@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Data lifecycle — Synaps</title>
+  <title>Data lifecycle — Synapse</title>
   <meta name="description" content="Locate the database, understand startup checks and automatic backups, export a consistent snapshot, and restore safely.">
   <meta name="theme-color" content="#0a43c8">
   <meta property="og:title" content="Data lifecycle">
@@ -22,16 +22,16 @@
   
   <a class="skip" href="#content">Skip to content</a>
   <header class="topbar">
-    <a class="wordmark" href="../../" aria-label="Synaps home">
+    <a class="wordmark" href="../../" aria-label="Synapse home">
       <img src="../../icon.svg" width="30" height="30" alt="">
-      <span>Synaps</span>
+      <span>Synapse</span>
     </a>
     <button class="navtoggle" type="button" aria-expanded="false" aria-controls="topnav">Menu</button>
     <nav id="topnav" aria-label="Primary">
       <a href="../../docs/" aria-current="page">Docs</a>
       <a href="../../tutorials/">Tutorials</a>
       <a href="https://github.com/wess/synapse">GitHub <span aria-hidden="true">↗</span></a>
-      <a class="navdownload" href="https://github.com/wess/synapse/releases/latest">Download</a>
+      <a class="navdownload" href="https://github.com/wess/synapse/releases/latest/download/synapse.zip">Download</a>
     </nav>
   </header>
   
@@ -78,7 +78,7 @@
       </header>
       
     <h2 id="files">Files and permissions</h2>
-    <p>On macOS, the default data directory is <code>~/Library/Application Support/synaps</code>. Run <code>synaps path</code> to print the resolved home, data, database, and CLI paths for the current environment.</p>
+    <p>On macOS, the default data directory is <code>~/Library/Application Support/synapse</code>. Run <code>synapse path</code> to print the resolved home, data, database, and CLI paths for the current environment.</p>
     <table>
       <thead><tr><th>Path</th><th>Purpose</th></tr></thead>
       <tbody>
@@ -107,13 +107,13 @@
       <span>shell</span>
       <button type="button" data-copy aria-live="polite">Copy</button>
     </div>
-    <pre><code>synaps data check
-synaps data check --json</code></pre>
+    <pre><code>synapse data check
+synapse data check --json</code></pre>
   </div>
 
     <h2 id="backups">Automatic backups</h2>
-    <p>Before changing an existing schema, Synaps creates <code>backups/brain.&lt;timestamp&gt;.v&lt;version&gt;.db</code>. Before replacing an existing database during restore, it creates <code>backups/brain.&lt;timestamp&gt;.restore.db</code>.</p>
-    <p>These are complete snapshots created through SQLite <code>VACUUM INTO</code>, not copies of a live database file. Synaps does not currently rotate them; include the folder in your normal local backup policy and remove old snapshots deliberately.</p>
+    <p>Before changing an existing schema, Synapse creates <code>backups/brain.&lt;timestamp&gt;.v&lt;version&gt;.db</code>. Before replacing an existing database during restore, it creates <code>backups/brain.&lt;timestamp&gt;.restore.db</code>.</p>
+    <p>These are complete snapshots created through SQLite <code>VACUUM INTO</code>, not copies of a live database file. Synapse does not currently rotate them; include the folder in your normal local backup policy and remove old snapshots deliberately.</p>
 
     <h2 id="export">Export a portable snapshot</h2>
     
@@ -122,10 +122,10 @@ synaps data check --json</code></pre>
       <span>shell</span>
       <button type="button" data-copy aria-live="polite">Copy</button>
     </div>
-    <pre><code>synaps data export &quot;$HOME/Desktop/synapsbackup.db&quot;
-synaps data check --json</code></pre>
+    <pre><code>synapse data export &quot;$HOME/Desktop/synapsebackup.db&quot;
+synapse data check --json</code></pre>
   </div>
-    <p>The destination must not already exist. Synaps opens the active database normally, writes a consistent compact snapshot, secures its permissions, then reopens it read-only and validates integrity before reporting success.</p>
+    <p>The destination must not already exist. Synapse opens the active database normally, writes a consistent compact snapshot, secures its permissions, then reopens it read-only and validates integrity before reporting success.</p>
     
   <aside class="note">
     <strong>Keychain values are separate</strong>
@@ -134,7 +134,7 @@ synaps data check --json</code></pre>
 
     <h2 id="restore">Restore a snapshot</h2>
     <ol>
-      <li>Quit the Synaps desktop app.</li>
+      <li>Quit the Synapse desktop app.</li>
       <li>Stop every connected MCP process by closing the relevant tool sessions.</li>
       <li>Run the restore command from a separate terminal.</li>
     </ol>
@@ -144,15 +144,15 @@ synaps data check --json</code></pre>
       <span>shell</span>
       <button type="button" data-copy aria-live="polite">Copy</button>
     </div>
-    <pre><code>synaps data restore &quot;$HOME/Desktop/synapsbackup.db&quot;
-synaps data check</code></pre>
+    <pre><code>synapse data restore &quot;$HOME/Desktop/synapsebackup.db&quot;
+synapse data check</code></pre>
   </div>
     <p>Restore opens the source read-only, validates page and relationship integrity, and requires its schema version to match the current release. It then tries to acquire the exclusive lifecycle lock. If the app or any MCP server still holds the database, restore refuses without changing anything.</p>
-    <p>When a current database exists, Synaps validates it and creates a recovery snapshot before atomically replacing it. WAL and SHM sidecars are cleared, file permissions are secured, and the containing directory is synced.</p>
+    <p>When a current database exists, Synapse validates it and creates a recovery snapshot before atomically replacing it. WAL and SHM sidecars are cleared, file permissions are secured, and the containing directory is synced.</p>
 
     <h2 id="wipe">Memory wipe is not a reset</h2>
-    <p><code>synaps memory wipe --confirm</code> removes every memory entry but leaves settings, vault labels, Keychain values, global mappings, and scope approvals. Use it when you want a clean memory history without rebuilding credential setup.</p>
-    <p>There is no one-command factory reset. To remove Synaps completely, first forget each Keychain secret through the app or CLI, then quit all processes and remove the application, installed launcher, and data directory deliberately.</p>
+    <p><code>synapse memory wipe --confirm</code> removes every memory entry but leaves settings, vault labels, Keychain values, global mappings, and scope approvals. Use it when you want a clean memory history without rebuilding credential setup.</p>
+    <p>There is no one-command factory reset. To remove Synapse completely, first forget each Keychain secret through the app or CLI, then quit all processes and remove the application, installed launcher, and data directory deliberately.</p>
   
     </main>
     <aside class="ontoc" aria-label="On this page">
@@ -163,8 +163,8 @@ synaps data check</code></pre>
   
   <footer class="footer">
     <div>
-      <a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">Synaps</a>
-      <p>Local memory and scoped credentials for developer tools.</p>
+      <a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">Synapse</a>
+      <p>Project memory and scoped credentials, kept on your Mac.</p>
     </div>
     <nav aria-label="Footer">
       <a href="../../docs/">Documentation</a>
@@ -172,7 +172,7 @@ synaps data check</code></pre>
       <a href="https://github.com/wess/synapse">Source</a>
       <a href="https://github.com/wess/synapse/releases">Releases</a>
     </nav>
-    <p class="footerfine">Local-first. No account required. macOS 13+ beta.</p>
+    <p class="footerfine">No account required. Apple silicon · macOS 13+.</p>
   </footer>
 </body>
 </html>

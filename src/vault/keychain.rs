@@ -1,6 +1,6 @@
 use anyhow::{Context, Result};
 
-const SERVICE: &str = "app.synaps.vault";
+const SERVICE: &str = "app.synapse.vault";
 
 #[cfg(target_os = "macos")]
 pub fn set(account: &str, value: &str) -> Result<()> {

@@ -78,11 +78,11 @@ for (const file of htmlfiles) {
 const home = await Bun.file(join(output, "index.html")).text();
 if (!home.startsWith("<!--\nTHESIS:")) fail("landing page is missing its direction contract");
 for (const phrase of [
-  "One memory. Every tool.",
+  "Your tools forget. Synapse remembers.",
   "Download macOS beta",
-  "Local SQLite",
-  "macOS Keychain",
-  "Open MCP",
+  "Remember decisions",
+  "Scope credentials",
+  "Stay in control",
 ]) {
   if (!home.includes(phrase)) fail(`landing page is missing: ${phrase}`);
 }
@@ -103,11 +103,9 @@ for (const page of htmlfiles) {
     fail(`sitemap is missing canonical route: ${route}`);
   }
 }
-if (corpus.includes("https://wess.github.io/synaps/") || corpus.includes("https://wess.io/synaps/")) {
-  fail("generated pages contain the former GitHub Pages project path");
-}
-if (/https:\/\/github\.com\/wess\/synaps(?:["/])/.test(corpus)) {
-  fail("generated pages contain the former repository URL");
+const formerspelling = ["syn", "aps"].join("");
+if (new RegExp(`${formerspelling}(?!e)`, "i").test(corpus)) {
+  fail("generated pages contain the former product spelling");
 }
 if (!corpus.includes(repositoryurl)) {
   fail("generated pages are missing the repository URL");
@@ -142,23 +140,23 @@ for (const phrase of [
 }
 
 for (const command of [
-  "synaps app",
-  "synaps mcp",
-  "synaps run",
-  "synaps hook",
-  "synaps allow",
-  "synaps deny",
-  "synaps export",
-  "synaps status",
-  "synaps vault",
-  "synaps secret",
-  "synaps scope",
-  "synaps data",
-  "synaps memory",
-  "synaps settings",
-  "synaps install",
-  "synaps path",
-  "synaps version",
+  "synapse app",
+  "synapse mcp",
+  "synapse run",
+  "synapse hook",
+  "synapse allow",
+  "synapse deny",
+  "synapse export",
+  "synapse status",
+  "synapse vault",
+  "synapse secret",
+  "synapse scope",
+  "synapse data",
+  "synapse memory",
+  "synapse settings",
+  "synapse install",
+  "synapse path",
+  "synapse version",
 ]) {
   if (!corpus.includes(command)) fail(`documentation is missing command family: ${command}`);
 }

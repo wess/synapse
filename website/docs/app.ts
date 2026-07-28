@@ -5,7 +5,7 @@ export const app: Page = {
   path: "docs/app/index.html",
   title: "Desktop app reference",
   description:
-    "Use every Synaps screen with clear data boundaries, confirmation behavior, recovery paths, and shell-integration states.",
+    "Use every Synapse screen with clear data boundaries, confirmation behavior, recovery paths, and shell-integration states.",
   kind: "docs",
   toc: [
     { label: "Navigation", id: "navigation" },
@@ -23,7 +23,7 @@ export const app: Page = {
       <tbody>
         <tr><td>Connections</td><td>Detect and connect supported developer tools.</td><td>Tool MCP configuration and managed instruction blocks.</td></tr>
         <tr><td>Memory</td><td>Search, inspect, correct, or remove durable context.</td><td>Memory rows in the local database.</td></tr>
-        <tr><td>Vaults</td><td>Manage labels, Keychain values, mappings, and approved project scopes.</td><td>Vault metadata, Keychain items, and <code>.synaps.yaml</code>.</td></tr>
+        <tr><td>Vaults</td><td>Manage labels, Keychain values, mappings, and approved project scopes.</td><td>Vault metadata, Keychain items, and <code>.synapse.yaml</code>.</td></tr>
         <tr><td>Settings</td><td>Choose recall, appearance, CLI, and shell-integration behavior.</td><td>Local preferences, the CLI launcher, and one managed shell block.</td></tr>
       </tbody>
     </table>
@@ -35,12 +35,12 @@ export const app: Page = {
       <dt>Not installed</dt>
       <dd>The command was not found on <code>PATH</code>. Set up is disabled until the tool is installed.</dd>
       <dt>Detected</dt>
-      <dd>The tool executable is available but its exact <code>synaps</code> MCP entry is absent or stale. Choose <strong>Set up</strong>.</dd>
+      <dd>The tool executable is available but its exact <code>synapse</code> MCP entry is absent or stale. Choose <strong>Set up</strong>.</dd>
       <dt>Connected</dt>
-      <dd>The stored executable and <code>["mcp"]</code> arguments match the expected Synaps server.</dd>
+      <dd>The stored executable and <code>["mcp"]</code> arguments match the expected Synapse server.</dd>
     </dl>
-    <p>Set up registers the MCP server and adds a marked memory-policy block to that tool’s global instructions. Existing settings and text outside the managed block remain in place; changed files receive <code>.synapsbackup</code> siblings. If either write fails, Synaps restores both files to their previous state.</p>
-    <p><strong>Edit instructions</strong> and <strong>Edit config</strong> open the actual files in the built-in editor. Synaps does not currently provide a separate Disconnect button; remove the named <code>synaps</code> entry and managed instruction block through those files when you intentionally want to disconnect a tool. See <a href="../config/#tools">Tool integration files</a> for their exact paths.</p>
+    <p>Set up registers the MCP server and adds a marked memory-policy block to that tool’s global instructions. Existing settings and text outside the managed block remain in place; changed files receive <code>.synapsebackup</code> siblings. If either write fails, Synapse restores both files to their previous state.</p>
+    <p><strong>Edit instructions</strong> and <strong>Edit config</strong> open the actual files in the built-in editor. Synapse does not currently provide a separate Disconnect button; remove the named <code>synapse</code> entry and managed instruction block through those files when you intentionally want to disconnect a tool. See <a href="../config/#tools">Tool integration files</a> for their exact paths.</p>
 
     <h2 id="memory">Memory</h2>
     <p>An empty search shows recent memory; a query searches the stored body and shows up to 100 results. Select an entry to inspect its ID, local creation time, full Markdown body, and source. <strong>Save changes</strong> replaces the selected body and source in place, so future recall sees the correction without creating a competing record.</p>
@@ -55,7 +55,7 @@ export const app: Page = {
       <li><strong>Forget</strong> requires <strong>Confirm</strong>, then removes both the Keychain item and its SQLite metadata.</li>
       <li><strong>Delete vault</strong> is available only when the selected vault is empty and requires a second confirmation.</li>
     </ul>
-    <p>Under <strong>Project and folder scopes</strong>, choose a directory, create or edit its <code>.synaps.yaml</code>, inspect the reported state, then choose <strong>Approve</strong> only after reviewing the exact file. Any later edit invalidates that digest and requires another review. Secret values never enter YAML. See <a href="../vault/">Vaults and scopes</a> for resolution order and both process boundaries.</p>
+    <p>Under <strong>Project and folder scopes</strong>, choose a directory, create or edit its <code>.synapse.yaml</code>, inspect the reported state, then choose <strong>Approve</strong> only after reviewing the exact file. Any later edit invalidates that digest and requires another review. Secret values never enter YAML. See <a href="../vault/">Vaults and scopes</a> for resolution order and both process boundaries.</p>
 
     <h2 id="settings">Settings</h2>
     <h3>Recall optimization</h3>
@@ -63,9 +63,9 @@ export const app: Page = {
     <h3>Appearance</h3>
     <p>System follows the current macOS appearance as it changes. Light and Dark pin the app to that mode. The preference is stored locally.</p>
     <h3>Command line</h3>
-    <p>The status is Installed, Not installed, or Conflict. <strong>Install CLI</strong> places the managed launcher at the displayed path. Synaps refuses to overwrite an unrelated executable; resolve a Conflict deliberately before trying again.</p>
+    <p>The status is Installed, Not installed, or Conflict. <strong>Install CLI</strong> places the managed launcher at the displayed path. Synapse refuses to overwrite an unrelated executable; resolve a Conflict deliberately before trying again.</p>
     <h3>Shell environments</h3>
-    <p>Command scoped always remains available through <code>synaps run -- &lt;command&gt;</code>. Automatic directory loading is an explicit opt-in for the detected default zsh, bash, or fish shell. Only that detected shell is changed.</p>
+    <p>Command scoped always remains available through <code>synapse run -- &lt;command&gt;</code>. Automatic directory loading is an explicit opt-in for the detected default zsh, bash, or fish shell. Only that detected shell is changed.</p>
     <table>
       <thead><tr><th>Status</th><th>Control</th><th>Result</th></tr></thead>
       <tbody>
@@ -76,7 +76,7 @@ export const app: Page = {
       </tbody>
     </table>
     <p>Open a new terminal after enabling, repairing, or removing the hook. Existing terminals retain the integration they already loaded. Ambient values are readable by every child of an activated shell; use the command-scoped mode for a sensitive one-off process.</p>
-    ${note("Startup files stay user-owned", "Synaps backs up and atomically rewrites the detected startup file, follows an existing symlink, and refuses malformed or duplicate managed markers instead of guessing what to replace.")}
+    ${note("Startup files stay user-owned", "Synapse backs up and atomically rewrites the detected startup file, follows an existing symlink, and refuses malformed or duplicate managed markers instead of guessing what to replace.")}
 
     <h2 id="editors">Editors, local data, and recovery</h2>
     <p>The built-in editor handles the supported tool instructions, TOML or JSON configuration, and YAML scope files. Structured formats must validate before saving. Changed files are backed up and replaced atomically while existing permissions and symlinks are preserved.</p>

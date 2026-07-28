@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Memory and recall — Synaps</title>
+  <title>Memory and recall — Synapse</title>
   <meta name="description" content="Know what becomes durable, how search works, how to correct stored context, and what each response budget changes.">
   <meta name="theme-color" content="#0a43c8">
   <meta property="og:title" content="Memory and recall">
@@ -22,16 +22,16 @@
   
   <a class="skip" href="#content">Skip to content</a>
   <header class="topbar">
-    <a class="wordmark" href="../../" aria-label="Synaps home">
+    <a class="wordmark" href="../../" aria-label="Synapse home">
       <img src="../../icon.svg" width="30" height="30" alt="">
-      <span>Synaps</span>
+      <span>Synapse</span>
     </a>
     <button class="navtoggle" type="button" aria-expanded="false" aria-controls="topnav">Menu</button>
     <nav id="topnav" aria-label="Primary">
       <a href="../../docs/" aria-current="page">Docs</a>
       <a href="../../tutorials/">Tutorials</a>
       <a href="https://github.com/wess/synapse">GitHub <span aria-hidden="true">↗</span></a>
-      <a class="navdownload" href="https://github.com/wess/synapse/releases/latest">Download</a>
+      <a class="navdownload" href="https://github.com/wess/synapse/releases/latest/download/synapse.zip">Download</a>
     </nav>
   </header>
   
@@ -79,7 +79,7 @@
       
     <h2 id="durable">What belongs in durable memory</h2>
     <p>Good memory remains useful after the current conversation ends. Store confirmed decisions, recurring preferences, corrected assumptions, naming conventions, project constraints, and facts whose source is clear.</p>
-    <p>Do not store transient task status, speculative ideas, full conversation transcripts, secret values, or instructions that attempt to override the current request or repository guidance. Synaps adds this distinction to connected tools’ global instructions, but you remain in control of the stored result.</p>
+    <p>Do not store transient task status, speculative ideas, full conversation transcripts, secret values, or instructions that attempt to override the current request or repository guidance. Synapse adds this distinction to connected tools’ global instructions, but you remain in control of the stored result.</p>
     
   <div class="codeblock">
     <div class="codebar">
@@ -88,7 +88,7 @@
     </div>
     <pre><code>printf &#039;%s
 &#039; &#039;Use Bun for JavaScript tasks in this repository.&#039; \
-  | synaps memory add tooling</code></pre>
+  | synapse memory add tooling</code></pre>
   </div>
     <p><code>memory add</code> and <code>memory edit</code> read the body from stdin. This keeps long content and shell metacharacters out of command arguments. Empty or whitespace-only memory is rejected.</p>
 
@@ -100,10 +100,10 @@
       <span>shell</span>
       <button type="button" data-copy aria-live="polite">Copy</button>
     </div>
-    <pre><code>synaps memory list &quot;Bun JavaScript&quot;
-synaps memory list --json
-synaps memory show 24
-synaps memory show 24 --json</code></pre>
+    <pre><code>synapse memory list &quot;Bun JavaScript&quot;
+synapse memory list --json
+synapse memory show 24
+synapse memory show 24 --json</code></pre>
   </div>
     <p>The CLI lists up to 100 matching memories. Each record contains an integer ID, exact body, source string, and Unix timestamp. JSON output is suitable for local automation.</p>
 
@@ -117,9 +117,9 @@ synaps memory show 24 --json</code></pre>
     </div>
     <pre><code>printf &#039;%s
 &#039; &#039;Use Bun unless a task explicitly requires another runtime.&#039; \
-  | synaps memory edit 24 tooling
+  | synapse memory edit 24 tooling
 
-synaps memory show 24</code></pre>
+synapse memory show 24</code></pre>
   </div>
     <p>Editing changes the stored original. Recall optimization does not. If a convention has become wrong, edit or delete it instead of adding a conflicting correction and hoping the tools choose the newer entry.</p>
 
@@ -138,9 +138,9 @@ synaps memory show 24</code></pre>
       <span>shell</span>
       <button type="button" data-copy aria-live="polite">Copy</button>
     </div>
-    <pre><code>synaps settings show
-synaps settings optimize lean
-synaps settings optimize balanced</code></pre>
+    <pre><code>synapse settings show
+synapse settings optimize lean
+synapse settings optimize balanced</code></pre>
   </div>
     
   <aside class="note">
@@ -156,10 +156,10 @@ synaps settings optimize balanced</code></pre>
       <span>shell</span>
       <button type="button" data-copy aria-live="polite">Copy</button>
     </div>
-    <pre><code>synaps memory delete 24 --confirm
-synaps memory wipe --confirm</code></pre>
+    <pre><code>synapse memory delete 24 --confirm
+synapse memory wipe --confirm</code></pre>
   </div>
-    <p>Before a large cleanup, create a portable snapshot with <code>synaps data export</code>. Use a wipe when the goal is to clear context while retaining the vault setup; use a database restore when the goal is to return the entire Synaps state to an earlier snapshot.</p>
+    <p>Before a large cleanup, create a portable snapshot with <code>synapse data export</code>. Use a wipe when the goal is to clear context while retaining the vault setup; use a database restore when the goal is to return the entire Synapse state to an earlier snapshot.</p>
   
     </main>
     <aside class="ontoc" aria-label="On this page">
@@ -170,8 +170,8 @@ synaps memory wipe --confirm</code></pre>
   
   <footer class="footer">
     <div>
-      <a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">Synaps</a>
-      <p>Local memory and scoped credentials for developer tools.</p>
+      <a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">Synapse</a>
+      <p>Project memory and scoped credentials, kept on your Mac.</p>
     </div>
     <nav aria-label="Footer">
       <a href="../../docs/">Documentation</a>
@@ -179,7 +179,7 @@ synaps memory wipe --confirm</code></pre>
       <a href="https://github.com/wess/synapse">Source</a>
       <a href="https://github.com/wess/synapse/releases">Releases</a>
     </nav>
-    <p class="footerfine">Local-first. No account required. macOS 13+ beta.</p>
+    <p class="footerfine">No account required. Apple silicon · macOS 13+.</p>
   </footer>
 </body>
 </html>

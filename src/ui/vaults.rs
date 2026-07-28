@@ -47,7 +47,10 @@ pub fn render(view: View, actions: Actions, cx: &App) -> AnyElement {
         .iter()
         .find(|vault| Some(vault.id) == view.selected)
         .map(|vault| vault.name.clone());
-    let scopepath = view.folder.as_deref().map(|path| path.join(".synaps.yaml"));
+    let scopepath = view
+        .folder
+        .as_deref()
+        .map(|path| path.join(".synapse.yaml"));
     let Actions {
         createvault,
         selectvault,
@@ -169,7 +172,7 @@ fn hero(view: &View, cx: &App) -> impl IntoElement {
     };
     let message = match &view.notice {
         Notice::Ready => {
-            "Values stay in Keychain. Synaps stores only labels and scoped references."
+            "Values stay in Keychain. Synapse stores only labels and scoped references."
         }
         Notice::Success(message) | Notice::Error(message) => message,
     };
@@ -544,7 +547,7 @@ fn scopepanel(
                 )
                 .child(
                     Text::new(
-                        ".synaps.yaml maps environment names to vault.secret references. Editing it invalidates approval; values never enter YAML.",
+                        ".synapse.yaml maps environment names to vault.secret references. Editing it invalidates approval; values never enter YAML.",
                     )
                     .size(Size::Xs)
                     .dimmed(),

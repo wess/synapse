@@ -3,7 +3,7 @@ import type { Page } from "../types";
 export const tutorials: Page = {
   path: "tutorials/index.html",
   title: "Tutorials",
-  description: "Build complete working Synaps workflows, verify each result, and understand what to clean up when you are done.",
+  description: "Build complete working Synapse workflows, verify each result, and understand what to clean up when you are done.",
   kind: "tutorial",
   toc: [
     { label: "Recommended order", id: "order" },
@@ -20,7 +20,7 @@ export const tutorials: Page = {
     </ol>
 
     <h2 id="all">What every tutorial includes</h2>
-    <p>Each tutorial names prerequisites, builds one complete outcome, includes observable verification, calls out the security boundary, and provides cleanup or the next safe step. Commands assume the installed <code>synaps</code> CLI is on <code>PATH</code>.</p>
+    <p>Each tutorial names prerequisites, builds one complete outcome, includes observable verification, calls out the security boundary, and provides cleanup or the next safe step. Commands assume the installed <code>synapse</code> CLI is on <code>PATH</code>.</p>
     <p>If you need exact command syntax outside a guided workflow, use the <a href="../docs/cli/">CLI reference</a>. If a step fails, stop at that point and use <a href="../docs/troubleshoot/">Troubleshooting</a> rather than skipping a trust or integrity check.</p>
   `,
 };

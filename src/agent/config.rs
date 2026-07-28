@@ -24,14 +24,14 @@ fn entry(kind: Kind, content: &str) -> Option<Entry> {
             let value = toml::from_str::<toml::Value>(content).ok()?;
             let value = value
                 .get("mcp_servers")
-                .and_then(|value| value.get("synaps"));
+                .and_then(|value| value.get("synapse"));
             Some((value.is_some(), value.and_then(tomlserver)))
         }
         Kind::Claude => {
             let value = serde_json::from_str::<serde_json::Value>(content).ok()?;
             let value = value
                 .get("mcpServers")
-                .and_then(|value| value.get("synaps"));
+                .and_then(|value| value.get("synapse"));
             Some((value.is_some(), value.and_then(jsonserver)))
         }
     }
@@ -80,13 +80,13 @@ mod tests {
     #[test]
     fn reads_codex_and_claude_user_entries() {
         let directory = tempfile::tempdir().unwrap();
-        let server = directory.path().join("synaps");
+        let server = directory.path().join("synapse");
         fs::write(&server, "binary").unwrap();
         let codex = directory.path().join("config.toml");
         fs::write(
             &codex,
             format!(
-                "[mcp_servers.synaps]\ncommand = {:?}\nargs = [\"mcp\"]\n",
+                "[mcp_servers.synapse]\ncommand = {:?}\nargs = [\"mcp\"]\n",
                 server.display().to_string()
             ),
         )
@@ -95,7 +95,7 @@ mod tests {
         fs::write(
             &claude,
             serde_json::json!({
-                "mcpServers": {"synaps": {"command": server, "args": ["mcp"]}}
+                "mcpServers": {"synapse": {"command": server, "args": ["mcp"]}}
             })
             .to_string(),
         )
@@ -117,14 +117,14 @@ mod tests {
         let path = directory.path().join("config.toml");
         fs::write(
             &path,
-            "[mcp_servers.synaps]\ncommand = \"/deleted/synaps\"\nargs = [\"mcp\"]\n",
+            "[mcp_servers.synapse]\ncommand = \"/deleted/synapse\"\nargs = [\"mcp\"]\n",
         )
         .unwrap();
 
         assert_eq!(
             state(
                 &agent(Kind::Codex, path),
-                Some(Path::new("/current/synaps"))
+                Some(Path::new("/current/synapse"))
             ),
             (true, false)
         );
@@ -134,12 +134,12 @@ mod tests {
     fn malformed_named_entry_can_still_be_replaced() {
         let directory = tempfile::tempdir().unwrap();
         let path = directory.path().join("claude.json");
-        fs::write(&path, "{\"mcpServers\":{\"synaps\":{\"args\":false}}}").unwrap();
+        fs::write(&path, "{\"mcpServers\":{\"synapse\":{\"args\":false}}}").unwrap();
 
         assert_eq!(
             state(
                 &agent(Kind::Claude, path),
-                Some(Path::new("/current/synaps"))
+                Some(Path::new("/current/synapse"))
             ),
             (true, false)
         );

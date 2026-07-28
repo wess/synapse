@@ -3,11 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>CLI reference — Synaps</title>
-  <meta name="description" content="The complete Synaps command surface, including inputs, output modes, confirmation guards, and process behavior.">
+  <title>CLI reference — Synapse</title>
+  <meta name="description" content="The complete Synapse command surface, including inputs, output modes, confirmation guards, and process behavior.">
   <meta name="theme-color" content="#0a43c8">
   <meta property="og:title" content="CLI reference">
-  <meta property="og:description" content="The complete Synaps command surface, including inputs, output modes, confirmation guards, and process behavior.">
+  <meta property="og:description" content="The complete Synapse command surface, including inputs, output modes, confirmation guards, and process behavior.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://wess.io/synapse/docs/cli/">
   <link rel="canonical" href="https://wess.io/synapse/docs/cli/">
@@ -22,16 +22,16 @@
   
   <a class="skip" href="#content">Skip to content</a>
   <header class="topbar">
-    <a class="wordmark" href="../../" aria-label="Synaps home">
+    <a class="wordmark" href="../../" aria-label="Synapse home">
       <img src="../../icon.svg" width="30" height="30" alt="">
-      <span>Synaps</span>
+      <span>Synapse</span>
     </a>
     <button class="navtoggle" type="button" aria-expanded="false" aria-controls="topnav">Menu</button>
     <nav id="topnav" aria-label="Primary">
       <a href="../../docs/" aria-current="page">Docs</a>
       <a href="../../tutorials/">Tutorials</a>
       <a href="https://github.com/wess/synapse">GitHub <span aria-hidden="true">↗</span></a>
-      <a class="navdownload" href="https://github.com/wess/synapse/releases/latest">Download</a>
+      <a class="navdownload" href="https://github.com/wess/synapse/releases/latest/download/synapse.zip">Download</a>
     </nav>
   </header>
   
@@ -74,11 +74,11 @@
     <main class="article" id="content">
       <header class="articlehead">
         <h1>CLI reference</h1>
-        <span>The complete Synaps command surface, including inputs, output modes, confirmation guards, and process behavior.</span>
+        <span>The complete Synapse command surface, including inputs, output modes, confirmation guards, and process behavior.</span>
       </header>
       
     <h2 id="invocation">Invocation</h2>
-    <p>Run <code>synaps help</code> for the built-in summary. Commands print human-readable output unless a documented <code>--json</code> option is present. Errors go to stderr and return a non-zero exit status.</p>
+    <p>Run <code>synapse help</code> for the built-in summary. Commands print human-readable output unless a documented <code>--json</code> option is present. Errors go to stderr and return a non-zero exit status.</p>
     
   <aside class="note">
     <strong>Secret and memory input</strong>
@@ -90,15 +90,15 @@
   <section class="command" id="app">
     <div>
       <h3>app</h3>
-      <code>synaps app</code>
+      <code>synapse app</code>
     </div>
-    <p>Open the native desktop application. Running <code>synaps</code with no command has the same result.</p>
+    <p>Open the native desktop application. Running <code>synapse</code with no command has the same result.</p>
   </section>
     
   <section class="command" id="mcp">
     <div>
       <h3>mcp</h3>
-      <code>synaps mcp</code>
+      <code>synapse mcp</code>
     </div>
     <p>Run the MCP stdio server until the client closes the connection. The process holds a shared database lifecycle lock.</p>
   </section>
@@ -106,15 +106,15 @@
   <section class="command" id="run">
     <div>
       <h3>run</h3>
-      <code>synaps run -- &lt;command&gt; [arguments]</code>
+      <code>synapse run -- &lt;command&gt; [arguments]</code>
     </div>
-    <p>Resolve global, project, and folder vault mappings for the current directory, refuse on any scope warning, read selected Keychain values, and launch the child. Synaps returns the child exit code, or 1 when the operating system reports no code.</p>
+    <p>Resolve global, project, and folder vault mappings for the current directory, refuse on any scope warning, read selected Keychain values, and launch the child. Synapse returns the child exit code, or 1 when the operating system reports no code.</p>
   </section>
     
   <section class="command" id="status">
     <div>
       <h3>status</h3>
-      <code>synaps status [folder] [--json]</code>
+      <code>synapse status [folder] [--json]</code>
     </div>
     <p>Show the resolved folder, available environment names, discovered scope states, warnings, ambient readiness, and detected shell hook. Values remain in Keychain. The folder defaults to the current directory.</p>
   </section>
@@ -124,7 +124,7 @@
   <section class="command" id="hook">
     <div>
       <h3>hook</h3>
-      <code>synaps hook &lt;zsh|bash|fish&gt;</code>
+      <code>synapse hook &lt;zsh|bash|fish&gt;</code>
     </div>
     <p>Print the integration script for a shell. Evaluate or source it from that shell’s startup file. The hook reevaluates approved directory scopes after directory changes and before prompts.</p>
   </section>
@@ -132,15 +132,15 @@
   <section class="command" id="allow">
     <div>
       <h3>allow</h3>
-      <code>synaps allow [folder]</code>
+      <code>synapse allow [folder]</code>
     </div>
-    <p>Inspect and approve the exact contents of the closest <code>.synaps.yaml</code> at or above the folder. The folder defaults to the current directory.</p>
+    <p>Inspect and approve the exact contents of the closest <code>.synapse.yaml</code> at or above the folder. The folder defaults to the current directory.</p>
   </section>
     
   <section class="command" id="deny">
     <div>
       <h3>deny</h3>
-      <code>synaps deny [folder]</code>
+      <code>synapse deny [folder]</code>
     </div>
     <p>Revoke approval for the closest discovered scope. An installed hook unloads its managed values at the next prompt or directory change.</p>
   </section>
@@ -148,14 +148,14 @@
   <section class="command" id="export">
     <div>
       <h3>export</h3>
-      <code>synaps export &lt;zsh|bash|fish&gt;</code>
+      <code>synapse export &lt;zsh|bash|fish&gt;</code>
     </div>
     <p>Internal hook protocol. Emits a shell-quoted environment diff that the installed hook evaluates. Users normally invoke <code>hook</code>, <code>allow</code>, and <code>deny</code> instead.</p>
   </section>
     
   <aside class="note">
     <strong>Two boundaries</strong>
-    <p>synaps run gives one child process the resolved environment. The shell hook exposes the environment to every process launched from an activated shell until the scope unloads.</p>
+    <p>synapse run gives one child process the resolved environment. The shell hook exposes the environment to every process launched from an activated shell until the scope unloads.</p>
   </aside>
 
     <h2 id="vault">Vault and scope</h2>
@@ -163,7 +163,7 @@
   <section class="command" id="vaultlist">
     <div>
       <h3>vault list</h3>
-      <code>synaps vault list</code>
+      <code>synapse vault list</code>
     </div>
     <p>List vault names alphabetically.</p>
   </section>
@@ -171,7 +171,7 @@
   <section class="command" id="vaultcreate">
     <div>
       <h3>vault create</h3>
-      <code>synaps vault create &lt;name&gt;</code>
+      <code>synapse vault create &lt;name&gt;</code>
     </div>
     <p>Create a unique vault. Names may contain ASCII letters, numbers, and hyphens.</p>
   </section>
@@ -179,7 +179,7 @@
   <section class="command" id="vaultdelete">
     <div>
       <h3>vault delete</h3>
-      <code>synaps vault delete &lt;name&gt;</code>
+      <code>synapse vault delete &lt;name&gt;</code>
     </div>
     <p>Delete an empty vault. Forget every contained secret first.</p>
   </section>
@@ -187,7 +187,7 @@
   <section class="command" id="secretlist">
     <div>
       <h3>secret list</h3>
-      <code>synaps secret list &lt;vault&gt;</code>
+      <code>synapse secret list &lt;vault&gt;</code>
     </div>
     <p>List each <code>vault.name</code> reference, environment name, and whether it is global or scoped. Never prints a value.</p>
   </section>
@@ -195,7 +195,7 @@
   <section class="command" id="secretset">
     <div>
       <h3>secret set</h3>
-      <code>synaps secret set &lt;vault&gt; &lt;name&gt; &lt;env&gt; [--global]</code>
+      <code>synapse secret set &lt;vault&gt; &lt;name&gt; &lt;env&gt; [--global]</code>
     </div>
     <p>Read a value from a hidden terminal prompt or stdin and save it in Keychain. Creates metadata when the label is new; updates the existing Keychain item when the environment name matches. <code>--global</code> also enables the mapping.</p>
   </section>
@@ -203,7 +203,7 @@
   <section class="command" id="secretforget">
     <div>
       <h3>secret forget</h3>
-      <code>synaps secret forget &lt;vault.name&gt;</code>
+      <code>synapse secret forget &lt;vault.name&gt;</code>
     </div>
     <p>Delete the Keychain value, its metadata, and any global mapping.</p>
   </section>
@@ -211,7 +211,7 @@
   <section class="command" id="secretglobal">
     <div>
       <h3>secret global</h3>
-      <code>synaps secret global &lt;vault.name&gt; &lt;on|off&gt;</code>
+      <code>synapse secret global &lt;vault.name&gt; &lt;on|off&gt;</code>
     </div>
     <p>Enable or disable a secret’s global environment mapping. Enabling replaces the current global source for that environment name.</p>
   </section>
@@ -219,25 +219,25 @@
   <section class="command" id="scopeinit">
     <div>
       <h3>scope init</h3>
-      <code>synaps scope init [folder] [--folder]</code>
+      <code>synapse scope init [folder] [--folder]</code>
     </div>
-    <p>Create a new <code>.synaps.yaml</code>. The folder defaults to the current directory. Use <code>--folder</code> for a folder-kind template; the command refuses when the file already exists.</p>
+    <p>Create a new <code>.synapse.yaml</code>. The folder defaults to the current directory. Use <code>--folder</code> for a folder-kind template; the command refuses when the file already exists.</p>
   </section>
     
   <section class="command" id="scopetrust">
     <div>
       <h3>scope trust</h3>
-      <code>synaps scope trust [folder]</code>
+      <code>synapse scope trust [folder]</code>
     </div>
-    <p>Approve an exact scope path directly by parsing it, calculating its content digest, and storing that digest with its canonical path. <code>synaps allow</code> is the directory-oriented shortcut.</p>
+    <p>Approve an exact scope path directly by parsing it, calculating its content digest, and storing that digest with its canonical path. <code>synapse allow</code> is the directory-oriented shortcut.</p>
   </section>
     
   <section class="command" id="scopestatus">
     <div>
       <h3>scope status</h3>
-      <code>synaps scope status [folder] [--json]</code>
+      <code>synapse scope status [folder] [--json]</code>
     </div>
-    <p>Alias the scope-oriented status flow to the same resolved output as <code>synaps status</code>.</p>
+    <p>Alias the scope-oriented status flow to the same resolved output as <code>synapse status</code>.</p>
   </section>
 
     <h2 id="memory">Memory</h2>
@@ -245,7 +245,7 @@
   <section class="command" id="memorylist">
     <div>
       <h3>memory list</h3>
-      <code>synaps memory list [query] [--json]</code>
+      <code>synapse memory list [query] [--json]</code>
     </div>
     <p>Search the body with the joined query words or list recent memory when empty. Returns up to 100 entries. Text mode prints ID, source, and a compact preview.</p>
   </section>
@@ -253,7 +253,7 @@
   <section class="command" id="memoryshow">
     <div>
       <h3>memory show</h3>
-      <code>synaps memory show &lt;id&gt; [--json]</code>
+      <code>synapse memory show &lt;id&gt; [--json]</code>
     </div>
     <p>Print one exact memory with source and timestamp, or return structured JSON.</p>
   </section>
@@ -261,7 +261,7 @@
   <section class="command" id="memoryadd">
     <div>
       <h3>memory add</h3>
-      <code>synaps memory add [source]</code>
+      <code>synapse memory add [source]</code>
     </div>
     <p>Read a non-empty body from stdin and store it with an optional source label.</p>
   </section>
@@ -269,7 +269,7 @@
   <section class="command" id="memoryedit">
     <div>
       <h3>memory edit</h3>
-      <code>synaps memory edit &lt;id&gt; [source]</code>
+      <code>synapse memory edit &lt;id&gt; [source]</code>
     </div>
     <p>Read the replacement body from stdin and replace one existing memory. The optional source replaces the source label.</p>
   </section>
@@ -277,7 +277,7 @@
   <section class="command" id="memorydelete">
     <div>
       <h3>memory delete</h3>
-      <code>synaps memory delete &lt;id&gt; --confirm</code>
+      <code>synapse memory delete &lt;id&gt; --confirm</code>
     </div>
     <p>Delete one memory. The exact <code>--confirm</code> guard is required.</p>
   </section>
@@ -285,7 +285,7 @@
   <section class="command" id="memorywipe">
     <div>
       <h3>memory wipe</h3>
-      <code>synaps memory wipe --confirm</code>
+      <code>synapse memory wipe --confirm</code>
     </div>
     <p>Delete every memory entry while leaving settings, vaults, Keychain values, and scope approvals intact. The exact guard is required.</p>
   </section>
@@ -295,7 +295,7 @@
   <section class="command" id="datacheck">
     <div>
       <h3>data check</h3>
-      <code>synaps data check [--json]</code>
+      <code>synapse data check [--json]</code>
     </div>
     <p>Open the database, run page and foreign-key integrity checks, apply supported migrations, and report the path, schema version, and <code>ok</code> integrity state.</p>
   </section>
@@ -303,7 +303,7 @@
   <section class="command" id="dataexport">
     <div>
       <h3>data export</h3>
-      <code>synaps data export &lt;file&gt;</code>
+      <code>synapse data export &lt;file&gt;</code>
     </div>
     <p>Create and validate a consistent SQLite snapshot at a destination that does not already exist. Secret values remain in Keychain and are not included.</p>
   </section>
@@ -311,7 +311,7 @@
   <section class="command" id="datarestore">
     <div>
       <h3>data restore</h3>
-      <code>synaps data restore &lt;file&gt;</code>
+      <code>synapse data restore &lt;file&gt;</code>
     </div>
     <p>Validate a current-version snapshot and restore it while the app and MCP servers are closed. Preserves the previous database as a recovery backup and refuses without the exclusive lock.</p>
   </section>
@@ -319,7 +319,7 @@
   <section class="command" id="settingsshow">
     <div>
       <h3>settings show</h3>
-      <code>synaps settings show</code>
+      <code>synapse settings show</code>
     </div>
     <p>Print the active recall optimization, result limit, character budget, supported shell modes, and zsh hook example.</p>
   </section>
@@ -327,7 +327,7 @@
   <section class="command" id="settingsoptimize">
     <div>
       <h3>settings optimize</h3>
-      <code>synaps settings optimize &lt;full|balanced|lean&gt;</code>
+      <code>synapse settings optimize &lt;full|balanced|lean&gt;</code>
     </div>
     <p>Change the shared MCP recall response budget. Stored memory is not modified.</p>
   </section>
@@ -337,7 +337,7 @@
   <section class="command" id="install">
     <div>
       <h3>install</h3>
-      <code>synaps install</code>
+      <code>synapse install</code>
     </div>
     <p>Install the current executable for this user. A packaged app creates a launcher into the signed bundle; a development binary is copied atomically. Unrelated destination files are never overwritten.</p>
   </section>
@@ -345,7 +345,7 @@
   <section class="command" id="path">
     <div>
       <h3>path</h3>
-      <code>synaps path</code>
+      <code>synapse path</code>
     </div>
     <p>Print the resolved home, data directory, database, and CLI destination.</p>
   </section>
@@ -353,7 +353,7 @@
   <section class="command" id="version">
     <div>
       <h3>version</h3>
-      <code>synaps version</code>
+      <code>synapse version</code>
     </div>
     <p>Print the application version. <code>--version</code> and <code>-V</code> are aliases.</p>
   </section>
@@ -361,7 +361,7 @@
   <section class="command" id="help">
     <div>
       <h3>help</h3>
-      <code>synaps help</code>
+      <code>synapse help</code>
     </div>
     <p>Print the command summary. <code>--help</code> and <code>-h</code> are aliases at the top level.</p>
   </section>
@@ -375,8 +375,8 @@
   
   <footer class="footer">
     <div>
-      <a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">Synaps</a>
-      <p>Local memory and scoped credentials for developer tools.</p>
+      <a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">Synapse</a>
+      <p>Project memory and scoped credentials, kept on your Mac.</p>
     </div>
     <nav aria-label="Footer">
       <a href="../../docs/">Documentation</a>
@@ -384,7 +384,7 @@
       <a href="https://github.com/wess/synapse">Source</a>
       <a href="https://github.com/wess/synapse/releases">Releases</a>
     </nav>
-    <p class="footerfine">Local-first. No account required. macOS 13+ beta.</p>
+    <p class="footerfine">No account required. Apple silicon · macOS 13+.</p>
   </footer>
 </body>
 </html>

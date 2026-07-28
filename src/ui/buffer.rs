@@ -117,7 +117,7 @@ mod tests {
         assert_eq!(format(Path::new("AGENTS.md")), Format::Markdown);
         assert_eq!(format(Path::new("config.toml")), Format::Toml);
         assert_eq!(format(Path::new("settings.json")), Format::Json);
-        assert_eq!(format(Path::new(".synaps.yaml")), Format::Yaml);
+        assert_eq!(format(Path::new(".synapse.yaml")), Format::Yaml);
         assert_eq!(format(Path::new("notes.txt")), Format::Text);
     }
 }

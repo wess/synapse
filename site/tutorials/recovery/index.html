@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Export and restore safely — Synaps</title>
+  <title>Export and restore safely — Synapse</title>
   <meta name="description" content="Create a validated snapshot, make one reversible memory change, stop all database users, restore, and prove the previous state returned.">
   <meta name="theme-color" content="#0a43c8">
   <meta property="og:title" content="Export and restore safely">
@@ -22,16 +22,16 @@
   
   <a class="skip" href="#content">Skip to content</a>
   <header class="topbar">
-    <a class="wordmark" href="../../" aria-label="Synaps home">
+    <a class="wordmark" href="../../" aria-label="Synapse home">
       <img src="../../icon.svg" width="30" height="30" alt="">
-      <span>Synaps</span>
+      <span>Synapse</span>
     </a>
     <button class="navtoggle" type="button" aria-expanded="false" aria-controls="topnav">Menu</button>
     <nav id="topnav" aria-label="Primary">
       <a href="../../docs/">Docs</a>
       <a href="../../tutorials/" aria-current="page">Tutorials</a>
       <a href="https://github.com/wess/synapse">GitHub <span aria-hidden="true">↗</span></a>
-      <a class="navdownload" href="https://github.com/wess/synapse/releases/latest">Download</a>
+      <a class="navdownload" href="https://github.com/wess/synapse/releases/latest/download/synapse.zip">Download</a>
     </nav>
   </header>
   
@@ -82,7 +82,7 @@
     
   <aside class="note">
     <strong>This changes the active database</strong>
-    <p>The tutorial is designed to be reversible and Synaps creates a pre-restore backup, but restore is still a real database replacement. Read every step and do not substitute a production backup you have not separately preserved.</p>
+    <p>The tutorial is designed to be reversible and Synapse creates a pre-restore backup, but restore is still a real database replacement. Read every step and do not substitute a production backup you have not separately preserved.</p>
   </aside>
 
     <ol class="steps">
@@ -94,8 +94,8 @@
       <span>shell</span>
       <button type="button" data-copy aria-live="polite">Copy</button>
     </div>
-    <pre><code>synaps path
-synaps data check</code></pre>
+    <pre><code>synapse path
+synapse data check</code></pre>
   </div>
         <p>Integrity must report <code>ok</code>. If it does not, stop here and follow the corruption guidance in Troubleshooting.</p>
       </li>
@@ -107,11 +107,11 @@ synaps data check</code></pre>
       <span>shell</span>
       <button type="button" data-copy aria-live="polite">Copy</button>
     </div>
-    <pre><code>backup=&quot;$HOME/Desktop/synapstutorialbackup.db&quot;
+    <pre><code>backup=&quot;$HOME/Desktop/synapsetutorialbackup.db&quot;
 test ! -e &quot;$backup&quot;
-synaps data export &quot;$backup&quot;</code></pre>
+synapse data export &quot;$backup&quot;</code></pre>
   </div>
-        <p>Synaps writes a consistent compact snapshot, secures it, opens it read-only, and validates it before returning success.</p>
+        <p>Synapse writes a consistent compact snapshot, secures it, opens it read-only, and validates it before returning success.</p>
       </li>
       <li>
         <h3 id="change">Add one post-export memory</h3>
@@ -123,14 +123,14 @@ synaps data export &quot;$backup&quot;</code></pre>
     </div>
     <pre><code>printf &#039;%s
 &#039; &#039;This entry exists only after the tutorial export.&#039; \
-  | synaps memory add synapsrecovery
-synaps memory list synapsrecovery</code></pre>
+  | synapse memory add synapserecovery
+synapse memory list synapserecovery</code></pre>
   </div>
         <p>Record the returned ID. This entry is the marker that should disappear after restoration.</p>
       </li>
       <li>
         <h3 id="stop">Stop every database user</h3>
-        <p>Quit the Synaps desktop app. Close all connected Codex and Claude Code sessions so their <code>synaps mcp</code> child processes exit. A normal CLI command releases its shared lock when it finishes.</p>
+        <p>Quit the Synapse desktop app. Close all connected Codex and Claude Code sessions so their <code>synapse mcp</code> child processes exit. A normal CLI command releases its shared lock when it finishes.</p>
         <p>If you intentionally leave a connected session open, the next step should refuse with a message telling you to close the app and connected tools. Do not work around the lock.</p>
       </li>
       <li>
@@ -141,7 +141,7 @@ synaps memory list synapsrecovery</code></pre>
       <span>shell</span>
       <button type="button" data-copy aria-live="polite">Copy</button>
     </div>
-    <pre><code>synaps data restore &quot;$backup&quot;</code></pre>
+    <pre><code>synapse data restore &quot;$backup&quot;</code></pre>
   </div>
         <p>The command validates the source and current database, acquires the exclusive lock, creates an automatic <code>restore</code> recovery snapshot of the current state, then atomically replaces the database.</p>
       </li>
@@ -153,16 +153,16 @@ synaps memory list synapsrecovery</code></pre>
       <span>shell</span>
       <button type="button" data-copy aria-live="polite">Copy</button>
     </div>
-    <pre><code>synaps data check
-synaps memory list synapsrecovery</code></pre>
+    <pre><code>synapse data check
+synapse memory list synapserecovery</code></pre>
   </div>
         <p>Integrity should be <code>ok</code>, and the post-export marker should be absent. Reopen the desktop app and connected tools only after this verification.</p>
       </li>
     </ol>
 
     <h2>Understand what did not move</h2>
-    <p>Keychain values are not inside the export. On the same Mac, restored vault metadata still points at the existing items. On another Mac, recreate each expected value with <code>synaps secret set</code>.</p>
-    <p>Keep the export if it is part of your backup plan. Otherwise, move it to Trash after you are satisfied with the restore. The automatic pre-restore snapshot remains in the Synaps <code>backups</code> directory until you manage it deliberately.</p>
+    <p>Keychain values are not inside the export. On the same Mac, restored vault metadata still points at the existing items. On another Mac, recreate each expected value with <code>synapse secret set</code>.</p>
+    <p>Keep the export if it is part of your backup plan. Otherwise, move it to Trash after you are satisfied with the restore. The automatic pre-restore snapshot remains in the Synapse <code>backups</code> directory until you manage it deliberately.</p>
   
     </main>
     <aside class="ontoc" aria-label="On this page">
@@ -173,8 +173,8 @@ synaps memory list synapsrecovery</code></pre>
   
   <footer class="footer">
     <div>
-      <a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">Synaps</a>
-      <p>Local memory and scoped credentials for developer tools.</p>
+      <a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">Synapse</a>
+      <p>Project memory and scoped credentials, kept on your Mac.</p>
     </div>
     <nav aria-label="Footer">
       <a href="../../docs/">Documentation</a>
@@ -182,7 +182,7 @@ synaps memory list synapsrecovery</code></pre>
       <a href="https://github.com/wess/synapse">Source</a>
       <a href="https://github.com/wess/synapse/releases">Releases</a>
     </nav>
-    <p class="footerfine">Local-first. No account required. macOS 13+ beta.</p>
+    <p class="footerfine">No account required. Apple silicon · macOS 13+.</p>
   </footer>
 </body>
 </html>

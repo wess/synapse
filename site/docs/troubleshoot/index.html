@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Troubleshooting — Synaps</title>
+  <title>Troubleshooting — Synapse</title>
   <meta name="description" content="Diagnose installation, tool connection, scope, Keychain, memory, database, and restore failures without risking user-owned data.">
   <meta name="theme-color" content="#0a43c8">
   <meta property="og:title" content="Troubleshooting">
@@ -22,16 +22,16 @@
   
   <a class="skip" href="#content">Skip to content</a>
   <header class="topbar">
-    <a class="wordmark" href="../../" aria-label="Synaps home">
+    <a class="wordmark" href="../../" aria-label="Synapse home">
       <img src="../../icon.svg" width="30" height="30" alt="">
-      <span>Synaps</span>
+      <span>Synapse</span>
     </a>
     <button class="navtoggle" type="button" aria-expanded="false" aria-controls="topnav">Menu</button>
     <nav id="topnav" aria-label="Primary">
       <a href="../../docs/" aria-current="page">Docs</a>
       <a href="../../tutorials/">Tutorials</a>
       <a href="https://github.com/wess/synapse">GitHub <span aria-hidden="true">↗</span></a>
-      <a class="navdownload" href="https://github.com/wess/synapse/releases/latest">Download</a>
+      <a class="navdownload" href="https://github.com/wess/synapse/releases/latest/download/synapse.zip">Download</a>
     </nav>
   </header>
   
@@ -84,18 +84,18 @@
       <span>shell</span>
       <button type="button" data-copy aria-live="polite">Copy</button>
     </div>
-    <pre><code>synaps version
-synaps path
-synaps data check
-synaps status .
-synaps settings show</code></pre>
+    <pre><code>synapse version
+synapse path
+synapse data check
+synapse status .
+synapse settings show</code></pre>
   </div>
     <p>These commands establish which executable is running, which database it opens, whether the database is healthy, which scopes apply to the current folder, and which response budget connected tools use.</p>
 
     <h2 id="app">App and CLI</h2>
     <h3>macOS will not open the app</h3>
     <p>Confirm you downloaded the current archive from the release page, extracted it fully, and moved the app to Applications. The distributed beta is Developer ID signed, notarized, and stapled. Avoid modifying files inside the application bundle because that invalidates its signature.</p>
-    <h3><code>synaps: command not found</code></h3>
+    <h3><code>synapse: command not found</code></h3>
     <p>Install the CLI from Settings, then add <code>~/.local/bin</code> to <code>PATH</code>. Run the executable by full path once to verify:</p>
     
   <div class="codeblock">
@@ -103,52 +103,52 @@ synaps settings show</code></pre>
       <span>shell</span>
       <button type="button" data-copy aria-live="polite">Copy</button>
     </div>
-    <pre><code>~/.local/bin/synaps version</code></pre>
+    <pre><code>~/.local/bin/synapse version</code></pre>
   </div>
     <h3>The CLI installer reports a conflict</h3>
-    <p>A different file already exists at the destination and does not have a matching Synaps receipt. Synaps will not replace it. Move or rename that file yourself, or set <code>SYNAPS_BIN</code> to a different full destination and install again.</p>
+    <p>A different file already exists at the destination and does not have a matching Synapse receipt. Synapse will not replace it. Move or rename that file yourself, or set <code>SYNAPSE_BIN</code> to a different full destination and install again.</p>
     <h3>The CLI stopped working after moving the app</h3>
-    <p>Packaged installations point into the signed bundle. Open Synaps at its final location and choose <strong>Install CLI</strong> again to refresh the managed launcher.</p>
+    <p>Packaged installations point into the signed bundle. Open Synapse at its final location and choose <strong>Install CLI</strong> again to refresh the managed launcher.</p>
 
     <h2 id="connection">Tool connection</h2>
     <h3>A tool is detected but not connected</h3>
-    <p>The registered entry may point to a deleted build or old app location, or may have arguments other than <code>["mcp"]</code>. Choose <strong>Repair</strong> in the app. Synaps backs up the integration store before replacing the named entry.</p>
+    <p>The registered entry may point to a deleted build or old app location, or may have arguments other than <code>["mcp"]</code>. Choose <strong>Repair</strong> in the app. Synapse backs up the integration store before replacing the named entry.</p>
     <h3>The tools do not appear after connection</h3>
-    <p>Restart the developer tool so it relaunches user-level MCP servers. Confirm the stored command exists and runs <code>synaps mcp</code> without printing shell startup text to stdout.</p>
+    <p>Restart the developer tool so it relaunches user-level MCP servers. Confirm the stored command exists and runs <code>synapse mcp</code> without printing shell startup text to stdout.</p>
     <h3>Setup failed</h3>
-    <p>Read the app error for the external tool command that failed. Setup restores both the integration store and instruction file on failure, leaving <code>.synapsbackup</code> recovery copies beside changed existing files.</p>
+    <p>Read the app error for the external tool command that failed. Setup restores both the integration store and instruction file on failure, leaving <code>.synapsebackup</code> recovery copies beside changed existing files.</p>
 
     <h2 id="scopes">Scopes and secrets</h2>
     <h3><code>vault scope is not ready</code></h3>
-    <p>Run <code>synaps status .</code>. Approve pending or changed files with <code>synaps allow</code> only after inspecting them. Fix invalid YAML and unknown <code>vault.name</code> references before trying either shell mode again.</p>
+    <p>Run <code>synapse status .</code>. Approve pending or changed files with <code>synapse allow</code> only after inspecting them. Fix invalid YAML and unknown <code>vault.name</code> references before trying either shell mode again.</p>
     <h3>The shell hook does not activate</h3>
-    <p>Open Settings and check <strong>Shell environments</strong>. Enable or repair the detected hook, then open a new terminal. Run <code>synaps status .</code>; it should report the current shell hook and ambient state as ready. Approve the closest scope with <code>synaps allow</code>. Global mappings alone never activate ambient mode.</p>
+    <p>Open Settings and check <strong>Shell environments</strong>. Enable or repair the detected hook, then open a new terminal. Run <code>synapse status .</code>; it should report the current shell hook and ambient state as ready. Approve the closest scope with <code>synapse allow</code>. Global mappings alone never activate ambient mode.</p>
     <h3>Settings reports an incomplete or duplicate hook block</h3>
-    <p>Synaps refuses to guess which startup-file content it owns. Open the path shown in Settings, reduce the <code># synaps:shell:begin</code> and <code># synaps:shell:end</code> markers to one complete pair or remove that marked block, then return to Settings and enable the hook again.</p>
+    <p>Synapse refuses to guess which startup-file content it owns. Open the path shown in Settings, reduce the <code># synapse:shell:begin</code> and <code># synapse:shell:end</code> markers to one complete pair or remove that marked block, then return to Settings and enable the hook again.</p>
     <h3>An ambient value remains after leaving</h3>
-    <p>Press Enter once so the prompt hook reevaluates the directory. If the name existed before activation, Synaps deliberately restores that original value. Run <code>synaps status .</code> to distinguish a restored value from an active scope.</p>
+    <p>Press Enter once so the prompt hook reevaluates the directory. If the name existed before activation, Synapse deliberately restores that original value. Run <code>synapse status .</code> to distinguish a restored value from an active scope.</p>
     <h3>A narrower mapping does not apply</h3>
     <p>Check every ancestor scope. A broader <code>deny</code> permanently blocks that environment name for narrower scopes. Also confirm the nested file itself is approved and the command’s working directory is below it.</p>
     <h3>Keychain access fails</h3>
     <p>Unlock the login Keychain and retry from an interactive user session. If a label exists but its item was removed externally, set the secret again. If the credential itself may be invalid, rotate it at its issuer before storing the replacement.</p>
     <h3>The child sees a value but MCP does not</h3>
-    <p>This is expected. MCP reports only names and trust state. Values are read from Keychain only for <code>synaps run -- &lt;command&gt;</code> or while an installed shell hook activates an approved directory.</p>
+    <p>This is expected. MCP reports only names and trust state. Values are read from Keychain only for <code>synapse run -- &lt;command&gt;</code> or while an installed shell hook activates an approved directory.</p>
 
     <h2 id="database">Memory and database</h2>
     <h3>Recall returns too little content</h3>
-    <p>Run <code>synaps settings show</code>. Switch to Balanced or Full if Lean is too small. Search with concrete words present in the stored body and inspect the exact entry through <code>synaps memory show &lt;id&gt;</code>.</p>
+    <p>Run <code>synapse settings show</code>. Switch to Balanced or Full if Lean is too small. Search with concrete words present in the stored body and inspect the exact entry through <code>synapse memory show &lt;id&gt;</code>.</p>
     <h3>A stored memory is wrong</h3>
     <p>Edit or delete the original. Do not add another contradictory entry. Export a snapshot before a large cleanup.</p>
     <h3>Integrity check fails</h3>
     <p>Stop using the affected database. Do not overwrite it. Preserve the whole data directory, locate the newest known-good export or automatic backup, and follow the restore procedure. A failed check is a data-recovery event, not a migration prompt.</p>
 
     <h2 id="restore">Restore</h2>
-    <h3>Restore says Synaps is using the database</h3>
-    <p>Quit the desktop app and close every developer-tool session connected to the MCP server. Confirm no <code>synaps mcp</code> process remains, then retry. The refusal proves the exclusive lifecycle guard is working.</p>
+    <h3>Restore says Synapse is using the database</h3>
+    <p>Quit the desktop app and close every developer-tool session connected to the MCP server. Confirm no <code>synapse mcp</code> process remains, then retry. The refusal proves the exclusive lifecycle guard is working.</p>
     <h3>The backup version is unsupported</h3>
-    <p>The source schema must match the current release. Keep the source unchanged. Open it first with the Synaps version that created it, let that version migrate normally if appropriate, export a fresh snapshot, then restore that compatible export with the current app.</p>
+    <p>The source schema must match the current release. Keep the source unchanged. Open it first with the Synapse version that created it, let that version migrate normally if appropriate, export a fresh snapshot, then restore that compatible export with the current app.</p>
     <h3>Secrets are missing after moving to another Mac</h3>
-    <p>Database exports do not contain Keychain values. Recreate each value with <code>synaps secret set</code> on the destination Mac. Existing vault labels and references in the restored database tell you which entries are expected.</p>
+    <p>Database exports do not contain Keychain values. Recreate each value with <code>synapse secret set</code> on the destination Mac. Existing vault labels and references in the restored database tell you which entries are expected.</p>
   
     </main>
     <aside class="ontoc" aria-label="On this page">
@@ -159,8 +159,8 @@ synaps settings show</code></pre>
   
   <footer class="footer">
     <div>
-      <a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">Synaps</a>
-      <p>Local memory and scoped credentials for developer tools.</p>
+      <a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">Synapse</a>
+      <p>Project memory and scoped credentials, kept on your Mac.</p>
     </div>
     <nav aria-label="Footer">
       <a href="../../docs/">Documentation</a>
@@ -168,7 +168,7 @@ synaps settings show</code></pre>
       <a href="https://github.com/wess/synapse">Source</a>
       <a href="https://github.com/wess/synapse/releases">Releases</a>
     </nav>
-    <p class="footerfine">Local-first. No account required. macOS 13+ beta.</p>
+    <p class="footerfine">No account required. Apple silicon · macOS 13+.</p>
   </footer>
 </body>
 </html>

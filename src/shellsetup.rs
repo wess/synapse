@@ -3,8 +3,8 @@ use anyhow::{Context, Result};
 use std::fs;
 use std::path::{Path, PathBuf};
 
-const START: &str = "# synaps:shell:begin";
-const END: &str = "# synaps:shell:end";
+const START: &str = "# synapse:shell:begin";
+const END: &str = "# synapse:shell:end";
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum IntegrationState {
@@ -39,7 +39,7 @@ fn installat(shell: Shell, path: PathBuf, command: &Path) -> Result<Integration>
     let current = read(&path)?;
     let block = managed(shell, command)?;
     let content = merge(&current, &block)
-        .with_context(|| format!("could not update the Synaps block in {}", path.display()))?;
+        .with_context(|| format!("could not update the Synapse block in {}", path.display()))?;
     crate::files::write(&path, &content)
         .with_context(|| format!("could not install the shell hook in {}", path.display()))?;
     inspect(shell, path, command)
@@ -48,7 +48,7 @@ fn installat(shell: Shell, path: PathBuf, command: &Path) -> Result<Integration>
 fn removeat(shell: Shell, path: PathBuf, command: &Path) -> Result<Integration> {
     let current = read(&path)?;
     let content = strip(&current)
-        .with_context(|| format!("could not remove the Synaps block in {}", path.display()))?;
+        .with_context(|| format!("could not remove the Synapse block in {}", path.display()))?;
     if content != current {
         crate::files::write(&path, &content)
             .with_context(|| format!("could not remove the shell hook from {}", path.display()))?;
@@ -85,7 +85,7 @@ fn target() -> Result<(Shell, PathBuf)> {
 fn inspect(shell: Shell, path: PathBuf, command: &Path) -> Result<Integration> {
     let current = read(&path)?;
     let range = managedrange(&current)
-        .with_context(|| format!("could not inspect the Synaps block in {}", path.display()))?;
+        .with_context(|| format!("could not inspect the Synapse block in {}", path.display()))?;
     let state = match range {
         None => IntegrationState::Missing,
         Some((start, end)) if current[start..end] == managed(shell, command)? => {
@@ -118,13 +118,13 @@ fn managed(shell: Shell, command: &Path) -> Result<String> {
     };
     let setup = match shell {
         Shell::Bash | Shell::Zsh => format!(
-            "eval \"$(env SYNAPS_SHELL_COMMAND={quoted} {quoted} hook {})\"",
+            "eval \"$(env SYNAPSE_SHELL_COMMAND={quoted} {quoted} hook {})\"",
             shellname(shell)
         ),
-        Shell::Fish => format!("env SYNAPS_SHELL_COMMAND={quoted} {quoted} hook fish | source"),
+        Shell::Fish => format!("env SYNAPSE_SHELL_COMMAND={quoted} {quoted} hook fish | source"),
     };
     Ok(format!(
-        "{START}\n# Managed by Synaps Settings. Changes inside this block may be replaced.\n{setup}\n{END}"
+        "{START}\n# Managed by Synapse Settings. Changes inside this block may be replaced.\n{setup}\n{END}"
     ))
 }
 
@@ -167,7 +167,7 @@ fn managedrange(content: &str) -> Result<Option<(usize, usize)>> {
         ([], []) => Ok(None),
         ([(start, _)], [(end, _)]) if end > start => Ok(Some((*start, *end + END.len()))),
         _ => anyhow::bail!(
-            "the shell file contains an incomplete or duplicate Synaps hook block; repair the markers manually before using Settings"
+            "the shell file contains an incomplete or duplicate Synapse hook block; repair the markers manually before using Settings"
         ),
     }
 }
@@ -194,7 +194,7 @@ mod tests {
 
     #[test]
     fn install_is_idempotent_and_preserves_user_content() {
-        let command = Path::new("/Applications/Synaps App/synaps");
+        let command = Path::new("/Applications/Synapse App/synapse");
         let block = managed(Shell::Zsh, command).unwrap();
         let original = "export EDITOR=vim\n";
         let first = merge(original, &block).unwrap();
@@ -202,12 +202,12 @@ mod tests {
 
         assert_eq!(first, second);
         assert!(first.starts_with(original));
-        assert!(first.contains("'/Applications/Synaps App/synaps' hook zsh"));
+        assert!(first.contains("'/Applications/Synapse App/synapse' hook zsh"));
     }
 
     #[test]
     fn modified_managed_block_is_repaired_without_touching_its_neighbors() {
-        let block = managed(Shell::Bash, Path::new("/new/synaps")).unwrap();
+        let block = managed(Shell::Bash, Path::new("/new/synapse")).unwrap();
         let current = format!("before\n{START}\nold\n{END}\nafter\n");
         let merged = merge(&current, &block).unwrap();
 
@@ -218,7 +218,7 @@ mod tests {
 
     #[test]
     fn removal_keeps_content_outside_the_managed_block() {
-        let block = managed(Shell::Fish, Path::new("/opt/synaps")).unwrap();
+        let block = managed(Shell::Fish, Path::new("/opt/synapse")).unwrap();
         let current = format!("set -gx EDITOR vim\n\n{block}\nset -gx PAGER less\n");
         let stripped = strip(&current).unwrap();
 
@@ -237,13 +237,13 @@ mod tests {
     fn file_install_and_remove_are_backed_up_and_detected() {
         let directory = tempfile::tempdir().unwrap();
         let path = directory.path().join("zshrc");
-        let command = Path::new("/opt/synaps");
+        let command = Path::new("/opt/synapse");
         fs::write(&path, "export EDITOR=vim\n").unwrap();
 
         let installed = installat(Shell::Zsh, path.clone(), command).unwrap();
         assert_eq!(installed.state, IntegrationState::Installed);
         assert_eq!(
-            fs::read_to_string(directory.path().join("zshrc.synapsbackup")).unwrap(),
+            fs::read_to_string(directory.path().join("zshrc.synapsebackup")).unwrap(),
             "export EDITOR=vim\n"
         );
 

@@ -12,19 +12,19 @@ pub enum InstallStatus {
 }
 
 pub fn destination() -> Result<PathBuf> {
-    if let Some(path) = std::env::var_os("SYNAPS_BIN").filter(|value| !value.is_empty()) {
+    if let Some(path) = std::env::var_os("SYNAPSE_BIN").filter(|value| !value.is_empty()) {
         return Ok(PathBuf::from(path));
     }
     #[cfg(target_os = "windows")]
     {
-        return Ok(crate::files::data()?.join("bin").join("synaps.exe"));
+        return Ok(crate::files::data()?.join("bin").join("synapse.exe"));
     }
     #[cfg(not(target_os = "windows"))]
     {
         Ok(crate::files::home()?
             .join(".local")
             .join("bin")
-            .join("synaps"))
+            .join("synapse"))
     }
 }
 
@@ -65,7 +65,7 @@ pub fn install() -> Result<PathBuf> {
     match status()? {
         InstallStatus::Conflict(path) => {
             anyhow::bail!(
-                "{} already exists and is not this Synaps executable",
+                "{} already exists and is not this Synapse executable",
                 path.display()
             )
         }
@@ -98,7 +98,7 @@ fn installtarget(executable: &Path, target: &Path) -> Result<()> {
     if bundled(executable) {
         anyhow::ensure!(
             !executable.starts_with("/Volumes"),
-            "move Synaps out of the mounted image before installing its CLI"
+            "move Synapse out of the mounted image before installing its CLI"
         );
         crate::files::write(target, &launcher(executable))?;
         executablepermissions(target)?;
@@ -159,7 +159,7 @@ fn receiptpath(path: &Path) -> PathBuf {
         .file_name()
         .map(|value| value.to_os_string())
         .unwrap_or_default();
-    name.push(".synapsreceipt");
+    name.push(".synapsereceipt");
     path.with_file_name(name)
 }
 
@@ -194,11 +194,11 @@ mod tests {
             .join("quoted'.app")
             .join("contents")
             .join("macos")
-            .join("synaps");
+            .join("synapse");
         fs::create_dir_all(executable.parent().unwrap()).unwrap();
         fs::write(&executable, "#!/bin/sh\nprintf 'launched %s\\n' \"$1\"\n").unwrap();
         fs::set_permissions(&executable, fs::Permissions::from_mode(0o755)).unwrap();
-        let target = directory.path().join("bin").join("synaps");
+        let target = directory.path().join("bin").join("synapse");
 
         installtarget(&executable, &target).unwrap();
 

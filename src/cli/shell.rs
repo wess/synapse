@@ -6,8 +6,8 @@ use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
 pub fn hook(arguments: &[OsString]) -> Result<Outcome> {
-    let shell = shellarg(arguments, "usage: synaps hook <zsh|bash|fish>")?;
-    let script = std::env::var("SYNAPS_SHELL_COMMAND")
+    let shell = shellarg(arguments, "usage: synapse hook <zsh|bash|fish>")?;
+    let script = std::env::var("SYNAPSE_SHELL_COMMAND")
         .ok()
         .filter(|command| !command.is_empty())
         .map(|command| crate::vault::shellhookcommand(shell, &command))
@@ -17,10 +17,10 @@ pub fn hook(arguments: &[OsString]) -> Result<Outcome> {
 }
 
 pub fn environment(arguments: &[OsString]) -> Result<Outcome> {
-    let shell = shellarg(arguments, "usage: synaps export <zsh|bash|fish>")?;
-    let previous = std::env::var("SYNAPS_SHELL_KEYS").unwrap_or_default();
+    let shell = shellarg(arguments, "usage: synapse export <zsh|bash|fish>")?;
+    let previous = std::env::var("SYNAPSE_SHELL_KEYS").unwrap_or_default();
     let script = prepare(shell, &previous).unwrap_or_else(|error| {
-        eprintln!("synaps: ambient activation paused: {error:#}");
+        eprintln!("synapse: ambient activation paused: {error:#}");
         crate::vault::shellclear(shell, &previous, "error")
     });
     print!("{script}");
@@ -47,7 +47,7 @@ fn prepare(shell: Shell, previous: &str) -> Result<String> {
 fn approval(arguments: &[OsString], allowed: bool) -> Result<Outcome> {
     anyhow::ensure!(
         arguments.len() <= 1,
-        "usage: synaps {} [folder]",
+        "usage: synapse {} [folder]",
         if allowed { "allow" } else { "deny" }
     );
     let folder = arguments
@@ -75,7 +75,7 @@ fn scopepath(path: &Path) -> Result<PathBuf> {
     }
     crate::vault::discover(path)?
         .pop()
-        .context("no .synaps.yaml found here or in a parent folder")
+        .context("no .synapse.yaml found here or in a parent folder")
 }
 
 fn shellarg(arguments: &[OsString], usage: &str) -> Result<Shell> {

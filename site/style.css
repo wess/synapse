@@ -733,7 +733,7 @@ a {
   color: var(--cobaltsoft);
   font-family: var(--utility);
   font-size: var(--textutility);
-  content: ".synaps.yaml  •  approved";
+  content: ".synapse.yaml  •  approved";
   text-transform: uppercase;
 }
 

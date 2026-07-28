@@ -32,7 +32,7 @@ pub async fn open(path: &Path) -> Result<Opened> {
 }
 
 async fn connect(path: &Path) -> Result<SqlitePool> {
-    let options = SqliteConnectOptions::from_str("sqlite://synaps")?
+    let options = SqliteConnectOptions::from_str("sqlite://synapse")?
         .filename(path)
         .create_if_missing(true)
         .foreign_keys(true)
@@ -46,7 +46,7 @@ async fn connect(path: &Path) -> Result<SqlitePool> {
 }
 
 async fn readonly(path: &Path) -> Result<SqlitePool> {
-    let options = SqliteConnectOptions::from_str("sqlite://synaps")?
+    let options = SqliteConnectOptions::from_str("sqlite://synapse")?
         .filename(path)
         .read_only(true)
         .foreign_keys(true)

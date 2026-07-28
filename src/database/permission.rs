@@ -9,7 +9,7 @@ pub fn prepare(path: &Path) -> Result<bool> {
         let created = !parent.exists();
         fs::create_dir_all(parent)
             .with_context(|| format!("could not create {}", parent.display()))?;
-        if created || parent.file_name().is_some_and(|name| name == "synaps") {
+        if created || parent.file_name().is_some_and(|name| name == "synapse") {
             securedirectory(parent)?;
         }
     }
@@ -42,7 +42,7 @@ pub fn sharedlock(path: &Path) -> Result<File> {
 pub fn exclusivelock(path: &Path) -> Result<File> {
     let file = lockfile(path)?;
     FileExt::try_lock_exclusive(&file).context(
-        "Synaps is using this database; close the app and connected tools before restoring",
+        "Synapse is using this database; close the app and connected tools before restoring",
     )?;
     Ok(file)
 }

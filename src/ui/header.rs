@@ -41,7 +41,7 @@ pub fn render(
                         .text_color(guise::rgb(255, 255, 255))
                         .child(Icon::new(IconName::BrainCircuit).size(Size::Md)),
                 )
-                .child(Title::new("Synaps").order(3))
+                .child(Title::new("Synapse").order(3))
                 .when_some(appmenu, |element, menu| {
                     element.child(div().ml(px(16.0)).child(menu))
                 }),

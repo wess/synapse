@@ -18,7 +18,7 @@ pub fn run() {
                 WindowOptions {
                     window_bounds: Some(WindowBounds::Windowed(bounds)),
                     titlebar: Some(TitlebarOptions {
-                        title: Some(SharedString::new_static("Synaps")),
+                        title: Some(SharedString::new_static("Synapse")),
                         ..Default::default()
                     }),
                     ..Default::default()
@@ -35,7 +35,7 @@ pub fn run() {
                     cx.new(Dashboard::new)
                 },
             )
-            .expect("open Synaps window");
+            .expect("open Synapse window");
         crate::ui::menu::configure(window, cx);
 
         #[cfg(target_os = "macos")]
@@ -44,7 +44,7 @@ pub fn run() {
             use gpui::Task;
 
             let (sender, receiver) = async_channel::unbounded();
-            let statusbar = statusbar::install(sender).expect("create Synaps status item");
+            let statusbar = statusbar::install(sender).expect("create Synapse status item");
             cx.set_global(statusbar);
             let data = crate::files::data().ok();
             let task: Task<()> = cx.spawn(async move |cx| {

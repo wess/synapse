@@ -88,9 +88,9 @@ impl Dashboard {
                 .placeholder("project path or topic")
                 .value(selected.map(|memory| memory.source.as_str()).unwrap_or(""))
         });
-        let document = std::env::var_os("SYNAPS_DOCUMENT")
+        let document = std::env::var_os("SYNAPSE_DOCUMENT")
             .map(PathBuf::from)
-            .and_then(|path| Self::loaddocument("Synaps".to_owned(), path, cx).ok());
+            .and_then(|path| Self::loaddocument("Synapse".to_owned(), path, cx).ok());
         let appmenu = crate::ui::menu::bar(cx);
         let vaultname = cx.new(|cx| TextInput::new(cx).label("New vault").placeholder("work"));
         let secretname = cx.new(|cx| TextInput::new(cx).label("Name").placeholder("database"));
@@ -619,10 +619,10 @@ impl Dashboard {
             return;
         };
         let result = connectionserver()
-            .ok_or_else(|| anyhow::anyhow!("could not locate the Synaps MCP executable"))
+            .ok_or_else(|| anyhow::anyhow!("could not locate the Synapse MCP executable"))
             .and_then(|server| agent::setup(&row.agent, &row.detection, &server));
         self.notice = match result {
-            Ok(()) => Notice::Success(format!("{} is connected to Synaps.", row.agent.name)),
+            Ok(()) => Notice::Success(format!("{} is connected to Synapse.", row.agent.name)),
             Err(error) => Notice::Error(format!("Could not connect {}: {error}", row.agent.name)),
         };
         self.rows = loadrows();
@@ -753,7 +753,7 @@ impl Dashboard {
         else {
             return true;
         };
-        document.error = Some("Save or discard these changes before quitting Synaps.".to_owned());
+        document.error = Some("Save or discard these changes before quitting Synapse.".to_owned());
         window.activate_window();
         cx.notify();
         false
@@ -766,7 +766,7 @@ impl Dashboard {
             .map(files::reveal)
             .unwrap_or_else(|| Err(anyhow::anyhow!("the data directory is unavailable")));
         self.notice = match result {
-            Ok(()) => Notice::Success("Opened the local Synaps data folder.".to_owned()),
+            Ok(()) => Notice::Success("Opened the local Synapse data folder.".to_owned()),
             Err(error) => Notice::Error(format!("Could not open the data folder: {error}")),
         };
         cx.notify();
@@ -998,7 +998,7 @@ impl Render for Dashboard {
                     StatusBar::new()
                         .height(36.0)
                         .left(Text::new("Keychain · values protected").size(Size::Xs))
-                        .right(Text::new("synaps run -- <command>").size(Size::Xs)),
+                        .right(Text::new("synapse run -- <command>").size(Size::Xs)),
                 )
                 .into_any_element();
         }
@@ -1006,7 +1006,7 @@ impl Render for Dashboard {
         shell
             .child(
                 div()
-                    .id("synapsmain")
+                    .id("synapsemain")
                     .flex_1()
                     .min_h(px(0.0))
                     .overflow_y_scroll()
@@ -1116,7 +1116,7 @@ fn connectionserver() -> Option<PathBuf> {
 }
 
 fn initialpage() -> Page {
-    match std::env::var("SYNAPS_PAGE").as_deref() {
+    match std::env::var("SYNAPSE_PAGE").as_deref() {
         Ok("memory") => Page::Memories,
         Ok("vaults") => Page::Vaults,
         Ok("settings") => Page::Settings,

@@ -104,7 +104,7 @@ pub struct RememberResponse {
 pub struct RecallRequest {
     /// Words or phrase describing the memory needed.
     pub query: String,
-    /// Requested match count. The active Synaps optimization setting may lower it.
+    /// Requested match count. The active Synapse optimization setting may lower it.
     pub limit: Option<u32>,
 }
 

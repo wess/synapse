@@ -21,46 +21,46 @@ export const curate: Page = {
     <ol class="steps">
       <li>
         <h3 id="add">Add focused entries</h3>
-        ${code("shell", `printf '%s\n' 'Tutorial apps use port 4100.' | synaps memory add synapstutorial
-printf '%s\n' 'Tutorial commands use Bun.' | synaps memory add synapstutorial
-printf '%s\n' 'Tutorial backups go in the backups folder.' | synaps memory add synapstutorial`)}
+        ${code("shell", `printf '%s\n' 'Tutorial apps use port 4100.' | synapse memory add synapsetutorial
+printf '%s\n' 'Tutorial commands use Bun.' | synapse memory add synapsetutorial
+printf '%s\n' 'Tutorial backups go in the backups folder.' | synapse memory add synapsetutorial`)}
         <p>Write down the three IDs. Each entry contains one durable idea, which makes later recall easier to interpret and correct.</p>
       </li>
       <li>
         <h3 id="search">Search and inspect</h3>
-        ${code("shell", `synaps memory list tutorial
-synaps memory list "Tutorial Bun" --json
-synaps memory show <bunid>`)}
+        ${code("shell", `synapse memory list tutorial
+synapse memory list "Tutorial Bun" --json
+synapse memory show <bunid>`)}
         <p>Text output is optimized for scanning. JSON output includes exact bodies, sources, IDs, and timestamps for local scripts.</p>
       </li>
       <li>
         <h3 id="correct">Correct the source in place</h3>
         <p>Suppose the runtime convention becomes more precise. Replace the original instead of adding a contradiction:</p>
         ${code("shell", `printf '%s\n' 'Tutorial commands use Bun unless a task requires another runtime.' \\
-  | synaps memory edit <bunid> synapstutorial
-synaps memory show <bunid>`)}
+  | synapse memory edit <bunid> synapsetutorial
+synapse memory show <bunid>`)}
         <p>The ID remains stable and future recall returns the correction.</p>
       </li>
       <li>
         <h3 id="budgets">Compare response budgets</h3>
-        ${code("shell", `synaps settings show
-synaps settings optimize full`)}
-        <p>Ask a connected tool to recall <code>synapstutorial</code> and inspect the formatting and number of results. Then switch:</p>
-        ${code("shell", `synaps settings optimize lean`)}
+        ${code("shell", `synapse settings show
+synapse settings optimize full`)}
+        <p>Ask a connected tool to recall <code>synapsetutorial</code> and inspect the formatting and number of results. Then switch:</p>
+        ${code("shell", `synapse settings optimize lean`)}
         <p>Recall the same query. Lean returns at most four compacted entries within 2,800 characters. The stored bodies visible through <code>memory show</code> remain unchanged.</p>
       </li>
       <li>
         <h3>Restore your preferred setting</h3>
-        ${code("shell", `synaps settings optimize balanced`)}
+        ${code("shell", `synapse settings optimize balanced`)}
         <p>Balanced is the default: up to eight results and 6,000 characters, with prose whitespace compaction and exact duplicate removal.</p>
       </li>
     </ol>
 
     <h2 id="cleanup">Delete only the tutorial entries</h2>
-    ${code("shell", `synaps memory delete <portid> --confirm
-synaps memory delete <bunid> --confirm
-synaps memory delete <backupid> --confirm
-synaps memory list synapstutorial`)}
+    ${code("shell", `synapse memory delete <portid> --confirm
+synapse memory delete <bunid> --confirm
+synapse memory delete <backupid> --confirm
+synapse memory list synapsetutorial`)}
     <p>The final search should be empty unless another tutorial created the same source. Use the Memories screen for a visual review before deleting any additional record.</p>
   `,
 };

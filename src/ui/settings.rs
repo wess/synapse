@@ -68,7 +68,7 @@ pub fn render(view: View, actions: Actions, cx: &App) -> AnyElement {
                         .child(Title::new("Settings").order(2))
                         .child(
                             Text::new(
-                                "Tune what Synaps sends, how it looks, and how it integrates with your shell.",
+                                "Tune what Synapse sends, how it looks, and how it integrates with your shell.",
                             )
                             .size(Size::Sm)
                             .dimmed(),
@@ -356,20 +356,20 @@ fn shellmodes(
                 .gap(px(24.0))
                 .child(shellmode(
                     "Command scoped",
-                    "synaps run -- cargo test",
+                    "synapse run -- cargo test",
                     "Reads Keychain values for one child process. Your current shell remains unchanged.",
                     border,
                 ))
                 .child(shellmode(
                     "Ambient directory",
-                    "synaps allow",
+                    "synapse allow",
                     "Once enabled above, loads an approved scope on entry, unloads it on exit, and restores previous shell values.",
                     border,
                 )),
         )
         .child(
             Text::new(
-                "Ambient values are available to every process launched from that shell. Leave the directory or run synaps deny to unload them.",
+                "Ambient values are available to every process launched from that shell. Leave the directory or run synapse deny to unload them.",
             )
             .size(Size::Xs)
             .dimmed(),
@@ -406,7 +406,7 @@ fn shellcontrol(
                     )
                     .child(
                         Text::new(error.unwrap_or_else(|| {
-                            "Synaps could not detect a supported default shell.".to_owned()
+                            "Synapse could not detect a supported default shell.".to_owned()
                         }))
                         .size(Size::Xs)
                         .dimmed(),

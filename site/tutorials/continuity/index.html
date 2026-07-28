@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Carry one decision between tools — Synaps</title>
+  <title>Carry one decision between tools — Synapse</title>
   <meta name="description" content="Make a real project convention durable in one session, recover it before work in another, and correct it from the source of truth.">
   <meta name="theme-color" content="#0a43c8">
   <meta property="og:title" content="Carry one decision between tools">
@@ -22,16 +22,16 @@
   
   <a class="skip" href="#content">Skip to content</a>
   <header class="topbar">
-    <a class="wordmark" href="../../" aria-label="Synaps home">
+    <a class="wordmark" href="../../" aria-label="Synapse home">
       <img src="../../icon.svg" width="30" height="30" alt="">
-      <span>Synaps</span>
+      <span>Synapse</span>
     </a>
     <button class="navtoggle" type="button" aria-expanded="false" aria-controls="topnav">Menu</button>
     <nav id="topnav" aria-label="Primary">
       <a href="../../docs/">Docs</a>
       <a href="../../tutorials/" aria-current="page">Tutorials</a>
       <a href="https://github.com/wess/synapse">GitHub <span aria-hidden="true">↗</span></a>
-      <a class="navdownload" href="https://github.com/wess/synapse/releases/latest">Download</a>
+      <a class="navdownload" href="https://github.com/wess/synapse/releases/latest/download/synapse.zip">Download</a>
     </nav>
   </header>
   
@@ -93,12 +93,12 @@
       <li>
         <h3 id="remember">Confirm and remember it</h3>
         <p>In the first connected tool, establish the decision explicitly, then ask it to remember the confirmed result with the repository name as the source. Example:</p>
-        <blockquote>We have confirmed that this repository uses Bun for JavaScript tasks. Remember that durable convention with source synapstutorial.</blockquote>
+        <blockquote>We have confirmed that this repository uses Bun for JavaScript tasks. Remember that durable convention with source synapsetutorial.</blockquote>
         <p>The tool should call <code>remember</code> once and return an ID. If it stores a transcript instead of the concise decision, correct the entry in the next step.</p>
       </li>
       <li>
         <h3>Close the session</h3>
-        <p>End the first tool session completely. This rules out conversational context and leaves the local Synaps database as the continuity layer.</p>
+        <p>End the first tool session completely. This rules out conversational context and leaves the local Synapse database as the continuity layer.</p>
       </li>
       <li>
         <h3 id="recall">Recall from another tool</h3>
@@ -114,8 +114,8 @@
       <span>shell</span>
       <button type="button" data-copy aria-live="polite">Copy</button>
     </div>
-    <pre><code>synaps memory list &quot;Bun JavaScript&quot;
-synaps memory show &lt;id&gt;</code></pre>
+    <pre><code>synapse memory list &quot;Bun JavaScript&quot;
+synapse memory show &lt;id&gt;</code></pre>
   </div>
         <p>Open the same record in the Memories screen. Confirm that the exact text is concise, stable, and correctly sourced. If not, replace it:</p>
         
@@ -126,7 +126,7 @@ synaps memory show &lt;id&gt;</code></pre>
     </div>
     <pre><code>printf &#039;%s
 &#039; &#039;Use Bun for JavaScript tasks in this repository.&#039; \
-  | synaps memory edit &lt;id&gt; synapstutorial</code></pre>
+  | synapse memory edit &lt;id&gt; synapsetutorial</code></pre>
   </div>
       </li>
       <li>
@@ -136,7 +136,7 @@ synaps memory show &lt;id&gt;</code></pre>
     </ol>
 
     <h2>Keep or clean up</h2>
-    <p>If the convention is real, keep it. If it was tutorial-only, remove the exact ID with <code>synaps memory delete &lt;id&gt; --confirm</code>. Avoid a full wipe unless you intend to remove every memory.</p>
+    <p>If the convention is real, keep it. If it was tutorial-only, remove the exact ID with <code>synapse memory delete &lt;id&gt; --confirm</code>. Avoid a full wipe unless you intend to remove every memory.</p>
   
     </main>
     <aside class="ontoc" aria-label="On this page">
@@ -147,8 +147,8 @@ synaps memory show &lt;id&gt;</code></pre>
   
   <footer class="footer">
     <div>
-      <a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">Synaps</a>
-      <p>Local memory and scoped credentials for developer tools.</p>
+      <a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">Synapse</a>
+      <p>Project memory and scoped credentials, kept on your Mac.</p>
     </div>
     <nav aria-label="Footer">
       <a href="../../docs/">Documentation</a>
@@ -156,7 +156,7 @@ synaps memory show &lt;id&gt;</code></pre>
       <a href="https://github.com/wess/synapse">Source</a>
       <a href="https://github.com/wess/synapse/releases">Releases</a>
     </nav>
-    <p class="footerfine">Local-first. No account required. macOS 13+ beta.</p>
+    <p class="footerfine">No account required. Apple silicon · macOS 13+.</p>
   </footer>
 </body>
 </html>

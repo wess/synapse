@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 pub fn home() -> Result<PathBuf> {
-    if let Some(path) = std::env::var_os("SYNAPS_HOME").filter(|value| !value.is_empty()) {
+    if let Some(path) = std::env::var_os("SYNAPSE_HOME").filter(|value| !value.is_empty()) {
         return Ok(PathBuf::from(path));
     }
     BaseDirs::new()
@@ -15,11 +15,11 @@ pub fn home() -> Result<PathBuf> {
 }
 
 pub fn data() -> Result<PathBuf> {
-    if let Some(path) = std::env::var_os("SYNAPS_DATA").filter(|value| !value.is_empty()) {
+    if let Some(path) = std::env::var_os("SYNAPSE_DATA").filter(|value| !value.is_empty()) {
         return Ok(PathBuf::from(path));
     }
     BaseDirs::new()
-        .map(|dirs| dirs.data_local_dir().join("synaps"))
+        .map(|dirs| dirs.data_local_dir().join("synapse"))
         .context("could not locate the application data directory")
 }
 
@@ -92,7 +92,7 @@ fn backuppath(path: &Path) -> PathBuf {
         .file_name()
         .map(|value| value.to_os_string())
         .unwrap_or_default();
-    name.push(".synapsbackup");
+    name.push(".synapsebackup");
     path.with_file_name(name)
 }
 
@@ -202,7 +202,7 @@ mod tests {
         );
         assert_eq!(fs::read_to_string(target).unwrap(), "version = 2\n");
         assert_eq!(
-            fs::read_to_string(directory.path().join("config.toml.synapsbackup")).unwrap(),
+            fs::read_to_string(directory.path().join("config.toml.synapsebackup")).unwrap(),
             "version = 1\n"
         );
     }

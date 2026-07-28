@@ -48,7 +48,7 @@ impl MemoryServer {
     }
 
     #[tool(
-        description = "List active Synaps vault variable names and scope trust status for a folder. Secret values are never returned."
+        description = "List active Synapse vault variable names and scope trust status for a folder. Secret values are never returned."
     )]
     async fn vaultstatus(
         &self,
@@ -57,7 +57,7 @@ impl MemoryServer {
         let path = request
             .path
             .map(std::path::PathBuf::from)
-            .or_else(|| std::env::var_os("SYNAPS_PROJECT_DIR").map(Into::into))
+            .or_else(|| std::env::var_os("SYNAPSE_PROJECT_DIR").map(Into::into))
             .or_else(|| std::env::current_dir().ok())
             .ok_or_else(|| "could not determine the project folder".to_owned())?;
         let resolved = crate::vault::resolve(&self.vaults, &path)
@@ -76,8 +76,8 @@ impl MemoryServer {
             scopes: resolved.scopes.into_iter().map(Into::into).collect(),
             warnings: resolved.warnings,
             ambient: ambient.to_owned(),
-            shell: std::env::var("SYNAPS_SHELL_ACTIVE").ok(),
-            note: "Values stay in Keychain. Use `synaps run -- <command>` for one child or an installed shell hook for an approved directory."
+            shell: std::env::var("SYNAPSE_SHELL_ACTIVE").ok(),
+            note: "Values stay in Keychain. Use `synapse run -- <command>` for one child or an installed shell hook for an approved directory."
                 .to_owned(),
         }))
     }
@@ -88,11 +88,11 @@ impl ServerHandler for MemoryServer {
     fn get_info(&self) -> ServerInfo {
         ServerInfo::new(ServerCapabilities::builder().enable_tools().build())
             .with_instructions(
-                "Synaps stores durable local memory and reports value-free vault scope status. Recall relevant context before making decisions and remember only confirmed information that will remain useful.",
+                "Synapse stores durable local memory and reports value-free vault scope status. Recall relevant context before making decisions and remember only confirmed information that will remain useful.",
             )
             .with_server_info(
-                Implementation::new("synaps", env!("CARGO_PKG_VERSION"))
-                    .with_title("Synaps")
+                Implementation::new("synapse", env!("CARGO_PKG_VERSION"))
+                    .with_title("Synapse")
                     .with_description("Local memory and scoped credential metadata"),
             )
     }

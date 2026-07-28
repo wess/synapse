@@ -4,7 +4,7 @@ use gpui::{AnyElement, App, ClickEvent, Window, actions, div, px};
 use guise::prelude::*;
 use std::path::PathBuf;
 
-actions!(synaps, [SaveDocument]);
+actions!(synapse, [SaveDocument]);
 
 #[derive(Clone)]
 pub struct Document {

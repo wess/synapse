@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>MCP tool reference — Synaps</title>
+  <title>MCP tool reference — Synapse</title>
   <meta name="description" content="Run the local stdio server and understand the exact request, response, and value boundary of every exposed tool.">
   <meta name="theme-color" content="#0a43c8">
   <meta property="og:title" content="MCP tool reference">
@@ -22,16 +22,16 @@
   
   <a class="skip" href="#content">Skip to content</a>
   <header class="topbar">
-    <a class="wordmark" href="../../" aria-label="Synaps home">
+    <a class="wordmark" href="../../" aria-label="Synapse home">
       <img src="../../icon.svg" width="30" height="30" alt="">
-      <span>Synaps</span>
+      <span>Synapse</span>
     </a>
     <button class="navtoggle" type="button" aria-expanded="false" aria-controls="topnav">Menu</button>
     <nav id="topnav" aria-label="Primary">
       <a href="../../docs/" aria-current="page">Docs</a>
       <a href="../../tutorials/">Tutorials</a>
       <a href="https://github.com/wess/synapse">GitHub <span aria-hidden="true">↗</span></a>
-      <a class="navdownload" href="https://github.com/wess/synapse/releases/latest">Download</a>
+      <a class="navdownload" href="https://github.com/wess/synapse/releases/latest/download/synapse.zip">Download</a>
     </nav>
   </header>
   
@@ -78,14 +78,14 @@
       </header>
       
     <h2 id="server">Server</h2>
-    <p>Synaps implements an MCP stdio server. A tool launches the same signed or installed executable with the <code>mcp</code> argument:</p>
+    <p>Synapse implements an MCP stdio server. A tool launches the same signed or installed executable with the <code>mcp</code> argument:</p>
     
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
       <button type="button" data-copy aria-live="polite">Copy</button>
     </div>
-    <pre><code>~/.local/bin/synaps mcp</code></pre>
+    <pre><code>~/.local/bin/synapse mcp</code></pre>
   </div>
     <p>The process uses stdin and stdout for protocol messages. Do not wrap it in a command that writes banners or shell setup output to stdout. The server opens the same local database as the desktop app and holds a shared lifecycle lock while connected.</p>
 
@@ -99,7 +99,7 @@
     </div>
     <pre><code>{
   &quot;content&quot;: &quot;Use small focused modules.&quot;,
-  &quot;source&quot;: &quot;synaps&quot;
+  &quot;source&quot;: &quot;synapse&quot;
 }</code></pre>
   </div>
     <table>
@@ -152,7 +152,7 @@
     {
       &quot;id&quot;: 24,
       &quot;body&quot;: &quot;Use small focused modules.&quot;,
-      &quot;source&quot;: &quot;synaps&quot;,
+      &quot;source&quot;: &quot;synapse&quot;,
       &quot;created&quot;: 1785250000
     }
   ]
@@ -171,7 +171,7 @@
   &quot;path&quot;: &quot;/Users/example/project&quot;
 }</code></pre>
   </div>
-    <p><code>path</code> is optional. Resolution falls back to <code>SYNAPS_PROJECT_DIR</code>, then the server process’s current directory.</p>
+    <p><code>path</code> is optional. Resolution falls back to <code>SYNAPSE_PROJECT_DIR</code>, then the server process’s current directory.</p>
     
   <div class="codeblock">
     <div class="codebar">
@@ -185,7 +185,7 @@
   &quot;shell&quot;: &quot;zsh&quot;,
   &quot;scopes&quot;: [
     {
-      &quot;path&quot;: &quot;/Users/example/project/.synaps.yaml&quot;,
+      &quot;path&quot;: &quot;/Users/example/project/.synapse.yaml&quot;,
       &quot;scope&quot;: &quot;project&quot;,
       &quot;trusted&quot;: true,
       &quot;changed&quot;: false,
@@ -195,7 +195,7 @@
     }
   ],
   &quot;warnings&quot;: [],
-  &quot;note&quot;: &quot;Values stay in Keychain. Use synaps run for one child or install the shell hook for an approved directory.&quot;
+  &quot;note&quot;: &quot;Values stay in Keychain. Use synapse run for one child or install the shell hook for an approved directory.&quot;
 }</code></pre>
   </div>
     
@@ -207,9 +207,9 @@
     <h2 id="behavior">Operational behavior</h2>
     <ul>
       <li>Tool errors are returned as readable strings. Protocol messages remain on stdio.</li>
-      <li>The server identifies itself as <code>synaps</code> using the application version and advertises tool capability only.</li>
+      <li>The server identifies itself as <code>synapse</code> using the application version and advertises tool capability only.</li>
       <li>Opening the database runs integrity and relationship checks, applies numbered migrations, and secures database permissions.</li>
-      <li>A running MCP process holds a shared database lock. <code>synaps data restore</code> requires an exclusive lock and therefore refuses while any connected server or the desktop app is using the database.</li>
+      <li>A running MCP process holds a shared database lock. <code>synapse data restore</code> requires an exclusive lock and therefore refuses while any connected server or the desktop app is using the database.</li>
       <li>Connected tools should recall before decisions that depend on project history and remember only stable confirmed context after it is established.</li>
     </ul>
   
@@ -222,8 +222,8 @@
   
   <footer class="footer">
     <div>
-      <a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">Synaps</a>
-      <p>Local memory and scoped credentials for developer tools.</p>
+      <a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">Synapse</a>
+      <p>Project memory and scoped credentials, kept on your Mac.</p>
     </div>
     <nav aria-label="Footer">
       <a href="../../docs/">Documentation</a>
@@ -231,7 +231,7 @@
       <a href="https://github.com/wess/synapse">Source</a>
       <a href="https://github.com/wess/synapse/releases">Releases</a>
     </nav>
-    <p class="footerfine">Local-first. No account required. macOS 13+ beta.</p>
+    <p class="footerfine">No account required. Apple silicon · macOS 13+.</p>
   </footer>
 </body>
 </html>

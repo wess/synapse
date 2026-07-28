@@ -5,11 +5,11 @@ use std::path::Path;
 use std::process::{Command, Output, Stdio};
 
 fn command(root: &Path) -> Command {
-    let mut command = Command::new(env!("CARGO_BIN_EXE_synaps"));
+    let mut command = Command::new(env!("CARGO_BIN_EXE_synapse"));
     command
-        .env("SYNAPS_HOME", root.join("home"))
-        .env("SYNAPS_DATA", root.join("data"))
-        .env("SYNAPS_BIN", root.join("bin").join("synaps"));
+        .env("SYNAPSE_HOME", root.join("home"))
+        .env("SYNAPSE_DATA", root.join("data"))
+        .env("SYNAPSE_BIN", root.join("bin").join("synapse"));
     command
 }
 
@@ -54,7 +54,7 @@ fn ambient_shell_mode_tracks_approval_changes_and_revocation() {
         &["export", "zsh"],
         None,
     ));
-    assert!(inactive.contains("__synaps_state='inactive'"));
+    assert!(inactive.contains("__synapse_state='inactive'"));
 
     success(run(
         root.path(),
@@ -70,14 +70,14 @@ fn ambient_shell_mode_tracks_approval_changes_and_revocation() {
         &["export", "zsh"],
         None,
     ));
-    assert!(active.contains("__synaps_state='active'"));
+    assert!(active.contains("__synapse_state='active'"));
     assert!(active.contains(&format!(
-        "__synaps_scope='{}'",
+        "__synapse_scope='{}'",
         project.canonicalize().unwrap().display()
     )));
 
     fs::write(
-        project.join(".synaps.yaml"),
+        project.join(".synapse.yaml"),
         "version: 1\nscope: project\nenv: {}\ndeny: []\n\n",
     )
     .unwrap();
@@ -87,7 +87,7 @@ fn ambient_shell_mode_tracks_approval_changes_and_revocation() {
         &["export", "zsh"],
         None,
     ));
-    assert!(blocked.contains("__synaps_state='blocked'"));
+    assert!(blocked.contains("__synapse_state='blocked'"));
 
     let denied = success(runfrom(root.path(), Some(&nested), &["deny"], None));
     assert!(denied.contains("Denied"));
@@ -100,8 +100,8 @@ fn ambient_shell_mode_tracks_approval_changes_and_revocation() {
     assert!(!status["scopes"][0]["trusted"].as_bool().unwrap());
 
     let hook = success(run(root.path(), &["hook", "zsh"], None));
-    assert!(hook.contains("add-zsh-hook chpwd __synaps_hook"));
-    assert!(hook.contains("SYNAPS_SHELL_ACTIVE=zsh"));
+    assert!(hook.contains("add-zsh-hook chpwd __synapse_hook"));
+    assert!(hook.contains("SYNAPSE_SHELL_ACTIVE=zsh"));
 }
 
 fn success(output: Output) -> String {
@@ -164,7 +164,7 @@ fn cli_roundtrips_memory_vault_scope_and_data() {
         &["scope", "init", project.to_str().unwrap()],
         None,
     ));
-    let scope = fs::read_to_string(project.join(".synaps.yaml")).unwrap();
+    let scope = fs::read_to_string(project.join(".synapse.yaml")).unwrap();
     assert!(scope.contains("scope: project"));
 
     let report: Value =
@@ -263,7 +263,7 @@ fn clean_install_copies_an_executable_and_protects_conflicts() {
     use std::os::unix::fs::PermissionsExt;
 
     let root = tempfile::tempdir().unwrap();
-    let target = root.path().join("bin").join("synaps");
+    let target = root.path().join("bin").join("synapse");
     success(run(root.path(), &["install"], None));
 
     let metadata = fs::symlink_metadata(&target).unwrap();
@@ -271,11 +271,11 @@ fn clean_install_copies_an_executable_and_protects_conflicts() {
     assert_ne!(metadata.permissions().mode() & 0o111, 0);
     let version = Command::new(&target).arg("version").output().unwrap();
     assert!(version.status.success());
-    assert!(String::from_utf8_lossy(&version.stdout).starts_with("synaps "));
+    assert!(String::from_utf8_lossy(&version.stdout).starts_with("synapse "));
     success(run(root.path(), &["install"], None));
 
     let conflict = tempfile::tempdir().unwrap();
-    let conflictpath = conflict.path().join("bin").join("synaps");
+    let conflictpath = conflict.path().join("bin").join("synapse");
     fs::create_dir_all(conflictpath.parent().unwrap()).unwrap();
     fs::write(&conflictpath, "keep me").unwrap();
     let rejected = run(conflict.path(), &["install"], None);
@@ -293,7 +293,7 @@ fn keychain_secret_reaches_only_the_launched_process() {
         .duration_since(UNIX_EPOCH)
         .unwrap()
         .as_nanos();
-    let vault = format!("synapstest{suffix}");
+    let vault = format!("synapsetest{suffix}");
     success(run(root.path(), &["vault", "create", &vault], None));
     let reference = format!("{vault}.token");
 
@@ -304,7 +304,7 @@ fn keychain_secret_reaches_only_the_launched_process() {
             "set",
             &vault,
             "token",
-            "SYNAPS_TEST_VALUE",
+            "SYNAPSE_TEST_VALUE",
             "--global",
         ],
         Some("keychainvalue\n"),
@@ -312,15 +312,15 @@ fn keychain_secret_reaches_only_the_launched_process() {
     let listed = run(root.path(), &["secret", "list", &vault], None);
     let launched = run(
         root.path(),
-        &["run", "--", "/usr/bin/printenv", "SYNAPS_TEST_VALUE"],
+        &["run", "--", "/usr/bin/printenv", "SYNAPSE_TEST_VALUE"],
         None,
     );
 
     let project = root.path().join("ambient");
     fs::create_dir(&project).unwrap();
     fs::write(
-        project.join(".synaps.yaml"),
-        format!("version: 1\nscope: project\nenv:\n  SYNAPS_TEST_VALUE: {reference}\ndeny: []\n"),
+        project.join(".synapse.yaml"),
+        format!("version: 1\nscope: project\nenv:\n  SYNAPSE_TEST_VALUE: {reference}\ndeny: []\n"),
     )
     .unwrap();
     success(run(
@@ -339,9 +339,9 @@ fn keychain_secret_reaches_only_the_launched_process() {
     success(forgotten);
     success(deleted);
     assert!(!saved.contains("keychainvalue"));
-    assert!(listed.contains("SYNAPS_TEST_VALUE"));
+    assert!(listed.contains("SYNAPSE_TEST_VALUE"));
     assert!(!listed.contains("keychainvalue"));
     assert_eq!(launched.trim(), "keychainvalue");
-    assert!(ambient.contains("export SYNAPS_TEST_VALUE='keychainvalue'"));
-    assert!(ambient.contains("__synaps_state='active'"));
+    assert!(ambient.contains("export SYNAPSE_TEST_VALUE='keychainvalue'"));
+    assert!(ambient.contains("__synapse_state='active'"));
 }

@@ -1,8 +1,8 @@
-# Synaps product brief
+# Synapse product brief
 
 ## Purpose
 
-Synaps is a quiet local memory service for developer tools. It gives every connected coding tool the same durable, inspectable memory without requiring a general-purpose notes application.
+Synapse is a quiet local memory service for developer tools. It gives every connected coding tool the same durable, inspectable memory without requiring a general-purpose notes application.
 
 ## Primary users
 
@@ -23,8 +23,8 @@ Developers who move between multiple coding tools and want decisions, preference
 - One-click user-level setup for Codex and Claude Code.
 - Shortcuts to each tool's global instructions and settings.
 - Keychain-backed vaults managed from the dashboard.
-- Global, project, and folder resolution through approved `.synaps.yaml` files.
-- `synaps run -- <command>` for one-child scoped environment injection.
+- Global, project, and folder resolution through approved `.synapse.yaml` files.
+- `synapse run -- <command>` for one-child scoped environment injection.
 - One-click Settings management for optional zsh, bash, and fish hooks, with automatic loading in explicitly approved directories and `allow` and `deny` controls.
 - A user-installable CLI with safe secret prompting and the same vault/scope controls as the GUI.
 - Non-destructive recall optimization with Full, Balanced, and Lean response budgets.

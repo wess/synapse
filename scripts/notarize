@@ -2,10 +2,10 @@
 set -eu
 
 root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
-profile=${SYNAPS_NOTARY_PROFILE:-synaps}
-archive="$root/dist/synaps.zip"
-application="$root/dist/synaps.app"
-stage=$(mktemp -d "${TMPDIR:-/tmp}/synapsnotary.XXXXXX")
+profile=${SYNAPSE_NOTARY_PROFILE:-synapse}
+archive="$root/dist/synapse.zip"
+application="$root/dist/synapse.app"
+stage=$(mktemp -d "${TMPDIR:-/tmp}/synapsenotary.XXXXXX")
 trap 'rm -rf "$stage"' EXIT INT TERM
 
 if [ -n "${APPLE_ID:-}${APPLE_TEAM_ID:-}${APPLE_APP_PASSWORD:-}" ]; then
@@ -23,5 +23,5 @@ fi
 xcrun stapler staple "$application"
 xcrun stapler validate "$application"
 spctl --assess --type execute --verbose=2 "$application"
-ditto -c -k --norsrc --noextattr --noqtn --noacl --keepParent "$application" "$stage/synaps.zip"
-mv "$stage/synaps.zip" "$archive"
+ditto -c -k --norsrc --noextattr --noqtn --noacl --keepParent "$application" "$stage/synapse.zip"
+mv "$stage/synapse.zip" "$archive"

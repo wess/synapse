@@ -93,7 +93,7 @@ fn restorelink(path: &Path, link: &Path) -> Result<()> {
     }
     let parent = path.parent().unwrap_or_else(|| Path::new("."));
     for number in 0..100 {
-        let temporary = parent.join(format!(".synapslink{}{}", std::process::id(), number));
+        let temporary = parent.join(format!(".synapselink{}{}", std::process::id(), number));
         match symlink(link, &temporary) {
             Ok(()) => {
                 if let Err(error) = fs::rename(&temporary, path) {
@@ -121,7 +121,7 @@ fn restorelink(_path: &Path, _link: &Path) -> Result<()> {
 
 fn backuppath(path: &Path) -> PathBuf {
     let mut name = path.file_name().map(OsString::from).unwrap_or_default();
-    name.push(".synapsbackup");
+    name.push(".synapsebackup");
     path.with_file_name(name)
 }
 

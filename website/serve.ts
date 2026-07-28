@@ -34,4 +34,4 @@ const server = Bun.serve({
   },
 });
 
-console.log(`Synaps site: http://127.0.0.1:${server.port}${sitepath}`);
+console.log(`Synapse site: http://127.0.0.1:${server.port}${sitepath}`);

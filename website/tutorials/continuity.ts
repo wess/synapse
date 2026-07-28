@@ -26,12 +26,12 @@ export const continuity: Page = {
       <li>
         <h3 id="remember">Confirm and remember it</h3>
         <p>In the first connected tool, establish the decision explicitly, then ask it to remember the confirmed result with the repository name as the source. Example:</p>
-        <blockquote>We have confirmed that this repository uses Bun for JavaScript tasks. Remember that durable convention with source synapstutorial.</blockquote>
+        <blockquote>We have confirmed that this repository uses Bun for JavaScript tasks. Remember that durable convention with source synapsetutorial.</blockquote>
         <p>The tool should call <code>remember</code> once and return an ID. If it stores a transcript instead of the concise decision, correct the entry in the next step.</p>
       </li>
       <li>
         <h3>Close the session</h3>
-        <p>End the first tool session completely. This rules out conversational context and leaves the local Synaps database as the continuity layer.</p>
+        <p>End the first tool session completely. This rules out conversational context and leaves the local Synapse database as the continuity layer.</p>
       </li>
       <li>
         <h3 id="recall">Recall from another tool</h3>
@@ -41,11 +41,11 @@ export const continuity: Page = {
       </li>
       <li>
         <h3 id="correct">Inspect the source of truth</h3>
-        ${code("shell", `synaps memory list "Bun JavaScript"
-synaps memory show <id>`)}
+        ${code("shell", `synapse memory list "Bun JavaScript"
+synapse memory show <id>`)}
         <p>Open the same record in the Memories screen. Confirm that the exact text is concise, stable, and correctly sourced. If not, replace it:</p>
         ${code("shell", `printf '%s\n' 'Use Bun for JavaScript tasks in this repository.' \\
-  | synaps memory edit <id> synapstutorial`)}
+  | synapse memory edit <id> synapsetutorial`)}
       </li>
       <li>
         <h3 id="verify">Verify the correction</h3>
@@ -54,6 +54,6 @@ synaps memory show <id>`)}
     </ol>
 
     <h2>Keep or clean up</h2>
-    <p>If the convention is real, keep it. If it was tutorial-only, remove the exact ID with <code>synaps memory delete &lt;id&gt; --confirm</code>. Avoid a full wipe unless you intend to remove every memory.</p>
+    <p>If the convention is real, keep it. If it was tutorial-only, remove the exact ID with <code>synapse memory delete &lt;id&gt; --confirm</code>. Avoid a full wipe unless you intend to remove every memory.</p>
   `,
 };

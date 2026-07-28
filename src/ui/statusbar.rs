@@ -25,7 +25,7 @@ impl Global for Statusbar {}
 
 pub fn install(sender: Sender<Action>) -> anyhow::Result<Statusbar> {
     let menu = Menu::new();
-    let open = MenuItem::new("Open Synaps", true, None);
+    let open = MenuItem::new("Open Synapse", true, None);
     let install = MenuItem::new("Install CLI", true, None);
     let data = MenuItem::new("Open data folder", true, None);
     let systemtheme = MenuItem::new("System", true, None);
@@ -34,7 +34,7 @@ pub fn install(sender: Sender<Action>) -> anyhow::Result<Statusbar> {
     let appearance =
         Submenu::with_items("Appearance", true, &[&systemtheme, &lighttheme, &darktheme])?;
     let separator = PredefinedMenuItem::separator();
-    let quit = MenuItem::new("Quit Synaps", true, None);
+    let quit = MenuItem::new("Quit Synapse", true, None);
     menu.append_items(&[&open, &install, &data, &appearance, &separator, &quit])?;
 
     let openid = open.id().clone();
@@ -68,7 +68,7 @@ pub fn install(sender: Sender<Action>) -> anyhow::Result<Statusbar> {
     }));
 
     let tray = TrayIconBuilder::new()
-        .with_tooltip("Synaps · local memory")
+        .with_tooltip("Synapse · local memory")
         .with_menu(Box::new(menu))
         .with_menu_on_left_click(true)
         .with_icon_as_template(true)

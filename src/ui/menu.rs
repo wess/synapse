@@ -3,15 +3,15 @@ use gpui::{App, Context, Entity, Global, SharedString, WindowHandle};
 use guise::prelude::MenuBar;
 
 gpui::actions!(
-    synaps,
+    synapse,
     [
-        OpenSynaps,
+        OpenSynapse,
         InstallCli,
         OpenData,
         SystemTheme,
         LightTheme,
         DarkTheme,
-        QuitSynaps
+        QuitSynapse
     ]
 );
 
@@ -27,9 +27,9 @@ pub fn configure(window: WindowHandle<Dashboard>, cx: &mut App) {
     cx.set_global(State::default());
     cx.set_menus(vec![
         gpui::Menu {
-            name: SharedString::new_static("Synaps"),
+            name: SharedString::new_static("Synapse"),
             items: vec![
-                gpui::MenuItem::action("Open Synaps", OpenSynaps),
+                gpui::MenuItem::action("Open Synapse", OpenSynapse),
                 gpui::MenuItem::action("Install CLI", InstallCli),
                 gpui::MenuItem::action("Open Data Folder", OpenData),
                 gpui::MenuItem::submenu(gpui::Menu {
@@ -41,7 +41,7 @@ pub fn configure(window: WindowHandle<Dashboard>, cx: &mut App) {
                     ],
                 }),
                 gpui::MenuItem::separator(),
-                gpui::MenuItem::action("Quit Synaps", QuitSynaps),
+                gpui::MenuItem::action("Quit Synapse", QuitSynapse),
             ],
         },
         gpui::Menu {
@@ -55,7 +55,7 @@ pub fn configure(window: WindowHandle<Dashboard>, cx: &mut App) {
     ]);
 
     let openwindow = window;
-    cx.on_action::<OpenSynaps>(move |_, cx| {
+    cx.on_action::<OpenSynapse>(move |_, cx| {
         cx.activate(true);
         let _ = openwindow.update(cx, |_view, window, _cx| window.activate_window());
     });
@@ -63,14 +63,14 @@ pub fn configure(window: WindowHandle<Dashboard>, cx: &mut App) {
     cx.on_action::<OpenData>(|_, cx| {
         let result = crate::files::data().and_then(|path| crate::files::reveal(&path));
         setresult(
-            result.map(|_| "Opened the Synaps data folder.".to_owned()),
+            result.map(|_| "Opened the Synapse data folder.".to_owned()),
             cx,
         );
     });
     cx.on_action::<SystemTheme>(|_, cx| crate::ui::theme::set(crate::ui::theme::Mode::System, cx));
     cx.on_action::<LightTheme>(|_, cx| crate::ui::theme::set(crate::ui::theme::Mode::Light, cx));
     cx.on_action::<DarkTheme>(|_, cx| crate::ui::theme::set(crate::ui::theme::Mode::Dark, cx));
-    cx.on_action::<QuitSynaps>(move |_, cx| {
+    cx.on_action::<QuitSynapse>(move |_, cx| {
         let canquit = window
             .update(cx, |view, window, cx| view.preparequit(window, cx))
             .unwrap_or(true);
@@ -127,12 +127,12 @@ pub fn bar<T: 'static>(cx: &mut Context<T>) -> Option<Entity<MenuBar>> {
     {
         Some(cx.new(|cx| {
             MenuBar::new(cx)
-                .menu("Synaps", |menu| {
-                    menu.item("Open Synaps", |_, cx| cx.dispatch_action(&OpenSynaps))
+                .menu("Synapse", |menu| {
+                    menu.item("Open Synapse", |_, cx| cx.dispatch_action(&OpenSynapse))
                         .item("Install CLI", |_, cx| cx.dispatch_action(&InstallCli))
                         .item("Open data folder", |_, cx| cx.dispatch_action(&OpenData))
                         .divider()
-                        .danger_item("Quit", |_, cx| cx.dispatch_action(&QuitSynaps))
+                        .danger_item("Quit", |_, cx| cx.dispatch_action(&QuitSynapse))
                 })
                 .menu("View", |menu| {
                     menu.item("System appearance", |_, cx| {

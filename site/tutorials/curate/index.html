@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Curate and optimize memory — Synaps</title>
+  <title>Curate and optimize memory — Synapse</title>
   <meta name="description" content="Build a small memory set, search it, correct the durable source, compare recall budgets, and remove only the tutorial entries.">
   <meta name="theme-color" content="#0a43c8">
   <meta property="og:title" content="Curate and optimize memory">
@@ -22,16 +22,16 @@
   
   <a class="skip" href="#content">Skip to content</a>
   <header class="topbar">
-    <a class="wordmark" href="../../" aria-label="Synaps home">
+    <a class="wordmark" href="../../" aria-label="Synapse home">
       <img src="../../icon.svg" width="30" height="30" alt="">
-      <span>Synaps</span>
+      <span>Synapse</span>
     </a>
     <button class="navtoggle" type="button" aria-expanded="false" aria-controls="topnav">Menu</button>
     <nav id="topnav" aria-label="Primary">
       <a href="../../docs/">Docs</a>
       <a href="../../tutorials/" aria-current="page">Tutorials</a>
       <a href="https://github.com/wess/synapse">GitHub <span aria-hidden="true">↗</span></a>
-      <a class="navdownload" href="https://github.com/wess/synapse/releases/latest">Download</a>
+      <a class="navdownload" href="https://github.com/wess/synapse/releases/latest/download/synapse.zip">Download</a>
     </nav>
   </header>
   
@@ -95,11 +95,11 @@
       <button type="button" data-copy aria-live="polite">Copy</button>
     </div>
     <pre><code>printf &#039;%s
-&#039; &#039;Tutorial apps use port 4100.&#039; | synaps memory add synapstutorial
+&#039; &#039;Tutorial apps use port 4100.&#039; | synapse memory add synapsetutorial
 printf &#039;%s
-&#039; &#039;Tutorial commands use Bun.&#039; | synaps memory add synapstutorial
+&#039; &#039;Tutorial commands use Bun.&#039; | synapse memory add synapsetutorial
 printf &#039;%s
-&#039; &#039;Tutorial backups go in the backups folder.&#039; | synaps memory add synapstutorial</code></pre>
+&#039; &#039;Tutorial backups go in the backups folder.&#039; | synapse memory add synapsetutorial</code></pre>
   </div>
         <p>Write down the three IDs. Each entry contains one durable idea, which makes later recall easier to interpret and correct.</p>
       </li>
@@ -111,9 +111,9 @@ printf &#039;%s
       <span>shell</span>
       <button type="button" data-copy aria-live="polite">Copy</button>
     </div>
-    <pre><code>synaps memory list tutorial
-synaps memory list &quot;Tutorial Bun&quot; --json
-synaps memory show &lt;bunid&gt;</code></pre>
+    <pre><code>synapse memory list tutorial
+synapse memory list &quot;Tutorial Bun&quot; --json
+synapse memory show &lt;bunid&gt;</code></pre>
   </div>
         <p>Text output is optimized for scanning. JSON output includes exact bodies, sources, IDs, and timestamps for local scripts.</p>
       </li>
@@ -128,8 +128,8 @@ synaps memory show &lt;bunid&gt;</code></pre>
     </div>
     <pre><code>printf &#039;%s
 &#039; &#039;Tutorial commands use Bun unless a task requires another runtime.&#039; \
-  | synaps memory edit &lt;bunid&gt; synapstutorial
-synaps memory show &lt;bunid&gt;</code></pre>
+  | synapse memory edit &lt;bunid&gt; synapsetutorial
+synapse memory show &lt;bunid&gt;</code></pre>
   </div>
         <p>The ID remains stable and future recall returns the correction.</p>
       </li>
@@ -141,17 +141,17 @@ synaps memory show &lt;bunid&gt;</code></pre>
       <span>shell</span>
       <button type="button" data-copy aria-live="polite">Copy</button>
     </div>
-    <pre><code>synaps settings show
-synaps settings optimize full</code></pre>
+    <pre><code>synapse settings show
+synapse settings optimize full</code></pre>
   </div>
-        <p>Ask a connected tool to recall <code>synapstutorial</code> and inspect the formatting and number of results. Then switch:</p>
+        <p>Ask a connected tool to recall <code>synapsetutorial</code> and inspect the formatting and number of results. Then switch:</p>
         
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
       <button type="button" data-copy aria-live="polite">Copy</button>
     </div>
-    <pre><code>synaps settings optimize lean</code></pre>
+    <pre><code>synapse settings optimize lean</code></pre>
   </div>
         <p>Recall the same query. Lean returns at most four compacted entries within 2,800 characters. The stored bodies visible through <code>memory show</code> remain unchanged.</p>
       </li>
@@ -163,7 +163,7 @@ synaps settings optimize full</code></pre>
       <span>shell</span>
       <button type="button" data-copy aria-live="polite">Copy</button>
     </div>
-    <pre><code>synaps settings optimize balanced</code></pre>
+    <pre><code>synapse settings optimize balanced</code></pre>
   </div>
         <p>Balanced is the default: up to eight results and 6,000 characters, with prose whitespace compaction and exact duplicate removal.</p>
       </li>
@@ -176,10 +176,10 @@ synaps settings optimize full</code></pre>
       <span>shell</span>
       <button type="button" data-copy aria-live="polite">Copy</button>
     </div>
-    <pre><code>synaps memory delete &lt;portid&gt; --confirm
-synaps memory delete &lt;bunid&gt; --confirm
-synaps memory delete &lt;backupid&gt; --confirm
-synaps memory list synapstutorial</code></pre>
+    <pre><code>synapse memory delete &lt;portid&gt; --confirm
+synapse memory delete &lt;bunid&gt; --confirm
+synapse memory delete &lt;backupid&gt; --confirm
+synapse memory list synapsetutorial</code></pre>
   </div>
     <p>The final search should be empty unless another tutorial created the same source. Use the Memories screen for a visual review before deleting any additional record.</p>
   
@@ -192,8 +192,8 @@ synaps memory list synapstutorial</code></pre>
   
   <footer class="footer">
     <div>
-      <a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">Synaps</a>
-      <p>Local memory and scoped credentials for developer tools.</p>
+      <a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">Synapse</a>
+      <p>Project memory and scoped credentials, kept on your Mac.</p>
     </div>
     <nav aria-label="Footer">
       <a href="../../docs/">Documentation</a>
@@ -201,7 +201,7 @@ synaps memory list synapstutorial</code></pre>
       <a href="https://github.com/wess/synapse">Source</a>
       <a href="https://github.com/wess/synapse/releases">Releases</a>
     </nav>
-    <p class="footerfine">Local-first. No account required. macOS 13+ beta.</p>
+    <p class="footerfine">No account required. Apple silicon · macOS 13+.</p>
   </footer>
 </body>
 </html>

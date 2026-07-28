@@ -29,19 +29,19 @@ export const vault: Page = {
     </table>
 
     <h2 id="create">Create a secret</h2>
-    ${code("shell", `synaps vault create work
-synaps secret set work database DATABASE_URL
-synaps secret list work`)}
+    ${code("shell", `synapse vault create work
+synapse secret set work database DATABASE_URL
+synapse secret list work`)}
     <p>When stdin is a terminal, <code>secret set</code> reads the value with a hidden prompt and asks for confirmation. When stdin is piped, it reads the stream and trims its final line ending. The value is never accepted as a command argument.</p>
-    ${code("shell", `printf '%s' "$DATABASE_URL" | synaps secret set work database DATABASE_URL`)}
+    ${code("shell", `printf '%s' "$DATABASE_URL" | synapse secret set work database DATABASE_URL`)}
     ${note("Shell history boundary", "The safe prompt keeps the value out of history and process arguments. A piped command is only as safe as the command that produces its stdin; do not paste a value directly into a visible shell command.")}
     <p>Add <code>--global</code> to make the environment name available in every folder, or change an existing label later:</p>
-    ${code("shell", `synaps secret set work registry NPM_TOKEN --global
-synaps secret global work.registry off`)}
+    ${code("shell", `synapse secret set work registry NPM_TOKEN --global
+synapse secret global work.registry off`)}
 
     <h2 id="files">Scope files</h2>
-    <p>From a project folder, create <code>.synaps.yaml</code>:</p>
-    ${code("shell", `synaps scope init .`)}
+    <p>From a project folder, create <code>.synapse.yaml</code>:</p>
+    ${code("shell", `synapse scope init .`)}
     <p>The generated project template is valid but maps nothing:</p>
     ${code("yaml", `version: 1
 scope: project
@@ -55,21 +55,21 @@ env:
   NPM_TOKEN: work.registry
 deny:
   - PRODUCTION_TOKEN`)}
-    <p>Use <code>synaps scope init path/to/folder --folder</code> for a nested folder scope. The <code>scope</code> field describes intent and appears in status output; resolution uses the file’s position in the ancestor path.</p>
+    <p>Use <code>synapse scope init path/to/folder --folder</code> for a nested folder scope. The <code>scope</code> field describes intent and appears in status output; resolution uses the file’s position in the ancestor path.</p>
 
     <h2 id="approval">Approval</h2>
-    <p>A scope has no effect until its exact contents are approved. Synaps hashes the file and stores its canonical path plus digest in SQLite:</p>
-    ${code("shell", `synaps status .
-synaps allow
-synaps scope status .`)}
-    <p><code>synaps allow</code> approves the closest discovered scope. If several ancestor scopes exist, approve each from its own folder. <code>synaps scope trust [folder]</code> remains available when you want to approve an exact path directly.</p>
+    <p>A scope has no effect until its exact contents are approved. Synapse hashes the file and stores its canonical path plus digest in SQLite:</p>
+    ${code("shell", `synapse status .
+synapse allow
+synapse scope status .`)}
+    <p><code>synapse allow</code> approves the closest discovered scope. If several ancestor scopes exist, approve each from its own folder. <code>synapse scope trust [folder]</code> remains available when you want to approve an exact path directly.</p>
     <p>Changing even whitespace changes the digest. The scope then reports <strong>changed</strong> and stops applying until you inspect and approve it again. Invalid YAML and unknown references produce warnings.</p>
     <p>Both shell modes refuse an incomplete environment when any discovered scope is pending, changed, invalid, or references an unknown secret. Command-scoped mode refuses to launch; ambient mode unloads its managed values.</p>
 
     <h2 id="precedence">Precedence and deny</h2>
     <ol>
       <li>Global mappings load first.</li>
-      <li>Synaps discovers every <code>.synaps.yaml</code> from the filesystem root toward the working folder.</li>
+      <li>Synapse discovers every <code>.synapse.yaml</code> from the filesystem root toward the working folder.</li>
       <li>Approved files apply in that order, so the closest mapping replaces a broader mapping for the same environment name.</li>
       <li>A name in <code>deny</code> is removed and remains denied for all narrower scopes. A child scope cannot add it back.</li>
     </ol>
@@ -78,23 +78,23 @@ synaps scope status .`)}
     <h2 id="modes">Choose an environment boundary</h2>
     <h3>Command scoped</h3>
     ${code("shell", `cd /path/to/project
-synaps status .
-synaps run -- cargo test
-synaps run -- bun run deploy`)}
-    <p><code>synaps run</code> resolves the current working folder, verifies every discovered scope, reads each selected value from Keychain, and sets it only on the new child process. Normal environment inheritance still applies; Synaps adds or replaces the resolved names. Your current shell is unchanged.</p>
+synapse status .
+synapse run -- cargo test
+synapse run -- bun run deploy`)}
+    <p><code>synapse run</code> resolves the current working folder, verifies every discovered scope, reads each selected value from Keychain, and sets it only on the new child process. Normal environment inheritance still applies; Synapse adds or replaces the resolved names. Your current shell is unchanged.</p>
 
     <h3>Ambient directory</h3>
-    <p>Open <strong>Settings → Shell environments</strong> and choose <strong>Enable shell hook</strong>. Synaps detects the default shell, installs the CLI if needed, and manages a marked startup-file block. Open a new terminal, then allow the project:</p>
+    <p>Open <strong>Settings → Shell environments</strong> and choose <strong>Enable shell hook</strong>. Synapse detects the default shell, installs the CLI if needed, and manages a marked startup-file block. Open a new terminal, then allow the project:</p>
     ${code("shell", `cd /path/to/project
-synaps allow`)}
+synapse allow`)}
     <p>For a temporary or manual installation, evaluate the matching hook directly:</p>
     ${code("shell", `# Add the matching line to your shell startup file.
-eval "$(synaps hook zsh)"
-# eval "$(synaps hook bash)"
-# synaps hook fish | source`)}
-    <p>The hook loads the approved environment when the shell enters the project, unloads it when the shell leaves, and reloads it after an approved change. If Synaps replaced a variable that already existed, it restores the original value instead of unsetting it. A hook never activates from global mappings alone: the directory must contain at least one approved discovered scope.</p>
-    <p>Run <code>synaps deny</code> to revoke the closest scope. The next prompt unloads managed values. <code>synaps status .</code> reports whether ambient activation is ready, blocked, or inactive and whether the current shell has a hook installed.</p>
-    ${note("Ambient mode has a wider boundary", "Every process launched from the activated shell can read the values. Prefer synaps run for a sensitive one-off command. Do not enable shell tracing such as set -x while the hook is evaluating environment changes, because tracing can print plaintext values.")}
-    <p>MCP <code>vaultstatus</code> and CLI <code>status</code> report names, scope states, and warnings. They do not read or reveal values. To remove a value and its metadata, run <code>synaps secret forget work.database</code>. A vault can be deleted only after all of its secrets are forgotten.</p>
+eval "$(synapse hook zsh)"
+# eval "$(synapse hook bash)"
+# synapse hook fish | source`)}
+    <p>The hook loads the approved environment when the shell enters the project, unloads it when the shell leaves, and reloads it after an approved change. If Synapse replaced a variable that already existed, it restores the original value instead of unsetting it. A hook never activates from global mappings alone: the directory must contain at least one approved discovered scope.</p>
+    <p>Run <code>synapse deny</code> to revoke the closest scope. The next prompt unloads managed values. <code>synapse status .</code> reports whether ambient activation is ready, blocked, or inactive and whether the current shell has a hook installed.</p>
+    ${note("Ambient mode has a wider boundary", "Every process launched from the activated shell can read the values. Prefer synapse run for a sensitive one-off command. Do not enable shell tracing such as set -x while the hook is evaluating environment changes, because tracing can print plaintext values.")}
+    <p>MCP <code>vaultstatus</code> and CLI <code>status</code> report names, scope states, and warnings. They do not read or reveal values. To remove a value and its metadata, run <code>synapse secret forget work.database</code>. A vault can be deleted only after all of its secrets are forgotten.</p>
   `,
 };

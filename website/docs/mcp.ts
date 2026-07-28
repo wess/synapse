@@ -15,15 +15,15 @@ export const mcp: Page = {
   ],
   body: `
     <h2 id="server">Server</h2>
-    <p>Synaps implements an MCP stdio server. A tool launches the same signed or installed executable with the <code>mcp</code> argument:</p>
-    ${code("shell", `~/.local/bin/synaps mcp`)}
+    <p>Synapse implements an MCP stdio server. A tool launches the same signed or installed executable with the <code>mcp</code> argument:</p>
+    ${code("shell", `~/.local/bin/synapse mcp`)}
     <p>The process uses stdin and stdout for protocol messages. Do not wrap it in a command that writes banners or shell setup output to stdout. The server opens the same local database as the desktop app and holds a shared lifecycle lock while connected.</p>
 
     <h2 id="remember">remember</h2>
     <p>Stores a durable fact, decision, preference, convention, or correction.</p>
     ${code("json", `{
   "content": "Use small focused modules.",
-  "source": "synaps"
+  "source": "synapse"
 }`)}
     <table>
       <thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Meaning</th></tr></thead>
@@ -55,7 +55,7 @@ export const mcp: Page = {
     {
       "id": 24,
       "body": "Use small focused modules.",
-      "source": "synaps",
+      "source": "synapse",
       "created": 1785250000
     }
   ]
@@ -66,7 +66,7 @@ export const mcp: Page = {
     ${code("json", `{
   "path": "/Users/example/project"
 }`)}
-    <p><code>path</code> is optional. Resolution falls back to <code>SYNAPS_PROJECT_DIR</code>, then the server process’s current directory.</p>
+    <p><code>path</code> is optional. Resolution falls back to <code>SYNAPSE_PROJECT_DIR</code>, then the server process’s current directory.</p>
     ${code("json", `{
   "path": "/Users/example/project",
   "available": ["DATABASE_URL"],
@@ -74,7 +74,7 @@ export const mcp: Page = {
   "shell": "zsh",
   "scopes": [
     {
-      "path": "/Users/example/project/.synaps.yaml",
+      "path": "/Users/example/project/.synapse.yaml",
       "scope": "project",
       "trusted": true,
       "changed": false,
@@ -84,16 +84,16 @@ export const mcp: Page = {
     }
   ],
   "warnings": [],
-  "note": "Values stay in Keychain. Use synaps run for one child or install the shell hook for an approved directory."
+  "note": "Values stay in Keychain. Use synapse run for one child or install the shell hook for an approved directory."
 }`)}
     ${note("Metadata, not a secret channel", "The names in available tell a tool what a scoped command or activated shell could receive. vaultstatus never reads the corresponding Keychain values and cannot change a connected tool’s environment.")}
 
     <h2 id="behavior">Operational behavior</h2>
     <ul>
       <li>Tool errors are returned as readable strings. Protocol messages remain on stdio.</li>
-      <li>The server identifies itself as <code>synaps</code> using the application version and advertises tool capability only.</li>
+      <li>The server identifies itself as <code>synapse</code> using the application version and advertises tool capability only.</li>
       <li>Opening the database runs integrity and relationship checks, applies numbered migrations, and secures database permissions.</li>
-      <li>A running MCP process holds a shared database lock. <code>synaps data restore</code> requires an exclusive lock and therefore refuses while any connected server or the desktop app is using the database.</li>
+      <li>A running MCP process holds a shared database lock. <code>synapse data restore</code> requires an exclusive lock and therefore refuses while any connected server or the desktop app is using the database.</li>
       <li>Connected tools should recall before decisions that depend on project history and remember only stable confirmed context after it is established.</li>
     </ul>
   `,

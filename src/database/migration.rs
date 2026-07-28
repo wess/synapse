@@ -34,7 +34,7 @@ pub async fn run(pool: &SqlitePool, path: &Path, existed: bool) -> Result<()> {
     let current = version(pool).await?;
     anyhow::ensure!(
         current <= LATEST,
-        "database version {current} is newer than this Synaps release supports"
+        "database version {current} is newer than this Synapse release supports"
     );
     if current == LATEST {
         return Ok(());

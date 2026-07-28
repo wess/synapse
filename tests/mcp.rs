@@ -5,10 +5,10 @@ use std::process::{Command, Stdio};
 #[test]
 fn mcp_stdio_lists_and_calls_every_tool() {
     let root = tempfile::tempdir().unwrap();
-    let mut child = Command::new(env!("CARGO_BIN_EXE_synaps"))
+    let mut child = Command::new(env!("CARGO_BIN_EXE_synapse"))
         .arg("mcp")
-        .env("SYNAPS_HOME", root.path().join("home"))
-        .env("SYNAPS_DATA", root.path().join("data"))
+        .env("SYNAPSE_HOME", root.path().join("home"))
+        .env("SYNAPSE_DATA", root.path().join("data"))
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -27,12 +27,12 @@ fn mcp_stdio_lists_and_calls_every_tool() {
             "params": {
                 "protocolVersion": "2025-11-25",
                 "capabilities": {},
-                "clientInfo": {"name": "synapstest", "version": "1"}
+                "clientInfo": {"name": "synapsetest", "version": "1"}
             }
         }),
         1,
     );
-    assert_eq!(initialized["result"]["serverInfo"]["name"], "synaps");
+    assert_eq!(initialized["result"]["serverInfo"]["name"], "synapse");
     writeln!(
         stdin,
         "{}",

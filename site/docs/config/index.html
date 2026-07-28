@@ -3,11 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Configuration and paths — Synaps</title>
-  <meta name="description" content="Find every Synaps-owned path, understand environment overrides, and know how integration and editor writes are protected.">
+  <title>Configuration and paths — Synapse</title>
+  <meta name="description" content="Find every Synapse-owned path, understand environment overrides, and know how integration and editor writes are protected.">
   <meta name="theme-color" content="#0a43c8">
   <meta property="og:title" content="Configuration and paths">
-  <meta property="og:description" content="Find every Synaps-owned path, understand environment overrides, and know how integration and editor writes are protected.">
+  <meta property="og:description" content="Find every Synapse-owned path, understand environment overrides, and know how integration and editor writes are protected.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://wess.io/synapse/docs/config/">
   <link rel="canonical" href="https://wess.io/synapse/docs/config/">
@@ -22,16 +22,16 @@
   
   <a class="skip" href="#content">Skip to content</a>
   <header class="topbar">
-    <a class="wordmark" href="../../" aria-label="Synaps home">
+    <a class="wordmark" href="../../" aria-label="Synapse home">
       <img src="../../icon.svg" width="30" height="30" alt="">
-      <span>Synaps</span>
+      <span>Synapse</span>
     </a>
     <button class="navtoggle" type="button" aria-expanded="false" aria-controls="topnav">Menu</button>
     <nav id="topnav" aria-label="Primary">
       <a href="../../docs/" aria-current="page">Docs</a>
       <a href="../../tutorials/">Tutorials</a>
       <a href="https://github.com/wess/synapse">GitHub <span aria-hidden="true">↗</span></a>
-      <a class="navdownload" href="https://github.com/wess/synapse/releases/latest">Download</a>
+      <a class="navdownload" href="https://github.com/wess/synapse/releases/latest/download/synapse.zip">Download</a>
     </nav>
   </header>
   
@@ -74,7 +74,7 @@
     <main class="article" id="content">
       <header class="articlehead">
         <h1>Configuration and paths</h1>
-        <span>Find every Synaps-owned path, understand environment overrides, and know how integration and editor writes are protected.</span>
+        <span>Find every Synapse-owned path, understand environment overrides, and know how integration and editor writes are protected.</span>
       </header>
       
     <h2 id="paths">Resolved paths</h2>
@@ -84,15 +84,15 @@
       <span>shell</span>
       <button type="button" data-copy aria-live="polite">Copy</button>
     </div>
-    <pre><code>synaps path</code></pre>
+    <pre><code>synapse path</code></pre>
   </div>
     <table>
       <thead><tr><th>Item</th><th>Default on macOS</th></tr></thead>
       <tbody>
         <tr><td>Home</td><td><code>~</code></td></tr>
-        <tr><td>Data directory</td><td><code>~/Library/Application Support/synaps</code></td></tr>
-        <tr><td>Database</td><td><code>~/Library/Application Support/synaps/brain.db</code></td></tr>
-        <tr><td>Installed CLI</td><td><code>~/.local/bin/synaps</code></td></tr>
+        <tr><td>Data directory</td><td><code>~/Library/Application Support/synapse</code></td></tr>
+        <tr><td>Database</td><td><code>~/Library/Application Support/synapse/brain.db</code></td></tr>
+        <tr><td>Installed CLI</td><td><code>~/.local/bin/synapse</code></td></tr>
       </tbody>
     </table>
 
@@ -100,12 +100,12 @@
     <table>
       <thead><tr><th>Name</th><th>Effect</th><th>Typical use</th></tr></thead>
       <tbody>
-        <tr><td><code>SYNAPS_DATA</code></td><td>Replaces the application-data directory.</td><td>Development, tests, or a deliberately isolated database.</td></tr>
-        <tr><td><code>SYNAPS_HOME</code></td><td>Replaces the home directory used for tool files and the default CLI path.</td><td>Integration testing without touching real user files.</td></tr>
-        <tr><td><code>SYNAPS_BIN</code></td><td>Replaces the full CLI installation destination.</td><td>Install outside <code>~/.local/bin</code>.</td></tr>
-        <tr><td><code>SYNAPS_DOCUMENT</code></td><td>Launches the desktop app directly into a Markdown, TOML, JSON, or YAML document.</td><td>Internal editor entrypoint.</td></tr>
-        <tr><td><code>SYNAPS_PROJECT_DIR</code></td><td>Provides the fallback project folder for MCP <code>vaultstatus</code>.</td><td>A client that launches the server outside the project working directory.</td></tr>
-        <tr><td><code>SYNAPS_SHELL_ACTIVE</code></td><td>Identifies the shell hook currently evaluated in this shell.</td><td>Set automatically by the zsh, bash, or fish integration so status can report it.</td></tr>
+        <tr><td><code>SYNAPSE_DATA</code></td><td>Replaces the application-data directory.</td><td>Development, tests, or a deliberately isolated database.</td></tr>
+        <tr><td><code>SYNAPSE_HOME</code></td><td>Replaces the home directory used for tool files and the default CLI path.</td><td>Integration testing without touching real user files.</td></tr>
+        <tr><td><code>SYNAPSE_BIN</code></td><td>Replaces the full CLI installation destination.</td><td>Install outside <code>~/.local/bin</code>.</td></tr>
+        <tr><td><code>SYNAPSE_DOCUMENT</code></td><td>Launches the desktop app directly into a Markdown, TOML, JSON, or YAML document.</td><td>Internal editor entrypoint.</td></tr>
+        <tr><td><code>SYNAPSE_PROJECT_DIR</code></td><td>Provides the fallback project folder for MCP <code>vaultstatus</code>.</td><td>A client that launches the server outside the project working directory.</td></tr>
+        <tr><td><code>SYNAPSE_SHELL_ACTIVE</code></td><td>Identifies the shell hook currently evaluated in this shell.</td><td>Set automatically by the zsh, bash, or fish integration so status can report it.</td></tr>
       </tbody>
     </table>
     
@@ -114,10 +114,10 @@
       <span>shell</span>
       <button type="button" data-copy aria-live="polite">Copy</button>
     </div>
-    <pre><code>SYNAPS_DATA=&quot;$HOME/tmp/synapsdemo&quot; synaps data check
-SYNAPS_BIN=&quot;$HOME/bin/synaps&quot; synaps install</code></pre>
+    <pre><code>SYNAPSE_DATA=&quot;$HOME/tmp/synapsedemo&quot; synapse data check
+SYNAPSE_BIN=&quot;$HOME/bin/synapse&quot; synapse install</code></pre>
   </div>
-    <p>Overrides affect only the process that receives them. Keep the desktop app, CLI, and connected MCP server on the same <code>SYNAPS_DATA</code> value if they should share one store.</p>
+    <p>Overrides affect only the process that receives them. Keep the desktop app, CLI, and connected MCP server on the same <code>SYNAPSE_DATA</code> value if they should share one store.</p>
 
     <h2 id="tools">Tool integration files</h2>
     <table>
@@ -127,13 +127,13 @@ SYNAPS_BIN=&quot;$HOME/bin/synaps&quot; synaps install</code></pre>
         <tr><td>Claude Code</td><td><code>~/.claude.json</code></td><td><code>~/.claude/CLAUDE.md</code></td><td><code>~/.claude/settings.json</code></td></tr>
       </tbody>
     </table>
-    <p>Connection detection parses the actual TOML or JSON entry named <code>synaps</code>. It reports connected only when the stored command resolves to the expected executable and the arguments equal <code>["mcp"]</code>. A deleted development binary therefore appears stale instead of healthy.</p>
+    <p>Connection detection parses the actual TOML or JSON entry named <code>synapse</code>. It reports connected only when the stored command resolves to the expected executable and the arguments equal <code>["mcp"]</code>. A deleted development binary therefore appears stale instead of healthy.</p>
 
     <h2 id="writes">Safe writes</h2>
     <p>The built-in document views validate JSON, TOML, and YAML before saving. A write with changed content:</p>
     <ol>
       <li>Resolves a dotfile symlink and writes through it rather than replacing the link.</li>
-      <li>Writes the previous bytes to a sibling file ending in <code>.synapsbackup</code>.</li>
+      <li>Writes the previous bytes to a sibling file ending in <code>.synapsebackup</code>.</li>
       <li>Writes the replacement to a temporary file, syncs it, preserves existing permissions, then renames it atomically.</li>
       <li>Syncs the containing directory.</li>
     </ol>
@@ -146,15 +146,15 @@ SYNAPS_BIN=&quot;$HOME/bin/synaps&quot; synaps install</code></pre>
       <span>shell</span>
       <button type="button" data-copy aria-live="polite">Copy</button>
     </div>
-    <pre><code>synaps settings show
-synaps settings optimize full
-synaps settings optimize balanced
-synaps settings optimize lean
+    <pre><code>synapse settings show
+synapse settings optimize full
+synapse settings optimize balanced
+synapse settings optimize lean
 
 # Manual alternative to Settings → Enable shell hook.
-eval &quot;$(synaps hook zsh)&quot;
-synaps allow
-synaps deny</code></pre>
+eval &quot;$(synapse hook zsh)&quot;
+synapse allow
+synapse deny</code></pre>
   </div>
     <p>The optimization value lives in SQLite, so the app, CLI, and every connected MCP process read the same setting. Balanced is the default. See <a href="../memory/">Memory and recall</a> for exact limits and transformations.</p>
     <p>The Settings screen detects the default shell and can enable, repair, or remove its managed startup-file block. Existing files are backed up and replaced atomically. The hook is an explicit per-shell opt-in: it activates only inside a directory with at least one discovered, approved scope. Leaving the scope, revoking approval, or changing the YAML unloads managed values and restores values that existed before activation. See <a href="../vault/#modes">Choose an environment boundary</a> before enabling ambient mode.</p>
@@ -168,8 +168,8 @@ synaps deny</code></pre>
   
   <footer class="footer">
     <div>
-      <a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">Synaps</a>
-      <p>Local memory and scoped credentials for developer tools.</p>
+      <a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">Synapse</a>
+      <p>Project memory and scoped credentials, kept on your Mac.</p>
     </div>
     <nav aria-label="Footer">
       <a href="../../docs/">Documentation</a>
@@ -177,7 +177,7 @@ synaps deny</code></pre>
       <a href="https://github.com/wess/synapse">Source</a>
       <a href="https://github.com/wess/synapse/releases">Releases</a>
     </nav>
-    <p class="footerfine">Local-first. No account required. macOS 13+ beta.</p>
+    <p class="footerfine">No account required. Apple silicon · macOS 13+.</p>
   </footer>
 </body>
 </html>

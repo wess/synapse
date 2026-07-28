@@ -5,16 +5,16 @@ use std::ffi::OsString;
 use std::io::{IsTerminal, Read};
 use std::path::{Path, PathBuf};
 
-const HELP: &str = "Synaps · local memory and scoped credentials
+const HELP: &str = "Synapse · local memory and scoped credentials
 
-Usage: synaps [command]
+Usage: synapse [command]
 
 Commands:
   app                              Open the desktop application
   mcp                              Run the MCP stdio server
   run -- <command> [arguments]     Run with resolved vault variables
   hook <zsh|bash|fish>             Print automatic shell activation setup
-  allow [folder]                   Approve the closest .synaps.yaml digest
+  allow [folder]                   Approve the closest .synapse.yaml digest
   deny [folder]                    Revoke approval for the closest scope
   status [folder] [--json]         Show names, scope trust, and ambient readiness
   vault list                       List vaults
@@ -26,12 +26,12 @@ Commands:
   secret forget <vault.name>       Remove a Keychain value and its label
   secret global <vault.name> <on|off>
                                    Change global availability
-  scope init [folder] [--folder]   Create .synaps.yaml
+  scope init [folder] [--folder]   Create .synapse.yaml
   scope trust [folder]             Approve the current YAML digest
   scope status [folder]            Show resolved scope status
   data check [--json]              Verify database integrity and version
   data export <file>               Export a consistent database backup
-  data restore <file>              Restore a backup while Synaps is closed
+  data restore <file>              Restore a backup while Synapse is closed
   memory list [query] [--json]     Search or list recent memories
   memory show <id> [--json]        Inspect one memory
   memory add [source]              Store content read from stdin
@@ -41,7 +41,7 @@ Commands:
   settings show                    Show recall and shell settings
   settings optimize <full|balanced|lean>
                                    Set the MCP recall response budget
-  install                          Install the synaps CLI for this user
+  install                          Install the synapse CLI for this user
   path                             Print the local data and CLI paths
   version                          Print the version
   help                             Show this help
@@ -57,7 +57,7 @@ pub fn run(arguments: Vec<OsString>) -> Result<Outcome> {
     match command {
         "app" => Ok(Outcome::App),
         "help" | "--help" | "-h" => output(HELP),
-        "version" | "--version" | "-V" => output(&format!("synaps {}", env!("CARGO_PKG_VERSION"))),
+        "version" | "--version" | "-V" => output(&format!("synapse {}", env!("CARGO_PKG_VERSION"))),
         "mcp" => {
             runtime()?.block_on(crate::mcp::run())?;
             Ok(Outcome::Exit(0))
@@ -142,13 +142,13 @@ async fn statusresponse(path: &Path) -> Result<VaultStatusResponse> {
         scopes: resolved.scopes.into_iter().map(Into::into).collect(),
         warnings: resolved.warnings,
         ambient: ambient.to_owned(),
-        shell: std::env::var("SYNAPS_SHELL_ACTIVE").ok(),
+        shell: std::env::var("SYNAPSE_SHELL_ACTIVE").ok(),
         note: "Values remain in Keychain.".to_owned(),
     })
 }
 
 fn vault(arguments: &[OsString]) -> Result<Outcome> {
-    let action = textarg(arguments, 0, "usage: synaps vault <list|create|delete>")?;
+    let action = textarg(arguments, 0, "usage: synapse vault <list|create|delete>")?;
     let runtime = runtime()?;
     let store = runtime.block_on(VaultStore::open(crate::files::database()?))?;
     match action.as_str() {
@@ -158,12 +158,12 @@ fn vault(arguments: &[OsString]) -> Result<Outcome> {
             }
         }
         "create" => {
-            let name = textarg(arguments, 1, "usage: synaps vault create <name>")?;
+            let name = textarg(arguments, 1, "usage: synapse vault create <name>")?;
             let vault = runtime.block_on(store.createvault(&name))?;
             println!("Created vault {}", vault.name);
         }
         "delete" => {
-            let name = textarg(arguments, 1, "usage: synaps vault delete <name>")?;
+            let name = textarg(arguments, 1, "usage: synapse vault delete <name>")?;
             let vaults = runtime.block_on(store.vaults())?;
             let vault = vaults
                 .into_iter()
@@ -181,13 +181,13 @@ fn secret(arguments: &[OsString]) -> Result<Outcome> {
     let action = textarg(
         arguments,
         0,
-        "usage: synaps secret <list|set|forget|global>",
+        "usage: synapse secret <list|set|forget|global>",
     )?;
     let runtime = runtime()?;
     let store = runtime.block_on(VaultStore::open(crate::files::database()?))?;
     match action.as_str() {
         "list" => {
-            let name = textarg(arguments, 1, "usage: synaps secret list <vault>")?;
+            let name = textarg(arguments, 1, "usage: synapse secret list <vault>")?;
             let vault = runtime
                 .block_on(store.vaults())?
                 .into_iter()
@@ -205,7 +205,7 @@ fn secret(arguments: &[OsString]) -> Result<Outcome> {
         }
         "set" => setsecret(&runtime, &store, arguments)?,
         "forget" => {
-            let reference = textarg(arguments, 1, "usage: synaps secret forget <vault.name>")?;
+            let reference = textarg(arguments, 1, "usage: synapse secret forget <vault.name>")?;
             let secret = runtime
                 .block_on(store.findsecret(&reference))?
                 .context("secret not found")?;
@@ -217,12 +217,12 @@ fn secret(arguments: &[OsString]) -> Result<Outcome> {
             let reference = textarg(
                 arguments,
                 1,
-                "usage: synaps secret global <vault.name> <on|off>",
+                "usage: synapse secret global <vault.name> <on|off>",
             )?;
             let enabled = match textarg(
                 arguments,
                 2,
-                "usage: synaps secret global <vault.name> <on|off>",
+                "usage: synapse secret global <vault.name> <on|off>",
             )?
             .as_str()
             {
@@ -252,17 +252,17 @@ fn setsecret(
     let vaultname = textarg(
         arguments,
         1,
-        "usage: synaps secret set <vault> <name> <env> [--global]",
+        "usage: synapse secret set <vault> <name> <env> [--global]",
     )?;
     let name = textarg(
         arguments,
         2,
-        "usage: synaps secret set <vault> <name> <env> [--global]",
+        "usage: synapse secret set <vault> <name> <env> [--global]",
     )?;
     let env = textarg(
         arguments,
         3,
-        "usage: synaps secret set <vault> <name> <env> [--global]",
+        "usage: synapse secret set <vault> <name> <env> [--global]",
     )?;
     let global = arguments.iter().any(|value| value == "--global");
     let vault = runtime
@@ -294,7 +294,7 @@ fn setsecret(
 }
 
 fn scope(arguments: &[OsString]) -> Result<Outcome> {
-    let action = textarg(arguments, 0, "usage: synaps scope <init|trust|status>")?;
+    let action = textarg(arguments, 0, "usage: synapse scope <init|trust|status>")?;
     if action == "status" {
         return status(&arguments[1..]);
     }
@@ -337,7 +337,7 @@ fn install() -> Result<Outcome> {
     println!("Installed {}", target.display());
     if !pathcontains(target.parent().unwrap_or_else(|| Path::new("."))) {
         println!(
-            "Add {} to PATH to use synaps from your shell.",
+            "Add {} to PATH to use synapse from your shell.",
             target.parent().unwrap().display()
         );
     }
@@ -345,7 +345,7 @@ fn install() -> Result<Outcome> {
 }
 
 fn data(arguments: &[OsString]) -> Result<Outcome> {
-    let action = textarg(arguments, 0, "usage: synaps data <check|export|restore>")?;
+    let action = textarg(arguments, 0, "usage: synapse data <check|export|restore>")?;
     let database = crate::files::database()?;
     let runtime = runtime()?;
     match action.as_str() {
@@ -360,12 +360,13 @@ fn data(arguments: &[OsString]) -> Result<Outcome> {
             }
         }
         "export" => {
-            let target = PathBuf::from(textarg(arguments, 1, "usage: synaps data export <file>")?);
+            let target = PathBuf::from(textarg(arguments, 1, "usage: synapse data export <file>")?);
             runtime.block_on(crate::database::export(&database, &target))?;
             println!("Exported {}", target.display());
         }
         "restore" => {
-            let source = PathBuf::from(textarg(arguments, 1, "usage: synaps data restore <file>")?);
+            let source =
+                PathBuf::from(textarg(arguments, 1, "usage: synapse data restore <file>")?);
             let backup = runtime.block_on(crate::database::restore(&database, &source))?;
             println!("Restored {}", source.display());
             if let Some(backup) = backup {
@@ -378,7 +379,7 @@ fn data(arguments: &[OsString]) -> Result<Outcome> {
 }
 
 fn settings(arguments: &[OsString]) -> Result<Outcome> {
-    let action = textarg(arguments, 0, "usage: synaps settings <show|optimize>")?;
+    let action = textarg(arguments, 0, "usage: synapse settings <show|optimize>")?;
     let runtime = runtime()?;
     let brain = runtime.block_on(crate::brain::Brain::open(crate::files::database()?))?;
     match action.as_str() {
@@ -394,13 +395,13 @@ fn settings(arguments: &[OsString]) -> Result<Outcome> {
                     .unwrap_or_else(|| "unlimited".to_owned())
             );
             println!("shell modes\tcommand-scoped, ambient directory");
-            println!("zsh hook\teval \"$(synaps hook zsh)\"");
+            println!("zsh hook\teval \"$(synapse hook zsh)\"");
         }
         "optimize" => {
             let value = textarg(
                 arguments,
                 1,
-                "usage: synaps settings optimize <full|balanced|lean>",
+                "usage: synapse settings optimize <full|balanced|lean>",
             )?;
             let optimization = value.parse()?;
             runtime.block_on(brain.setoptimization(optimization))?;
@@ -415,7 +416,7 @@ fn memory(arguments: &[OsString]) -> Result<Outcome> {
     let action = textarg(
         arguments,
         0,
-        "usage: synaps memory <list|show|add|edit|delete|wipe>",
+        "usage: synapse memory <list|show|add|edit|delete|wipe>",
     )?;
     let runtime = runtime()?;
     let brain = runtime.block_on(crate::brain::Brain::open(crate::files::database()?))?;
@@ -448,7 +449,7 @@ fn memory(arguments: &[OsString]) -> Result<Outcome> {
             }
         }
         "show" => {
-            let id = memoryid(arguments, 1, "usage: synaps memory show <id> [--json]")?;
+            let id = memoryid(arguments, 1, "usage: synapse memory show <id> [--json]")?;
             let memory = runtime
                 .block_on(brain.memory(id))?
                 .context("memory not found")?;
@@ -469,7 +470,7 @@ fn memory(arguments: &[OsString]) -> Result<Outcome> {
             println!("Stored memory #{id}");
         }
         "edit" => {
-            let id = memoryid(arguments, 1, "usage: synaps memory edit <id> [source]")?;
+            let id = memoryid(arguments, 1, "usage: synapse memory edit <id> [source]")?;
             let source = arguments.get(2).and_then(|value| value.to_str());
             let body = readmemory()?;
             runtime
@@ -478,7 +479,7 @@ fn memory(arguments: &[OsString]) -> Result<Outcome> {
             println!("Updated memory #{id}");
         }
         "delete" => {
-            let id = memoryid(arguments, 1, "usage: synaps memory delete <id> --confirm")?;
+            let id = memoryid(arguments, 1, "usage: synapse memory delete <id> --confirm")?;
             anyhow::ensure!(
                 arguments.iter().any(|value| value == "--confirm"),
                 "add --confirm to delete memory #{id}"

@@ -1,5 +1,5 @@
 import type { Page } from "./types";
-import { repositoryurl, siteurl } from "./deploy";
+import { downloadurl, repositoryurl, siteurl } from "./deploy";
 
 const depth = (path: string) => path.split("/").length - 1;
 const rootfor = (path: string) => "../".repeat(depth(path));
@@ -11,16 +11,16 @@ const current = (page: Page, kind: Page["kind"]) =>
 const topnav = (page: Page, root: string) => `
   <a class="skip" href="#content">Skip to content</a>
   <header class="topbar">
-    <a class="wordmark" href="${root}" aria-label="Synaps home">
+    <a class="wordmark" href="${root}" aria-label="Synapse home">
       <img src="${root}icon.svg" width="30" height="30" alt="">
-      <span>Synaps</span>
+      <span>Synapse</span>
     </a>
     <button class="navtoggle" type="button" aria-expanded="false" aria-controls="topnav">Menu</button>
     <nav id="topnav" aria-label="Primary">
       <a href="${root}docs/"${current(page, "docs")}>Docs</a>
       <a href="${root}tutorials/"${current(page, "tutorial")}>Tutorials</a>
       <a href="${repositoryurl}">GitHub <span aria-hidden="true">↗</span></a>
-      <a class="navdownload" href="${repositoryurl}/releases/latest">Download</a>
+      <a class="navdownload" href="${downloadurl}">Download</a>
     </nav>
   </header>`;
 
@@ -67,8 +67,8 @@ const ontoc = (page: Page) =>
 const footer = (root: string) => `
   <footer class="footer">
     <div>
-      <a class="wordmark" href="${root}"><img src="${root}icon.svg" width="26" height="26" alt="">Synaps</a>
-      <p>Local memory and scoped credentials for developer tools.</p>
+      <a class="wordmark" href="${root}"><img src="${root}icon.svg" width="26" height="26" alt="">Synapse</a>
+      <p>Project memory and scoped credentials, kept on your Mac.</p>
     </div>
     <nav aria-label="Footer">
       <a href="${root}docs/">Documentation</a>
@@ -76,7 +76,7 @@ const footer = (root: string) => `
       <a href="${repositoryurl}">Source</a>
       <a href="${repositoryurl}/releases">Releases</a>
     </nav>
-    <p class="footerfine">Local-first. No account required. macOS 13+ beta.</p>
+    <p class="footerfine">No account required. Apple silicon · macOS 13+.</p>
   </footer>`;
 
 const article = (page: Page, pages: Page[], root: string) => `
@@ -101,7 +101,7 @@ export const render = (page: Page, pages: Page[]) => {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>${page.title === "Synaps" ? "Synaps — one memory, every tool" : `${page.title} — Synaps`}</title>
+  <title>${page.title === "Synapse" ? "Synapse — one memory, every tool" : `${page.title} — Synapse`}</title>
   <meta name="description" content="${page.description}">
   <meta name="theme-color" content="#0a43c8">
   <meta property="og:title" content="${page.title}">

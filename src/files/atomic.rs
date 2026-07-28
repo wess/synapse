@@ -44,7 +44,7 @@ pub fn replace(path: &Path, content: &[u8], source: Option<&fs::Metadata>) -> Re
 fn temporary(parent: &Path) -> Result<(PathBuf, File)> {
     for _ in 0..100 {
         let number = NEXT.fetch_add(1, Ordering::Relaxed);
-        let name = format!(".synapstemp{}{}", std::process::id(), number);
+        let name = format!(".synapsetemp{}{}", std::process::id(), number);
         let path = parent.join(name);
         match OpenOptions::new().write(true).create_new(true).open(&path) {
             Ok(file) => return Ok((path, file)),

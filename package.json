@@ -1,5 +1,5 @@
 {
-  "name": "synapswebsite",
+  "name": "synapsewebsite",
   "private": true,
   "scripts": {
     "site": "bun run website/build.ts",

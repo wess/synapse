@@ -11,7 +11,7 @@ pub async fn run(arguments: Vec<OsString>) -> Result<ExitStatus> {
         .collect::<Vec<_>>();
     let (program, arguments) = arguments
         .split_first()
-        .context("usage: synaps run -- <command> [arguments]")?;
+        .context("usage: synapse run -- <command> [arguments]")?;
     let folder = std::env::current_dir().context("could not read the current folder")?;
     let store = VaultStore::open(crate::files::database()?).await?;
     let resolved = resolve(&store, Path::new(&folder)).await?;

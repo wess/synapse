@@ -5,7 +5,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 
-pub const CONFIG: &str = ".synaps.yaml";
+pub const CONFIG: &str = ".synapse.yaml";
 
 pub fn template() -> &'static str {
     templatefor(ScopeKind::Project)
@@ -35,8 +35,8 @@ pub fn read(path: &Path) -> Result<(ScopeConfig, String)> {
     let content =
         fs::read_to_string(path).with_context(|| format!("could not read {}", path.display()))?;
     let config: ScopeConfig = serde_saphyr::from_str(&content)
-        .with_context(|| format!("{} is not valid Synaps YAML", path.display()))?;
-    anyhow::ensure!(config.version == 1, "unsupported Synaps scope version");
+        .with_context(|| format!("{} is not valid Synapse YAML", path.display()))?;
+    anyhow::ensure!(config.version == 1, "unsupported Synapse scope version");
     let digest = format!("{:x}", Sha256::digest(content.as_bytes()));
     Ok((config, digest))
 }

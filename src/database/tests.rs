@@ -5,7 +5,7 @@ use std::str::FromStr;
 #[tokio::test]
 async fn migrates_existing_data_and_creates_backup() {
     let directory = tempfile::tempdir().unwrap();
-    let folder = directory.path().join("synaps");
+    let folder = directory.path().join("synapse");
     std::fs::create_dir_all(&folder).unwrap();
     let path = folder.join("brain.db");
     let options = SqliteConnectOptions::from_str("sqlite://test")
@@ -81,7 +81,7 @@ async fn migrates_existing_data_and_creates_backup() {
 #[tokio::test]
 async fn exports_checks_and_restores_consistent_database() {
     let directory = tempfile::tempdir().unwrap();
-    let folder = directory.path().join("synaps");
+    let folder = directory.path().join("synapse");
     let path = folder.join("brain.db");
     let exported = directory.path().join("export.db");
 
@@ -119,7 +119,7 @@ async fn exports_checks_and_restores_consistent_database() {
 #[tokio::test]
 async fn rejects_foreign_key_corruption() {
     let directory = tempfile::tempdir().unwrap();
-    let folder = directory.path().join("synaps");
+    let folder = directory.path().join("synapse");
     let path = folder.join("brain.db");
     let opened = open(&path).await.unwrap();
     opened.pool.close().await;

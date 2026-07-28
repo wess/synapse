@@ -2,26 +2,26 @@
 set -eu
 
 root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
-identity=${SYNAPS_SIGNING_IDENTITY:-Developer ID Application: Wesley Cope (XJDC46F35X)}
-bundle="$root/target/release/bundle/osx/Synaps.app"
+identity=${SYNAPSE_SIGNING_IDENTITY:-Developer ID Application: Wesley Cope (XJDC46F35X)}
+bundle="$root/target/release/bundle/osx/Synapse.app"
 output="$root/dist"
-stage=$(mktemp -d "${TMPDIR:-/tmp}/synapsrelease.XXXXXX")
+stage=$(mktemp -d "${TMPDIR:-/tmp}/synapserelease.XXXXXX")
 trap 'rm -rf "$stage"' EXIT INT TERM
 
 cd "$root"
 rustc -vV | grep -q '^host: aarch64-apple-darwin$'
 cargo bundle --release --format osx
-ditto --norsrc --noextattr --noqtn --noacl "$bundle" "$stage/synaps.app"
-/usr/libexec/PlistBuddy -c 'Set :LSRequiresCarbon false' "$stage/synaps.app/Contents/Info.plist"
-codesign --force --deep --options runtime --timestamp --sign "$identity" "$stage/synaps.app"
-codesign --verify --deep --strict --verbose=2 "$stage/synaps.app"
-ditto -c -k --norsrc --noextattr --noqtn --noacl --keepParent "$stage/synaps.app" "$stage/synaps.zip"
+ditto --norsrc --noextattr --noqtn --noacl "$bundle" "$stage/synapse.app"
+/usr/libexec/PlistBuddy -c 'Set :LSRequiresCarbon false' "$stage/synapse.app/Contents/Info.plist"
+codesign --force --deep --options runtime --timestamp --sign "$identity" "$stage/synapse.app"
+codesign --verify --deep --strict --verbose=2 "$stage/synapse.app"
+ditto -c -k --norsrc --noextattr --noqtn --noacl --keepParent "$stage/synapse.app" "$stage/synapse.zip"
 
 mkdir -p "$output"
-rm -rf "$output/synaps.app"
-rm -f "$output/synaps.zip"
-mv "$stage/synaps.app" "$output/synaps.app"
-mv "$stage/synaps.zip" "$output/synaps.zip"
+rm -rf "$output/synapse.app"
+rm -f "$output/synapse.zip"
+mv "$stage/synapse.app" "$output/synapse.app"
+mv "$stage/synapse.zip" "$output/synapse.zip"
 
-echo "$output/synaps.app"
-echo "$output/synaps.zip"
+echo "$output/synapse.app"
+echo "$output/synapse.zip"

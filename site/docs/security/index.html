@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Security model — Synaps</title>
+  <title>Security model — Synapse</title>
   <meta name="description" content="Understand the trust boundary around local memory, Keychain values, MCP metadata, approved scopes, child processes, and configuration writes.">
   <meta name="theme-color" content="#0a43c8">
   <meta property="og:title" content="Security model">
@@ -22,16 +22,16 @@
   
   <a class="skip" href="#content">Skip to content</a>
   <header class="topbar">
-    <a class="wordmark" href="../../" aria-label="Synaps home">
+    <a class="wordmark" href="../../" aria-label="Synapse home">
       <img src="../../icon.svg" width="30" height="30" alt="">
-      <span>Synaps</span>
+      <span>Synapse</span>
     </a>
     <button class="navtoggle" type="button" aria-expanded="false" aria-controls="topnav">Menu</button>
     <nav id="topnav" aria-label="Primary">
       <a href="../../docs/" aria-current="page">Docs</a>
       <a href="../../tutorials/">Tutorials</a>
       <a href="https://github.com/wess/synapse">GitHub <span aria-hidden="true">↗</span></a>
-      <a class="navdownload" href="https://github.com/wess/synapse/releases/latest">Download</a>
+      <a class="navdownload" href="https://github.com/wess/synapse/releases/latest/download/synapse.zip">Download</a>
     </nav>
   </header>
   
@@ -78,8 +78,8 @@
       </header>
       
     <h2 id="boundary">Trust boundary</h2>
-    <p>Synaps is local-first, not a sandbox. It removes unnecessary network and file exposure from the memory-and-credential workflow, but it still runs as your macOS user. Any process already able to control your account, inspect your terminal, or access an unlocked Keychain may sit inside the same trust boundary.</p>
-    <p>The application requires no Synaps account or hosted service. MCP uses local stdio. Memory and metadata live in a local SQLite file. The beta does not include telemetry, remote synchronization, or a web server.</p>
+    <p>Synapse is local-first, not a sandbox. It removes unnecessary network and file exposure from the memory-and-credential workflow, but it still runs as your macOS user. Any process already able to control your account, inspect your terminal, or access an unlocked Keychain may sit inside the same trust boundary.</p>
+    <p>The application requires no Synapse account or hosted service. MCP uses local stdio. Memory and metadata live in a local SQLite file. The beta does not include telemetry, remote synchronization, or a web server.</p>
 
     <h2 id="memory">Memory</h2>
     <p>Memory bodies are plain text in SQLite and are available to connected MCP clients through recall. Do not store credentials, private keys, access tokens, or material you would not want an authorized connected tool to read.</p>
@@ -95,13 +95,13 @@
   </aside>
 
     <h2 id="scopes">Scope approval</h2>
-    <p>An unapproved, edited, or invalid <code>.synaps.yaml</code> never contributes variables. Approval stores a SHA-256 digest of the exact file bytes and its canonical path. Any later edit invalidates that digest.</p>
-    <p>Resolution walks from broad ancestor folders toward the working folder. Narrower approved files can replace a mapping, but a name denied by a broader scope remains denied. Any scope warning prevents <code>synaps run</code> from launching and makes the shell hook unload its managed values, avoiding silent partial configuration.</p>
+    <p>An unapproved, edited, or invalid <code>.synapse.yaml</code> never contributes variables. Approval stores a SHA-256 digest of the exact file bytes and its canonical path. Any later edit invalidates that digest.</p>
+    <p>Resolution walks from broad ancestor folders toward the working folder. Narrower approved files can replace a mapping, but a name denied by a broader scope remains denied. Any scope warning prevents <code>synapse run</code> from launching and makes the shell hook unload its managed values, avoiding silent partial configuration.</p>
 
     <h2 id="children">Environment boundaries</h2>
-    <p><code>synaps run -- &lt;command&gt;</code> reads only the selected Keychain values and places them in the environment of a new child process. That command and all of its descendants can read those values normally. Synaps cannot stop the child from logging, transmitting, or persisting them.</p>
+    <p><code>synapse run -- &lt;command&gt;</code> reads only the selected Keychain values and places them in the environment of a new child process. That command and all of its descendants can read those values normally. Synapse cannot stop the child from logging, transmitting, or persisting them.</p>
     <p>The optional zsh, bash, or fish hook asks the shell to evaluate quoted environment changes. It activates only inside a directory with at least one approved discovered scope. Leaving, revoking approval, or changing any discovered scope unloads managed variables and restores values that existed before activation.</p>
-    <p>Settings installs the hook inside a marked startup-file block using the absolute managed CLI path. It backs up and atomically replaces an existing file, refuses incomplete or duplicate Synaps blocks, and removes only the marked block when disabled.</p>
+    <p>Settings installs the hook inside a marked startup-file block using the absolute managed CLI path. It backs up and atomically replaces an existing file, refuses incomplete or duplicate Synapse blocks, and removes only the marked block when disabled.</p>
     
   <aside class="note">
     <strong>Ambient access is broader</strong>
@@ -111,18 +111,18 @@
       <li>Inspect scripts before launching them with production credentials.</li>
       <li>Use folder scopes and <code>deny</code> to narrow access.</li>
       <li>Prefer separate least-privilege credentials for development and deployment.</li>
-      <li>Use <code>synaps status .</code> immediately before a sensitive command.</li>
-      <li>Use <code>synaps deny</code> when a directory should no longer activate automatically.</li>
+      <li>Use <code>synapse status .</code> immediately before a sensitive command.</li>
+      <li>Use <code>synapse deny</code> when a directory should no longer activate automatically.</li>
     </ul>
 
     <h2 id="limits">Operational limits</h2>
     <ul>
-      <li>Synaps does not isolate a malicious connected MCP client from recalled memory. Only connect tools you trust.</li>
+      <li>Synapse does not isolate a malicious connected MCP client from recalled memory. Only connect tools you trust.</li>
       <li>Keychain protects stored values, but an authorized local child receives plaintext environment variables.</li>
       <li>Database exports omit Keychain values but include memory and credential metadata.</li>
       <li>Configuration writes are validated, backed up, and atomic, but external programs can still change the same files afterward.</li>
       <li>A scope digest proves that you approved exact bytes at a path; it does not prove the commands launched from that folder are safe.</li>
-      <li>There is no remote revocation system. Forget a secret in Synaps and rotate it at its issuer when exposure is possible.</li>
+      <li>There is no remote revocation system. Forget a secret in Synapse and rotate it at its issuer when exposure is possible.</li>
     </ul>
   
     </main>
@@ -134,8 +134,8 @@
   
   <footer class="footer">
     <div>
-      <a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">Synaps</a>
-      <p>Local memory and scoped credentials for developer tools.</p>
+      <a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">Synapse</a>
+      <p>Project memory and scoped credentials, kept on your Mac.</p>
     </div>
     <nav aria-label="Footer">
       <a href="../../docs/">Documentation</a>
@@ -143,7 +143,7 @@
       <a href="https://github.com/wess/synapse">Source</a>
       <a href="https://github.com/wess/synapse/releases">Releases</a>
     </nav>
-    <p class="footerfine">Local-first. No account required. macOS 13+ beta.</p>
+    <p class="footerfine">No account required. Apple silicon · macOS 13+.</p>
   </footer>
 </body>
 </html>

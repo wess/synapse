@@ -3,11 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Desktop app reference — Synaps</title>
-  <meta name="description" content="Use every Synaps screen with clear data boundaries, confirmation behavior, recovery paths, and shell-integration states.">
+  <title>Desktop app reference — Synapse</title>
+  <meta name="description" content="Use every Synapse screen with clear data boundaries, confirmation behavior, recovery paths, and shell-integration states.">
   <meta name="theme-color" content="#0a43c8">
   <meta property="og:title" content="Desktop app reference">
-  <meta property="og:description" content="Use every Synaps screen with clear data boundaries, confirmation behavior, recovery paths, and shell-integration states.">
+  <meta property="og:description" content="Use every Synapse screen with clear data boundaries, confirmation behavior, recovery paths, and shell-integration states.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://wess.io/synapse/docs/app/">
   <link rel="canonical" href="https://wess.io/synapse/docs/app/">
@@ -22,16 +22,16 @@
   
   <a class="skip" href="#content">Skip to content</a>
   <header class="topbar">
-    <a class="wordmark" href="../../" aria-label="Synaps home">
+    <a class="wordmark" href="../../" aria-label="Synapse home">
       <img src="../../icon.svg" width="30" height="30" alt="">
-      <span>Synaps</span>
+      <span>Synapse</span>
     </a>
     <button class="navtoggle" type="button" aria-expanded="false" aria-controls="topnav">Menu</button>
     <nav id="topnav" aria-label="Primary">
       <a href="../../docs/" aria-current="page">Docs</a>
       <a href="../../tutorials/">Tutorials</a>
       <a href="https://github.com/wess/synapse">GitHub <span aria-hidden="true">↗</span></a>
-      <a class="navdownload" href="https://github.com/wess/synapse/releases/latest">Download</a>
+      <a class="navdownload" href="https://github.com/wess/synapse/releases/latest/download/synapse.zip">Download</a>
     </nav>
   </header>
   
@@ -74,7 +74,7 @@
     <main class="article" id="content">
       <header class="articlehead">
         <h1>Desktop app reference</h1>
-        <span>Use every Synaps screen with clear data boundaries, confirmation behavior, recovery paths, and shell-integration states.</span>
+        <span>Use every Synapse screen with clear data boundaries, confirmation behavior, recovery paths, and shell-integration states.</span>
       </header>
       
     <h2 id="navigation">Navigation and shared state</h2>
@@ -84,7 +84,7 @@
       <tbody>
         <tr><td>Connections</td><td>Detect and connect supported developer tools.</td><td>Tool MCP configuration and managed instruction blocks.</td></tr>
         <tr><td>Memory</td><td>Search, inspect, correct, or remove durable context.</td><td>Memory rows in the local database.</td></tr>
-        <tr><td>Vaults</td><td>Manage labels, Keychain values, mappings, and approved project scopes.</td><td>Vault metadata, Keychain items, and <code>.synaps.yaml</code>.</td></tr>
+        <tr><td>Vaults</td><td>Manage labels, Keychain values, mappings, and approved project scopes.</td><td>Vault metadata, Keychain items, and <code>.synapse.yaml</code>.</td></tr>
         <tr><td>Settings</td><td>Choose recall, appearance, CLI, and shell-integration behavior.</td><td>Local preferences, the CLI launcher, and one managed shell block.</td></tr>
       </tbody>
     </table>
@@ -96,12 +96,12 @@
       <dt>Not installed</dt>
       <dd>The command was not found on <code>PATH</code>. Set up is disabled until the tool is installed.</dd>
       <dt>Detected</dt>
-      <dd>The tool executable is available but its exact <code>synaps</code> MCP entry is absent or stale. Choose <strong>Set up</strong>.</dd>
+      <dd>The tool executable is available but its exact <code>synapse</code> MCP entry is absent or stale. Choose <strong>Set up</strong>.</dd>
       <dt>Connected</dt>
-      <dd>The stored executable and <code>["mcp"]</code> arguments match the expected Synaps server.</dd>
+      <dd>The stored executable and <code>["mcp"]</code> arguments match the expected Synapse server.</dd>
     </dl>
-    <p>Set up registers the MCP server and adds a marked memory-policy block to that tool’s global instructions. Existing settings and text outside the managed block remain in place; changed files receive <code>.synapsbackup</code> siblings. If either write fails, Synaps restores both files to their previous state.</p>
-    <p><strong>Edit instructions</strong> and <strong>Edit config</strong> open the actual files in the built-in editor. Synaps does not currently provide a separate Disconnect button; remove the named <code>synaps</code> entry and managed instruction block through those files when you intentionally want to disconnect a tool. See <a href="../config/#tools">Tool integration files</a> for their exact paths.</p>
+    <p>Set up registers the MCP server and adds a marked memory-policy block to that tool’s global instructions. Existing settings and text outside the managed block remain in place; changed files receive <code>.synapsebackup</code> siblings. If either write fails, Synapse restores both files to their previous state.</p>
+    <p><strong>Edit instructions</strong> and <strong>Edit config</strong> open the actual files in the built-in editor. Synapse does not currently provide a separate Disconnect button; remove the named <code>synapse</code> entry and managed instruction block through those files when you intentionally want to disconnect a tool. See <a href="../config/#tools">Tool integration files</a> for their exact paths.</p>
 
     <h2 id="memory">Memory</h2>
     <p>An empty search shows recent memory; a query searches the stored body and shows up to 100 results. Select an entry to inspect its ID, local creation time, full Markdown body, and source. <strong>Save changes</strong> replaces the selected body and source in place, so future recall sees the correction without creating a competing record.</p>
@@ -116,7 +116,7 @@
       <li><strong>Forget</strong> requires <strong>Confirm</strong>, then removes both the Keychain item and its SQLite metadata.</li>
       <li><strong>Delete vault</strong> is available only when the selected vault is empty and requires a second confirmation.</li>
     </ul>
-    <p>Under <strong>Project and folder scopes</strong>, choose a directory, create or edit its <code>.synaps.yaml</code>, inspect the reported state, then choose <strong>Approve</strong> only after reviewing the exact file. Any later edit invalidates that digest and requires another review. Secret values never enter YAML. See <a href="../vault/">Vaults and scopes</a> for resolution order and both process boundaries.</p>
+    <p>Under <strong>Project and folder scopes</strong>, choose a directory, create or edit its <code>.synapse.yaml</code>, inspect the reported state, then choose <strong>Approve</strong> only after reviewing the exact file. Any later edit invalidates that digest and requires another review. Secret values never enter YAML. See <a href="../vault/">Vaults and scopes</a> for resolution order and both process boundaries.</p>
 
     <h2 id="settings">Settings</h2>
     <h3>Recall optimization</h3>
@@ -124,9 +124,9 @@
     <h3>Appearance</h3>
     <p>System follows the current macOS appearance as it changes. Light and Dark pin the app to that mode. The preference is stored locally.</p>
     <h3>Command line</h3>
-    <p>The status is Installed, Not installed, or Conflict. <strong>Install CLI</strong> places the managed launcher at the displayed path. Synaps refuses to overwrite an unrelated executable; resolve a Conflict deliberately before trying again.</p>
+    <p>The status is Installed, Not installed, or Conflict. <strong>Install CLI</strong> places the managed launcher at the displayed path. Synapse refuses to overwrite an unrelated executable; resolve a Conflict deliberately before trying again.</p>
     <h3>Shell environments</h3>
-    <p>Command scoped always remains available through <code>synaps run -- &lt;command&gt;</code>. Automatic directory loading is an explicit opt-in for the detected default zsh, bash, or fish shell. Only that detected shell is changed.</p>
+    <p>Command scoped always remains available through <code>synapse run -- &lt;command&gt;</code>. Automatic directory loading is an explicit opt-in for the detected default zsh, bash, or fish shell. Only that detected shell is changed.</p>
     <table>
       <thead><tr><th>Status</th><th>Control</th><th>Result</th></tr></thead>
       <tbody>
@@ -140,7 +140,7 @@
     
   <aside class="note">
     <strong>Startup files stay user-owned</strong>
-    <p>Synaps backs up and atomically rewrites the detected startup file, follows an existing symlink, and refuses malformed or duplicate managed markers instead of guessing what to replace.</p>
+    <p>Synapse backs up and atomically rewrites the detected startup file, follows an existing symlink, and refuses malformed or duplicate managed markers instead of guessing what to replace.</p>
   </aside>
 
     <h2 id="editors">Editors, local data, and recovery</h2>
@@ -157,8 +157,8 @@
   
   <footer class="footer">
     <div>
-      <a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">Synaps</a>
-      <p>Local memory and scoped credentials for developer tools.</p>
+      <a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">Synapse</a>
+      <p>Project memory and scoped credentials, kept on your Mac.</p>
     </div>
     <nav aria-label="Footer">
       <a href="../../docs/">Documentation</a>
@@ -166,7 +166,7 @@
       <a href="https://github.com/wess/synapse">Source</a>
       <a href="https://github.com/wess/synapse/releases">Releases</a>
     </nav>
-    <p class="footerfine">Local-first. No account required. macOS 13+ beta.</p>
+    <p class="footerfine">No account required. Apple silicon · macOS 13+.</p>
   </footer>
 </body>
 </html>
