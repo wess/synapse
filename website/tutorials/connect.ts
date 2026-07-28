@@ -4,7 +4,7 @@ import type { Page } from "../types";
 export const connect: Page = {
   path: "tutorials/connect/index.html",
   title: "Install and connect your first tools",
-  description: "Go from the notarized archive to a working local MCP connection and verify memory from the app, CLI, and developer tool.",
+  description: "Go from the signed beta archive to a working local MCP connection and verify memory from the app, CLI, and developer tool.",
   kind: "tutorial",
   toc: [
     { label: "Outcome", id: "outcome" },
@@ -25,7 +25,7 @@ export const connect: Page = {
     <ol class="steps">
       <li>
         <h3 id="install">Move and open the app</h3>
-        <p>Extract <code>synapse.zip</code>, move <strong>synapse.app</strong> to Applications, then open it. macOS should accept the notarized Developer ID application without a security workaround.</p>
+        <p>Extract <code>synapse.zip</code>, move <strong>synapse.app</strong> to Applications, then open it. This prerelease is Developer ID signed but not yet notarized. If macOS blocks it, follow the <a href="../../docs/install/">installation security notice</a> before deciding whether to use <strong>Open Anyway</strong>.</p>
         ${note("Choose the permanent location now", "The CLI installed from a packaged app launches the executable inside that signed bundle. Install it only after the app is where you intend to keep it.")}
       </li>
       <li>

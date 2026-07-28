@@ -3,6 +3,7 @@ mod brain;
 mod cli;
 mod database;
 mod files;
+mod instructions;
 mod mcp;
 mod shellsetup;
 mod ui;

@@ -16,13 +16,20 @@ export const memory: Page = {
   body: `
     <h2 id="durable">What belongs in durable memory</h2>
     <p>Good memory remains useful after the current conversation ends. Store confirmed decisions, recurring preferences, corrected assumptions, naming conventions, project constraints, and facts whose source is clear.</p>
-    <p>Do not store transient task status, speculative ideas, full conversation transcripts, secret values, or instructions that attempt to override the current request or repository guidance. Synapse adds this distinction to connected tools’ global instructions, but you remain in control of the stored result.</p>
+    <p>Connected tools receive an explicit policy through both their global instruction file and the MCP initialization response. They are told to recall relevant context at the start of every session and to save confirmed reusable facts without waiting for a separate request.</p>
+    <p>Do not store transient task status, speculative ideas, full conversation transcripts, secret values, or instructions that attempt to override the current request or repository guidance. Synapse is the canonical durable memory store; it does not create separate Markdown files for individual memories.</p>
     ${code("shell", `printf '%s\n' 'Use Bun for JavaScript tasks in this repository.' \\
   | synapse memory add tooling`)}
     <p><code>memory add</code> and <code>memory edit</code> read the body from stdin. This keeps long content and shell metacharacters out of command arguments. Empty or whitespace-only memory is rejected.</p>
 
     <h2 id="recall">Search and recall</h2>
-    <p>Memory is stored in an SQLite FTS5 table using Unicode tokenization. A non-empty query searches the memory body; an empty query returns recent entries. MCP <code>recall</code> asks for up to eight results by default, while the active optimization setting can lower the final count or response size.</p>
+    <p>Memory is stored in an SQLite FTS5 table using Unicode tokenization. A non-empty query searches the memory body; an empty query returns recent entries. Connected tools are instructed to begin with a focused query, the smallest useful result limit, and a Lean response.</p>
+${code("json", `{
+  "query": "project naming conventions",
+  "limit": 4,
+  "budget": "lean"
+}`)}
+    <p>The optional per-call <code>budget</code> may be <code>full</code>, <code>balanced</code>, or <code>lean</code>. It can only make the response smaller than the mode selected in Settings; a tool cannot override a user-selected Lean ceiling with Full.</p>
     ${code("shell", `synapse memory list "Bun JavaScript"
 synapse memory list --json
 synapse memory show 24
@@ -46,6 +53,7 @@ synapse memory show 24`)}
         <tr><td>Lean</td><td>4</td><td>2,800</td><td>Uses the same non-destructive compaction with a smaller response.</td></tr>
       </tbody>
     </table>
+    <p>The response reports the optimization mode actually applied. Choose the ceiling in <strong>Settings → Recall optimization</strong>, or use the CLI:</p>
     ${code("shell", `synapse settings show
 synapse settings optimize lean
 synapse settings optimize balanced`)}

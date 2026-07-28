@@ -27,7 +27,7 @@ const body = `
           <a class="button" href="${downloadurl}">Download macOS beta <span aria-hidden="true">↓</span></a>
           <a class="button secondary" href="docs/">See how it works</a>
         </div>
-        <span class="heronote">Apple silicon · macOS 13+ · signed and notarized</span>
+        <span class="heronote">Apple silicon · macOS 13+ · Developer ID signed prerelease</span>
       </div>
       <div class="matchcut" aria-label="A confirmed project decision moves from one work session to the next through Synapse">
         <div class="terminal codex">

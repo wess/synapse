@@ -1,6 +1,6 @@
 import { readdir } from "node:fs/promises";
 import { extname, join, relative } from "node:path";
-import { repositoryurl, siteurl } from "./deploy";
+import { releasetag, repositoryurl, siteurl } from "./deploy";
 
 const project = join(import.meta.dir, "..");
 const output = join(project, "site");
@@ -109,6 +109,9 @@ if (new RegExp(`${formerspelling}(?!e)`, "i").test(corpus)) {
 }
 if (!corpus.includes(repositoryurl)) {
   fail("generated pages are missing the repository URL");
+}
+if (!corpus.includes(`/releases/download/${releasetag}/synapse.zip`)) {
+  fail("generated pages are missing the current beta download");
 }
 if (!corpus.includes('data-searchstatus role="status" aria-live="polite"')) {
   fail("documentation search is missing an announced status");

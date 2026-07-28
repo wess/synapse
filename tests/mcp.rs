@@ -33,6 +33,12 @@ fn mcp_stdio_lists_and_calls_every_tool() {
         1,
     );
     assert_eq!(initialized["result"]["serverInfo"]["name"], "synapse");
+    let instructions = initialized["result"]["instructions"].as_str().unwrap();
+    assert!(instructions.contains("At the start of every session"));
+    assert!(instructions.contains("the `lean` budget first"));
+    assert!(instructions.contains("call `remember` without waiting to be asked"));
+    assert!(instructions.contains("instead of ad hoc memory Markdown files"));
+    assert!(instructions.contains("never returns secret values"));
     writeln!(
         stdin,
         "{}",
@@ -66,7 +72,7 @@ fn mcp_stdio_lists_and_calls_every_tool() {
             "jsonrpc": "2.0",
             "id": 4,
             "method": "tools/call",
-            "params": {"name": "recall", "arguments": {"query": "durable marker", "limit": 4}}
+            "params": {"name": "recall", "arguments": {"query": "durable marker", "limit": 4, "budget": "lean"}}
         }),
         4,
     );
@@ -102,6 +108,10 @@ fn mcp_stdio_lists_and_calls_every_tool() {
         .collect::<Vec<_>>();
     assert_eq!(names, vec!["recall", "remember", "vaultstatus"]);
     assert!(remembered.to_string().contains("stored"));
+    assert_eq!(
+        recalled["result"]["structuredContent"]["optimization"],
+        "lean"
+    );
     assert!(recalled.to_string().contains("mcp durable marker"));
     assert!(vault.to_string().contains("Values stay in Keychain"));
 }

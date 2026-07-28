@@ -42,6 +42,14 @@ impl Optimization {
             Self::Lean => "lean",
         }
     }
+
+    pub fn constrained(self, requested: Option<Self>) -> Self {
+        match (self, requested.unwrap_or(self)) {
+            (Self::Lean, _) | (_, Self::Lean) => Self::Lean,
+            (Self::Balanced, _) | (_, Self::Balanced) => Self::Balanced,
+            (Self::Full, Self::Full) => Self::Full,
+        }
+    }
 }
 
 impl FromStr for Optimization {
@@ -106,9 +114,33 @@ pub struct RecallRequest {
     pub query: String,
     /// Requested match count. The active Synapse optimization setting may lower it.
     pub limit: Option<u32>,
+    /// Optional per-call response budget. This can make the configured budget smaller, never larger.
+    pub budget: Option<Optimization>,
 }
 
 #[derive(Debug, Serialize, JsonSchema)]
 pub struct RecallResponse {
+    pub optimization: Optimization,
     pub memories: Vec<Memory>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn requested_budget_can_only_reduce_the_configured_budget() {
+        assert_eq!(
+            Optimization::Full.constrained(Some(Optimization::Lean)),
+            Optimization::Lean
+        );
+        assert_eq!(
+            Optimization::Balanced.constrained(Some(Optimization::Full)),
+            Optimization::Balanced
+        );
+        assert_eq!(
+            Optimization::Lean.constrained(Some(Optimization::Full)),
+            Optimization::Lean
+        );
+    }
 }

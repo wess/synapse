@@ -34,16 +34,21 @@ impl MemoryServer {
     }
 
     #[tool(
-        description = "Recall durable context relevant to a query. An empty query returns recent memory."
+        description = "Recall durable context with a focused query and the smallest practical limit. Use the lean budget first to minimize token use; a per-call budget can only reduce the user-configured response size."
     )]
     async fn recall(
         &self,
         Parameters(request): Parameters<RecallRequest>,
     ) -> Result<Json<RecallResponse>, String> {
         self.brain
-            .recall(&request.query, request.limit.unwrap_or(8))
+            .recallwith(&request.query, request.limit.unwrap_or(8), request.budget)
             .await
-            .map(|memories| Json(RecallResponse { memories }))
+            .map(|(settings, memories)| {
+                Json(RecallResponse {
+                    optimization: settings.optimization,
+                    memories,
+                })
+            })
             .map_err(|error| error.to_string())
     }
 
@@ -87,9 +92,7 @@ impl MemoryServer {
 impl ServerHandler for MemoryServer {
     fn get_info(&self) -> ServerInfo {
         ServerInfo::new(ServerCapabilities::builder().enable_tools().build())
-            .with_instructions(
-                "Synapse stores durable local memory and reports value-free vault scope status. Recall relevant context before making decisions and remember only confirmed information that will remain useful.",
-            )
+            .with_instructions(crate::instructions::MEMORY)
             .with_server_info(
                 Implementation::new("synapse", env!("CARGO_PKG_VERSION"))
                     .with_title("Synapse")

@@ -27,7 +27,7 @@ Developers who move between multiple coding tools and want decisions, preference
 - `synapse run -- <command>` for one-child scoped environment injection.
 - One-click Settings management for optional zsh, bash, and fish hooks, with automatic loading in explicitly approved directories and `allow` and `deny` controls.
 - A user-installable CLI with safe secret prompting and the same vault/scope controls as the GUI.
-- Non-destructive recall optimization with Full, Balanced, and Lean response budgets.
+- Non-destructive recall optimization with Full, Balanced, and Lean response budgets, plus per-call reductions that cannot exceed the user's configured ceiling.
 - Light and dark themes that follow the operating system by default.
 - Clear detection, connected, missing, success, and error states.
 - Numbered migrations, integrity checks, owner-only data permissions, backups, export, and restore.

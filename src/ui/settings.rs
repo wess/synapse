@@ -168,7 +168,7 @@ pub fn render(view: View, actions: Actions, cx: &App) -> AnyElement {
                         )
                         .child(
                             Text::new(
-                                "Token counts are estimates; exact usage depends on the connected model's tokenizer.",
+                                "Token counts are estimates. Connected tools may request a smaller per-call budget, but they cannot exceed this setting.",
                             )
                             .size(Size::Xs)
                             .dimmed(),

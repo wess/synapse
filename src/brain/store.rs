@@ -41,12 +41,18 @@ impl Brain {
         Ok(result.last_insert_rowid())
     }
 
-    pub async fn recall(&self, query: &str, limit: u32) -> Result<Vec<Memory>> {
-        let settings = self.settings().await?;
+    pub async fn recallwith(
+        &self,
+        query: &str,
+        limit: u32,
+        budget: Option<Optimization>,
+    ) -> Result<(Settings, Vec<Memory>)> {
+        let configured = self.settings().await?;
+        let settings = Settings::from(configured.optimization.constrained(budget));
         let memories = self
             .search(query, limit.clamp(1, settings.resultlimit))
             .await?;
-        Ok(crate::brain::optimize::recall(memories, settings))
+        Ok((settings, crate::brain::optimize::recall(memories, settings)))
     }
 
     pub async fn search(&self, query: &str, limit: u32) -> Result<Vec<Memory>> {
@@ -178,7 +184,11 @@ mod tests {
             .await
             .unwrap();
 
-        let matches = brain.recall("focused modules", 8).await.unwrap();
+        let matches = brain
+            .recallwith("focused modules", 8, None)
+            .await
+            .unwrap()
+            .1;
         assert_eq!(matches.len(), 1);
         assert_eq!(matches[0].source, "preferences");
         assert_eq!(brain.stats().await.unwrap().entries, 1);
@@ -205,19 +215,48 @@ mod tests {
             .unwrap();
         brain.setoptimization(Optimization::Lean).await.unwrap();
         assert_eq!(
-            brain.recall("durable", 8).await.unwrap()[0].body,
+            brain.recallwith("durable", 8, None).await.unwrap().1[0].body,
             "One durable fact."
         );
 
         brain.setoptimization(Optimization::Full).await.unwrap();
         assert_eq!(
-            brain.recall("durable", 8).await.unwrap()[0].body,
+            brain.recallwith("durable", 8, None).await.unwrap().1[0].body,
             "One   durable fact."
         );
         brain.setpreference("appearance", "dark").await.unwrap();
         assert_eq!(
             brain.preference("appearance").await.unwrap().as_deref(),
             Some("dark")
+        );
+    }
+
+    #[tokio::test]
+    async fn call_budget_can_shrink_but_not_expand_the_configured_response() {
+        let directory = tempfile::tempdir().unwrap();
+        let brain = Brain::open(directory.path().join("brain.db"))
+            .await
+            .unwrap();
+        let original = "detail ".repeat(1_000);
+        brain.remember(&original, Some("test")).await.unwrap();
+
+        brain.setoptimization(Optimization::Full).await.unwrap();
+        let (lean, memories) = brain
+            .recallwith("detail", 25, Some(Optimization::Lean))
+            .await
+            .unwrap();
+        assert_eq!(lean.optimization, Optimization::Lean);
+        assert!(memories[0].body.chars().count() <= 2_800);
+
+        brain.setoptimization(Optimization::Lean).await.unwrap();
+        let (stilllean, _) = brain
+            .recallwith("detail", 25, Some(Optimization::Full))
+            .await
+            .unwrap();
+        assert_eq!(stilllean.optimization, Optimization::Lean);
+        assert_eq!(
+            brain.memory(1).await.unwrap().unwrap().body,
+            original.trim()
         );
     }
 

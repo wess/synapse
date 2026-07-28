@@ -1,11 +1,11 @@
 import { code, note } from "../markup";
 import type { Page } from "../types";
-import { repositoryurl } from "../deploy";
+import { releaseurl } from "../deploy";
 
 export const install: Page = {
   path: "docs/install/index.html",
   title: "Install and connect",
-  description: "Install the notarized macOS beta, add the CLI, and connect Codex or Claude Code without replacing your configuration.",
+  description: "Install the signed macOS beta, add the CLI, and connect Codex or Claude Code without replacing your configuration.",
   kind: "docs",
   toc: [
     { label: "Requirements", id: "requirements" },
@@ -26,10 +26,11 @@ export const install: Page = {
 
     <h2 id="app">Install the app</h2>
     <ol>
-      <li>Download <code>synapse.zip</code> from the <a href="${repositoryurl}/releases/latest">latest release</a>.</li>
+      <li>Download <code>synapse.zip</code> from the <a href="${releaseurl}">current beta release</a>.</li>
       <li>Extract the archive and move <strong>synapse.app</strong> into <strong>Applications</strong>. Do not install the CLI while the app is still inside Downloads or a mounted disk image.</li>
-      <li>Open Synapse. The build is signed, notarized, and stapled, so macOS should identify it as a Developer ID application.</li>
+      <li>Open Synapse. This prerelease is Developer ID signed but not yet notarized. If macOS says it cannot check the app, try opening it once, then open <strong>System Settings → Privacy &amp; Security</strong> and choose <strong>Open Anyway</strong> only if you trust this release and its published checksum.</li>
     </ol>
+${note("Beta security notice", "Apple recommends notarized software under the default Gatekeeper settings. This beta still awaits Apple notarization. See <a href=\"https://support.apple.com/en-us/102445\">Apple’s guidance for opening apps safely</a> before overriding the warning.")}
     ${note("Why move it first?", "The installed CLI is a small launcher that points into the signed application bundle. Moving the app later would leave that launcher pointing at the old location.")}
 
     <h2 id="cli">Install the CLI</h2>
@@ -60,6 +61,7 @@ synapse version`)}
       <li>It registers the installed Synapse executable as a user-level MCP stdio server with the single argument <code>mcp</code>.</li>
       <li>It appends or refreshes a delimited Synapse memory block in the tool’s global instruction file. Existing user content remains outside that block.</li>
     </ol>
+    <p>The connected tool reads that global block on launch, and the MCP server repeats the same policy during initialization. It explicitly tells the tool to recall relevant context at the start of every session, remember confirmed reusable facts proactively, use Synapse instead of ad hoc memory Markdown files, and keep secrets out of memory.</p>
     <table>
       <thead><tr><th>Tool</th><th>MCP store</th><th>Instruction file</th></tr></thead>
       <tbody>
