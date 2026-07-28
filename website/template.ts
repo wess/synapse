@@ -1,7 +1,5 @@
 import type { Page } from "./types";
-
-export const siteurl = "https://wess.io/synaps/";
-const repository = "https://github.com/wess/synaps";
+import { repositoryurl, siteurl } from "./deploy";
 
 const depth = (path: string) => path.split("/").length - 1;
 const rootfor = (path: string) => "../".repeat(depth(path));
@@ -21,8 +19,8 @@ const topnav = (page: Page, root: string) => `
     <nav id="topnav" aria-label="Primary">
       <a href="${root}docs/"${current(page, "docs")}>Docs</a>
       <a href="${root}tutorials/"${current(page, "tutorial")}>Tutorials</a>
-      <a href="${repository}">GitHub <span aria-hidden="true">↗</span></a>
-      <a class="navdownload" href="${repository}/releases/latest">Download</a>
+      <a href="${repositoryurl}">GitHub <span aria-hidden="true">↗</span></a>
+      <a class="navdownload" href="${repositoryurl}/releases/latest">Download</a>
     </nav>
   </header>`;
 
@@ -75,8 +73,8 @@ const footer = (root: string) => `
     <nav aria-label="Footer">
       <a href="${root}docs/">Documentation</a>
       <a href="${root}tutorials/">Tutorials</a>
-      <a href="${repository}">Source</a>
-      <a href="${repository}/releases">Releases</a>
+      <a href="${repositoryurl}">Source</a>
+      <a href="${repositoryurl}/releases">Releases</a>
     </nav>
     <p class="footerfine">Local-first. No account required. macOS 13+ beta.</p>
   </footer>`;

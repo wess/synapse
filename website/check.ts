@@ -1,6 +1,6 @@
 import { readdir } from "node:fs/promises";
 import { extname, join, relative } from "node:path";
-import { siteurl } from "./template";
+import { repositoryurl, siteurl } from "./deploy";
 
 const project = join(import.meta.dir, "..");
 const output = join(project, "site");
@@ -103,8 +103,14 @@ for (const page of htmlfiles) {
     fail(`sitemap is missing canonical route: ${route}`);
   }
 }
-if (corpus.includes("https://wess.github.io/synaps/")) {
-  fail("generated pages contain the redirecting GitHub Pages hostname");
+if (corpus.includes("https://wess.github.io/synaps/") || corpus.includes("https://wess.io/synaps/")) {
+  fail("generated pages contain the former GitHub Pages project path");
+}
+if (/https:\/\/github\.com\/wess\/synaps(?:["/])/.test(corpus)) {
+  fail("generated pages contain the former repository URL");
+}
+if (!corpus.includes(repositoryurl)) {
+  fail("generated pages are missing the repository URL");
 }
 if (!corpus.includes('data-searchstatus role="status" aria-live="polite"')) {
   fail("documentation search is missing an announced status");

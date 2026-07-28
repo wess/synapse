@@ -1,4 +1,5 @@
 import type { Page } from "./types";
+import { repositoryurl } from "./deploy";
 
 const contract = `<!--
 THESIS: A confirmed decision survives a cinematic match cut between developer tools; this refuses the generic neon node graph and the centered SaaS hero.
@@ -23,7 +24,7 @@ const body = `
         <h1>One memory. Every tool.</h1>
         <p>Synaps keeps durable project context on your Mac, then makes it available to every connected coding tool—without an account or a cloud memory service.</p>
         <div class="heroactions">
-          <a class="button" href="https://github.com/wess/synaps/releases/latest">Download macOS beta <span aria-hidden="true">↓</span></a>
+          <a class="button" href="${repositoryurl}/releases/latest">Download macOS beta <span aria-hidden="true">↓</span></a>
           <a class="button secondary" href="docs/">Read the docs</a>
         </div>
         <span class="heronote">Apple silicon · macOS 13+ · notarized beta</span>
@@ -156,7 +157,7 @@ $ synaps run -- cargo test</pre>
       <h2>Keep the thread.</h2>
       <p>Install the notarized macOS beta, connect your tools, and let confirmed context survive the next handoff.</p>
       <div class="heroactions">
-        <a class="button" href="https://github.com/wess/synaps/releases/latest">Download for macOS</a>
+        <a class="button" href="${repositoryurl}/releases/latest">Download for macOS</a>
         <a class="button secondary" href="tutorials/connect/">Follow the setup tutorial</a>
       </div>
     </div>

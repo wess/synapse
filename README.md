@@ -144,9 +144,9 @@ bun run sitecheck
 bun run serve
 ```
 
-The build writes the static artifact to `site/`. The check verifies every local link, anchor, asset, filename, canonical URL, sitemap entry, required landing-page claim, and complete desktop-app, CLI, and MCP documentation coverage. The local server mirrors the project path at `http://127.0.0.1:4173/synaps/`.
+The build writes the static artifact to `site/`. The check verifies every local link, anchor, asset, filename, canonical URL, sitemap entry, required landing-page claim, and complete desktop-app, CLI, and MCP documentation coverage. The local server mirrors the project path at `http://127.0.0.1:4173/synapse/`.
 
-`.github/workflows/pages.yml` rebuilds and checks the site on `main`, then publishes `site/` through GitHub Pages at `https://wess.io/synaps/`. Repository and release links assume the eventual public location is `wess/synaps`.
+`.github/workflows/pages.yml` rebuilds and checks the site on `main`, then publishes `site/` through GitHub Pages at `https://wess.io/synapse/`. Repository and release links use `wess/synapse`.
 
 ## Verify
 

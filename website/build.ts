@@ -1,7 +1,8 @@
 import { mkdir, rm } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { pages } from "./content";
-import { render, siteurl } from "./template";
+import { siteurl } from "./deploy";
+import { render } from "./template";
 
 const project = join(import.meta.dir, "..");
 const output = join(project, "site");

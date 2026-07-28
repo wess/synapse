@@ -1,4 +1,5 @@
 import { extname, join, normalize } from "node:path";
+import { sitepath } from "./deploy";
 
 const root = join(import.meta.dir, "..", "site");
 const types: Record<string, string> = {
@@ -14,7 +15,8 @@ const types: Record<string, string> = {
 
 const filepath = (request: Request) => {
   const url = new URL(request.url);
-  let path = decodeURIComponent(url.pathname).replace(/^\/synaps\/?/, "");
+  let path = decodeURIComponent(url.pathname);
+  path = path.startsWith(sitepath) ? path.slice(sitepath.length) : path.replace(/^\/+/, "");
   if (!path || path.endsWith("/")) path += "index.html";
   const safe = normalize(path).replace(/^(\.\.\/)+/, "");
   return join(root, safe);
@@ -32,4 +34,4 @@ const server = Bun.serve({
   },
 });
 
-console.log(`Synaps site: http://127.0.0.1:${server.port}/synaps/`);
+console.log(`Synaps site: http://127.0.0.1:${server.port}${sitepath}`);

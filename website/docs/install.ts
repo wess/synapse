@@ -1,5 +1,6 @@
 import { code, note } from "../markup";
 import type { Page } from "../types";
+import { repositoryurl } from "../deploy";
 
 export const install: Page = {
   path: "docs/install/index.html",
@@ -25,7 +26,7 @@ export const install: Page = {
 
     <h2 id="app">Install the app</h2>
     <ol>
-      <li>Download <code>synaps.zip</code> from the <a href="https://github.com/wess/synaps/releases/latest">latest release</a>.</li>
+      <li>Download <code>synaps.zip</code> from the <a href="${repositoryurl}/releases/latest">latest release</a>.</li>
       <li>Extract the archive and move <strong>synaps.app</strong> into <strong>Applications</strong>. Do not install the CLI while the app is still inside Downloads or a mounted disk image.</li>
       <li>Open Synaps. The build is signed, notarized, and stapled, so macOS should identify it as a Developer ID application.</li>
     </ol>
