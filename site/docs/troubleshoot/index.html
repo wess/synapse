@@ -31,7 +31,7 @@
       <a href="../../docs/" aria-current="page">Docs</a>
       <a href="../../tutorials/">Tutorials</a>
       <a href="https://github.com/wess/synapse">GitHub <span aria-hidden="true">↗</span></a>
-      <a class="navdownload" href="https://github.com/wess/synapse/releases/download/v0.1.0-beta.1/synapse.zip">Download</a>
+      <a class="navdownload" href="https://github.com/wess/synapse/releases/download/v0.1.0-beta.2/synapse.zip">Download</a>
     </nav>
   </header>
   
@@ -94,7 +94,7 @@ synapse settings show</code></pre>
 
     <h2 id="app">App and CLI</h2>
     <h3>macOS will not open the app</h3>
-    <p>Confirm you downloaded the current archive from the release page, extracted it fully, and moved the app to Applications. This prerelease is Developer ID signed but still awaits Apple notarization, so default Gatekeeper settings may require the <a href="../install/">documented Open Anyway step</a>. Avoid modifying files inside the application bundle because that invalidates its signature.</p>
+    <p>Confirm you downloaded the current archive from the release page, extracted it fully, and moved the app to Applications. The app is Developer ID signed and notarized, so a Gatekeeper refusal usually means the archive was altered or only partly extracted. Avoid modifying files inside the application bundle because that invalidates its signature.</p>
     <h3><code>synapse: command not found</code></h3>
     <p>Install the CLI from Settings, then add <code>~/.local/bin</code> to <code>PATH</code>. Run the executable by full path once to verify:</p>
     
