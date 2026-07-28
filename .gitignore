@@ -129,6 +129,7 @@ cscope.*
 .direnv/
 *.local
 secrets.*
+!website/tutorials/secrets.ts
 *.pem
 *.key
 *.p12
