@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Install and connect — Synaps</title>
+  <meta name="description" content="Install the notarized macOS beta, add the CLI, and connect Codex or Claude Code without replacing your configuration.">
+  <meta name="theme-color" content="#0a43c8">
+  <meta property="og:title" content="Install and connect">
+  <meta property="og:description" content="Install the notarized macOS beta, add the CLI, and connect Codex or Claude Code without replacing your configuration.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://wess.io/synaps/docs/install/">
+  <link rel="canonical" href="https://wess.io/synaps/docs/install/">
+  <link rel="icon" href="../../icon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Fragment+Mono&family=Manrope:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="../../style.css">
+  <script type="module" src="../../site.js"></script>
+</head>
+<body class="docs" data-root="../../">
+  
+  <a class="skip" href="#content">Skip to content</a>
+  <header class="topbar">
+    <a class="wordmark" href="../../" aria-label="Synaps home">
+      <img src="../../icon.svg" width="30" height="30" alt="">
+      <span>Synaps</span>
+    </a>
+    <button class="navtoggle" type="button" aria-expanded="false" aria-controls="topnav">Menu</button>
+    <nav id="topnav" aria-label="Primary">
+      <a href="../../docs/" aria-current="page">Docs</a>
+      <a href="../../tutorials/">Tutorials</a>
+      <a href="https://github.com/wess/synaps">GitHub <span aria-hidden="true">↗</span></a>
+      <a class="navdownload" href="https://github.com/wess/synaps/releases/latest">Download</a>
+    </nav>
+  </header>
+  
+  <div class="doclayout">
+    
+  <aside class="docsrail" aria-label="Documentation navigation">
+    <div class="searchbox">
+      <label for="search">Search the guide</label>
+      <input id="search" type="search" placeholder="Memory, vaults, restore…" autocomplete="off">
+      <div class="searchresults" data-results hidden></div>
+      <span class="searchstatus" data-searchstatus role="status" aria-live="polite"></span>
+    </div>
+    <details class="railnav" open>
+      <summary>Browse all guides</summary>
+      <nav aria-label="All guides">
+        <h2>Documentation</h2>
+        <ul>
+        <li><a href="../../docs/">Start here</a></li>
+        <li><a href="../../docs/install/" aria-current="page">Install and connect</a></li>
+        <li><a href="../../docs/app/">Desktop app reference</a></li>
+        <li><a href="../../docs/memory/">Memory and recall</a></li>
+        <li><a href="../../docs/mcp/">MCP tool reference</a></li>
+        <li><a href="../../docs/vault/">Vaults and scopes</a></li>
+        <li><a href="../../docs/data/">Data lifecycle</a></li>
+        <li><a href="../../docs/config/">Configuration and paths</a></li>
+        <li><a href="../../docs/security/">Security model</a></li>
+        <li><a href="../../docs/cli/">CLI reference</a></li>
+        <li><a href="../../docs/troubleshoot/">Troubleshooting</a></li></ul>
+        <h2>Tutorials</h2>
+        <ul>
+        <li><a href="../../tutorials/">Tutorials</a></li>
+        <li><a href="../../tutorials/connect/">Install and connect your first tools</a></li>
+        <li><a href="../../tutorials/continuity/">Carry one decision between tools</a></li>
+        <li><a href="../../tutorials/secrets/">Use a scoped secret in either shell mode</a></li>
+        <li><a href="../../tutorials/curate/">Curate and optimize memory</a></li>
+        <li><a href="../../tutorials/recovery/">Export and restore safely</a></li></ul>
+      </nav>
+    </details>
+  </aside>
+    <main class="article" id="content">
+      <header class="articlehead">
+        <h1>Install and connect</h1>
+        <span>Install the notarized macOS beta, add the CLI, and connect Codex or Claude Code without replacing your configuration.</span>
+      </header>
+      
+    <h2 id="requirements">Requirements</h2>
+    <ul>
+      <li>Apple-silicon Mac running macOS 13 or later.</li>
+      <li>At least one supported tool on <code>PATH</code>: Codex or Claude Code.</li>
+      <li>A writable <code>~/.local/bin</code>, or a custom path supplied through <code>SYNAPS_BIN</code>.</li>
+    </ul>
+
+    <h2 id="app">Install the app</h2>
+    <ol>
+      <li>Download <code>synaps.zip</code> from the <a href="https://github.com/wess/synaps/releases/latest">latest release</a>.</li>
+      <li>Extract the archive and move <strong>synaps.app</strong> into <strong>Applications</strong>. Do not install the CLI while the app is still inside Downloads or a mounted disk image.</li>
+      <li>Open Synaps. The build is signed, notarized, and stapled, so macOS should identify it as a Developer ID application.</li>
+    </ol>
+    
+  <aside class="note">
+    <strong>Why move it first?</strong>
+    <p>The installed CLI is a small launcher that points into the signed application bundle. Moving the app later would leave that launcher pointing at the old location.</p>
+  </aside>
+
+    <h2 id="cli">Install the CLI</h2>
+    <p>Open <strong>Settings</strong> in Synaps and choose <strong>Install CLI</strong>, or run the application binary once from a terminal and use:</p>
+    
+  <div class="codeblock">
+    <div class="codebar">
+      <span>shell</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>synaps install
+synaps path
+synaps version</code></pre>
+  </div>
+    <p>The default destination is <code>~/.local/bin/synaps</code>. If your shell cannot find it, add that folder to <code>PATH</code> and start a new shell.</p>
+    
+  <div class="codeblock">
+    <div class="codebar">
+      <span>shell</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>export PATH=&quot;$HOME/.local/bin:$PATH&quot;</code></pre>
+  </div>
+    <p>Synaps never overwrites an unrelated executable. A managed launcher has a sibling <code>.synapsreceipt</code> containing its digest so future installs can distinguish an update from a conflict.</p>
+
+    <h2 id="shell">Enable shell integration</h2>
+    <p>In <strong>Settings → Shell environments</strong>, choose <strong>Enable shell hook</strong>. Synaps detects your default zsh, bash, or fish shell, installs the CLI if needed, and adds one marked block to its startup file. Open a new terminal after the setting changes.</p>
+    <table>
+      <thead><tr><th>Shell</th><th>Managed startup file</th></tr></thead>
+      <tbody>
+        <tr><td>zsh</td><td><code>~/.zshrc</code></td></tr>
+        <tr><td>bash on macOS</td><td><code>~/.bash_profile</code></td></tr>
+        <tr><td>fish</td><td><code>~/.config/fish/config.fish</code></td></tr>
+      </tbody>
+    </table>
+    <p>The app shows <strong>Needs repair</strong> if the managed block changes. Repair replaces only that block. Remove deletes only that block; already-running terminals retain the loaded hook until they close. Every changed existing startup file receives a <code>.synapsbackup</code> sibling and an atomic replacement.</p>
+
+    <h2 id="tools">Connect tools</h2>
+    <p>On the Synaps dashboard, each detected tool shows its installation and connection state. Choose <strong>Connect</strong> for Codex or Claude Code.</p>
+    <p>Setup performs two changes as one rollback-protected operation:</p>
+    <ol>
+      <li>It registers the installed Synaps executable as a user-level MCP stdio server with the single argument <code>mcp</code>.</li>
+      <li>It appends or refreshes a delimited Synaps memory block in the tool’s global instruction file. Existing user content remains outside that block.</li>
+    </ol>
+    <table>
+      <thead><tr><th>Tool</th><th>MCP store</th><th>Instruction file</th></tr></thead>
+      <tbody>
+        <tr><td>Codex</td><td><code>~/.codex/config.toml</code></td><td><code>~/.codex/AGENTS.md</code></td></tr>
+        <tr><td>Claude Code</td><td><code>~/.claude.json</code></td><td><code>~/.claude/CLAUDE.md</code></td></tr>
+      </tbody>
+    </table>
+    <p>Before changing a tool store or instruction file, Synaps creates a sibling <code>.synapsbackup</code>. If either half of setup fails, both files are restored.</p>
+
+    <h2 id="manual">Manual connection</h2>
+    <p>The app is the recommended setup path because it detects stale executable paths and repairs them. If you need to register the server manually, use the installed CLI path:</p>
+    
+  <div class="codeblock">
+    <div class="codebar">
+      <span>shell</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>codex mcp add synaps -- ~/.local/bin/synaps mcp
+claude mcp add --scope user synaps -- ~/.local/bin/synaps mcp</code></pre>
+  </div>
+    <p>Then add the memory instructions shown in the app to the corresponding global instruction file. Do not point an integration at a build artifact such as <code>target/debug/synaps</code>; cleaning the repository would break the connection.</p>
+
+    <h2 id="verify">Verify the connection</h2>
+    <ol>
+      <li>Restart the connected tool so it reloads its MCP servers and instructions.</li>
+      <li>Inspect its available tools. Synaps should expose <code>remember</code>, <code>recall</code>, and <code>vaultstatus</code>.</li>
+      <li>Ask it to remember one harmless confirmed convention, then recall it in a new session.</li>
+      <li>Open the Synaps <strong>Memories</strong> screen and confirm the exact entry and source are visible.</li>
+    </ol>
+    <p>If the dashboard shows a registered but disconnected state, the stored path is stale or its arguments differ from <code>["mcp"]</code>. Choose <strong>Repair</strong> in the app or remove and re-add the manual entry.</p>
+  
+    </main>
+    <aside class="ontoc" aria-label="On this page">
+        <span>On this page</span>
+        <ol><li><a href="#requirements">Requirements</a></li><li><a href="#app">Install the app</a></li><li><a href="#cli">Install the CLI</a></li><li><a href="#shell">Shell integration</a></li><li><a href="#tools">Connect tools</a></li><li><a href="#manual">Manual connection</a></li><li><a href="#verify">Verify</a></li></ol>
+      </aside>
+  </div>
+  
+  <footer class="footer">
+    <div>
+      <a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">Synaps</a>
+      <p>Local memory and scoped credentials for developer tools.</p>
+    </div>
+    <nav aria-label="Footer">
+      <a href="../../docs/">Documentation</a>
+      <a href="../../tutorials/">Tutorials</a>
+      <a href="https://github.com/wess/synaps">Source</a>
+      <a href="https://github.com/wess/synaps/releases">Releases</a>
+    </nav>
+    <p class="footerfine">Local-first. No account required. macOS 13+ beta.</p>
+  </footer>
+</body>
+</html>

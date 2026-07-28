@@ -1,0 +1,52 @@
+# Synaps product brief
+
+## Purpose
+
+Synaps is a quiet local memory service for developer tools. It gives every connected coding tool the same durable, inspectable memory without requiring a general-purpose notes application.
+
+## Primary users
+
+Developers who move between multiple coding tools and want decisions, preferences, corrections, and project context to carry across sessions.
+
+## Core loop
+
+1. Connect a supported tool once.
+2. The tool recalls relevant memory before work and stores durable context after work.
+3. The user can inspect health, usage, and connections from a small native dashboard.
+4. The user grants credential names to one command or an opted-in shell through explicit global or YAML-backed scopes.
+
+## First release
+
+- A local SQLite memory store.
+- Search, inspection, editing, deletion, and guarded wipe controls for stored memory.
+- An MCP stdio server exposing `remember`, `recall`, and value-free vault status.
+- One-click user-level setup for Codex and Claude Code.
+- Shortcuts to each tool's global instructions and settings.
+- Keychain-backed vaults managed from the dashboard.
+- Global, project, and folder resolution through approved `.synaps.yaml` files.
+- `synaps run -- <command>` for one-child scoped environment injection.
+- One-click Settings management for optional zsh, bash, and fish hooks, with automatic loading in explicitly approved directories and `allow` and `deny` controls.
+- A user-installable CLI with safe secret prompting and the same vault/scope controls as the GUI.
+- Non-destructive recall optimization with Full, Balanced, and Lean response budgets.
+- Light and dark themes that follow the operating system by default.
+- Clear detection, connected, missing, success, and error states.
+- Numbered migrations, integrity checks, owner-only data permissions, backups, export, and restore.
+- A signed Apple-silicon macOS 13+ beta archive with a user-installable CLI launcher.
+
+## Operating context
+
+Native desktop application, macOS first. It should feel at home beside a terminal: compact, calm, fast, and useful at a glance. The integration registry and storage code should remain portable.
+
+## Design direction
+
+Use a warm, low-contrast canvas with a crisp white working surface, ink typography, and a restrained violet accent. Connections are rows in one coherent console, not a collection of decorative cards. Status must be readable without relying on color alone.
+
+## Constraints
+
+- Rust, Tokio, GPUI, Guise, and SQLx with SQLite.
+- Local-first. No account or network service is required.
+- Preserve user-owned configuration and instruction content.
+- Never write secret values to SQLite, YAML, MCP responses, or the application log.
+- Never activate an ambient environment from global mappings alone or from an incomplete scope; unload on invalidation and restore pre-existing shell values.
+- Keep source files small, lowercase, and grouped by responsibility.
+- Prefer data and functions over class-like abstractions.

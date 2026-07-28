@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Security model — Synaps</title>
+  <meta name="description" content="Understand the trust boundary around local memory, Keychain values, MCP metadata, approved scopes, child processes, and configuration writes.">
+  <meta name="theme-color" content="#0a43c8">
+  <meta property="og:title" content="Security model">
+  <meta property="og:description" content="Understand the trust boundary around local memory, Keychain values, MCP metadata, approved scopes, child processes, and configuration writes.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://wess.io/synaps/docs/security/">
+  <link rel="canonical" href="https://wess.io/synaps/docs/security/">
+  <link rel="icon" href="../../icon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Fragment+Mono&family=Manrope:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="../../style.css">
+  <script type="module" src="../../site.js"></script>
+</head>
+<body class="docs" data-root="../../">
+  
+  <a class="skip" href="#content">Skip to content</a>
+  <header class="topbar">
+    <a class="wordmark" href="../../" aria-label="Synaps home">
+      <img src="../../icon.svg" width="30" height="30" alt="">
+      <span>Synaps</span>
+    </a>
+    <button class="navtoggle" type="button" aria-expanded="false" aria-controls="topnav">Menu</button>
+    <nav id="topnav" aria-label="Primary">
+      <a href="../../docs/" aria-current="page">Docs</a>
+      <a href="../../tutorials/">Tutorials</a>
+      <a href="https://github.com/wess/synaps">GitHub <span aria-hidden="true">↗</span></a>
+      <a class="navdownload" href="https://github.com/wess/synaps/releases/latest">Download</a>
+    </nav>
+  </header>
+  
+  <div class="doclayout">
+    
+  <aside class="docsrail" aria-label="Documentation navigation">
+    <div class="searchbox">
+      <label for="search">Search the guide</label>
+      <input id="search" type="search" placeholder="Memory, vaults, restore…" autocomplete="off">
+      <div class="searchresults" data-results hidden></div>
+      <span class="searchstatus" data-searchstatus role="status" aria-live="polite"></span>
+    </div>
+    <details class="railnav" open>
+      <summary>Browse all guides</summary>
+      <nav aria-label="All guides">
+        <h2>Documentation</h2>
+        <ul>
+        <li><a href="../../docs/">Start here</a></li>
+        <li><a href="../../docs/install/">Install and connect</a></li>
+        <li><a href="../../docs/app/">Desktop app reference</a></li>
+        <li><a href="../../docs/memory/">Memory and recall</a></li>
+        <li><a href="../../docs/mcp/">MCP tool reference</a></li>
+        <li><a href="../../docs/vault/">Vaults and scopes</a></li>
+        <li><a href="../../docs/data/">Data lifecycle</a></li>
+        <li><a href="../../docs/config/">Configuration and paths</a></li>
+        <li><a href="../../docs/security/" aria-current="page">Security model</a></li>
+        <li><a href="../../docs/cli/">CLI reference</a></li>
+        <li><a href="../../docs/troubleshoot/">Troubleshooting</a></li></ul>
+        <h2>Tutorials</h2>
+        <ul>
+        <li><a href="../../tutorials/">Tutorials</a></li>
+        <li><a href="../../tutorials/connect/">Install and connect your first tools</a></li>
+        <li><a href="../../tutorials/continuity/">Carry one decision between tools</a></li>
+        <li><a href="../../tutorials/secrets/">Use a scoped secret in either shell mode</a></li>
+        <li><a href="../../tutorials/curate/">Curate and optimize memory</a></li>
+        <li><a href="../../tutorials/recovery/">Export and restore safely</a></li></ul>
+      </nav>
+    </details>
+  </aside>
+    <main class="article" id="content">
+      <header class="articlehead">
+        <h1>Security model</h1>
+        <span>Understand the trust boundary around local memory, Keychain values, MCP metadata, approved scopes, child processes, and configuration writes.</span>
+      </header>
+      
+    <h2 id="boundary">Trust boundary</h2>
+    <p>Synaps is local-first, not a sandbox. It removes unnecessary network and file exposure from the memory-and-credential workflow, but it still runs as your macOS user. Any process already able to control your account, inspect your terminal, or access an unlocked Keychain may sit inside the same trust boundary.</p>
+    <p>The application requires no Synaps account or hosted service. MCP uses local stdio. Memory and metadata live in a local SQLite file. The beta does not include telemetry, remote synchronization, or a web server.</p>
+
+    <h2 id="memory">Memory</h2>
+    <p>Memory bodies are plain text in SQLite and are available to connected MCP clients through recall. Do not store credentials, private keys, access tokens, or material you would not want an authorized connected tool to read.</p>
+    <p>Database files use owner-only permissions on Unix systems and are checked for page and foreign-key integrity before use. These controls protect against accidental broad access and corruption; they do not encrypt memory at rest.</p>
+
+    <h2 id="secrets">Secret values</h2>
+    <p>Secret values are written to macOS Keychain. SQLite stores the vault, label, environment name, and Keychain account reference. YAML stores only a <code>vault.name</code> reference. MCP <code>vaultstatus</code> returns environment names and scope state only.</p>
+    <p><code>secret set</code> does not accept a value argument. Interactive input uses a hidden prompt; piped input remains available for automation. Application logs and MCP responses do not contain values.</p>
+    
+  <aside class="note">
+    <strong>Metadata can still be sensitive</strong>
+    <p>Names such as PRODUCTION_DATABASE_URL can reveal system structure even when the value is hidden. Choose scope files and variable names with the same care you apply to ordinary repository configuration.</p>
+  </aside>
+
+    <h2 id="scopes">Scope approval</h2>
+    <p>An unapproved, edited, or invalid <code>.synaps.yaml</code> never contributes variables. Approval stores a SHA-256 digest of the exact file bytes and its canonical path. Any later edit invalidates that digest.</p>
+    <p>Resolution walks from broad ancestor folders toward the working folder. Narrower approved files can replace a mapping, but a name denied by a broader scope remains denied. Any scope warning prevents <code>synaps run</code> from launching and makes the shell hook unload its managed values, avoiding silent partial configuration.</p>
+
+    <h2 id="children">Environment boundaries</h2>
+    <p><code>synaps run -- &lt;command&gt;</code> reads only the selected Keychain values and places them in the environment of a new child process. That command and all of its descendants can read those values normally. Synaps cannot stop the child from logging, transmitting, or persisting them.</p>
+    <p>The optional zsh, bash, or fish hook asks the shell to evaluate quoted environment changes. It activates only inside a directory with at least one approved discovered scope. Leaving, revoking approval, or changing any discovered scope unloads managed variables and restores values that existed before activation.</p>
+    <p>Settings installs the hook inside a marked startup-file block using the absolute managed CLI path. It backs up and atomically replaces an existing file, refuses incomplete or duplicate Synaps blocks, and removes only the marked block when disabled.</p>
+    
+  <aside class="note">
+    <strong>Ambient access is broader</strong>
+    <p>Every process launched from an activated shell inherits the values, including commands that do not need them. Use command-scoped mode for a smaller boundary, and do not enable shell tracing while environment changes are evaluated.</p>
+  </aside>
+    <ul>
+      <li>Inspect scripts before launching them with production credentials.</li>
+      <li>Use folder scopes and <code>deny</code> to narrow access.</li>
+      <li>Prefer separate least-privilege credentials for development and deployment.</li>
+      <li>Use <code>synaps status .</code> immediately before a sensitive command.</li>
+      <li>Use <code>synaps deny</code> when a directory should no longer activate automatically.</li>
+    </ul>
+
+    <h2 id="limits">Operational limits</h2>
+    <ul>
+      <li>Synaps does not isolate a malicious connected MCP client from recalled memory. Only connect tools you trust.</li>
+      <li>Keychain protects stored values, but an authorized local child receives plaintext environment variables.</li>
+      <li>Database exports omit Keychain values but include memory and credential metadata.</li>
+      <li>Configuration writes are validated, backed up, and atomic, but external programs can still change the same files afterward.</li>
+      <li>A scope digest proves that you approved exact bytes at a path; it does not prove the commands launched from that folder are safe.</li>
+      <li>There is no remote revocation system. Forget a secret in Synaps and rotate it at its issuer when exposure is possible.</li>
+    </ul>
+  
+    </main>
+    <aside class="ontoc" aria-label="On this page">
+        <span>On this page</span>
+        <ol><li><a href="#boundary">Trust boundary</a></li><li><a href="#memory">Memory</a></li><li><a href="#secrets">Secret values</a></li><li><a href="#scopes">Scope approval</a></li><li><a href="#children">Environment boundaries</a></li><li><a href="#limits">Operational limits</a></li></ol>
+      </aside>
+  </div>
+  
+  <footer class="footer">
+    <div>
+      <a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">Synaps</a>
+      <p>Local memory and scoped credentials for developer tools.</p>
+    </div>
+    <nav aria-label="Footer">
+      <a href="../../docs/">Documentation</a>
+      <a href="../../tutorials/">Tutorials</a>
+      <a href="https://github.com/wess/synaps">Source</a>
+      <a href="https://github.com/wess/synaps/releases">Releases</a>
+    </nav>
+    <p class="footerfine">Local-first. No account required. macOS 13+ beta.</p>
+  </footer>
+</body>
+</html>

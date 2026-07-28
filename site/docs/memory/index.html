@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Memory and recall — Synaps</title>
+  <meta name="description" content="Know what becomes durable, how search works, how to correct stored context, and what each response budget changes.">
+  <meta name="theme-color" content="#0a43c8">
+  <meta property="og:title" content="Memory and recall">
+  <meta property="og:description" content="Know what becomes durable, how search works, how to correct stored context, and what each response budget changes.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://wess.io/synaps/docs/memory/">
+  <link rel="canonical" href="https://wess.io/synaps/docs/memory/">
+  <link rel="icon" href="../../icon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Fragment+Mono&family=Manrope:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="../../style.css">
+  <script type="module" src="../../site.js"></script>
+</head>
+<body class="docs" data-root="../../">
+  
+  <a class="skip" href="#content">Skip to content</a>
+  <header class="topbar">
+    <a class="wordmark" href="../../" aria-label="Synaps home">
+      <img src="../../icon.svg" width="30" height="30" alt="">
+      <span>Synaps</span>
+    </a>
+    <button class="navtoggle" type="button" aria-expanded="false" aria-controls="topnav">Menu</button>
+    <nav id="topnav" aria-label="Primary">
+      <a href="../../docs/" aria-current="page">Docs</a>
+      <a href="../../tutorials/">Tutorials</a>
+      <a href="https://github.com/wess/synaps">GitHub <span aria-hidden="true">↗</span></a>
+      <a class="navdownload" href="https://github.com/wess/synaps/releases/latest">Download</a>
+    </nav>
+  </header>
+  
+  <div class="doclayout">
+    
+  <aside class="docsrail" aria-label="Documentation navigation">
+    <div class="searchbox">
+      <label for="search">Search the guide</label>
+      <input id="search" type="search" placeholder="Memory, vaults, restore…" autocomplete="off">
+      <div class="searchresults" data-results hidden></div>
+      <span class="searchstatus" data-searchstatus role="status" aria-live="polite"></span>
+    </div>
+    <details class="railnav" open>
+      <summary>Browse all guides</summary>
+      <nav aria-label="All guides">
+        <h2>Documentation</h2>
+        <ul>
+        <li><a href="../../docs/">Start here</a></li>
+        <li><a href="../../docs/install/">Install and connect</a></li>
+        <li><a href="../../docs/app/">Desktop app reference</a></li>
+        <li><a href="../../docs/memory/" aria-current="page">Memory and recall</a></li>
+        <li><a href="../../docs/mcp/">MCP tool reference</a></li>
+        <li><a href="../../docs/vault/">Vaults and scopes</a></li>
+        <li><a href="../../docs/data/">Data lifecycle</a></li>
+        <li><a href="../../docs/config/">Configuration and paths</a></li>
+        <li><a href="../../docs/security/">Security model</a></li>
+        <li><a href="../../docs/cli/">CLI reference</a></li>
+        <li><a href="../../docs/troubleshoot/">Troubleshooting</a></li></ul>
+        <h2>Tutorials</h2>
+        <ul>
+        <li><a href="../../tutorials/">Tutorials</a></li>
+        <li><a href="../../tutorials/connect/">Install and connect your first tools</a></li>
+        <li><a href="../../tutorials/continuity/">Carry one decision between tools</a></li>
+        <li><a href="../../tutorials/secrets/">Use a scoped secret in either shell mode</a></li>
+        <li><a href="../../tutorials/curate/">Curate and optimize memory</a></li>
+        <li><a href="../../tutorials/recovery/">Export and restore safely</a></li></ul>
+      </nav>
+    </details>
+  </aside>
+    <main class="article" id="content">
+      <header class="articlehead">
+        <h1>Memory and recall</h1>
+        <span>Know what becomes durable, how search works, how to correct stored context, and what each response budget changes.</span>
+      </header>
+      
+    <h2 id="durable">What belongs in durable memory</h2>
+    <p>Good memory remains useful after the current conversation ends. Store confirmed decisions, recurring preferences, corrected assumptions, naming conventions, project constraints, and facts whose source is clear.</p>
+    <p>Do not store transient task status, speculative ideas, full conversation transcripts, secret values, or instructions that attempt to override the current request or repository guidance. Synaps adds this distinction to connected tools’ global instructions, but you remain in control of the stored result.</p>
+    
+  <div class="codeblock">
+    <div class="codebar">
+      <span>shell</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>printf &#039;%s
+&#039; &#039;Use Bun for JavaScript tasks in this repository.&#039; \
+  | synaps memory add tooling</code></pre>
+  </div>
+    <p><code>memory add</code> and <code>memory edit</code> read the body from stdin. This keeps long content and shell metacharacters out of command arguments. Empty or whitespace-only memory is rejected.</p>
+
+    <h2 id="recall">Search and recall</h2>
+    <p>Memory is stored in an SQLite FTS5 table using Unicode tokenization. A non-empty query searches the memory body; an empty query returns recent entries. MCP <code>recall</code> asks for up to eight results by default, while the active optimization setting can lower the final count or response size.</p>
+    
+  <div class="codeblock">
+    <div class="codebar">
+      <span>shell</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>synaps memory list &quot;Bun JavaScript&quot;
+synaps memory list --json
+synaps memory show 24
+synaps memory show 24 --json</code></pre>
+  </div>
+    <p>The CLI lists up to 100 matching memories. Each record contains an integer ID, exact body, source string, and Unix timestamp. JSON output is suitable for local automation.</p>
+
+    <h2 id="control">Inspect and correct</h2>
+    <p>The desktop <strong>Memories</strong> screen searches the same store and lets you inspect, edit, or delete individual entries. CLI edits replace the body and optionally the source:</p>
+    
+  <div class="codeblock">
+    <div class="codebar">
+      <span>shell</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>printf &#039;%s
+&#039; &#039;Use Bun unless a task explicitly requires another runtime.&#039; \
+  | synaps memory edit 24 tooling
+
+synaps memory show 24</code></pre>
+  </div>
+    <p>Editing changes the stored original. Recall optimization does not. If a convention has become wrong, edit or delete it instead of adding a conflicting correction and hoping the tools choose the newer entry.</p>
+
+    <h2 id="budgets">Response budgets</h2>
+    <table>
+      <thead><tr><th>Mode</th><th>Result limit</th><th>Character budget</th><th>Transformation</th></tr></thead>
+      <tbody>
+        <tr><td>Full</td><td>25</td><td>Unlimited</td><td>Returns stored formatting without compaction.</td></tr>
+        <tr><td>Balanced</td><td>8</td><td>6,000</td><td>Compacts prose whitespace, preserves fenced and indented code, removes exact duplicate bodies, and truncates at a character boundary.</td></tr>
+        <tr><td>Lean</td><td>4</td><td>2,800</td><td>Uses the same non-destructive compaction with a smaller response.</td></tr>
+      </tbody>
+    </table>
+    
+  <div class="codeblock">
+    <div class="codebar">
+      <span>shell</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>synaps settings show
+synaps settings optimize lean
+synaps settings optimize balanced</code></pre>
+  </div>
+    
+  <aside class="note">
+    <strong>Originals remain intact</strong>
+    <p>Balanced and Lean transform only the MCP response. The database and memory-management views keep the complete stored body.</p>
+  </aside>
+
+    <h2 id="destructive">Destructive actions</h2>
+    <p>Deleting one memory and wiping every memory both require an explicit command flag. The desktop app presents a separate confirmation. A wipe affects memory rows only; vault labels, Keychain values, scope approvals, and settings remain intact.</p>
+    
+  <div class="codeblock">
+    <div class="codebar">
+      <span>shell</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>synaps memory delete 24 --confirm
+synaps memory wipe --confirm</code></pre>
+  </div>
+    <p>Before a large cleanup, create a portable snapshot with <code>synaps data export</code>. Use a wipe when the goal is to clear context while retaining the vault setup; use a database restore when the goal is to return the entire Synaps state to an earlier snapshot.</p>
+  
+    </main>
+    <aside class="ontoc" aria-label="On this page">
+        <span>On this page</span>
+        <ol><li><a href="#durable">Durable memory</a></li><li><a href="#recall">Search and recall</a></li><li><a href="#control">Inspect and correct</a></li><li><a href="#budgets">Response budgets</a></li><li><a href="#destructive">Destructive actions</a></li></ol>
+      </aside>
+  </div>
+  
+  <footer class="footer">
+    <div>
+      <a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">Synaps</a>
+      <p>Local memory and scoped credentials for developer tools.</p>
+    </div>
+    <nav aria-label="Footer">
+      <a href="../../docs/">Documentation</a>
+      <a href="../../tutorials/">Tutorials</a>
+      <a href="https://github.com/wess/synaps">Source</a>
+      <a href="https://github.com/wess/synaps/releases">Releases</a>
+    </nav>
+    <p class="footerfine">Local-first. No account required. macOS 13+ beta.</p>
+  </footer>
+</body>
+</html>

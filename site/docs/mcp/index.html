@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MCP tool reference — Synaps</title>
+  <meta name="description" content="Run the local stdio server and understand the exact request, response, and value boundary of every exposed tool.">
+  <meta name="theme-color" content="#0a43c8">
+  <meta property="og:title" content="MCP tool reference">
+  <meta property="og:description" content="Run the local stdio server and understand the exact request, response, and value boundary of every exposed tool.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://wess.io/synaps/docs/mcp/">
+  <link rel="canonical" href="https://wess.io/synaps/docs/mcp/">
+  <link rel="icon" href="../../icon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Fragment+Mono&family=Manrope:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="../../style.css">
+  <script type="module" src="../../site.js"></script>
+</head>
+<body class="docs" data-root="../../">
+  
+  <a class="skip" href="#content">Skip to content</a>
+  <header class="topbar">
+    <a class="wordmark" href="../../" aria-label="Synaps home">
+      <img src="../../icon.svg" width="30" height="30" alt="">
+      <span>Synaps</span>
+    </a>
+    <button class="navtoggle" type="button" aria-expanded="false" aria-controls="topnav">Menu</button>
+    <nav id="topnav" aria-label="Primary">
+      <a href="../../docs/" aria-current="page">Docs</a>
+      <a href="../../tutorials/">Tutorials</a>
+      <a href="https://github.com/wess/synaps">GitHub <span aria-hidden="true">↗</span></a>
+      <a class="navdownload" href="https://github.com/wess/synaps/releases/latest">Download</a>
+    </nav>
+  </header>
+  
+  <div class="doclayout">
+    
+  <aside class="docsrail" aria-label="Documentation navigation">
+    <div class="searchbox">
+      <label for="search">Search the guide</label>
+      <input id="search" type="search" placeholder="Memory, vaults, restore…" autocomplete="off">
+      <div class="searchresults" data-results hidden></div>
+      <span class="searchstatus" data-searchstatus role="status" aria-live="polite"></span>
+    </div>
+    <details class="railnav" open>
+      <summary>Browse all guides</summary>
+      <nav aria-label="All guides">
+        <h2>Documentation</h2>
+        <ul>
+        <li><a href="../../docs/">Start here</a></li>
+        <li><a href="../../docs/install/">Install and connect</a></li>
+        <li><a href="../../docs/app/">Desktop app reference</a></li>
+        <li><a href="../../docs/memory/">Memory and recall</a></li>
+        <li><a href="../../docs/mcp/" aria-current="page">MCP tool reference</a></li>
+        <li><a href="../../docs/vault/">Vaults and scopes</a></li>
+        <li><a href="../../docs/data/">Data lifecycle</a></li>
+        <li><a href="../../docs/config/">Configuration and paths</a></li>
+        <li><a href="../../docs/security/">Security model</a></li>
+        <li><a href="../../docs/cli/">CLI reference</a></li>
+        <li><a href="../../docs/troubleshoot/">Troubleshooting</a></li></ul>
+        <h2>Tutorials</h2>
+        <ul>
+        <li><a href="../../tutorials/">Tutorials</a></li>
+        <li><a href="../../tutorials/connect/">Install and connect your first tools</a></li>
+        <li><a href="../../tutorials/continuity/">Carry one decision between tools</a></li>
+        <li><a href="../../tutorials/secrets/">Use a scoped secret in either shell mode</a></li>
+        <li><a href="../../tutorials/curate/">Curate and optimize memory</a></li>
+        <li><a href="../../tutorials/recovery/">Export and restore safely</a></li></ul>
+      </nav>
+    </details>
+  </aside>
+    <main class="article" id="content">
+      <header class="articlehead">
+        <h1>MCP tool reference</h1>
+        <span>Run the local stdio server and understand the exact request, response, and value boundary of every exposed tool.</span>
+      </header>
+      
+    <h2 id="server">Server</h2>
+    <p>Synaps implements an MCP stdio server. A tool launches the same signed or installed executable with the <code>mcp</code> argument:</p>
+    
+  <div class="codeblock">
+    <div class="codebar">
+      <span>shell</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>~/.local/bin/synaps mcp</code></pre>
+  </div>
+    <p>The process uses stdin and stdout for protocol messages. Do not wrap it in a command that writes banners or shell setup output to stdout. The server opens the same local database as the desktop app and holds a shared lifecycle lock while connected.</p>
+
+    <h2 id="remember">remember</h2>
+    <p>Stores a durable fact, decision, preference, convention, or correction.</p>
+    
+  <div class="codeblock">
+    <div class="codebar">
+      <span>json</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>{
+  &quot;content&quot;: &quot;Use small focused modules.&quot;,
+  &quot;source&quot;: &quot;synaps&quot;
+}</code></pre>
+  </div>
+    <table>
+      <thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr><td><code>content</code></td><td>string</td><td>Yes</td><td>The durable text. Empty or whitespace-only content is rejected.</td></tr>
+        <tr><td><code>source</code></td><td>string or null</td><td>No</td><td>An origin such as a project path, repository name, or topic.</td></tr>
+      </tbody>
+    </table>
+    
+  <div class="codeblock">
+    <div class="codebar">
+      <span>json</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>{
+  &quot;id&quot;: 24,
+  &quot;stored&quot;: true
+}</code></pre>
+  </div>
+
+    <h2 id="recall">recall</h2>
+    <p>Returns durable context relevant to a query. An empty query returns recent memory.</p>
+    
+  <div class="codeblock">
+    <div class="codebar">
+      <span>json</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>{
+  &quot;query&quot;: &quot;module structure&quot;,
+  &quot;limit&quot;: 8
+}</code></pre>
+  </div>
+    <table>
+      <thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr><td><code>query</code></td><td>string</td><td>Yes</td><td>Words or a phrase describing the context needed. Use an empty string for recent entries.</td></tr>
+        <tr><td><code>limit</code></td><td>integer or null</td><td>No</td><td>Requested result count. Defaults to 8. The active response budget may lower it.</td></tr>
+      </tbody>
+    </table>
+    
+  <div class="codeblock">
+    <div class="codebar">
+      <span>json</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>{
+  &quot;memories&quot;: [
+    {
+      &quot;id&quot;: 24,
+      &quot;body&quot;: &quot;Use small focused modules.&quot;,
+      &quot;source&quot;: &quot;synaps&quot;,
+      &quot;created&quot;: 1785250000
+    }
+  ]
+}</code></pre>
+  </div>
+
+    <h2 id="vaultstatus">vaultstatus</h2>
+    <p>Lists active environment-variable names and scope trust state for a folder. It never returns secret values and cannot inject them into the connected tool.</p>
+    
+  <div class="codeblock">
+    <div class="codebar">
+      <span>json</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>{
+  &quot;path&quot;: &quot;/Users/example/project&quot;
+}</code></pre>
+  </div>
+    <p><code>path</code> is optional. Resolution falls back to <code>SYNAPS_PROJECT_DIR</code>, then the server process’s current directory.</p>
+    
+  <div class="codeblock">
+    <div class="codebar">
+      <span>json</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>{
+  &quot;path&quot;: &quot;/Users/example/project&quot;,
+  &quot;available&quot;: [&quot;DATABASE_URL&quot;],
+  &quot;ambient&quot;: &quot;ready&quot;,
+  &quot;shell&quot;: &quot;zsh&quot;,
+  &quot;scopes&quot;: [
+    {
+      &quot;path&quot;: &quot;/Users/example/project/.synaps.yaml&quot;,
+      &quot;scope&quot;: &quot;project&quot;,
+      &quot;trusted&quot;: true,
+      &quot;changed&quot;: false,
+      &quot;env&quot;: [&quot;DATABASE_URL&quot;],
+      &quot;denied&quot;: [],
+      &quot;error&quot;: null
+    }
+  ],
+  &quot;warnings&quot;: [],
+  &quot;note&quot;: &quot;Values stay in Keychain. Use synaps run for one child or install the shell hook for an approved directory.&quot;
+}</code></pre>
+  </div>
+    
+  <aside class="note">
+    <strong>Metadata, not a secret channel</strong>
+    <p>The names in available tell a tool what a scoped command or activated shell could receive. vaultstatus never reads the corresponding Keychain values and cannot change a connected tool’s environment.</p>
+  </aside>
+
+    <h2 id="behavior">Operational behavior</h2>
+    <ul>
+      <li>Tool errors are returned as readable strings. Protocol messages remain on stdio.</li>
+      <li>The server identifies itself as <code>synaps</code> using the application version and advertises tool capability only.</li>
+      <li>Opening the database runs integrity and relationship checks, applies numbered migrations, and secures database permissions.</li>
+      <li>A running MCP process holds a shared database lock. <code>synaps data restore</code> requires an exclusive lock and therefore refuses while any connected server or the desktop app is using the database.</li>
+      <li>Connected tools should recall before decisions that depend on project history and remember only stable confirmed context after it is established.</li>
+    </ul>
+  
+    </main>
+    <aside class="ontoc" aria-label="On this page">
+        <span>On this page</span>
+        <ol><li><a href="#server">Server</a></li><li><a href="#remember">remember</a></li><li><a href="#recall">recall</a></li><li><a href="#vaultstatus">vaultstatus</a></li><li><a href="#behavior">Operational behavior</a></li></ol>
+      </aside>
+  </div>
+  
+  <footer class="footer">
+    <div>
+      <a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">Synaps</a>
+      <p>Local memory and scoped credentials for developer tools.</p>
+    </div>
+    <nav aria-label="Footer">
+      <a href="../../docs/">Documentation</a>
+      <a href="../../tutorials/">Tutorials</a>
+      <a href="https://github.com/wess/synaps">Source</a>
+      <a href="https://github.com/wess/synaps/releases">Releases</a>
+    </nav>
+    <p class="footerfine">Local-first. No account required. macOS 13+ beta.</p>
+  </footer>
+</body>
+</html>

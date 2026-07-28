@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://wess.io/synaps/</loc></url>
+  <url><loc>https://wess.io/synaps/docs/</loc></url>
+  <url><loc>https://wess.io/synaps/docs/install/</loc></url>
+  <url><loc>https://wess.io/synaps/docs/app/</loc></url>
+  <url><loc>https://wess.io/synaps/docs/memory/</loc></url>
+  <url><loc>https://wess.io/synaps/docs/mcp/</loc></url>
+  <url><loc>https://wess.io/synaps/docs/vault/</loc></url>
+  <url><loc>https://wess.io/synaps/docs/data/</loc></url>
+  <url><loc>https://wess.io/synaps/docs/config/</loc></url>
+  <url><loc>https://wess.io/synaps/docs/security/</loc></url>
+  <url><loc>https://wess.io/synaps/docs/cli/</loc></url>
+  <url><loc>https://wess.io/synaps/docs/troubleshoot/</loc></url>
+  <url><loc>https://wess.io/synaps/tutorials/</loc></url>
+  <url><loc>https://wess.io/synaps/tutorials/connect/</loc></url>
+  <url><loc>https://wess.io/synaps/tutorials/continuity/</loc></url>
+  <url><loc>https://wess.io/synaps/tutorials/secrets/</loc></url>
+  <url><loc>https://wess.io/synaps/tutorials/curate/</loc></url>
+  <url><loc>https://wess.io/synaps/tutorials/recovery/</loc></url>
+</urlset>

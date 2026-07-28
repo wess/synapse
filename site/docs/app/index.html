@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Desktop app reference — Synaps</title>
+  <meta name="description" content="Use every Synaps screen with clear data boundaries, confirmation behavior, recovery paths, and shell-integration states.">
+  <meta name="theme-color" content="#0a43c8">
+  <meta property="og:title" content="Desktop app reference">
+  <meta property="og:description" content="Use every Synaps screen with clear data boundaries, confirmation behavior, recovery paths, and shell-integration states.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://wess.io/synaps/docs/app/">
+  <link rel="canonical" href="https://wess.io/synaps/docs/app/">
+  <link rel="icon" href="../../icon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Fragment+Mono&family=Manrope:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="../../style.css">
+  <script type="module" src="../../site.js"></script>
+</head>
+<body class="docs" data-root="../../">
+  
+  <a class="skip" href="#content">Skip to content</a>
+  <header class="topbar">
+    <a class="wordmark" href="../../" aria-label="Synaps home">
+      <img src="../../icon.svg" width="30" height="30" alt="">
+      <span>Synaps</span>
+    </a>
+    <button class="navtoggle" type="button" aria-expanded="false" aria-controls="topnav">Menu</button>
+    <nav id="topnav" aria-label="Primary">
+      <a href="../../docs/" aria-current="page">Docs</a>
+      <a href="../../tutorials/">Tutorials</a>
+      <a href="https://github.com/wess/synaps">GitHub <span aria-hidden="true">↗</span></a>
+      <a class="navdownload" href="https://github.com/wess/synaps/releases/latest">Download</a>
+    </nav>
+  </header>
+  
+  <div class="doclayout">
+    
+  <aside class="docsrail" aria-label="Documentation navigation">
+    <div class="searchbox">
+      <label for="search">Search the guide</label>
+      <input id="search" type="search" placeholder="Memory, vaults, restore…" autocomplete="off">
+      <div class="searchresults" data-results hidden></div>
+      <span class="searchstatus" data-searchstatus role="status" aria-live="polite"></span>
+    </div>
+    <details class="railnav" open>
+      <summary>Browse all guides</summary>
+      <nav aria-label="All guides">
+        <h2>Documentation</h2>
+        <ul>
+        <li><a href="../../docs/">Start here</a></li>
+        <li><a href="../../docs/install/">Install and connect</a></li>
+        <li><a href="../../docs/app/" aria-current="page">Desktop app reference</a></li>
+        <li><a href="../../docs/memory/">Memory and recall</a></li>
+        <li><a href="../../docs/mcp/">MCP tool reference</a></li>
+        <li><a href="../../docs/vault/">Vaults and scopes</a></li>
+        <li><a href="../../docs/data/">Data lifecycle</a></li>
+        <li><a href="../../docs/config/">Configuration and paths</a></li>
+        <li><a href="../../docs/security/">Security model</a></li>
+        <li><a href="../../docs/cli/">CLI reference</a></li>
+        <li><a href="../../docs/troubleshoot/">Troubleshooting</a></li></ul>
+        <h2>Tutorials</h2>
+        <ul>
+        <li><a href="../../tutorials/">Tutorials</a></li>
+        <li><a href="../../tutorials/connect/">Install and connect your first tools</a></li>
+        <li><a href="../../tutorials/continuity/">Carry one decision between tools</a></li>
+        <li><a href="../../tutorials/secrets/">Use a scoped secret in either shell mode</a></li>
+        <li><a href="../../tutorials/curate/">Curate and optimize memory</a></li>
+        <li><a href="../../tutorials/recovery/">Export and restore safely</a></li></ul>
+      </nav>
+    </details>
+  </aside>
+    <main class="article" id="content">
+      <header class="articlehead">
+        <h1>Desktop app reference</h1>
+        <span>Use every Synaps screen with clear data boundaries, confirmation behavior, recovery paths, and shell-integration states.</span>
+      </header>
+      
+    <h2 id="navigation">Navigation and shared state</h2>
+    <p>The desktop app is a local control surface over the same SQLite database, Keychain items, scope files, and tool configuration used by the CLI and MCP server. The header moves between four screens:</p>
+    <table>
+      <thead><tr><th>Screen</th><th>Use it for</th><th>Material it can change</th></tr></thead>
+      <tbody>
+        <tr><td>Connections</td><td>Detect and connect supported developer tools.</td><td>Tool MCP configuration and managed instruction blocks.</td></tr>
+        <tr><td>Memory</td><td>Search, inspect, correct, or remove durable context.</td><td>Memory rows in the local database.</td></tr>
+        <tr><td>Vaults</td><td>Manage labels, Keychain values, mappings, and approved project scopes.</td><td>Vault metadata, Keychain items, and <code>.synaps.yaml</code>.</td></tr>
+        <tr><td>Settings</td><td>Choose recall, appearance, CLI, and shell-integration behavior.</td><td>Local preferences, the CLI launcher, and one managed shell block.</td></tr>
+      </tbody>
+    </table>
+    <p>Success and error notices appear inside the active screen. The app does not require an account and does not send this state to a hosted service.</p>
+
+    <h2 id="connections">Connections</h2>
+    <p>The Connections screen reports memory count, database size, and how many supported tools are connected. Each tool row has one of three states:</p>
+    <dl>
+      <dt>Not installed</dt>
+      <dd>The command was not found on <code>PATH</code>. Set up is disabled until the tool is installed.</dd>
+      <dt>Detected</dt>
+      <dd>The tool executable is available but its exact <code>synaps</code> MCP entry is absent or stale. Choose <strong>Set up</strong>.</dd>
+      <dt>Connected</dt>
+      <dd>The stored executable and <code>["mcp"]</code> arguments match the expected Synaps server.</dd>
+    </dl>
+    <p>Set up registers the MCP server and adds a marked memory-policy block to that tool’s global instructions. Existing settings and text outside the managed block remain in place; changed files receive <code>.synapsbackup</code> siblings. If either write fails, Synaps restores both files to their previous state.</p>
+    <p><strong>Edit instructions</strong> and <strong>Edit config</strong> open the actual files in the built-in editor. Synaps does not currently provide a separate Disconnect button; remove the named <code>synaps</code> entry and managed instruction block through those files when you intentionally want to disconnect a tool. See <a href="../config/#tools">Tool integration files</a> for their exact paths.</p>
+
+    <h2 id="memory">Memory</h2>
+    <p>An empty search shows recent memory; a query searches the stored body and shows up to 100 results. Select an entry to inspect its ID, local creation time, full Markdown body, and source. <strong>Save changes</strong> replaces the selected body and source in place, so future recall sees the correction without creating a competing record.</p>
+    <p><strong>Delete</strong> changes to <strong>Confirm delete</strong> before removing one entry. <strong>Wipe memories</strong> separately changes to <strong>Confirm wipe</strong> before deleting the entire memory table. A wipe does not affect vault labels, Keychain values, scope approvals, or settings.</p>
+    <p>Recall optimization changes responses, not what this screen stores or displays. Read <a href="../memory/">Memory and recall</a> for search behavior, response budgets, and CLI equivalents.</p>
+
+    <h2 id="vaults">Vaults and scopes</h2>
+    <p>Create a vault, select it, then provide a label, environment name, and value under <strong>Add a secret</strong>. <strong>Save to Keychain</strong> writes the value directly to macOS Keychain while SQLite keeps only its label, environment name, account reference, and scope state. The app never shows a saved value again.</p>
+    <ul>
+      <li><strong>Project only</strong> requires an approved YAML mapping; <strong>Global</strong> makes that environment name available without a project mapping.</li>
+      <li><strong>Replace</strong> reads the current Secret value field and overwrites the selected Keychain item without changing its reference.</li>
+      <li><strong>Forget</strong> requires <strong>Confirm</strong>, then removes both the Keychain item and its SQLite metadata.</li>
+      <li><strong>Delete vault</strong> is available only when the selected vault is empty and requires a second confirmation.</li>
+    </ul>
+    <p>Under <strong>Project and folder scopes</strong>, choose a directory, create or edit its <code>.synaps.yaml</code>, inspect the reported state, then choose <strong>Approve</strong> only after reviewing the exact file. Any later edit invalidates that digest and requires another review. Secret values never enter YAML. See <a href="../vault/">Vaults and scopes</a> for resolution order and both process boundaries.</p>
+
+    <h2 id="settings">Settings</h2>
+    <h3>Recall optimization</h3>
+    <p>Full, Balanced, and Lean change the shared MCP response limit and character budget. Original memory remains untouched. Balanced is the default; exact limits are documented in <a href="../memory/#budgets">Response budgets</a>.</p>
+    <h3>Appearance</h3>
+    <p>System follows the current macOS appearance as it changes. Light and Dark pin the app to that mode. The preference is stored locally.</p>
+    <h3>Command line</h3>
+    <p>The status is Installed, Not installed, or Conflict. <strong>Install CLI</strong> places the managed launcher at the displayed path. Synaps refuses to overwrite an unrelated executable; resolve a Conflict deliberately before trying again.</p>
+    <h3>Shell environments</h3>
+    <p>Command scoped always remains available through <code>synaps run -- &lt;command&gt;</code>. Automatic directory loading is an explicit opt-in for the detected default zsh, bash, or fish shell. Only that detected shell is changed.</p>
+    <table>
+      <thead><tr><th>Status</th><th>Control</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>Not enabled</td><td>Enable shell hook</td><td>Installs the CLI if needed and adds one marked startup-file block.</td></tr>
+        <tr><td>Enabled</td><td>Remove hook</td><td>Removes only the marked block and leaves neighboring startup content intact.</td></tr>
+        <tr><td>Needs repair</td><td>Repair hook or Remove</td><td>Replaces or removes only the changed managed block.</td></tr>
+        <tr><td>Unavailable</td><td>Unavailable</td><td>No supported default shell or safe startup path could be detected; no file is changed.</td></tr>
+      </tbody>
+    </table>
+    <p>Open a new terminal after enabling, repairing, or removing the hook. Existing terminals retain the integration they already loaded. Ambient values are readable by every child of an activated shell; use the command-scoped mode for a sensitive one-off process.</p>
+    
+  <aside class="note">
+    <strong>Startup files stay user-owned</strong>
+    <p>Synaps backs up and atomically rewrites the detected startup file, follows an existing symlink, and refuses malformed or duplicate managed markers instead of guessing what to replace.</p>
+  </aside>
+
+    <h2 id="editors">Editors, local data, and recovery</h2>
+    <p>The built-in editor handles the supported tool instructions, TOML or JSON configuration, and YAML scope files. Structured formats must validate before saving. Changed files are backed up and replaced atomically while existing permissions and symlinks are preserved.</p>
+    <p>If an editor contains unsaved changes, Close and application quit are blocked until you choose Save or Discard. Saving a scope refreshes its state but does not approve it; review the result and choose Approve separately.</p>
+    <p><strong>Open data folder</strong> on the Connections screen reveals the directory containing the local database. It does not create a backup and editing database files by hand is unsupported. Use <a href="../data/">Data lifecycle</a> for integrity checks, validated exports, exclusive restore, and recovery behavior.</p>
+  
+    </main>
+    <aside class="ontoc" aria-label="On this page">
+        <span>On this page</span>
+        <ol><li><a href="#navigation">Navigation</a></li><li><a href="#connections">Connections</a></li><li><a href="#memory">Memory</a></li><li><a href="#vaults">Vaults</a></li><li><a href="#settings">Settings</a></li><li><a href="#editors">Editors and data</a></li></ol>
+      </aside>
+  </div>
+  
+  <footer class="footer">
+    <div>
+      <a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">Synaps</a>
+      <p>Local memory and scoped credentials for developer tools.</p>
+    </div>
+    <nav aria-label="Footer">
+      <a href="../../docs/">Documentation</a>
+      <a href="../../tutorials/">Tutorials</a>
+      <a href="https://github.com/wess/synaps">Source</a>
+      <a href="https://github.com/wess/synaps/releases">Releases</a>
+    </nav>
+    <p class="footerfine">Local-first. No account required. macOS 13+ beta.</p>
+  </footer>
+</body>
+</html>

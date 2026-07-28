@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="canvas" x1="160" y1="120" x2="860" y2="920" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#fbf9f6"/>
+      <stop offset="1" stop-color="#e8e0f2"/>
+    </linearGradient>
+    <linearGradient id="node" x1="340" y1="270" x2="690" y2="760" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#7155c8"/>
+      <stop offset="1" stop-color="#4d358e"/>
+    </linearGradient>
+    <filter id="shadow" x="0" y="0" width="1024" height="1024" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="24" stdDeviation="30" flood-color="#291d43" flood-opacity="0.22"/>
+    </filter>
+  </defs>
+  <rect x="76" y="64" width="872" height="872" rx="208" fill="url(#canvas)" filter="url(#shadow)"/>
+  <rect x="88" y="76" width="848" height="848" rx="196" fill="none" stroke="#ffffff" stroke-opacity="0.7" stroke-width="12"/>
+  <g fill="none" stroke="url(#node)" stroke-linecap="round" stroke-width="38" opacity="0.92">
+    <path d="M304 308L512 506L720 308"/>
+    <path d="M304 308L334 718L512 506L690 718L720 308"/>
+    <path d="M334 718L690 718"/>
+  </g>
+  <g stroke="#ffffff" stroke-width="24">
+    <circle cx="304" cy="308" r="68" fill="url(#node)"/>
+    <circle cx="720" cy="308" r="68" fill="url(#node)"/>
+    <circle cx="334" cy="718" r="68" fill="url(#node)"/>
+    <circle cx="690" cy="718" r="68" fill="url(#node)"/>
+    <circle cx="512" cy="506" r="86" fill="url(#node)"/>
+  </g>
+  <circle cx="512" cy="506" r="24" fill="#ffffff"/>
+</svg>

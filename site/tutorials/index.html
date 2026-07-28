@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tutorials — Synaps</title>
+  <meta name="description" content="Build complete working Synaps workflows, verify each result, and understand what to clean up when you are done.">
+  <meta name="theme-color" content="#0a43c8">
+  <meta property="og:title" content="Tutorials">
+  <meta property="og:description" content="Build complete working Synaps workflows, verify each result, and understand what to clean up when you are done.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://wess.io/synaps/tutorials/">
+  <link rel="canonical" href="https://wess.io/synaps/tutorials/">
+  <link rel="icon" href="../icon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Fragment+Mono&family=Manrope:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="../style.css">
+  <script type="module" src="../site.js"></script>
+</head>
+<body class="tutorial" data-root="../">
+  
+  <a class="skip" href="#content">Skip to content</a>
+  <header class="topbar">
+    <a class="wordmark" href="../" aria-label="Synaps home">
+      <img src="../icon.svg" width="30" height="30" alt="">
+      <span>Synaps</span>
+    </a>
+    <button class="navtoggle" type="button" aria-expanded="false" aria-controls="topnav">Menu</button>
+    <nav id="topnav" aria-label="Primary">
+      <a href="../docs/">Docs</a>
+      <a href="../tutorials/" aria-current="page">Tutorials</a>
+      <a href="https://github.com/wess/synaps">GitHub <span aria-hidden="true">↗</span></a>
+      <a class="navdownload" href="https://github.com/wess/synaps/releases/latest">Download</a>
+    </nav>
+  </header>
+  
+  <div class="doclayout">
+    
+  <aside class="docsrail" aria-label="Documentation navigation">
+    <div class="searchbox">
+      <label for="search">Search the guide</label>
+      <input id="search" type="search" placeholder="Memory, vaults, restore…" autocomplete="off">
+      <div class="searchresults" data-results hidden></div>
+      <span class="searchstatus" data-searchstatus role="status" aria-live="polite"></span>
+    </div>
+    <details class="railnav" open>
+      <summary>Browse all guides</summary>
+      <nav aria-label="All guides">
+        <h2>Documentation</h2>
+        <ul>
+        <li><a href="../docs/">Start here</a></li>
+        <li><a href="../docs/install/">Install and connect</a></li>
+        <li><a href="../docs/app/">Desktop app reference</a></li>
+        <li><a href="../docs/memory/">Memory and recall</a></li>
+        <li><a href="../docs/mcp/">MCP tool reference</a></li>
+        <li><a href="../docs/vault/">Vaults and scopes</a></li>
+        <li><a href="../docs/data/">Data lifecycle</a></li>
+        <li><a href="../docs/config/">Configuration and paths</a></li>
+        <li><a href="../docs/security/">Security model</a></li>
+        <li><a href="../docs/cli/">CLI reference</a></li>
+        <li><a href="../docs/troubleshoot/">Troubleshooting</a></li></ul>
+        <h2>Tutorials</h2>
+        <ul>
+        <li><a href="../tutorials/" aria-current="page">Tutorials</a></li>
+        <li><a href="../tutorials/connect/">Install and connect your first tools</a></li>
+        <li><a href="../tutorials/continuity/">Carry one decision between tools</a></li>
+        <li><a href="../tutorials/secrets/">Use a scoped secret in either shell mode</a></li>
+        <li><a href="../tutorials/curate/">Curate and optimize memory</a></li>
+        <li><a href="../tutorials/recovery/">Export and restore safely</a></li></ul>
+      </nav>
+    </details>
+  </aside>
+    <main class="article" id="content">
+      <header class="articlehead">
+        <h1>Tutorials</h1>
+        <span>Build complete working Synaps workflows, verify each result, and understand what to clean up when you are done.</span>
+      </header>
+      
+    <h2 id="order">Recommended order</h2>
+    <ol class="steps">
+      <li><h3><a href="connect/">Install and connect your first tools</a></h3><p>Start from the release archive, install the CLI, connect Codex or Claude Code, and verify all three MCP tools.</p></li>
+      <li><h3><a href="continuity/">Carry one decision between tools</a></h3><p>Store a confirmed convention in one tool, end the session, recover it in another, and inspect the exact record.</p></li>
+      <li><h3><a href="secrets/">Use a scoped secret in either shell mode</a></h3><p>Create a Keychain-backed value, compare one-command and ambient loading without printing the value, and exercise invalidation.</p></li>
+      <li><h3><a href="curate/">Curate and optimize memory</a></h3><p>Add, find, correct, delete, and budget durable memory using both human-readable and JSON CLI output.</p></li>
+      <li><h3><a href="recovery/">Export and restore safely</a></h3><p>Create a validated snapshot, make a reversible change, acquire the exclusive lifecycle lock, restore, and verify recovery.</p></li>
+    </ol>
+
+    <h2 id="all">What every tutorial includes</h2>
+    <p>Each tutorial names prerequisites, builds one complete outcome, includes observable verification, calls out the security boundary, and provides cleanup or the next safe step. Commands assume the installed <code>synaps</code> CLI is on <code>PATH</code>.</p>
+    <p>If you need exact command syntax outside a guided workflow, use the <a href="../docs/cli/">CLI reference</a>. If a step fails, stop at that point and use <a href="../docs/troubleshoot/">Troubleshooting</a> rather than skipping a trust or integrity check.</p>
+  
+    </main>
+    <aside class="ontoc" aria-label="On this page">
+        <span>On this page</span>
+        <ol><li><a href="#order">Recommended order</a></li><li><a href="#all">Every tutorial</a></li></ol>
+      </aside>
+  </div>
+  
+  <footer class="footer">
+    <div>
+      <a class="wordmark" href="../"><img src="../icon.svg" width="26" height="26" alt="">Synaps</a>
+      <p>Local memory and scoped credentials for developer tools.</p>
+    </div>
+    <nav aria-label="Footer">
+      <a href="../docs/">Documentation</a>
+      <a href="../tutorials/">Tutorials</a>
+      <a href="https://github.com/wess/synaps">Source</a>
+      <a href="https://github.com/wess/synaps/releases">Releases</a>
+    </nav>
+    <p class="footerfine">Local-first. No account required. macOS 13+ beta.</p>
+  </footer>
+</body>
+</html>

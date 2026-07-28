@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Data lifecycle — Synaps</title>
+  <meta name="description" content="Locate the database, understand startup checks and automatic backups, export a consistent snapshot, and restore safely.">
+  <meta name="theme-color" content="#0a43c8">
+  <meta property="og:title" content="Data lifecycle">
+  <meta property="og:description" content="Locate the database, understand startup checks and automatic backups, export a consistent snapshot, and restore safely.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://wess.io/synaps/docs/data/">
+  <link rel="canonical" href="https://wess.io/synaps/docs/data/">
+  <link rel="icon" href="../../icon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Fragment+Mono&family=Manrope:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="../../style.css">
+  <script type="module" src="../../site.js"></script>
+</head>
+<body class="docs" data-root="../../">
+  
+  <a class="skip" href="#content">Skip to content</a>
+  <header class="topbar">
+    <a class="wordmark" href="../../" aria-label="Synaps home">
+      <img src="../../icon.svg" width="30" height="30" alt="">
+      <span>Synaps</span>
+    </a>
+    <button class="navtoggle" type="button" aria-expanded="false" aria-controls="topnav">Menu</button>
+    <nav id="topnav" aria-label="Primary">
+      <a href="../../docs/" aria-current="page">Docs</a>
+      <a href="../../tutorials/">Tutorials</a>
+      <a href="https://github.com/wess/synaps">GitHub <span aria-hidden="true">↗</span></a>
+      <a class="navdownload" href="https://github.com/wess/synaps/releases/latest">Download</a>
+    </nav>
+  </header>
+  
+  <div class="doclayout">
+    
+  <aside class="docsrail" aria-label="Documentation navigation">
+    <div class="searchbox">
+      <label for="search">Search the guide</label>
+      <input id="search" type="search" placeholder="Memory, vaults, restore…" autocomplete="off">
+      <div class="searchresults" data-results hidden></div>
+      <span class="searchstatus" data-searchstatus role="status" aria-live="polite"></span>
+    </div>
+    <details class="railnav" open>
+      <summary>Browse all guides</summary>
+      <nav aria-label="All guides">
+        <h2>Documentation</h2>
+        <ul>
+        <li><a href="../../docs/">Start here</a></li>
+        <li><a href="../../docs/install/">Install and connect</a></li>
+        <li><a href="../../docs/app/">Desktop app reference</a></li>
+        <li><a href="../../docs/memory/">Memory and recall</a></li>
+        <li><a href="../../docs/mcp/">MCP tool reference</a></li>
+        <li><a href="../../docs/vault/">Vaults and scopes</a></li>
+        <li><a href="../../docs/data/" aria-current="page">Data lifecycle</a></li>
+        <li><a href="../../docs/config/">Configuration and paths</a></li>
+        <li><a href="../../docs/security/">Security model</a></li>
+        <li><a href="../../docs/cli/">CLI reference</a></li>
+        <li><a href="../../docs/troubleshoot/">Troubleshooting</a></li></ul>
+        <h2>Tutorials</h2>
+        <ul>
+        <li><a href="../../tutorials/">Tutorials</a></li>
+        <li><a href="../../tutorials/connect/">Install and connect your first tools</a></li>
+        <li><a href="../../tutorials/continuity/">Carry one decision between tools</a></li>
+        <li><a href="../../tutorials/secrets/">Use a scoped secret in either shell mode</a></li>
+        <li><a href="../../tutorials/curate/">Curate and optimize memory</a></li>
+        <li><a href="../../tutorials/recovery/">Export and restore safely</a></li></ul>
+      </nav>
+    </details>
+  </aside>
+    <main class="article" id="content">
+      <header class="articlehead">
+        <h1>Data lifecycle</h1>
+        <span>Locate the database, understand startup checks and automatic backups, export a consistent snapshot, and restore safely.</span>
+      </header>
+      
+    <h2 id="files">Files and permissions</h2>
+    <p>On macOS, the default data directory is <code>~/Library/Application Support/synaps</code>. Run <code>synaps path</code> to print the resolved home, data, database, and CLI paths for the current environment.</p>
+    <table>
+      <thead><tr><th>Path</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td><code>brain.db</code></td><td>Memory, settings, vault metadata, global mappings, and scope approvals.</td></tr>
+        <tr><td><code>brain.db-wal</code> and <code>brain.db-shm</code></td><td>SQLite write-ahead-log sidecars while the database is active.</td></tr>
+        <tr><td><code>brain.lock</code></td><td>Shared lifecycle lock held by the app, CLI operations, and MCP server.</td></tr>
+        <tr><td><code>backups/</code></td><td>Automatic pre-migration and pre-restore SQLite snapshots.</td></tr>
+      </tbody>
+    </table>
+    <p>On Unix systems the data and backup directories use mode <code>0700</code>; database files, sidecars, locks, and backups use <code>0600</code>.</p>
+
+    <h2 id="startup">Startup</h2>
+    <p>Every database open follows the same sequence:</p>
+    <ol>
+      <li>Create and secure the data directory if needed.</li>
+      <li>Acquire a shared lifecycle lock.</li>
+      <li>Open SQLite with foreign keys enabled, a five-second busy timeout, and WAL journal mode.</li>
+      <li>Run <code>PRAGMA quick_check</code> and <code>PRAGMA foreign_key_check</code>.</li>
+      <li>Reject a database newer than the current application supports.</li>
+      <li>Create a pre-migration snapshot when an existing database needs a numbered migration, then apply the migration transactionally.</li>
+      <li>Reapply owner-only file permissions.</li>
+    </ol>
+    
+  <div class="codeblock">
+    <div class="codebar">
+      <span>shell</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>synaps data check
+synaps data check --json</code></pre>
+  </div>
+
+    <h2 id="backups">Automatic backups</h2>
+    <p>Before changing an existing schema, Synaps creates <code>backups/brain.&lt;timestamp&gt;.v&lt;version&gt;.db</code>. Before replacing an existing database during restore, it creates <code>backups/brain.&lt;timestamp&gt;.restore.db</code>.</p>
+    <p>These are complete snapshots created through SQLite <code>VACUUM INTO</code>, not copies of a live database file. Synaps does not currently rotate them; include the folder in your normal local backup policy and remove old snapshots deliberately.</p>
+
+    <h2 id="export">Export a portable snapshot</h2>
+    
+  <div class="codeblock">
+    <div class="codebar">
+      <span>shell</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>synaps data export &quot;$HOME/Desktop/synapsbackup.db&quot;
+synaps data check --json</code></pre>
+  </div>
+    <p>The destination must not already exist. Synaps opens the active database normally, writes a consistent compact snapshot, secures its permissions, then reopens it read-only and validates integrity before reporting success.</p>
+    
+  <aside class="note">
+    <strong>Keychain values are separate</strong>
+    <p>The exported database contains vault metadata and Keychain account references, but not secret values. Restoring it on another Mac does not transfer those values.</p>
+  </aside>
+
+    <h2 id="restore">Restore a snapshot</h2>
+    <ol>
+      <li>Quit the Synaps desktop app.</li>
+      <li>Stop every connected MCP process by closing the relevant tool sessions.</li>
+      <li>Run the restore command from a separate terminal.</li>
+    </ol>
+    
+  <div class="codeblock">
+    <div class="codebar">
+      <span>shell</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>synaps data restore &quot;$HOME/Desktop/synapsbackup.db&quot;
+synaps data check</code></pre>
+  </div>
+    <p>Restore opens the source read-only, validates page and relationship integrity, and requires its schema version to match the current release. It then tries to acquire the exclusive lifecycle lock. If the app or any MCP server still holds the database, restore refuses without changing anything.</p>
+    <p>When a current database exists, Synaps validates it and creates a recovery snapshot before atomically replacing it. WAL and SHM sidecars are cleared, file permissions are secured, and the containing directory is synced.</p>
+
+    <h2 id="wipe">Memory wipe is not a reset</h2>
+    <p><code>synaps memory wipe --confirm</code> removes every memory entry but leaves settings, vault labels, Keychain values, global mappings, and scope approvals. Use it when you want a clean memory history without rebuilding credential setup.</p>
+    <p>There is no one-command factory reset. To remove Synaps completely, first forget each Keychain secret through the app or CLI, then quit all processes and remove the application, installed launcher, and data directory deliberately.</p>
+  
+    </main>
+    <aside class="ontoc" aria-label="On this page">
+        <span>On this page</span>
+        <ol><li><a href="#files">Files and permissions</a></li><li><a href="#startup">Startup</a></li><li><a href="#backups">Automatic backups</a></li><li><a href="#export">Export</a></li><li><a href="#restore">Restore</a></li><li><a href="#wipe">Memory wipe</a></li></ol>
+      </aside>
+  </div>
+  
+  <footer class="footer">
+    <div>
+      <a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">Synaps</a>
+      <p>Local memory and scoped credentials for developer tools.</p>
+    </div>
+    <nav aria-label="Footer">
+      <a href="../../docs/">Documentation</a>
+      <a href="../../tutorials/">Tutorials</a>
+      <a href="https://github.com/wess/synaps">Source</a>
+      <a href="https://github.com/wess/synaps/releases">Releases</a>
+    </nav>
+    <p class="footerfine">Local-first. No account required. macOS 13+ beta.</p>
+  </footer>
+</body>
+</html>

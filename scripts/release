@@ -1,0 +1,27 @@
+#!/bin/sh
+set -eu
+
+root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+identity=${SYNAPS_SIGNING_IDENTITY:-Developer ID Application: Wesley Cope (XJDC46F35X)}
+bundle="$root/target/release/bundle/osx/Synaps.app"
+output="$root/dist"
+stage=$(mktemp -d "${TMPDIR:-/tmp}/synapsrelease.XXXXXX")
+trap 'rm -rf "$stage"' EXIT INT TERM
+
+cd "$root"
+rustc -vV | grep -q '^host: aarch64-apple-darwin$'
+cargo bundle --release --format osx
+ditto --norsrc --noextattr --noqtn --noacl "$bundle" "$stage/synaps.app"
+/usr/libexec/PlistBuddy -c 'Set :LSRequiresCarbon false' "$stage/synaps.app/Contents/Info.plist"
+codesign --force --deep --options runtime --timestamp --sign "$identity" "$stage/synaps.app"
+codesign --verify --deep --strict --verbose=2 "$stage/synaps.app"
+ditto -c -k --norsrc --noextattr --noqtn --noacl --keepParent "$stage/synaps.app" "$stage/synaps.zip"
+
+mkdir -p "$output"
+rm -rf "$output/synaps.app"
+rm -f "$output/synaps.zip"
+mv "$stage/synaps.app" "$output/synaps.app"
+mv "$stage/synaps.zip" "$output/synaps.zip"
+
+echo "$output/synaps.app"
+echo "$output/synaps.zip"

@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Start here — Synaps</title>
+  <meta name="description" content="Understand the Synaps model, choose a path through the guide, and know where its guarantees stop.">
+  <meta name="theme-color" content="#0a43c8">
+  <meta property="og:title" content="Start here">
+  <meta property="og:description" content="Understand the Synaps model, choose a path through the guide, and know where its guarantees stop.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://wess.io/synaps/docs/">
+  <link rel="canonical" href="https://wess.io/synaps/docs/">
+  <link rel="icon" href="../icon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Fragment+Mono&family=Manrope:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="../style.css">
+  <script type="module" src="../site.js"></script>
+</head>
+<body class="docs" data-root="../">
+  
+  <a class="skip" href="#content">Skip to content</a>
+  <header class="topbar">
+    <a class="wordmark" href="../" aria-label="Synaps home">
+      <img src="../icon.svg" width="30" height="30" alt="">
+      <span>Synaps</span>
+    </a>
+    <button class="navtoggle" type="button" aria-expanded="false" aria-controls="topnav">Menu</button>
+    <nav id="topnav" aria-label="Primary">
+      <a href="../docs/" aria-current="page">Docs</a>
+      <a href="../tutorials/">Tutorials</a>
+      <a href="https://github.com/wess/synaps">GitHub <span aria-hidden="true">↗</span></a>
+      <a class="navdownload" href="https://github.com/wess/synaps/releases/latest">Download</a>
+    </nav>
+  </header>
+  
+  <div class="doclayout">
+    
+  <aside class="docsrail" aria-label="Documentation navigation">
+    <div class="searchbox">
+      <label for="search">Search the guide</label>
+      <input id="search" type="search" placeholder="Memory, vaults, restore…" autocomplete="off">
+      <div class="searchresults" data-results hidden></div>
+      <span class="searchstatus" data-searchstatus role="status" aria-live="polite"></span>
+    </div>
+    <details class="railnav" open>
+      <summary>Browse all guides</summary>
+      <nav aria-label="All guides">
+        <h2>Documentation</h2>
+        <ul>
+        <li><a href="../docs/" aria-current="page">Start here</a></li>
+        <li><a href="../docs/install/">Install and connect</a></li>
+        <li><a href="../docs/app/">Desktop app reference</a></li>
+        <li><a href="../docs/memory/">Memory and recall</a></li>
+        <li><a href="../docs/mcp/">MCP tool reference</a></li>
+        <li><a href="../docs/vault/">Vaults and scopes</a></li>
+        <li><a href="../docs/data/">Data lifecycle</a></li>
+        <li><a href="../docs/config/">Configuration and paths</a></li>
+        <li><a href="../docs/security/">Security model</a></li>
+        <li><a href="../docs/cli/">CLI reference</a></li>
+        <li><a href="../docs/troubleshoot/">Troubleshooting</a></li></ul>
+        <h2>Tutorials</h2>
+        <ul>
+        <li><a href="../tutorials/">Tutorials</a></li>
+        <li><a href="../tutorials/connect/">Install and connect your first tools</a></li>
+        <li><a href="../tutorials/continuity/">Carry one decision between tools</a></li>
+        <li><a href="../tutorials/secrets/">Use a scoped secret in either shell mode</a></li>
+        <li><a href="../tutorials/curate/">Curate and optimize memory</a></li>
+        <li><a href="../tutorials/recovery/">Export and restore safely</a></li></ul>
+      </nav>
+    </details>
+  </aside>
+    <main class="article" id="content">
+      <header class="articlehead">
+        <h1>Start here</h1>
+        <span>Understand the Synaps model, choose a path through the guide, and know where its guarantees stop.</span>
+      </header>
+      
+    <h2 id="model">The model</h2>
+    <p>Synaps is a local service with two deliberately separate jobs. Its <strong>memory layer</strong> gives connected developer tools one durable, searchable context store. Its <strong>vault layer</strong> gives commands or opted-in shells carefully scoped environment variables while keeping secret values in macOS Keychain.</p>
+    <p>The desktop app is the control surface. The CLI exposes the same memory, vault, scope, settings, and data-lifecycle operations. The MCP stdio server gives connected tools three narrow capabilities: remember durable context, recall it, and inspect value-free vault status.</p>
+
+    <h2 id="stores">What Synaps stores</h2>
+    <table>
+      <thead><tr><th>Material</th><th>Location</th><th>Visible to</th></tr></thead>
+      <tbody>
+        <tr><td>Memory text, source, and timestamp</td><td>Local SQLite database</td><td>Desktop app, CLI, and MCP memory tools</td></tr>
+        <tr><td>Vault names, secret labels, Keychain account references, global mappings</td><td>Local SQLite database</td><td>Desktop app and CLI; MCP receives names only</td></tr>
+        <tr><td>Secret values</td><td>macOS Keychain</td><td>Synaps, a child launched with <code>synaps run</code>, or processes launched from an activated shell</td></tr>
+        <tr><td>Project and folder mappings</td><td>Approved <code>.synaps.yaml</code> files</td><td>You, Synaps, and the repository if you commit the file</td></tr>
+        <tr><td>Scope approvals</td><td>Local SQLite database as a path and content digest</td><td>Synaps</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="limits">What Synaps does not do</h2>
+    <ul>
+      <li>It does not sync memory or secrets to an account or hosted service.</li>
+      <li>It does not send secret values through MCP, write them to YAML, or accept them as command arguments.</li>
+      <li>It cannot directly modify an already-running parent process. Use <code>synaps run -- &lt;command&gt;</code> for one child, or explicitly evaluate <code>synaps hook</code> so your shell applies quoted environment changes itself.</li>
+      <li>It does not decide that every conversation detail deserves permanent memory. Connected tools receive instructions to keep stable, confirmed context.</li>
+      <li>The current beta is a signed Apple-silicon build for macOS 13 or later.</li>
+    </ul>
+
+    <h2 id="paths">Choose a path</h2>
+    <dl>
+      <dt>I want to use Synaps now.</dt>
+      <dd>Follow <a href="../tutorials/connect/">Install and connect your first tools</a>. It covers download, first launch, the CLI, both supported tools, and a working recall check.</dd>
+      <dt>I want to manage Synaps from the app.</dt>
+      <dd>Use the <a href="app/">desktop app reference</a> for every screen, status, confirmation, editor, and shell-integration control.</dd>
+      <dt>I want to understand memory behavior.</dt>
+      <dd>Read <a href="memory/">Memory and recall</a>, then follow <a href="../tutorials/continuity/">Carry one decision between tools</a>.</dd>
+      <dt>I need credentials for local commands.</dt>
+      <dd>Read <a href="vault/">Vaults and scopes</a>, then build a complete approved scope in <a href="../tutorials/secrets/">Use a scoped secret in either shell mode</a>.</dd>
+      <dt>I need automation or exact syntax.</dt>
+      <dd>Use the <a href="cli/">complete CLI reference</a> and <a href="mcp/">MCP tool reference</a>.</dd>
+      <dt>I am planning backups or a recovery.</dt>
+      <dd>Read <a href="data/">Data lifecycle</a> before exporting or restoring the database.</dd>
+    </dl>
+  
+    </main>
+    <aside class="ontoc" aria-label="On this page">
+        <span>On this page</span>
+        <ol><li><a href="#model">The model</a></li><li><a href="#stores">What Synaps stores</a></li><li><a href="#limits">What Synaps does not do</a></li><li><a href="#paths">Choose a path</a></li></ol>
+      </aside>
+  </div>
+  
+  <footer class="footer">
+    <div>
+      <a class="wordmark" href="../"><img src="../icon.svg" width="26" height="26" alt="">Synaps</a>
+      <p>Local memory and scoped credentials for developer tools.</p>
+    </div>
+    <nav aria-label="Footer">
+      <a href="../docs/">Documentation</a>
+      <a href="../tutorials/">Tutorials</a>
+      <a href="https://github.com/wess/synaps">Source</a>
+      <a href="https://github.com/wess/synaps/releases">Releases</a>
+    </nav>
+    <p class="footerfine">Local-first. No account required. macOS 13+ beta.</p>
+  </footer>
+</body>
+</html>

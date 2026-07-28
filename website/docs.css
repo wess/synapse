@@ -1,0 +1,333 @@
+.doclayout {
+  display: grid;
+  grid-template-columns: 15.5rem minmax(0, 48rem) 13rem;
+  gap: clamp(2rem, 4vw, 4.5rem);
+  max-width: 94rem;
+  min-height: calc(100vh - 4.5rem);
+  margin: 0 auto;
+  padding: 3rem var(--gutter) 7rem;
+}
+
+.docsrail,
+.ontoc {
+  position: sticky;
+  top: 2rem;
+  align-self: start;
+  max-height: calc(100vh - 4rem);
+  overflow-y: auto;
+}
+
+.searchbox {
+  position: relative;
+  margin-bottom: 2rem;
+}
+
+.searchbox label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: var(--inksoft);
+  font-family: var(--utility);
+  font-size: var(--textcaption);
+  text-transform: uppercase;
+}
+
+.searchbox input {
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0 0.7rem;
+  border: 1px solid var(--inksoft);
+  border-radius: 0;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.searchresults {
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  z-index: 12;
+  width: min(27rem, calc(100vw - 2rem));
+  border: 1px solid var(--inksoft);
+  background: var(--paper);
+  box-shadow: 7px 8px 0 rgb(8 23 46 / 18%);
+}
+
+.searchresults a {
+  display: block;
+  padding: 0.8rem;
+  border-bottom: 1px solid var(--line);
+  text-decoration: none;
+}
+
+.searchresults a:last-child {
+  border-bottom: 0;
+}
+
+.searchresults strong,
+.searchresults span {
+  display: block;
+}
+
+.searchresults span {
+  margin-top: 0.15rem;
+  color: var(--inksoft);
+  font-size: var(--textsmall);
+}
+
+.searchstatus {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.railnav summary {
+  display: none;
+}
+
+.docsrail nav h2 {
+  margin: 1.8rem 0 0.55rem;
+  color: var(--inksoft);
+  font-family: var(--utility);
+  font-size: var(--textcaption);
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.docsrail ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.docsrail li + li {
+  margin-top: 0.1rem;
+}
+
+.docsrail nav a {
+  display: block;
+  padding: 0.38rem 0.55rem;
+  color: var(--inksoft);
+  font-size: var(--textnav);
+  text-decoration: none;
+}
+
+.docsrail nav a:hover {
+  color: var(--ink);
+  text-decoration: underline;
+}
+
+.docsrail nav a[aria-current="page"] {
+  background: var(--cobalt);
+  color: var(--white);
+  font-weight: 700;
+}
+
+.article {
+  min-width: 0;
+}
+
+.articlehead {
+  margin-bottom: 4rem;
+  padding-bottom: 2.5rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.articlehead h1 {
+  max-width: 12ch;
+  margin: 0;
+  font-family: var(--display);
+  font-size: var(--articlesize);
+  font-weight: 600;
+  letter-spacing: -0.04em;
+  line-height: 0.92;
+  text-wrap: balance;
+}
+
+.articlehead span {
+  display: block;
+  max-width: 62ch;
+  margin-top: 1.4rem;
+  color: var(--inksoft);
+  font-size: var(--textlead);
+}
+
+.article h2 {
+  margin: 4.5rem 0 1rem;
+  font-family: var(--display);
+  font-size: var(--headlinesize);
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1;
+}
+
+.article h3 {
+  margin: 2.8rem 0 0.7rem;
+  font-family: var(--display);
+  font-size: var(--texttitle);
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.article p,
+.article li {
+  max-width: 72ch;
+}
+
+.article p {
+  margin: 0.85rem 0;
+}
+
+.article ul,
+.article ol {
+  padding-left: 1.35rem;
+}
+
+.article li + li {
+  margin-top: 0.55rem;
+}
+
+.article table {
+  width: 100%;
+  margin: 1.5rem 0 2.5rem;
+  border-collapse: collapse;
+  font-size: var(--textmeta);
+}
+
+.article th,
+.article td {
+  padding: 0.8rem 0.65rem;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+  text-align: left;
+}
+
+.article th {
+  color: var(--inksoft);
+  font-family: var(--utility);
+  font-size: var(--textutility);
+  font-weight: 400;
+  text-transform: uppercase;
+}
+
+.article dl {
+  margin: 1.5rem 0;
+}
+
+.article dt {
+  margin-top: 1.3rem;
+  font-weight: 700;
+}
+
+.article dd {
+  max-width: 70ch;
+  margin: 0.3rem 0 0;
+  color: var(--inksoft);
+}
+
+.command {
+  display: grid;
+  grid-template-columns: minmax(12rem, 0.7fr) minmax(15rem, 1.3fr);
+  gap: 2rem;
+  padding: 1.6rem 0;
+  border-top: 1px solid var(--line);
+}
+
+.command:last-of-type {
+  border-bottom: 1px solid var(--line);
+}
+
+.command h3 {
+  margin: 0 0 0.45rem;
+}
+
+.command > div > code {
+  display: block;
+  color: var(--cobaltdeep);
+  font-family: var(--utility);
+  font-size: var(--textsmall);
+  line-height: 1.55;
+}
+
+.command p {
+  margin: 0.2rem 0 0;
+  color: var(--inksoft);
+}
+
+.steps {
+  margin: 2rem 0;
+  padding: 0;
+  counter-reset: step;
+  list-style: none;
+}
+
+.steps > li {
+  position: relative;
+  max-width: none;
+  padding: 0 0 3.5rem 4.5rem;
+  counter-increment: step;
+}
+
+.steps > li::before {
+  position: absolute;
+  top: -0.2rem;
+  left: 0;
+  display: grid;
+  width: 2.8rem;
+  height: 2.8rem;
+  place-items: center;
+  border: 1px solid var(--ink);
+  color: var(--cuetext);
+  content: counter(step, decimal-leading-zero);
+  font-family: var(--utility);
+  font-size: var(--textsmall);
+}
+
+.steps > li:not(:last-child)::after {
+  position: absolute;
+  top: 2.7rem;
+  bottom: 0.25rem;
+  left: 1.38rem;
+  border-left: 1px solid var(--line);
+  content: "";
+}
+
+.steps h2,
+.steps h3 {
+  margin-top: 0;
+}
+
+.ontoc {
+  padding-top: 0.15rem;
+}
+
+.ontoc > span {
+  color: var(--inksoft);
+  font-family: var(--utility);
+  font-size: var(--textcaption);
+  text-transform: uppercase;
+}
+
+.ontoc ol {
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ontoc li + li {
+  margin-top: 0.55rem;
+}
+
+.ontoc a {
+  color: var(--inksoft);
+  font-size: var(--textsmall);
+  text-decoration: none;
+}
+
+.ontoc a:hover {
+  color: var(--ink);
+  text-decoration: underline;
+}

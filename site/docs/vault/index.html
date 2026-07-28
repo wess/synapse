@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vaults and scopes — Synaps</title>
+  <meta name="description" content="Keep values in Keychain, map names through approved YAML, understand precedence, and choose a command-scoped or ambient environment.">
+  <meta name="theme-color" content="#0a43c8">
+  <meta property="og:title" content="Vaults and scopes">
+  <meta property="og:description" content="Keep values in Keychain, map names through approved YAML, understand precedence, and choose a command-scoped or ambient environment.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://wess.io/synaps/docs/vault/">
+  <link rel="canonical" href="https://wess.io/synaps/docs/vault/">
+  <link rel="icon" href="../../icon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Fragment+Mono&family=Manrope:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="../../style.css">
+  <script type="module" src="../../site.js"></script>
+</head>
+<body class="docs" data-root="../../">
+  
+  <a class="skip" href="#content">Skip to content</a>
+  <header class="topbar">
+    <a class="wordmark" href="../../" aria-label="Synaps home">
+      <img src="../../icon.svg" width="30" height="30" alt="">
+      <span>Synaps</span>
+    </a>
+    <button class="navtoggle" type="button" aria-expanded="false" aria-controls="topnav">Menu</button>
+    <nav id="topnav" aria-label="Primary">
+      <a href="../../docs/" aria-current="page">Docs</a>
+      <a href="../../tutorials/">Tutorials</a>
+      <a href="https://github.com/wess/synaps">GitHub <span aria-hidden="true">↗</span></a>
+      <a class="navdownload" href="https://github.com/wess/synaps/releases/latest">Download</a>
+    </nav>
+  </header>
+  
+  <div class="doclayout">
+    
+  <aside class="docsrail" aria-label="Documentation navigation">
+    <div class="searchbox">
+      <label for="search">Search the guide</label>
+      <input id="search" type="search" placeholder="Memory, vaults, restore…" autocomplete="off">
+      <div class="searchresults" data-results hidden></div>
+      <span class="searchstatus" data-searchstatus role="status" aria-live="polite"></span>
+    </div>
+    <details class="railnav" open>
+      <summary>Browse all guides</summary>
+      <nav aria-label="All guides">
+        <h2>Documentation</h2>
+        <ul>
+        <li><a href="../../docs/">Start here</a></li>
+        <li><a href="../../docs/install/">Install and connect</a></li>
+        <li><a href="../../docs/app/">Desktop app reference</a></li>
+        <li><a href="../../docs/memory/">Memory and recall</a></li>
+        <li><a href="../../docs/mcp/">MCP tool reference</a></li>
+        <li><a href="../../docs/vault/" aria-current="page">Vaults and scopes</a></li>
+        <li><a href="../../docs/data/">Data lifecycle</a></li>
+        <li><a href="../../docs/config/">Configuration and paths</a></li>
+        <li><a href="../../docs/security/">Security model</a></li>
+        <li><a href="../../docs/cli/">CLI reference</a></li>
+        <li><a href="../../docs/troubleshoot/">Troubleshooting</a></li></ul>
+        <h2>Tutorials</h2>
+        <ul>
+        <li><a href="../../tutorials/">Tutorials</a></li>
+        <li><a href="../../tutorials/connect/">Install and connect your first tools</a></li>
+        <li><a href="../../tutorials/continuity/">Carry one decision between tools</a></li>
+        <li><a href="../../tutorials/secrets/">Use a scoped secret in either shell mode</a></li>
+        <li><a href="../../tutorials/curate/">Curate and optimize memory</a></li>
+        <li><a href="../../tutorials/recovery/">Export and restore safely</a></li></ul>
+      </nav>
+    </details>
+  </aside>
+    <main class="article" id="content">
+      <header class="articlehead">
+        <h1>Vaults and scopes</h1>
+        <span>Keep values in Keychain, map names through approved YAML, understand precedence, and choose a command-scoped or ambient environment.</span>
+      </header>
+      
+    <h2 id="model">Storage model</h2>
+    <p>A vault is an organizational name. A secret record connects a vault-local label to an environment-variable name and a macOS Keychain account. SQLite stores that metadata; Keychain stores the value.</p>
+    <p>A reference uses <code>vault.name</code> form, such as <code>work.database</code>. Scope YAML maps an environment name such as <code>DATABASE_URL</code> to that reference. A repository can therefore contain the mapping without containing the value.</p>
+    <table>
+      <thead><tr><th>Object</th><th>Example</th><th>Rules</th></tr></thead>
+      <tbody>
+        <tr><td>Vault</td><td><code>work</code></td><td>Letters, numbers, and hyphens; unique name.</td></tr>
+        <tr><td>Secret name</td><td><code>database</code></td><td>Letters, numbers, and hyphens; unique inside its vault.</td></tr>
+        <tr><td>Environment name</td><td><code>DATABASE_URL</code></td><td>Starts with a letter or underscore; then letters, numbers, or underscores; stored uppercase.</td></tr>
+        <tr><td>Reference</td><td><code>work.database</code></td><td>Vault and secret name joined by a dot.</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="create">Create a secret</h2>
+    
+  <div class="codeblock">
+    <div class="codebar">
+      <span>shell</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>synaps vault create work
+synaps secret set work database DATABASE_URL
+synaps secret list work</code></pre>
+  </div>
+    <p>When stdin is a terminal, <code>secret set</code> reads the value with a hidden prompt and asks for confirmation. When stdin is piped, it reads the stream and trims its final line ending. The value is never accepted as a command argument.</p>
+    
+  <div class="codeblock">
+    <div class="codebar">
+      <span>shell</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>printf &#039;%s&#039; &quot;$DATABASE_URL&quot; | synaps secret set work database DATABASE_URL</code></pre>
+  </div>
+    
+  <aside class="note">
+    <strong>Shell history boundary</strong>
+    <p>The safe prompt keeps the value out of history and process arguments. A piped command is only as safe as the command that produces its stdin; do not paste a value directly into a visible shell command.</p>
+  </aside>
+    <p>Add <code>--global</code> to make the environment name available in every folder, or change an existing label later:</p>
+    
+  <div class="codeblock">
+    <div class="codebar">
+      <span>shell</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>synaps secret set work registry NPM_TOKEN --global
+synaps secret global work.registry off</code></pre>
+  </div>
+
+    <h2 id="files">Scope files</h2>
+    <p>From a project folder, create <code>.synaps.yaml</code>:</p>
+    
+  <div class="codeblock">
+    <div class="codebar">
+      <span>shell</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>synaps scope init .</code></pre>
+  </div>
+    <p>The generated project template is valid but maps nothing:</p>
+    
+  <div class="codeblock">
+    <div class="codebar">
+      <span>yaml</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>version: 1
+scope: project
+env: {}
+deny: []</code></pre>
+  </div>
+    <p>Edit it to map names to existing references. Unknown fields are rejected.</p>
+    
+  <div class="codeblock">
+    <div class="codebar">
+      <span>yaml</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>version: 1
+scope: project
+env:
+  DATABASE_URL: work.database
+  NPM_TOKEN: work.registry
+deny:
+  - PRODUCTION_TOKEN</code></pre>
+  </div>
+    <p>Use <code>synaps scope init path/to/folder --folder</code> for a nested folder scope. The <code>scope</code> field describes intent and appears in status output; resolution uses the file’s position in the ancestor path.</p>
+
+    <h2 id="approval">Approval</h2>
+    <p>A scope has no effect until its exact contents are approved. Synaps hashes the file and stores its canonical path plus digest in SQLite:</p>
+    
+  <div class="codeblock">
+    <div class="codebar">
+      <span>shell</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>synaps status .
+synaps allow
+synaps scope status .</code></pre>
+  </div>
+    <p><code>synaps allow</code> approves the closest discovered scope. If several ancestor scopes exist, approve each from its own folder. <code>synaps scope trust [folder]</code> remains available when you want to approve an exact path directly.</p>
+    <p>Changing even whitespace changes the digest. The scope then reports <strong>changed</strong> and stops applying until you inspect and approve it again. Invalid YAML and unknown references produce warnings.</p>
+    <p>Both shell modes refuse an incomplete environment when any discovered scope is pending, changed, invalid, or references an unknown secret. Command-scoped mode refuses to launch; ambient mode unloads its managed values.</p>
+
+    <h2 id="precedence">Precedence and deny</h2>
+    <ol>
+      <li>Global mappings load first.</li>
+      <li>Synaps discovers every <code>.synaps.yaml</code> from the filesystem root toward the working folder.</li>
+      <li>Approved files apply in that order, so the closest mapping replaces a broader mapping for the same environment name.</li>
+      <li>A name in <code>deny</code> is removed and remains denied for all narrower scopes. A child scope cannot add it back.</li>
+    </ol>
+    <p>This lets a repository override a harmless global credential while permanently blocking a production credential inside a sensitive subtree.</p>
+
+    <h2 id="modes">Choose an environment boundary</h2>
+    <h3>Command scoped</h3>
+    
+  <div class="codeblock">
+    <div class="codebar">
+      <span>shell</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>cd /path/to/project
+synaps status .
+synaps run -- cargo test
+synaps run -- bun run deploy</code></pre>
+  </div>
+    <p><code>synaps run</code> resolves the current working folder, verifies every discovered scope, reads each selected value from Keychain, and sets it only on the new child process. Normal environment inheritance still applies; Synaps adds or replaces the resolved names. Your current shell is unchanged.</p>
+
+    <h3>Ambient directory</h3>
+    <p>Open <strong>Settings → Shell environments</strong> and choose <strong>Enable shell hook</strong>. Synaps detects the default shell, installs the CLI if needed, and manages a marked startup-file block. Open a new terminal, then allow the project:</p>
+    
+  <div class="codeblock">
+    <div class="codebar">
+      <span>shell</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>cd /path/to/project
+synaps allow</code></pre>
+  </div>
+    <p>For a temporary or manual installation, evaluate the matching hook directly:</p>
+    
+  <div class="codeblock">
+    <div class="codebar">
+      <span>shell</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code># Add the matching line to your shell startup file.
+eval &quot;$(synaps hook zsh)&quot;
+# eval &quot;$(synaps hook bash)&quot;
+# synaps hook fish | source</code></pre>
+  </div>
+    <p>The hook loads the approved environment when the shell enters the project, unloads it when the shell leaves, and reloads it after an approved change. If Synaps replaced a variable that already existed, it restores the original value instead of unsetting it. A hook never activates from global mappings alone: the directory must contain at least one approved discovered scope.</p>
+    <p>Run <code>synaps deny</code> to revoke the closest scope. The next prompt unloads managed values. <code>synaps status .</code> reports whether ambient activation is ready, blocked, or inactive and whether the current shell has a hook installed.</p>
+    
+  <aside class="note">
+    <strong>Ambient mode has a wider boundary</strong>
+    <p>Every process launched from the activated shell can read the values. Prefer synaps run for a sensitive one-off command. Do not enable shell tracing such as set -x while the hook is evaluating environment changes, because tracing can print plaintext values.</p>
+  </aside>
+    <p>MCP <code>vaultstatus</code> and CLI <code>status</code> report names, scope states, and warnings. They do not read or reveal values. To remove a value and its metadata, run <code>synaps secret forget work.database</code>. A vault can be deleted only after all of its secrets are forgotten.</p>
+  
+    </main>
+    <aside class="ontoc" aria-label="On this page">
+        <span>On this page</span>
+        <ol><li><a href="#model">Storage model</a></li><li><a href="#create">Create a secret</a></li><li><a href="#files">Scope files</a></li><li><a href="#approval">Approval</a></li><li><a href="#precedence">Precedence and deny</a></li><li><a href="#modes">Choose a boundary</a></li></ol>
+      </aside>
+  </div>
+  
+  <footer class="footer">
+    <div>
+      <a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">Synaps</a>
+      <p>Local memory and scoped credentials for developer tools.</p>
+    </div>
+    <nav aria-label="Footer">
+      <a href="../../docs/">Documentation</a>
+      <a href="../../tutorials/">Tutorials</a>
+      <a href="https://github.com/wess/synaps">Source</a>
+      <a href="https://github.com/wess/synaps/releases">Releases</a>
+    </nav>
+    <p class="footerfine">Local-first. No account required. macOS 13+ beta.</p>
+  </footer>
+</body>
+</html>

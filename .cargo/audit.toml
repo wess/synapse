@@ -1,0 +1,4 @@
+[advisories]
+# xcb is a Linux-only transitive dependency of GPUI. Synaps 0.1 is released only
+# for Apple silicon macOS, so its quick-xml build dependency is not shipped.
+ignore = ["RUSTSEC-2026-0194", "RUSTSEC-2026-0195"]
