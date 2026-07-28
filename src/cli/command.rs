@@ -34,10 +34,20 @@ Commands:
   data restore <file>              Restore a backup while Synapse is closed
   memory list [query] [--json]     Search or list recent memories
   memory show <id> [--json]        Inspect one memory
-  memory add [source]              Store content read from stdin
+  memory add [source] [--global|--project <folder>]
+                                   Store content read from stdin
   memory edit <id> [source]        Replace content read from stdin
+  memory import <claude|codex|markdown> [path]
+                                   Preview an existing memory store
+  memory import <source> [path] --confirm
+                                   Import safe entries after preview
+  memory imports [--json]          Show reversible import batches
+  memory undo <batch> --confirm    Undo one import batch
   memory delete <id> --confirm     Delete one memory
   memory wipe --confirm            Delete every memory
+  guidance show [--json]           Show SOUL.md and pointer status
+  guidance sync                    Create SOUL.md and refresh both pointers
+  guidance adopt --confirm         Move global guidance into SOUL.md
   settings show                    Show recall and shell settings
   settings optimize <full|balanced|lean>
                                    Set the MCP recall response budget
@@ -75,7 +85,8 @@ pub fn run(arguments: Vec<OsString>) -> Result<Outcome> {
         "secret" => secret(rest),
         "scope" => scope(rest),
         "data" => data(rest),
-        "memory" => memory(rest),
+        "memory" => super::memory::run(rest),
+        "guidance" => super::guidance::run(rest),
         "settings" => settings(rest),
         "install" => install(),
         "path" => paths(),
@@ -412,98 +423,9 @@ fn settings(arguments: &[OsString]) -> Result<Outcome> {
     Ok(Outcome::Exit(0))
 }
 
-fn memory(arguments: &[OsString]) -> Result<Outcome> {
-    let action = textarg(
-        arguments,
-        0,
-        "usage: synapse memory <list|show|add|edit|delete|wipe>",
-    )?;
-    let runtime = runtime()?;
-    let brain = runtime.block_on(crate::brain::Brain::open(crate::files::database()?))?;
-    let json = arguments.iter().any(|value| value == "--json");
-    match action.as_str() {
-        "list" => {
-            let query = arguments
-                .iter()
-                .skip(1)
-                .filter(|value| *value != "--json")
-                .map(|value| value.to_string_lossy())
-                .collect::<Vec<_>>()
-                .join(" ");
-            let memories = runtime.block_on(brain.search(&query, 100))?;
-            if json {
-                println!("{}", serde_json::to_string_pretty(&memories)?);
-            } else {
-                for memory in memories {
-                    println!(
-                        "{}\t{}\t{}",
-                        memory.id,
-                        if memory.source.is_empty() {
-                            "-"
-                        } else {
-                            &memory.source
-                        },
-                        memorypreview(&memory.body)
-                    );
-                }
-            }
-        }
-        "show" => {
-            let id = memoryid(arguments, 1, "usage: synapse memory show <id> [--json]")?;
-            let memory = runtime
-                .block_on(brain.memory(id))?
-                .context("memory not found")?;
-            if json {
-                println!("{}", serde_json::to_string_pretty(&memory)?);
-            } else {
-                println!("Memory #{}", memory.id);
-                println!("Source: {}", memory.source);
-                println!("Created: {}", memory.created);
-                println!();
-                println!("{}", memory.body);
-            }
-        }
-        "add" => {
-            let source = arguments.get(1).and_then(|value| value.to_str());
-            let body = readmemory()?;
-            let id = runtime.block_on(brain.remember(&body, source))?;
-            println!("Stored memory #{id}");
-        }
-        "edit" => {
-            let id = memoryid(arguments, 1, "usage: synapse memory edit <id> [source]")?;
-            let source = arguments.get(2).and_then(|value| value.to_str());
-            let body = readmemory()?;
-            runtime
-                .block_on(brain.updatememory(id, &body, source))?
-                .context("memory not found")?;
-            println!("Updated memory #{id}");
-        }
-        "delete" => {
-            let id = memoryid(arguments, 1, "usage: synapse memory delete <id> --confirm")?;
-            anyhow::ensure!(
-                arguments.iter().any(|value| value == "--confirm"),
-                "add --confirm to delete memory #{id}"
-            );
-            runtime
-                .block_on(brain.deletememory(id))?
-                .context("memory not found")?;
-            println!("Deleted memory #{id}");
-        }
-        "wipe" => {
-            anyhow::ensure!(
-                arguments.iter().any(|value| value == "--confirm"),
-                "add --confirm to delete every memory"
-            );
-            let count = runtime.block_on(brain.wipememories())?;
-            println!("Deleted {count} memories");
-        }
-        _ => anyhow::bail!("unknown memory command `{action}`"),
-    }
-    Ok(Outcome::Exit(0))
-}
-
 fn paths() -> Result<Outcome> {
     println!("data\t{}", crate::files::data()?.display());
+    println!("soul\t{}", crate::files::soul()?.display());
     println!("cli\t{}", crate::cli::destination()?.display());
     Ok(Outcome::Exit(0))
 }
@@ -524,34 +446,6 @@ fn readsecret() -> Result<String> {
     }
     anyhow::ensure!(!value.is_empty(), "secret value cannot be empty");
     Ok(value)
-}
-
-fn readmemory() -> Result<String> {
-    anyhow::ensure!(
-        !std::io::stdin().is_terminal(),
-        "pipe the replacement memory content to stdin"
-    );
-    let mut value = String::new();
-    std::io::stdin().read_to_string(&mut value)?;
-    anyhow::ensure!(!value.trim().is_empty(), "memory content cannot be empty");
-    Ok(value)
-}
-
-fn memoryid(arguments: &[OsString], index: usize, usage: &str) -> Result<i64> {
-    textarg(arguments, index, usage)?
-        .parse()
-        .with_context(|| usage.to_owned())
-}
-
-fn memorypreview(value: &str) -> String {
-    let compact = value.split_whitespace().collect::<Vec<_>>().join(" ");
-    let mut characters = compact.chars();
-    let preview = characters.by_ref().take(80).collect::<String>();
-    if characters.next().is_some() {
-        format!("{preview}…")
-    } else {
-        preview
-    }
 }
 
 fn textarg(arguments: &[OsString], index: usize, usage: &str) -> Result<String> {

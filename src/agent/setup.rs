@@ -1,29 +1,24 @@
 use crate::agent::{Agent, Detection, Kind};
 use crate::files;
 use anyhow::{Context, Result};
-use std::fs;
 use std::path::Path;
 use std::process::Command;
 
-const START: &str = "<!-- synapse:begin -->";
-const END: &str = "<!-- synapse:end -->";
-
-fn instructions() -> String {
-    format!(
-        "{START}\n## Synapse memory\n\n{}\n{END}",
-        crate::instructions::MEMORY
-    )
-}
-
-pub fn setup(agent: &Agent, detection: &Detection, server: &Path) -> Result<()> {
+pub fn setup(agent: &Agent, detection: &Detection, server: &Path, soul: &Path) -> Result<()> {
     let integration = files::Snapshot::capture(&agent.integration)?;
     let instructions = files::Snapshot::capture(&agent.instructions)?;
+    let shared = files::Snapshot::capture(soul)?;
     if !detection.configured {
         integration.backup()?;
     }
+    crate::instructions::ensure(soul)?;
 
-    if let Err(error) = runsetup(agent, detection, server) {
-        if let Err(rollback) = instructions.restore().and_then(|_| integration.restore()) {
+    if let Err(error) = runsetup(agent, detection, server, soul) {
+        if let Err(rollback) = instructions
+            .restore()
+            .and_then(|_| integration.restore())
+            .and_then(|_| shared.restore())
+        {
             return Err(error).context(format!("setup rollback also failed: {rollback:#}"));
         }
         return Err(error);
@@ -31,7 +26,7 @@ pub fn setup(agent: &Agent, detection: &Detection, server: &Path) -> Result<()> 
     Ok(())
 }
 
-fn runsetup(agent: &Agent, detection: &Detection, server: &Path) -> Result<()> {
+fn runsetup(agent: &Agent, detection: &Detection, server: &Path, soul: &Path) -> Result<()> {
     let executable = detection
         .executable
         .as_deref()
@@ -71,74 +66,50 @@ fn runsetup(agent: &Agent, detection: &Detection, server: &Path) -> Result<()> {
         );
     }
 
-    writeinstructions(&agent.instructions)
+    writeinstructions(&agent.instructions, soul)
 }
 
-pub fn writeinstructions(path: &Path) -> Result<()> {
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent)
-            .with_context(|| format!("could not create {}", parent.display()))?;
-    }
-    let current = match fs::read_to_string(path) {
-        Ok(content) => content,
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => String::new(),
-        Err(error) => return Err(error.into()),
-    };
-    let merged = mergeinstructions(&current);
-    files::write(path, &merged).with_context(|| format!("could not update {}", path.display()))
-}
-
-fn mergeinstructions(current: &str) -> String {
-    let instructions = instructions();
-    match (current.find(START), current.find(END)) {
-        (Some(start), Some(end)) if end >= start => {
-            let tail = end + END.len();
-            format!("{}{}{}", &current[..start], instructions, &current[tail..])
-        }
-        _ if current.trim().is_empty() => format!("{instructions}\n"),
-        _ => format!("{}\n\n{instructions}\n", current.trim_end()),
-    }
+pub fn writeinstructions(path: &Path, soul: &Path) -> Result<()> {
+    crate::agent::guidance::writepointer(path, soul, false)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fs;
     use std::path::PathBuf;
 
     #[test]
     fn appends_without_replacing_user_content() {
-        let merged = mergeinstructions("# My rules\n\nKeep this.");
+        let directory = tempfile::tempdir().unwrap();
+        let file = directory.path().join("agents.md");
+        let soul = directory.path().join("SOUL.md");
+        fs::write(&file, "# My rules\n\nKeep this.").unwrap();
+        writeinstructions(&file, &soul).unwrap();
+        let merged = fs::read_to_string(file).unwrap();
         assert!(merged.starts_with("# My rules\n\nKeep this."));
-        assert_eq!(merged.matches(START).count(), 1);
-        assert!(merged.contains("At the start of every session"));
-        assert!(merged.contains("the `lean` budget first"));
-        assert!(merged.contains("call `remember` without waiting to be asked"));
-        assert!(merged.contains("instead of ad hoc memory Markdown files"));
-    }
-
-    #[test]
-    fn rerun_replaces_only_the_managed_block() {
-        let original = format!("before\n{START}\nold\n{END}\nafter");
-        let merged = mergeinstructions(&original);
-        assert!(merged.starts_with("before\n"));
-        assert!(merged.ends_with("\nafter"));
-        assert!(!merged.contains("old"));
-        assert_eq!(merged.matches(START).count(), 1);
+        assert!(merged.contains(soul.to_str().unwrap()));
+        assert_eq!(merged.matches("<!-- synapse:begin -->").count(), 1);
     }
 
     #[test]
     fn instruction_updates_leave_a_backup() {
         let directory = tempfile::tempdir().unwrap();
         let path = directory.path().join("agents.md");
+        let soul = directory.path().join("SOUL.md");
         fs::write(&path, "# My rules\n").unwrap();
 
-        writeinstructions(&path).unwrap();
+        writeinstructions(&path, &soul).unwrap();
 
         assert_eq!(
             fs::read_to_string(directory.path().join("agents.md.synapsebackup")).unwrap(),
             "# My rules\n"
         );
-        assert!(fs::read_to_string(path).unwrap().contains(START));
+        assert!(
+            fs::read_to_string(path)
+                .unwrap()
+                .contains("<!-- synapse:begin -->")
+        );
     }
 
     #[cfg(unix)]
@@ -168,7 +139,15 @@ mod tests {
             configured: false,
         };
 
-        assert!(setup(&agent, &detection, Path::new("/synapse")).is_err());
+        assert!(
+            setup(
+                &agent,
+                &detection,
+                Path::new("/synapse"),
+                &directory.path().join("SOUL.md")
+            )
+            .is_err()
+        );
         assert_eq!(
             fs::read_to_string(&settings).unwrap(),
             "[user]\nname = \"kept\"\n"
@@ -208,7 +187,15 @@ mod tests {
             configured: false,
         };
 
-        assert!(setup(&agent, &detection, Path::new("/synapse")).is_err());
+        assert!(
+            setup(
+                &agent,
+                &detection,
+                Path::new("/synapse"),
+                &directory.path().join("SOUL.md")
+            )
+            .is_err()
+        );
         assert_eq!(fs::read_to_string(settings).unwrap(), "enabled = false\n");
     }
 
@@ -241,7 +228,13 @@ mod tests {
             configured: false,
         };
 
-        setup(&agent, &detection, Path::new("/synapse")).unwrap();
+        setup(
+            &agent,
+            &detection,
+            Path::new("/synapse"),
+            &directory.path().join("SOUL.md"),
+        )
+        .unwrap();
 
         assert_eq!(
             fs::read_to_string(log).unwrap(),

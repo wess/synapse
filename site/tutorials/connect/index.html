@@ -112,7 +112,7 @@ synapse path</code></pre>
       <li>
         <h3 id="connect">Connect a detected tool</h3>
         <p>Return to the dashboard. Choose <strong>Connect</strong> beside Codex or Claude Code. The row should move from detected to connected. Connect the second tool too if it is installed.</p>
-        <p>Synapse registers <code>~/.local/bin/synapse mcp</code> at user scope and adds a managed memory instruction block. Existing configuration and instruction text remain in place; changed existing files receive <code>.synapsebackup</code> siblings.</p>
+        <p>Synapse registers <code>~/.local/bin/synapse mcp</code> at user scope, creates the shared <code>SOUL.md</code>, and adds a managed pointer to it. Existing configuration and instruction text remain in place; changed existing files receive <code>.synapsebackup</code> siblings.</p>
       </li>
       <li>
         <h3>Restart the developer tool</h3>
@@ -122,7 +122,7 @@ synapse path</code></pre>
         <h3 id="verify">Store a test memory</h3>
         <p>Tell the connected tool:</p>
         <blockquote>Remember this confirmed tutorial convention: documentation examples use the source label synapsetutorial.</blockquote>
-        <p>It should call <code>remember</code> and report a stored numeric ID. Do not use a secret or sensitive value for this check.</p>
+        <p>It should call <code>remember</code> with the current project root and report a stored numeric ID. Do not use a secret or sensitive value for this check.</p>
       </li>
       <li>
         <h3>Verify through the CLI and app</h3>

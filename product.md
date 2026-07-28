@@ -19,9 +19,12 @@ Developers who move between multiple coding tools and want decisions, preference
 
 - A local SQLite memory store.
 - Search, inspection, editing, deletion, and guarded wipe controls for stored memory.
+- Enforced global and project memory scopes shared by every connected tool.
+- Previewed, idempotent, reversible imports from Claude, Codex, and selected Markdown.
 - An MCP stdio server exposing `remember`, `recall`, and value-free vault status.
 - One-click user-level setup for Codex and Claude Code.
-- Shortcuts to each tool's global instructions and settings.
+- One editable `SOUL.md` for shared guidance, with managed pointers in each tool's global instruction file.
+- Safe pointer sync plus explicit, backed-up consolidation of existing global guidance.
 - Keychain-backed vaults managed from the dashboard.
 - Global, project, and folder resolution through approved `.synapse.yaml` files.
 - `synapse run -- <command>` for one-child scoped environment injection.
@@ -46,6 +49,7 @@ Use a warm, low-contrast canvas with a crisp white working surface, ink typograp
 - Rust, Tokio, GPUI, Guise, and SQLx with SQLite.
 - Local-first. No account or network service is required.
 - Preserve user-owned configuration and instruction content.
+- Never import conversation logs, settings, authentication files, or credential-shaped memory without explicit review.
 - Never write secret values to SQLite, YAML, MCP responses, or the application log.
 - Never activate an ambient environment from global mappings alone or from an incomplete scope; unload on invalidation and restore pre-existing shell values.
 - Keep source files small, lowercase, and grouped by responsibility.

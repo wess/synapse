@@ -46,12 +46,15 @@ export const cli: Page = {
     ${command("scope status", "synapse scope status [folder] [--json]", "Alias the scope-oriented status flow to the same resolved output as <code>synapse status</code>.")}
 
     <h2 id="memory">Memory</h2>
-    ${command("memory list", "synapse memory list [query] [--json]", "Search the body with the joined query words or list recent memory when empty. Returns up to 100 entries. Text mode prints ID, source, and a compact preview.")}
-    ${command("memory show", "synapse memory show <id> [--json]", "Print one exact memory with source and timestamp, or return structured JSON.")}
-    ${command("memory add", "synapse memory add [source]", "Read a non-empty body from stdin and store it with an optional source label.")}
+    ${command("memory list", "synapse memory list [query] [--json]", "Search the body with the joined query words or list recent memory when empty. Returns up to 100 entries. Text mode prints ID, scope, source, and a compact preview.")}
+    ${command("memory show", "synapse memory show <id> [--json]", "Print one exact memory with scope, project root, source, and timestamp, or return structured JSON.")}
+    ${command("memory add", "synapse memory add [source] [--global|--project <folder>]", "Read a non-empty body from stdin. Project scope is the default and resolves from the current folder; use global only for context that belongs everywhere.")}
     ${command("memory edit", "synapse memory edit <id> [source]", "Read the replacement body from stdin and replace one existing memory. The optional source replaces the source label.")}
+${command("memory import", "synapse memory import <claude|codex|markdown> [path] [--confirm]", "Preview recognized durable memory without changing its source. Add --confirm to import safe entries. Credential-shaped entries remain flagged unless the CLI also receives --include-flagged after source review.")}
+${command("memory imports", "synapse memory imports [--json]", "List import batches, their provider, stored and linked counts, and whether each batch is active or undone.")}
+${command("memory undo", "synapse memory undo <batch> --confirm", "Remove memories created only by that import batch. Preserve manually edited memories and records linked to another origin.")}
     ${command("memory delete", "synapse memory delete <id> --confirm", "Delete one memory. The exact <code>--confirm</code> guard is required.")}
-    ${command("memory wipe", "synapse memory wipe --confirm", "Delete every memory entry while leaving settings, vaults, Keychain values, and scope approvals intact. The exact guard is required.")}
+    ${command("memory wipe", "synapse memory wipe --confirm", "Delete every memory entry and import batch while leaving SOUL.md, settings, vaults, Keychain values, and scope approvals intact. The exact guard is required.")}
 
     <h2 id="data">Data and settings</h2>
     ${command("data check", "synapse data check [--json]", "Open the database, run page and foreign-key integrity checks, apply supported migrations, and report the path, schema version, and <code>ok</code> integrity state.")}
@@ -59,10 +62,13 @@ export const cli: Page = {
     ${command("data restore", "synapse data restore <file>", "Validate a current-version snapshot and restore it while the app and MCP servers are closed. Preserves the previous database as a recovery backup and refuses without the exclusive lock.")}
     ${command("settings show", "synapse settings show", "Print the active recall optimization, result limit, character budget, supported shell modes, and zsh hook example.")}
     ${command("settings optimize", "synapse settings optimize <full|balanced|lean>", "Change the shared MCP recall response budget. Stored memory is not modified.")}
+${command("guidance show", "synapse guidance show [--json]", "Print the SOUL.md path, whether it exists, pointer coverage, and whether both global instruction files are pointer-only.")}
+${command("guidance sync", "synapse guidance sync", "Create SOUL.md when needed and refresh managed pointers in both global instruction files without removing unmanaged text.")}
+${command("guidance adopt", "synapse guidance adopt --confirm", "Move unmanaged global guidance into SOUL.md, replace both global files with managed pointers, and retain backups.")}
 
     <h2 id="install">Installation and paths</h2>
     ${command("install", "synapse install", "Install the current executable for this user. A packaged app creates a launcher into the signed bundle; a development binary is copied atomically. Unrelated destination files are never overwritten.")}
-    ${command("path", "synapse path", "Print the resolved home, data directory, database, and CLI destination.")}
+    ${command("path", "synapse path", "Print the resolved data directory, SOUL.md, and CLI destination.")}
     ${command("version", "synapse version", "Print the application version. <code>--version</code> and <code>-V</code> are aliases.")}
     ${command("help", "synapse help", "Print the command summary. <code>--help</code> and <code>-h</code> are aliases at the top level.")}
   `,

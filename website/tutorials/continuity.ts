@@ -27,7 +27,7 @@ export const continuity: Page = {
         <h3 id="remember">Confirm and remember it</h3>
         <p>In the first connected tool, establish the decision explicitly, then ask it to remember the confirmed result with the repository name as the source. Example:</p>
         <blockquote>We have confirmed that this repository uses Bun for JavaScript tasks. Remember that durable convention with source synapsetutorial.</blockquote>
-        <p>The tool should call <code>remember</code> once and return an ID. If it stores a transcript instead of the concise decision, correct the entry in the next step.</p>
+        <p>The tool should call <code>remember</code> once with project scope and the repository root, then return an ID. If it stores a transcript instead of the concise decision, correct the entry in the next step.</p>
       </li>
       <li>
         <h3>Close the session</h3>
@@ -37,7 +37,7 @@ export const continuity: Page = {
         <h3 id="recall">Recall from another tool</h3>
         <p>Open the second connected tool in the same repository. Before telling it the convention, ask:</p>
         <blockquote>Recall the confirmed JavaScript tooling convention for this project before proposing commands.</blockquote>
-        <p>It should call <code>recall</code>, recover the Bun convention, and use that context in its answer. An explicit request is useful for this tutorial; normal global instructions also tell the tool to recall before history-dependent decisions.</p>
+        <p>It should call <code>recall</code> with the same project root, recover the Bun convention, and use that context in its answer. The managed global pointer sends both tools to the same <code>SOUL.md</code>, which also tells them to recall before history-dependent decisions.</p>
       </li>
       <li>
         <h3 id="correct">Inspect the source of truth</h3>

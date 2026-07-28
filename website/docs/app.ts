@@ -22,9 +22,9 @@ export const app: Page = {
       <thead><tr><th>Screen</th><th>Use it for</th><th>Material it can change</th></tr></thead>
       <tbody>
         <tr><td>Connections</td><td>Detect and connect supported developer tools.</td><td>Tool MCP configuration and managed instruction blocks.</td></tr>
-        <tr><td>Memory</td><td>Search, inspect, correct, or remove durable context.</td><td>Memory rows in the local database.</td></tr>
+        <tr><td>Memory</td><td>Import, scope, search, inspect, correct, or remove durable context.</td><td>Memory rows, scope metadata, and reversible import batches.</td></tr>
         <tr><td>Vaults</td><td>Manage labels, Keychain values, mappings, and approved project scopes.</td><td>Vault metadata, Keychain items, and <code>.synapse.yaml</code>.</td></tr>
-        <tr><td>Settings</td><td>Choose recall, appearance, CLI, and shell-integration behavior.</td><td>Local preferences, the CLI launcher, and one managed shell block.</td></tr>
+        <tr><td>Settings</td><td>Manage shared guidance, recall, appearance, CLI, and shell integration.</td><td><code>SOUL.md</code>, global pointers, local preferences, the CLI launcher, and one managed shell block.</td></tr>
       </tbody>
     </table>
     <p>Success and error notices appear inside the active screen. The app does not require an account and does not send this state to a hosted service.</p>
@@ -39,11 +39,12 @@ export const app: Page = {
       <dt>Connected</dt>
       <dd>The stored executable and <code>["mcp"]</code> arguments match the expected Synapse server.</dd>
     </dl>
-    <p>Set up registers the MCP server and adds a marked memory-policy block to that tool’s global instructions. Existing settings and text outside the managed block remain in place; changed files receive <code>.synapsebackup</code> siblings. If either write fails, Synapse restores both files to their previous state.</p>
+    <p>Set up registers the MCP server, creates <code>SOUL.md</code> when needed, and adds a marked pointer to that shared file in the tool's global instructions. Existing settings and text outside the managed block remain in place; changed files receive <code>.synapsebackup</code> siblings. If setup fails, Synapse restores the affected files.</p>
     <p><strong>Edit instructions</strong> and <strong>Edit config</strong> open the actual files in the built-in editor. Synapse does not currently provide a separate Disconnect button; remove the named <code>synapse</code> entry and managed instruction block through those files when you intentionally want to disconnect a tool. See <a href="../config/#tools">Tool integration files</a> for their exact paths.</p>
 
     <h2 id="memory">Memory</h2>
-    <p>An empty search shows recent memory; a query searches the stored body and shows up to 100 results. Select an entry to inspect its ID, local creation time, full Markdown body, and source. <strong>Save changes</strong> replaces the selected body and source in place, so future recall sees the correction without creating a competing record.</p>
+    <p>The import panel previews Claude and Codex separately. <strong>Import safe</strong> stores recognized project memory, skips anything credential-shaped, leaves source files untouched, and records a reversible batch. <strong>Review source</strong> opens the provider folder. Undo requires confirmation and preserves imported records that were edited or linked from another source.</p>
+    <p>An empty search shows recent memory; a query searches the stored body and shows up to 100 results. Select an entry to inspect its ID, local creation time, full Markdown body, source, and visibility. <strong>Global</strong> makes it available everywhere; <strong>Project</strong> requires a project root. <strong>Save changes</strong> replaces the selected body, source, and scope in place.</p>
     <p><strong>Delete</strong> changes to <strong>Confirm delete</strong> before removing one entry. <strong>Wipe memories</strong> separately changes to <strong>Confirm wipe</strong> before deleting the entire memory table. A wipe does not affect vault labels, Keychain values, scope approvals, or settings.</p>
     <p>Recall optimization changes responses, not what this screen stores or displays. Read <a href="../memory/">Memory and recall</a> for search behavior, response budgets, and CLI equivalents.</p>
 
@@ -58,6 +59,8 @@ export const app: Page = {
     <p>Under <strong>Project and folder scopes</strong>, choose a directory, create or edit its <code>.synapse.yaml</code>, inspect the reported state, then choose <strong>Approve</strong> only after reviewing the exact file. Any later edit invalidates that digest and requires another review. Secret values never enter YAML. See <a href="../vault/">Vaults and scopes</a> for resolution order and both process boundaries.</p>
 
     <h2 id="settings">Settings</h2>
+    <h3>Shared guidance</h3>
+    <p><strong>Open shared guidance</strong> edits <code>SOUL.md</code>. <strong>Sync pointers</strong> refreshes both global files without removing unmanaged content. <strong>Consolidate guidance</strong> requires confirmation, moves existing global text into the shared file, and leaves backups before making both global files pointer-only.</p>
     <h3>Recall optimization</h3>
     <p>Full, Balanced, and Lean change the shared MCP response limit and character budget. Original memory remains untouched. Balanced is the default; exact limits are documented in <a href="../memory/#budgets">Response budgets</a>.</p>
     <h3>Appearance</h3>
@@ -79,7 +82,7 @@ export const app: Page = {
     ${note("Startup files stay user-owned", "Synapse backs up and atomically rewrites the detected startup file, follows an existing symlink, and refuses malformed or duplicate managed markers instead of guessing what to replace.")}
 
     <h2 id="editors">Editors, local data, and recovery</h2>
-    <p>The built-in editor handles the supported tool instructions, TOML or JSON configuration, and YAML scope files. Structured formats must validate before saving. Changed files are backed up and replaced atomically while existing permissions and symlinks are preserved.</p>
+    <p>The built-in editor handles <code>SOUL.md</code>, supported tool instructions, TOML or JSON configuration, and YAML scope files. Structured formats must validate before saving. Changed files are backed up and replaced atomically while existing permissions and symlinks are preserved.</p>
     <p>If an editor contains unsaved changes, Close and application quit are blocked until you choose Save or Discard. Saving a scope refreshes its state but does not approve it; review the result and choose Approve separately.</p>
     <p><strong>Open data folder</strong> on the Connections screen reveals the directory containing the local database. It does not create a backup and editing database files by hand is unsupported. Use <a href="../data/">Data lifecycle</a> for integrity checks, validated exports, exclusive restore, and recovery behavior.</p>
   `,

@@ -11,13 +11,15 @@ Apple silicon · macOS 13 or later · Developer ID signed and notarized
 ## What Synapse does
 
 - **Keeps the thread.** Save decisions, corrections, conventions, and preferences once. Pick them up in a later session or another connected tool.
+- **Brings history with you.** Preview and import existing Claude and Codex memory into project-scoped Synapse records without changing the originals.
+- **Shares one playbook.** Keep global working guidance in one editable `SOUL.md`, with both tools pointed at it.
 - **Scopes credentials.** Keep secret values in macOS Keychain and choose which approved folders may receive which environment variables.
 - **Leaves you in control.** Search, edit, export, restore, or delete what Synapse stores. Nothing is hidden behind an account or remote service.
 
 ## A simple workflow
 
 1. Install Synapse and connect the tools you use.
-2. Let Synapse remember confirmed context that will matter later.
+2. Import useful existing memory, then let Synapse remember confirmed context that will matter later.
 3. Return to the project with its decisions already available.
 4. Run commands with only the credentials that project is allowed to use.
 

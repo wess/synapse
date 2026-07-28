@@ -1,3 +1,4 @@
+use crate::agent::GuidanceState;
 use crate::brain::Optimization;
 use crate::cli::InstallStatus;
 use crate::shellsetup::{Integration, IntegrationState};
@@ -16,6 +17,8 @@ pub struct View {
     pub shellintegration: Option<Integration>,
     pub shellerror: Option<String>,
     pub message: Option<(String, bool)>,
+    pub guidance: GuidanceState,
+    pub pendingguidance: bool,
 }
 
 pub struct Actions {
@@ -28,6 +31,9 @@ pub struct Actions {
     pub install: Click,
     pub shellinstall: Click,
     pub shellremove: Click,
+    pub opensoul: Click,
+    pub syncguidance: Click,
+    pub adoptguidance: Click,
 }
 
 pub fn render(view: View, actions: Actions, cx: &App) -> AnyElement {
@@ -44,6 +50,9 @@ pub fn render(view: View, actions: Actions, cx: &App) -> AnyElement {
         install,
         shellinstall,
         shellremove,
+        opensoul,
+        syncguidance,
+        adoptguidance,
     } = actions;
     div()
         .id("settingsmain")
@@ -68,7 +77,7 @@ pub fn render(view: View, actions: Actions, cx: &App) -> AnyElement {
                         .child(Title::new("Settings").order(2))
                         .child(
                             Text::new(
-                                "Tune what Synapse sends, how it looks, and how it integrates with your shell.",
+                                "Manage shared guidance, recall, appearance, CLI, and shell integration.",
                             )
                             .size(Size::Sm)
                             .dimmed(),
@@ -174,6 +183,14 @@ pub fn render(view: View, actions: Actions, cx: &App) -> AnyElement {
                             .dimmed(),
                         ),
                 )
+                .child(guidancepanel(
+                    view.guidance,
+                    view.pendingguidance,
+                    opensoul,
+                    syncguidance,
+                    adoptguidance,
+                    cx,
+                ))
                 .child(shellmodes(
                     view.shellintegration,
                     view.shellerror,
@@ -293,6 +310,156 @@ pub fn render(view: View, actions: Actions, cx: &App) -> AnyElement {
                 ),
         )
         .into_any_element()
+}
+
+fn guidancepanel(
+    guidance: GuidanceState,
+    pending: bool,
+    open: Click,
+    sync: Click,
+    adopt: Click,
+    cx: &App,
+) -> impl IntoElement {
+    let theme = guise::theme(cx);
+    let border = theme.border().hsla();
+    let surface = theme.surface().hsla();
+    let ready = guidance.exists && guidance.synced == guidance.total;
+    let label = if guidance.consolidated && ready {
+        "One source"
+    } else if ready {
+        "Pointers ready"
+    } else {
+        "Setup needed"
+    };
+    let description = if !ready {
+        "Create SOUL.md and connect both global instruction files with managed pointers."
+    } else if guidance.consolidated {
+        "Both global instruction files contain only managed pointers to SOUL.md."
+    } else {
+        "SOUL.md owns shared guidance. Sync preserves existing global text; consolidation moves it into the shared file and keeps backups."
+    };
+    div()
+        .rounded(px(14.0))
+        .border_1()
+        .border_color(border)
+        .bg(surface)
+        .p(px(18.0))
+        .flex()
+        .flex_col()
+        .gap(px(14.0))
+        .child(
+            div()
+                .flex()
+                .items_start()
+                .justify_between()
+                .gap(px(24.0))
+                .child(
+                    div()
+                        .flex()
+                        .flex_col()
+                        .gap(px(4.0))
+                        .child(
+                            div()
+                                .flex()
+                                .items_center()
+                                .gap(px(8.0))
+                                .child(Icon::new(IconName::BookOpenCheck).size(Size::Sm))
+                                .child(Text::new("Shared guidance").size(Size::Sm).bold()),
+                        )
+                        .child(Text::new(description).size(Size::Xs).dimmed()),
+                )
+                .child(
+                    Badge::new(label).color(if ready {
+                        ColorName::Teal
+                    } else {
+                        ColorName::Orange
+                    }),
+                ),
+        )
+        .child(
+            div()
+                .rounded(px(10.0))
+                .border_1()
+                .border_color(border)
+                .p(px(13.0))
+                .flex()
+                .items_center()
+                .justify_between()
+                .gap(px(18.0))
+                .child(
+                    div()
+                        .min_w(px(0.0))
+                        .flex()
+                        .flex_col()
+                        .gap(px(3.0))
+                        .child(Text::new("SOUL.md").size(Size::Sm).bold())
+                        .child(
+                            Text::new(guidance.path.display().to_string())
+                                .size(Size::Xs)
+                                .dimmed(),
+                        ),
+                )
+                .child(
+                    div()
+                        .flex()
+                        .items_center()
+                        .gap(px(8.0))
+                        .child(
+                            Button::new("opensoul", "Open shared guidance")
+                                .variant(Variant::Subtle)
+                                .color(ColorName::Gray)
+                                .size(Size::Xs)
+                                .left_section(Icon::new(IconName::FileText).size(Size::Xs))
+                                .on_click(move |event, window, cx| open(event, window, cx)),
+                        )
+                        .child(
+                            Button::new("syncguidance", "Sync pointers")
+                                .variant(Variant::Light)
+                                .color(ColorName::Violet)
+                                .size(Size::Xs)
+                                .left_section(Icon::new(IconName::RefreshCw).size(Size::Xs))
+                                .on_click(move |event, window, cx| sync(event, window, cx)),
+                        ),
+                ),
+        )
+        .when(!guidance.consolidated, |element| {
+            element.child(
+                div()
+                    .flex()
+                    .items_center()
+                    .justify_between()
+                    .gap(px(18.0))
+                    .child(
+                        Text::new(
+                            "Consolidation is optional and replaces the two global files only after confirmation.",
+                        )
+                        .size(Size::Xs)
+                        .dimmed(),
+                    )
+                    .child(
+                        Button::new(
+                            "adoptguidance",
+                            if pending {
+                                "Confirm consolidation"
+                            } else {
+                                "Consolidate guidance"
+                            },
+                        )
+                        .variant(if pending {
+                            Variant::Filled
+                        } else {
+                            Variant::Subtle
+                        })
+                        .color(if pending {
+                            ColorName::Orange
+                        } else {
+                            ColorName::Gray
+                        })
+                        .size(Size::Xs)
+                        .on_click(move |event, window, cx| adopt(event, window, cx)),
+                    ),
+            )
+        })
 }
 
 fn shellmodes(

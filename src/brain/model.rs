@@ -1,6 +1,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
+use std::path::Path;
 use std::str::FromStr;
 
 #[derive(Debug, Clone, FromRow, Serialize, JsonSchema, PartialEq, Eq)]
@@ -8,7 +9,53 @@ pub struct Memory {
     pub id: i64,
     pub body: String,
     pub source: String,
+    pub scope: MemoryScope,
+    pub project: String,
     pub created: i64,
+}
+
+#[derive(
+    Clone, Copy, Debug, Default, Deserialize, Serialize, JsonSchema, PartialEq, Eq, sqlx::Type,
+)]
+#[serde(rename_all = "lowercase")]
+#[sqlx(type_name = "TEXT", rename_all = "lowercase")]
+pub enum MemoryScope {
+    #[default]
+    Global,
+    Project,
+}
+
+impl MemoryScope {
+    pub fn value(self) -> &'static str {
+        match self {
+            Self::Global => "global",
+            Self::Project => "project",
+        }
+    }
+
+    pub fn project(self, path: Option<&Path>) -> anyhow::Result<String> {
+        match self {
+            Self::Global => Ok(String::new()),
+            Self::Project => path
+                .map(crate::brain::projectroot)
+                .transpose()?
+                .flatten()
+                .map(|path| path.display().to_string())
+                .ok_or_else(|| anyhow::anyhow!("project-scoped memory needs a project path")),
+        }
+    }
+}
+
+impl FromStr for MemoryScope {
+    type Err = anyhow::Error;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            "global" => Ok(Self::Global),
+            "project" => Ok(Self::Project),
+            _ => anyhow::bail!("expected global or project"),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Default)]
@@ -100,6 +147,10 @@ pub struct RememberRequest {
     pub content: String,
     /// Optional origin such as a project path or topic.
     pub source: Option<String>,
+    /// Store this for the current project by default, or globally when it is useful everywhere.
+    pub scope: Option<MemoryScope>,
+    /// Absolute project root used for project-scoped memory.
+    pub project: Option<String>,
 }
 
 #[derive(Debug, Serialize, JsonSchema)]
@@ -116,6 +167,8 @@ pub struct RecallRequest {
     pub limit: Option<u32>,
     /// Optional per-call response budget. This can make the configured budget smaller, never larger.
     pub budget: Option<Optimization>,
+    /// Absolute project root. Recall includes global memory plus memory for this project.
+    pub project: Option<String>,
 }
 
 #[derive(Debug, Serialize, JsonSchema)]

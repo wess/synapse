@@ -115,6 +115,8 @@ synapse settings show</code></pre>
     <p>The registered entry may point to a deleted build or old app location, or may have arguments other than <code>["mcp"]</code>. Choose <strong>Repair</strong> in the app. Synapse backs up the integration store before replacing the named entry.</p>
     <h3>The tools do not appear after connection</h3>
     <p>Restart the developer tool so it relaunches user-level MCP servers. Confirm the stored command exists and runs <code>synapse mcp</code> without printing shell startup text to stdout.</p>
+    <h3>The tools follow different global guidance</h3>
+    <p>Run <code>synapse guidance show</code>. If fewer than two pointers are ready, use <code>synapse guidance sync</code> or <strong>Settings → Shared guidance → Sync pointers</strong>, then restart both tools. Consolidation is optional and requires separate confirmation.</p>
     <h3>Setup failed</h3>
     <p>Read the app error for the external tool command that failed. Setup restores both the integration store and instruction file on failure, leaving <code>.synapsebackup</code> recovery copies beside changed existing files.</p>
 
@@ -139,6 +141,10 @@ synapse settings show</code></pre>
     <p>Run <code>synapse settings show</code>. Switch to Balanced or Full if Lean is too small. Search with concrete words present in the stored body and inspect the exact entry through <code>synapse memory show &lt;id&gt;</code>.</p>
     <h3>A stored memory is wrong</h3>
     <p>Edit or delete the original. Do not add another contradictory entry. Export a snapshot before a large cleanup.</p>
+    <h3>An import shows flagged entries</h3>
+    <p>Open the provider folder with <strong>Review source</strong> and inspect the named files. The app never imports flagged content. If a CLI import is genuinely safe, rerun it with both <code>--include-flagged</code> and <code>--confirm</code>; otherwise move only the durable non-sensitive fact into Synapse manually.</p>
+    <h3>One project's memory appears missing</h3>
+    <p>Inspect the record's project root in the Memory editor and compare it with the current repository root. Project recall intentionally combines global memory with one matching project and excludes every other project.</p>
     <h3>Integrity check fails</h3>
     <p>Stop using the affected database. Do not overwrite it. Preserve the whole data directory, locate the newest known-good export or automatic backup, and follow the restore procedure. A failed check is a data-recovery event, not a migration prompt.</p>
 

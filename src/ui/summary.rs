@@ -36,7 +36,7 @@ pub fn render(
                         .child(Title::new("Connect your coding tools").order(2))
                         .child(
                             Text::new(
-                                "One memory, available wherever you work. Setup preserves your existing global instructions and settings.",
+                                "One scoped memory and one shared playbook, available wherever you work.",
                             )
                             .size(Size::Sm)
                             .dimmed(),

@@ -20,7 +20,8 @@ export const overview: Page = {
     <table>
       <thead><tr><th>Material</th><th>Location</th><th>Visible to</th></tr></thead>
       <tbody>
-        <tr><td>Memory text, source, and timestamp</td><td>Local SQLite database</td><td>Desktop app, CLI, and MCP memory tools</td></tr>
+        <tr><td>Memory text, source, global or project scope, origin, and import history</td><td>Local SQLite database</td><td>Desktop app, CLI, and scoped MCP memory tools</td></tr>
+        <tr><td>Shared working guidance</td><td><code>SOUL.md</code> in the Synapse data directory</td><td>You and every connected tool through managed global pointers</td></tr>
         <tr><td>Vault names, secret labels, Keychain account references, global mappings</td><td>Local SQLite database</td><td>Desktop app and CLI; MCP receives names only</td></tr>
         <tr><td>Secret values</td><td>macOS Keychain</td><td>Synapse, a child launched with <code>synapse run</code>, or processes launched from an activated shell</td></tr>
         <tr><td>Project and folder mappings</td><td>Approved <code>.synapse.yaml</code> files</td><td>You, Synapse, and the repository if you commit the file</td></tr>
@@ -34,6 +35,7 @@ export const overview: Page = {
       <li>It does not send secret values through MCP, write them to YAML, or accept them as command arguments.</li>
       <li>It cannot directly modify an already-running parent process. Use <code>synapse run -- &lt;command&gt;</code> for one child, or explicitly evaluate <code>synapse hook</code> so your shell applies quoted environment changes itself.</li>
       <li>It does not decide that every conversation detail deserves permanent memory. Connected tools receive instructions to keep stable, confirmed context.</li>
+      <li>It does not continuously mirror native tool stores. Imports are explicit, previewed, and reversible; new shared memory belongs in Synapse.</li>
       <li>The current beta is a signed Apple-silicon build for macOS 13 or later.</li>
     </ul>
 

@@ -20,7 +20,8 @@ export const security: Page = {
     <p>The application requires no Synapse account or hosted service. MCP uses local stdio. Memory and metadata live in a local SQLite file. The beta does not include telemetry, remote synchronization, or a web server.</p>
 
     <h2 id="memory">Memory</h2>
-    <p>Memory bodies are plain text in SQLite and are available to connected MCP clients through recall. Do not store credentials, private keys, access tokens, or material you would not want an authorized connected tool to read.</p>
+    <p>Memory bodies are plain text in SQLite and are available to connected MCP clients through recall. Global records are available in every project; project records are returned only with the matching normalized project root. Do not store credentials, private keys, access tokens, or material you would not want an authorized connected tool to read.</p>
+    <p>Import reads recognized durable-memory stores only. It does not inspect conversation logs, authentication files, settings, tasks, or global instructions. Credential-shaped entries are flagged, hidden in previews, and skipped by the app. Provider formats are schema-checked before use, original files remain untouched, and import batches can be undone.</p>
     <p>Database files use owner-only permissions on Unix systems and are checked for page and foreign-key integrity before use. These controls protect against accidental broad access and corruption; they do not encrypt memory at rest.</p>
 
     <h2 id="secrets">Secret values</h2>
@@ -50,6 +51,7 @@ export const security: Page = {
       <li>Synapse does not isolate a malicious connected MCP client from recalled memory. Only connect tools you trust.</li>
       <li>Keychain protects stored values, but an authorized local child receives plaintext environment variables.</li>
       <li>Database exports omit Keychain values but include memory and credential metadata.</li>
+      <li><code>SOUL.md</code> is ordinary local Markdown. Both connected tools can read it, so do not put secrets there.</li>
       <li>Configuration writes are validated, backed up, and atomic, but external programs can still change the same files afterward.</li>
       <li>A scope digest proves that you approved exact bytes at a path; it does not prove the commands launched from that folder are safe.</li>
       <li>There is no remote revocation system. Forget a secret in Synapse and rotate it at its issuer when exposure is possible.</li>

@@ -1,6 +1,7 @@
-use crate::agent::{self, Kind};
-use crate::brain::{Brain, Memory, Optimization, Stats};
+use crate::agent::{self, GuidanceState, Kind};
+use crate::brain::{Brain, Memory, MemoryScope, Optimization, Stats};
 use crate::files;
+use crate::imports::{ImportBatch, ImportProvider, ImportSummary};
 use crate::ui::buffer::{self, Buffer, Format};
 use crate::ui::{
     Document, Notice, Page, Row, SaveDocument, agentrow, document, header, memories, settings,
@@ -28,8 +29,13 @@ pub struct Dashboard {
     memoryquery: Entity<TextInput>,
     memorybody: Entity<guise::markdown::MarkdownEditor>,
     memorysource: Entity<TextInput>,
+    memoryproject: Entity<TextInput>,
+    memoryscope: MemoryScope,
     pendingmemory: Option<i64>,
     pendingwipe: bool,
+    imports: Vec<ImportSummary>,
+    importbatches: Vec<ImportBatch>,
+    pendingbatch: Option<i64>,
     vaultstore: Option<VaultStore>,
     vaults: Vec<Vault>,
     selectedvault: Option<i64>,
@@ -46,6 +52,8 @@ pub struct Dashboard {
     pendingvault: Option<i64>,
     appmenu: Option<Entity<MenuBar>>,
     optimization: Optimization,
+    guidance: GuidanceState,
+    pendingguidance: bool,
 }
 
 struct VaultData {
@@ -58,6 +66,8 @@ struct VaultData {
 struct MemoryData {
     brain: Brain,
     memories: Vec<Memory>,
+    imports: Vec<ImportSummary>,
+    batches: Vec<ImportBatch>,
 }
 
 impl Dashboard {
@@ -65,9 +75,15 @@ impl Dashboard {
         let database = files::database().unwrap_or_else(|_| PathBuf::from("brain.db"));
         let stats = loadstats(&database).unwrap_or_default();
         let optimization = loadoptimization(&database).unwrap_or_default();
-        let (brain, memories, memoryerror) = match loadmemories(&database) {
-            Ok(data) => (Some(data.brain), data.memories, None),
-            Err(error) => (None, Vec::new(), Some(error)),
+        let (brain, memories, imports, importbatches, memoryerror) = match loadmemories(&database) {
+            Ok(data) => (
+                Some(data.brain),
+                data.memories,
+                data.imports,
+                data.batches,
+                None,
+            ),
+            Err(error) => (None, Vec::new(), Vec::new(), Vec::new(), Some(error)),
         };
         let selectedmemory = memories.first().map(|memory| memory.id);
         let selected = selectedmemory.and_then(|id| memories.iter().find(|item| item.id == id));
@@ -88,6 +104,16 @@ impl Dashboard {
                 .placeholder("project path or topic")
                 .value(selected.map(|memory| memory.source.as_str()).unwrap_or(""))
         });
+        let memoryproject = cx.new(|cx| {
+            TextInput::new(cx)
+                .label("Project root")
+                .placeholder("/path/to/project")
+                .value(selected.map(|memory| memory.project.as_str()).unwrap_or(""))
+        });
+        let memoryscope = selected.map(|memory| memory.scope).unwrap_or_default();
+        let home = files::home().unwrap_or_else(|_| PathBuf::from("."));
+        let soul = files::soul().unwrap_or_else(|_| PathBuf::from("SOUL.md"));
+        let guidance = agent::guidancestate(&home, &soul);
         let document = std::env::var_os("SYNAPSE_DOCUMENT")
             .map(PathBuf::from)
             .and_then(|path| Self::loaddocument("Synapse".to_owned(), path, cx).ok());
@@ -147,8 +173,13 @@ impl Dashboard {
             memoryquery,
             memorybody,
             memorysource,
+            memoryproject,
+            memoryscope,
             pendingmemory: None,
             pendingwipe: false,
+            imports,
+            importbatches,
+            pendingbatch: None,
             vaultstore,
             vaults,
             selectedvault,
@@ -165,6 +196,8 @@ impl Dashboard {
             pendingvault: None,
             appmenu,
             optimization,
+            guidance,
+            pendingguidance: false,
         }
     }
 
@@ -215,10 +248,19 @@ impl Dashboard {
             .and_then(|id| self.memories.iter().find(|memory| memory.id == id));
         let body = memory.map(|memory| memory.body.as_str()).unwrap_or("");
         let source = memory.map(|memory| memory.source.as_str()).unwrap_or("");
+        let project = memory.map(|memory| memory.project.as_str()).unwrap_or("");
+        self.memoryscope = memory.map(|memory| memory.scope).unwrap_or_default();
         self.memorybody
             .update(cx, |input, cx| input.set_text(body, cx));
         self.memorysource
             .update(cx, |input, cx| input.set_text(source, cx));
+        self.memoryproject
+            .update(cx, |input, cx| input.set_text(project, cx));
+    }
+
+    fn setmemoryscope(&mut self, scope: MemoryScope, cx: &mut Context<Self>) {
+        self.memoryscope = scope;
+        cx.notify();
     }
 
     fn savememory(&mut self, cx: &mut Context<Self>) {
@@ -227,7 +269,15 @@ impl Dashboard {
         };
         let body = self.memorybody.read(cx).text();
         let source = self.memorysource.read(cx).text();
-        match block(brain.updatememory(id, &body, Some(&source))) {
+        let project = self.memoryproject.read(cx).text();
+        let project = (self.memoryscope == MemoryScope::Project).then(|| PathBuf::from(project));
+        match block(brain.updatememoryscoped(
+            id,
+            &body,
+            Some(&source),
+            self.memoryscope,
+            project.as_deref(),
+        )) {
             Ok(Some(memory)) => {
                 self.notice = Notice::Success(format!("Saved memory #{}.", memory.id));
                 self.pendingmemory = None;
@@ -307,6 +357,105 @@ impl Dashboard {
         }
     }
 
+    fn refreshimports(&mut self, cx: &mut Context<Self>) {
+        let Some(brain) = self.brain.clone() else {
+            return;
+        };
+        match files::home().and_then(|home| loadimports(&brain, &home)) {
+            Ok((imports, batches)) => {
+                self.imports = imports;
+                self.importbatches = batches;
+                self.pendingbatch = None;
+            }
+            Err(error) => {
+                self.notice = Notice::Error(format!("Could not refresh imports: {error}"));
+            }
+        }
+        cx.notify();
+    }
+
+    fn importmemories(&mut self, provider: ImportProvider, cx: &mut Context<Self>) {
+        let Some(brain) = self.brain.clone() else {
+            return;
+        };
+        let result = files::home().and_then(|home| {
+            block(async {
+                let candidates = crate::imports::scan(&home, provider).await?;
+                let preview = brain.importpreview(provider, candidates).await?;
+                brain.importmemories(preview, false).await
+            })
+        });
+        match result {
+            Ok(report) => {
+                self.notice = Notice::Success(format!(
+                    "Imported {} {} memories; {} flagged entries stayed untouched. Batch #{} can be undone.",
+                    report.stored,
+                    provider.name(),
+                    report.flagged,
+                    report.batch.id
+                ));
+                self.refreshmemories(cx);
+                self.refreshmemorystats();
+                self.refreshimports(cx);
+            }
+            Err(error) => {
+                self.notice = Notice::Error(format!(
+                    "Could not import {} memories: {error}",
+                    provider.name()
+                ));
+                cx.notify();
+            }
+        }
+    }
+
+    fn openimport(&mut self, provider: ImportProvider, cx: &mut Context<Self>) {
+        let result = files::home().and_then(|home| {
+            let folder = match provider {
+                ImportProvider::Claude => home.join(".claude").join("projects"),
+                ImportProvider::Codex => std::env::var_os("CODEX_HOME")
+                    .filter(|value| !value.is_empty())
+                    .map(PathBuf::from)
+                    .unwrap_or_else(|| home.join(".codex")),
+                ImportProvider::Markdown => home,
+            };
+            files::reveal(&folder)
+        });
+        self.notice = match result {
+            Ok(()) => Notice::Success(format!("Opened the {} memory source.", provider.name())),
+            Err(error) => Notice::Error(format!("Could not open the memory source: {error}")),
+        };
+        cx.notify();
+    }
+
+    fn undoimport(&mut self, id: i64, cx: &mut Context<Self>) {
+        if self.pendingbatch != Some(id) {
+            self.pendingbatch = Some(id);
+            self.notice = Notice::Error(format!(
+                "Choose Confirm undo to remove memories created only by import batch #{id}. Edited and shared memories stay."
+            ));
+            cx.notify();
+            return;
+        }
+        let Some(brain) = self.brain.clone() else {
+            return;
+        };
+        match block(brain.undoimport(id)) {
+            Ok(deleted) => {
+                self.notice = Notice::Success(format!(
+                    "Undid import batch #{id}; removed {deleted} imported memories."
+                ));
+                self.pendingbatch = None;
+                self.refreshmemories(cx);
+                self.refreshmemorystats();
+                self.refreshimports(cx);
+            }
+            Err(error) => {
+                self.notice = Notice::Error(format!("Could not undo import: {error}"));
+                cx.notify();
+            }
+        }
+    }
+
     fn showvaults(&mut self, cx: &mut Context<Self>) {
         self.page = Page::Vaults;
         self.refreshvaults(cx);
@@ -314,6 +463,72 @@ impl Dashboard {
 
     fn showsettings(&mut self, cx: &mut Context<Self>) {
         self.page = Page::Settings;
+        self.refreshguidance();
+        cx.notify();
+    }
+
+    fn refreshguidance(&mut self) {
+        if let (Ok(home), Ok(soul)) = (files::home(), files::soul()) {
+            self.guidance = agent::guidancestate(&home, &soul);
+        }
+    }
+
+    fn opensoul(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let result = (|| {
+            let path = files::soul()?;
+            crate::instructions::ensure(&path)?;
+            let document = Self::loaddocument("Shared guidance".to_owned(), path, cx)?;
+            window.focus(&buffer::focus(&document.editor, cx));
+            self.document = Some(document);
+            Ok::<_, anyhow::Error>(())
+        })();
+        if let Err(error) = result {
+            self.notice = Notice::Error(format!("Could not open SOUL.md: {error}"));
+        }
+        self.refreshguidance();
+        cx.notify();
+    }
+
+    fn syncguidance(&mut self, cx: &mut Context<Self>) {
+        let result = files::home().and_then(|home| {
+            let soul = files::soul()?;
+            agent::sync(&home, &soul)
+        });
+        self.notice = match result {
+            Ok(report) => Notice::Success(format!(
+                "Shared guidance is ready; refreshed {} global pointers.",
+                report.files.len()
+            )),
+            Err(error) => Notice::Error(format!("Could not sync shared guidance: {error}")),
+        };
+        self.pendingguidance = false;
+        self.refreshguidance();
+        cx.notify();
+    }
+
+    fn adoptguidance(&mut self, cx: &mut Context<Self>) {
+        if !self.pendingguidance {
+            self.pendingguidance = true;
+            self.notice = Notice::Error(
+                "Choose Confirm consolidation to move both global instruction files into SOUL.md. Backups will be kept."
+                    .to_owned(),
+            );
+            cx.notify();
+            return;
+        }
+        let result = files::home().and_then(|home| {
+            let soul = files::soul()?;
+            agent::adopt(&home, &soul)
+        });
+        self.notice = match result {
+            Ok(report) => Notice::Success(format!(
+                "Consolidated {} guidance source(s) into SOUL.md; both global files now contain managed pointers.",
+                report.moved
+            )),
+            Err(error) => Notice::Error(format!("Could not consolidate guidance: {error}")),
+        };
+        self.pendingguidance = false;
+        self.refreshguidance();
         cx.notify();
     }
 
@@ -620,7 +835,10 @@ impl Dashboard {
         };
         let result = connectionserver()
             .ok_or_else(|| anyhow::anyhow!("could not locate the Synapse MCP executable"))
-            .and_then(|server| agent::setup(&row.agent, &row.detection, &server));
+            .and_then(|server| {
+                let soul = files::soul()?;
+                agent::setup(&row.agent, &row.detection, &server, &soul)
+            });
         self.notice = match result {
             Ok(()) => Notice::Success(format!("{} is connected to Synapse.", row.agent.name)),
             Err(error) => Notice::Error(format!("Could not connect {}: {error}", row.agent.name)),
@@ -835,6 +1053,29 @@ impl Render for Dashboard {
                     host.update(cx, |this, cx| this.selectmemory(id, cx)).ok();
                 })
             };
+            let importhost = cx.entity().downgrade();
+            let importmemories = move |provider| -> memories::Click {
+                let host = importhost.clone();
+                Box::new(move |_, _, cx| {
+                    host.update(cx, |this, cx| this.importmemories(provider, cx))
+                        .ok();
+                })
+            };
+            let reviewhost = cx.entity().downgrade();
+            let reviewimport = move |provider| -> memories::Click {
+                let host = reviewhost.clone();
+                Box::new(move |_, _, cx| {
+                    host.update(cx, |this, cx| this.openimport(provider, cx))
+                        .ok();
+                })
+            };
+            let undohost = cx.entity().downgrade();
+            let undoimport = move |id| -> memories::Click {
+                let host = undohost.clone();
+                Box::new(move |_, _, cx| {
+                    host.update(cx, |this, cx| this.undoimport(id, cx)).ok();
+                })
+            };
             return shell
                 .child(memories::render(
                     memories::View {
@@ -843,23 +1084,37 @@ impl Render for Dashboard {
                         query: self.memoryquery.clone(),
                         body: self.memorybody.clone(),
                         source: self.memorysource.clone(),
+                        project: self.memoryproject.clone(),
+                        scope: self.memoryscope,
                         pendingdelete: self.pendingmemory,
                         pendingwipe: self.pendingwipe,
+                        imports: self.imports.clone(),
+                        batches: self.importbatches.clone(),
+                        pendingbatch: self.pendingbatch,
                         notice: self.notice.clone(),
                     },
                     memories::Actions {
                         search: Box::new(cx.listener(|this, _, _, cx| this.refreshmemories(cx))),
                         select: Box::new(selectmemory),
                         save: Box::new(cx.listener(|this, _, _, cx| this.savememory(cx))),
+                        global: Box::new(cx.listener(|this, _, _, cx| {
+                            this.setmemoryscope(MemoryScope::Global, cx)
+                        })),
+                        project: Box::new(cx.listener(|this, _, _, cx| {
+                            this.setmemoryscope(MemoryScope::Project, cx)
+                        })),
                         delete: Box::new(cx.listener(|this, _, _, cx| this.deletememory(cx))),
                         wipe: Box::new(cx.listener(|this, _, _, cx| this.wipememories(cx))),
+                        import: Box::new(importmemories),
+                        review: Box::new(reviewimport),
+                        undo: Box::new(undoimport),
                     },
                     cx,
                 ))
                 .child(
                     StatusBar::new()
                         .height(36.0)
-                        .left(Text::new("SQLite FTS5 · editable").size(Size::Xs))
+                        .left(Text::new("Scoped SQLite · editable and importable").size(Size::Xs))
                         .right(Text::new("Original changes save immediately").size(Size::Xs)),
                 )
                 .into_any_element();
@@ -886,6 +1141,8 @@ impl Render for Dashboard {
                         shellintegration,
                         shellerror,
                         message: crate::ui::menu::message(cx),
+                        guidance: self.guidance.clone(),
+                        pendingguidance: self.pendingguidance,
                     },
                     settings::Actions {
                         full: Box::new(cx.listener(|this, _, _, cx| {
@@ -914,6 +1171,13 @@ impl Render for Dashboard {
                         ),
                         shellremove: Box::new(
                             cx.listener(|_, _, _, cx| crate::ui::menu::removeshell(cx)),
+                        ),
+                        opensoul: Box::new(
+                            cx.listener(|this, _, window, cx| this.opensoul(window, cx)),
+                        ),
+                        syncguidance: Box::new(cx.listener(|this, _, _, cx| this.syncguidance(cx))),
+                        adoptguidance: Box::new(
+                            cx.listener(|this, _, _, cx| this.adoptguidance(cx)),
                         ),
                     },
                     cx,
@@ -1186,8 +1450,41 @@ fn loadmemories(database: &std::path::Path) -> anyhow::Result<MemoryData> {
     block(async {
         let brain = Brain::open(database).await?;
         let memories = brain.search("", 100).await?;
-        Ok(MemoryData { brain, memories })
+        let home = files::home()?;
+        let (imports, batches) = importdata(&brain, &home).await?;
+        Ok(MemoryData {
+            brain,
+            memories,
+            imports,
+            batches,
+        })
     })
+}
+
+fn loadimports(
+    brain: &Brain,
+    home: &std::path::Path,
+) -> anyhow::Result<(Vec<ImportSummary>, Vec<ImportBatch>)> {
+    block(importdata(brain, home))
+}
+
+async fn importdata(
+    brain: &Brain,
+    home: &std::path::Path,
+) -> anyhow::Result<(Vec<ImportSummary>, Vec<ImportBatch>)> {
+    let mut summaries = Vec::new();
+    for provider in [ImportProvider::Claude, ImportProvider::Codex] {
+        let summary = match crate::imports::scan(home, provider).await {
+            Ok(candidates) => match brain.importpreview(provider, candidates).await {
+                Ok(preview) => preview.summary(),
+                Err(error) => ImportSummary::error(provider, error),
+            },
+            Err(error) => ImportSummary::error(provider, error),
+        };
+        summaries.push(summary);
+    }
+    let batches = brain.importbatches().await?;
+    Ok((summaries, batches))
 }
 
 fn block<T>(future: impl std::future::Future<Output = anyhow::Result<T>>) -> anyhow::Result<T> {

@@ -27,6 +27,10 @@ pub fn database() -> Result<PathBuf> {
     Ok(data()?.join("brain.db"))
 }
 
+pub fn soul() -> Result<PathBuf> {
+    Ok(data()?.join("SOUL.md"))
+}
+
 pub fn ensure(path: &Path) -> Result<()> {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)

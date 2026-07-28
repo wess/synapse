@@ -13,6 +13,7 @@ export const install: Page = {
     { label: "Install the CLI", id: "cli" },
     { label: "Shell integration", id: "shell" },
     { label: "Connect tools", id: "tools" },
+    { label: "Shared guidance", id: "guidance" },
     { label: "Manual connection", id: "manual" },
     { label: "Verify", id: "verify" },
   ],
@@ -58,9 +59,9 @@ synapse version`)}
     <p>Setup performs two changes as one rollback-protected operation:</p>
     <ol>
       <li>It registers the installed Synapse executable as a user-level MCP stdio server with the single argument <code>mcp</code>.</li>
-      <li>It appends or refreshes a delimited Synapse memory block in the tool’s global instruction file. Existing user content remains outside that block.</li>
+      <li>It creates <code>SOUL.md</code> when needed and appends or refreshes a small managed pointer in the tool’s global instruction file. Existing user content remains outside that block.</li>
     </ol>
-    <p>The connected tool reads that global block on launch, and the MCP server repeats the same policy during initialization. It explicitly tells the tool to recall relevant context at the start of every session, remember confirmed reusable facts proactively, use Synapse instead of ad hoc memory Markdown files, and keep secrets out of memory.</p>
+    <p>The connected tool follows that pointer on launch, and the MCP server loads the same <code>SOUL.md</code> during initialization. The default guidance tells both tools to recall global plus current-project context, save confirmed reusable facts with project scope by default, use a Lean response first, and keep secrets out of memory.</p>
     <table>
       <thead><tr><th>Tool</th><th>MCP store</th><th>Instruction file</th></tr></thead>
       <tbody>
@@ -70,11 +71,18 @@ synapse version`)}
     </table>
     <p>Before changing a tool store or instruction file, Synapse creates a sibling <code>.synapsebackup</code>. If either half of setup fails, both files are restored.</p>
 
+    <h2 id="guidance">Use one shared guidance file</h2>
+    <p>Open <strong>Settings → Shared guidance</strong>. <strong>Open shared guidance</strong> edits the central <code>SOUL.md</code>. <strong>Sync pointers</strong> creates it if needed and refreshes both global pointers while preserving every line outside Synapse's managed blocks.</p>
+    <p>If you want the two global files to contain only those pointers, choose <strong>Consolidate guidance</strong> and confirm. Synapse moves their unmanaged content into <code>SOUL.md</code>, deduplicates simple shared rules, writes pointer-only global files, and keeps <code>.synapsebackup</code> siblings. This operation is never performed implicitly during connection setup.</p>
+${code("shell", `synapse guidance show
+synapse guidance sync
+synapse guidance adopt --confirm`)}
+
     <h2 id="manual">Manual connection</h2>
     <p>The app is the recommended setup path because it detects stale executable paths and repairs them. If you need to register the server manually, use the installed CLI path:</p>
     ${code("shell", `codex mcp add synapse -- ~/.local/bin/synapse mcp
 claude mcp add --scope user synapse -- ~/.local/bin/synapse mcp`)}
-    <p>Then add the memory instructions shown in the app to the corresponding global instruction file. Do not point an integration at a build artifact such as <code>target/debug/synapse</code>; cleaning the repository would break the connection.</p>
+    <p>Then run <code>synapse guidance sync</code> so both global instruction files point to <code>SOUL.md</code>. Do not point an integration at a build artifact such as <code>target/debug/synapse</code>; cleaning the repository would break the connection.</p>
 
     <h2 id="verify">Verify the connection</h2>
     <ol>

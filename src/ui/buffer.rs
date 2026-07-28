@@ -32,7 +32,7 @@ pub fn format(path: &Path) -> Format {
 pub fn markdown(content: &str, cx: &mut gpui::Context<MarkdownEditor>) -> MarkdownEditor {
     MarkdownEditor::new(cx)
         .value(content)
-        .placeholder("Write global instructions in Markdown…")
+        .placeholder("Write shared guidance in Markdown…")
         .font_size(15.0)
         .style(MarkdownStyle {
             bare: true,

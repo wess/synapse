@@ -199,6 +199,94 @@ fn cli_roundtrips_memory_vault_scope_and_data() {
 }
 
 #[test]
+fn cli_imports_claude_memory_safely_and_undoes_the_batch() {
+    let root = tempfile::tempdir().unwrap();
+    let home = root.path().join("home");
+    let project = root.path().join("project");
+    fs::create_dir_all(&home).unwrap();
+    fs::create_dir(&project).unwrap();
+    let encoded = project.display().to_string().replace('/', "-");
+    let memory = home.join(".claude/projects").join(encoded).join("memory");
+    fs::create_dir_all(&memory).unwrap();
+    fs::write(memory.join("choice.md"), "Use the imported durable choice.").unwrap();
+    fs::write(memory.join("unsafe.md"), "API_KEY=not-for-memory").unwrap();
+    fs::write(
+        home.join(".claude.json"),
+        serde_json::json!({"projects": {project.display().to_string(): {}}}).to_string(),
+    )
+    .unwrap();
+
+    let preview: Value = serde_json::from_str(&success(run(
+        root.path(),
+        &["memory", "import", "claude", "--json"],
+        None,
+    )))
+    .unwrap();
+    assert_eq!(preview["ready"], 1);
+    assert_eq!(preview["flagged"], 1);
+    let report: Value = serde_json::from_str(&success(run(
+        root.path(),
+        &["memory", "import", "claude", "--confirm", "--json"],
+        None,
+    )))
+    .unwrap();
+    assert_eq!(report["stored"], 1);
+    assert_eq!(report["flagged"], 1);
+    let batch = report["batch"]["id"].as_i64().unwrap().to_string();
+    let memories: Value = serde_json::from_str(&success(run(
+        root.path(),
+        &["memory", "list", "imported", "--json"],
+        None,
+    )))
+    .unwrap();
+    assert_eq!(memories.as_array().unwrap().len(), 1);
+
+    success(run(
+        root.path(),
+        &["memory", "undo", &batch, "--confirm"],
+        None,
+    ));
+    let memories: Value = serde_json::from_str(&success(run(
+        root.path(),
+        &["memory", "list", "imported", "--json"],
+        None,
+    )))
+    .unwrap();
+    assert!(memories.as_array().unwrap().is_empty());
+}
+
+#[test]
+fn guidance_can_preserve_then_consolidate_global_files() {
+    let root = tempfile::tempdir().unwrap();
+    let home = root.path().join("home");
+    let codex = home.join(".codex/AGENTS.md");
+    let claude = home.join(".claude/CLAUDE.md");
+    fs::create_dir_all(codex.parent().unwrap()).unwrap();
+    fs::create_dir_all(claude.parent().unwrap()).unwrap();
+    fs::write(&codex, "# Use Bun\n").unwrap();
+    fs::write(&claude, "# Keep files focused\n").unwrap();
+
+    success(run(root.path(), &["guidance", "sync"], None));
+    assert!(fs::read_to_string(&codex).unwrap().contains("# Use Bun"));
+    assert!(fs::read_to_string(&codex).unwrap().contains("SOUL.md"));
+    let rejected = run(root.path(), &["guidance", "adopt"], None);
+    assert!(!rejected.status.success());
+
+    success(run(root.path(), &["guidance", "adopt", "--confirm"], None));
+    let soul = fs::read_to_string(root.path().join("data/SOUL.md")).unwrap();
+    assert!(soul.contains("# Use Bun"));
+    assert!(soul.contains("# Keep files focused"));
+    assert!(!fs::read_to_string(&codex).unwrap().contains("# Use Bun"));
+    assert!(
+        !fs::read_to_string(&claude)
+            .unwrap()
+            .contains("# Keep files focused")
+    );
+    assert!(codex.with_file_name("AGENTS.md.synapsebackup").is_file());
+    assert!(claude.with_file_name("CLAUDE.md.synapsebackup").is_file());
+}
+
+#[test]
 fn restore_refuses_while_an_mcp_process_holds_the_database() {
     let root = tempfile::tempdir().unwrap();
     let root = root.path();

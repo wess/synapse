@@ -23,13 +23,17 @@ export const mcp: Page = {
     <p>Stores a durable fact, decision, preference, convention, or correction.</p>
     ${code("json", `{
   "content": "Use small focused modules.",
-  "source": "synapse"
+  "source": "synapse",
+  "scope": "project",
+  "project": "/Users/example/project"
 }`)}
     <table>
       <thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Meaning</th></tr></thead>
       <tbody>
         <tr><td><code>content</code></td><td>string</td><td>Yes</td><td>The durable text. Empty or whitespace-only content is rejected.</td></tr>
         <tr><td><code>source</code></td><td>string or null</td><td>No</td><td>An origin such as a project path, repository name, or topic.</td></tr>
+        <tr><td><code>scope</code></td><td><code>project</code> or <code>global</code></td><td>No</td><td>Defaults to project. Use global only for context that should appear everywhere.</td></tr>
+        <tr><td><code>project</code></td><td>string or null</td><td>For project scope</td><td>Absolute working-project path. Synapse normalizes nested paths to the project root.</td></tr>
       </tbody>
     </table>
     ${code("json", `{
@@ -41,21 +45,28 @@ export const mcp: Page = {
     <p>Returns durable context relevant to a query. An empty query returns recent memory.</p>
     ${code("json", `{
   "query": "module structure",
-  "limit": 8
+  "limit": 8,
+  "budget": "lean",
+  "project": "/Users/example/project"
 }`)}
     <table>
       <thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Meaning</th></tr></thead>
       <tbody>
         <tr><td><code>query</code></td><td>string</td><td>Yes</td><td>Words or a phrase describing the context needed. Use an empty string for recent entries.</td></tr>
         <tr><td><code>limit</code></td><td>integer or null</td><td>No</td><td>Requested result count. Defaults to 8. The active response budget may lower it.</td></tr>
+        <tr><td><code>budget</code></td><td><code>full</code>, <code>balanced</code>, or <code>lean</code></td><td>No</td><td>May reduce the configured response ceiling but can never enlarge it.</td></tr>
+        <tr><td><code>project</code></td><td>string or null</td><td>No</td><td>Absolute working-project path. Results include global memory plus this project and exclude other projects.</td></tr>
       </tbody>
     </table>
     ${code("json", `{
+  "optimization": "lean",
   "memories": [
     {
       "id": 24,
       "body": "Use small focused modules.",
       "source": "synapse",
+      "scope": "project",
+      "project": "/Users/example/project",
       "created": 1785250000
     }
   ]

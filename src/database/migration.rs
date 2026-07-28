@@ -3,32 +3,59 @@ use anyhow::{Context, Result};
 use sqlx::SqlitePool;
 use std::path::Path;
 
-pub const LATEST: i64 = 1;
+pub const LATEST: i64 = 2;
 
 struct Migration {
     version: i64,
     statements: &'static [&'static str],
 }
 
-const MIGRATIONS: &[Migration] = &[Migration {
-    version: 1,
-    statements: &[
-        "CREATE VIRTUAL TABLE IF NOT EXISTS memory USING fts5(\
-         body, source UNINDEXED, created UNINDEXED, tokenize='unicode61')",
-        "CREATE TABLE IF NOT EXISTS setting(\
-         key TEXT PRIMARY KEY, value TEXT NOT NULL)",
-        "CREATE TABLE IF NOT EXISTS vault(\
-         id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL UNIQUE, created INTEGER NOT NULL)",
-        "CREATE TABLE IF NOT EXISTS secret(\
-         id INTEGER PRIMARY KEY AUTOINCREMENT, vaultid INTEGER NOT NULL REFERENCES vault(id) ON DELETE CASCADE, \
-         name TEXT NOT NULL, env TEXT NOT NULL, account TEXT NOT NULL UNIQUE, created INTEGER NOT NULL, \
-         UNIQUE(vaultid, name), UNIQUE(vaultid, env))",
-        "CREATE TABLE IF NOT EXISTS globalenv(\
-         env TEXT PRIMARY KEY, secretid INTEGER NOT NULL UNIQUE REFERENCES secret(id) ON DELETE CASCADE)",
-        "CREATE TABLE IF NOT EXISTS trust(\
-         path TEXT PRIMARY KEY, digest TEXT NOT NULL, updated INTEGER NOT NULL)",
-    ],
-}];
+const MIGRATIONS: &[Migration] = &[
+    Migration {
+        version: 1,
+        statements: &[
+            "CREATE VIRTUAL TABLE IF NOT EXISTS memory USING fts5(\
+             body, source UNINDEXED, created UNINDEXED, tokenize='unicode61')",
+            "CREATE TABLE IF NOT EXISTS setting(\
+             key TEXT PRIMARY KEY, value TEXT NOT NULL)",
+            "CREATE TABLE IF NOT EXISTS vault(\
+             id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL UNIQUE, created INTEGER NOT NULL)",
+            "CREATE TABLE IF NOT EXISTS secret(\
+             id INTEGER PRIMARY KEY AUTOINCREMENT, vaultid INTEGER NOT NULL REFERENCES vault(id) ON DELETE CASCADE, \
+             name TEXT NOT NULL, env TEXT NOT NULL, account TEXT NOT NULL UNIQUE, created INTEGER NOT NULL, \
+             UNIQUE(vaultid, name), UNIQUE(vaultid, env))",
+            "CREATE TABLE IF NOT EXISTS globalenv(\
+             env TEXT PRIMARY KEY, secretid INTEGER NOT NULL UNIQUE REFERENCES secret(id) ON DELETE CASCADE)",
+            "CREATE TABLE IF NOT EXISTS trust(\
+             path TEXT PRIMARY KEY, digest TEXT NOT NULL, updated INTEGER NOT NULL)",
+        ],
+    },
+    Migration {
+        version: 2,
+        statements: &[
+            "CREATE TABLE memorymeta(\
+             memoryid INTEGER PRIMARY KEY, \
+             scope TEXT NOT NULL CHECK(scope IN ('global', 'project')), \
+             project TEXT NOT NULL DEFAULT '', \
+             native INTEGER NOT NULL DEFAULT 1 CHECK(native IN (0, 1)))",
+            "INSERT INTO memorymeta(memoryid, scope, project, native) \
+             SELECT rowid, 'global', '', 1 FROM memory",
+            "CREATE INDEX memorymetascope ON memorymeta(scope, project)",
+            "CREATE TABLE importbatch(\
+             id INTEGER PRIMARY KEY AUTOINCREMENT, provider TEXT NOT NULL, created INTEGER NOT NULL, \
+             imported INTEGER NOT NULL DEFAULT 0, linked INTEGER NOT NULL DEFAULT 0, \
+             skipped INTEGER NOT NULL DEFAULT 0, flagged INTEGER NOT NULL DEFAULT 0, \
+             undone INTEGER NOT NULL DEFAULT 0 CHECK(undone IN (0, 1)))",
+            "CREATE TABLE memoryorigin(\
+             id INTEGER PRIMARY KEY AUTOINCREMENT, \
+             memoryid INTEGER NOT NULL REFERENCES memorymeta(memoryid) ON DELETE CASCADE, \
+             batchid INTEGER NOT NULL REFERENCES importbatch(id) ON DELETE CASCADE, \
+             provider TEXT NOT NULL, externalid TEXT NOT NULL, digest TEXT NOT NULL, path TEXT NOT NULL, \
+             UNIQUE(provider, externalid))",
+            "CREATE INDEX memoryoriginbatch ON memoryorigin(batchid)",
+        ],
+    },
+];
 
 pub async fn run(pool: &SqlitePool, path: &Path, existed: bool) -> Result<()> {
     let current = version(pool).await?;

@@ -1,4 +1,4 @@
-use crate::brain::{Memory, Optimization, Settings, Stats};
+use crate::brain::{Memory, MemoryScope, Optimization, Settings, Stats};
 use anyhow::{Context, Result};
 use sqlx::SqlitePool;
 use std::fs::File;
@@ -8,7 +8,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Clone)]
 pub struct Brain {
-    pool: SqlitePool,
+    pub(super) pool: SqlitePool,
     path: PathBuf,
     _lock: Arc<File>,
 }
@@ -24,33 +24,56 @@ impl Brain {
         })
     }
 
-    pub async fn remember(&self, body: &str, source: Option<&str>) -> Result<i64> {
+    pub async fn rememberscoped(
+        &self,
+        body: &str,
+        source: Option<&str>,
+        scope: MemoryScope,
+        project: Option<&Path>,
+    ) -> Result<i64> {
         let body = body.trim();
         anyhow::ensure!(!body.is_empty(), "memory content cannot be empty");
+        let project = scope.project(project)?;
 
         let created = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .context("system clock is before the Unix epoch")?
             .as_secs() as i64;
+        let mut transaction = self.pool.begin().await?;
         let result = sqlx::query("INSERT INTO memory(body, source, created) VALUES (?, ?, ?)")
             .bind(body)
             .bind(source.unwrap_or(""))
             .bind(created)
-            .execute(&self.pool)
+            .execute(&mut *transaction)
             .await?;
-        Ok(result.last_insert_rowid())
+        let id = result.last_insert_rowid();
+        sqlx::query("INSERT INTO memorymeta(memoryid, scope, project, native) VALUES (?, ?, ?, 1)")
+            .bind(id)
+            .bind(scope.value())
+            .bind(project)
+            .execute(&mut *transaction)
+            .await?;
+        transaction.commit().await?;
+        Ok(id)
     }
 
-    pub async fn recallwith(
+    pub async fn recallscoped(
         &self,
         query: &str,
         limit: u32,
         budget: Option<Optimization>,
+        project: Option<&Path>,
     ) -> Result<(Settings, Vec<Memory>)> {
         let configured = self.settings().await?;
         let settings = Settings::from(configured.optimization.constrained(budget));
+        let project = project
+            .map(crate::brain::projectroot)
+            .transpose()?
+            .flatten()
+            .map(|path| path.display().to_string())
+            .unwrap_or_default();
         let memories = self
-            .search(query, limit.clamp(1, settings.resultlimit))
+            .searchscoped(query, limit.clamp(1, settings.resultlimit), &project)
             .await?;
         Ok((settings, crate::brain::optimize::recall(memories, settings)))
     }
@@ -60,8 +83,10 @@ impl Brain {
         let query = query.trim();
         if query.is_empty() {
             sqlx::query_as::<_, Memory>(
-                "SELECT rowid AS id, body, source, CAST(created AS INTEGER) AS created \
-                 FROM memory ORDER BY created DESC LIMIT ?",
+                "SELECT memory.rowid AS id, memory.body, memory.source, meta.scope, meta.project, \
+                 CAST(memory.created AS INTEGER) AS created \
+                 FROM memory JOIN memorymeta meta ON meta.memoryid = memory.rowid \
+                 ORDER BY memory.created DESC LIMIT ?",
             )
             .bind(limit)
             .fetch_all(&self.pool)
@@ -70,8 +95,10 @@ impl Brain {
         } else {
             let expression = search_expression(query);
             sqlx::query_as::<_, Memory>(
-                "SELECT rowid AS id, body, source, CAST(created AS INTEGER) AS created \
-                 FROM memory WHERE memory MATCH ? ORDER BY rank LIMIT ?",
+                "SELECT memory.rowid AS id, memory.body, memory.source, meta.scope, meta.project, \
+                 CAST(memory.created AS INTEGER) AS created \
+                 FROM memory JOIN memorymeta meta ON meta.memoryid = memory.rowid \
+                 WHERE memory MATCH ? ORDER BY rank LIMIT ?",
             )
             .bind(expression)
             .bind(limit)
@@ -81,10 +108,47 @@ impl Brain {
         }
     }
 
+    async fn searchscoped(&self, query: &str, limit: u32, project: &str) -> Result<Vec<Memory>> {
+        let limit = limit.clamp(1, 200) as i64;
+        let query = query.trim();
+        if query.is_empty() {
+            sqlx::query_as::<_, Memory>(
+                "SELECT memory.rowid AS id, memory.body, memory.source, meta.scope, meta.project, \
+                 CAST(memory.created AS INTEGER) AS created \
+                 FROM memory JOIN memorymeta meta ON meta.memoryid = memory.rowid \
+                 WHERE meta.scope = 'global' OR (meta.scope = 'project' AND meta.project = ?) \
+                 ORDER BY memory.created DESC LIMIT ?",
+            )
+            .bind(project)
+            .bind(limit)
+            .fetch_all(&self.pool)
+            .await
+            .context("could not read scoped memories")
+        } else {
+            let expression = search_expression(query);
+            sqlx::query_as::<_, Memory>(
+                "SELECT memory.rowid AS id, memory.body, memory.source, meta.scope, meta.project, \
+                 CAST(memory.created AS INTEGER) AS created \
+                 FROM memory JOIN memorymeta meta ON meta.memoryid = memory.rowid \
+                 WHERE memory MATCH ? \
+                 AND (meta.scope = 'global' OR (meta.scope = 'project' AND meta.project = ?)) \
+                 ORDER BY rank LIMIT ?",
+            )
+            .bind(expression)
+            .bind(project)
+            .bind(limit)
+            .fetch_all(&self.pool)
+            .await
+            .context("could not search scoped memories")
+        }
+    }
+
     pub async fn memory(&self, id: i64) -> Result<Option<Memory>> {
         sqlx::query_as(
-            "SELECT rowid AS id, body, source, CAST(created AS INTEGER) AS created \
-             FROM memory WHERE rowid = ?",
+            "SELECT memory.rowid AS id, memory.body, memory.source, meta.scope, meta.project, \
+             CAST(memory.created AS INTEGER) AS created \
+             FROM memory JOIN memorymeta meta ON meta.memoryid = memory.rowid \
+             WHERE memory.rowid = ?",
         )
         .bind(id)
         .fetch_optional(&self.pool)
@@ -98,40 +162,92 @@ impl Brain {
         body: &str,
         source: Option<&str>,
     ) -> Result<Option<Memory>> {
+        let memory = self.memory(id).await?;
+        let Some(memory) = memory else {
+            return Ok(None);
+        };
+        let project = if memory.scope == MemoryScope::Project {
+            Some(Path::new(&memory.project))
+        } else {
+            None
+        };
+        self.updatememoryscoped(id, body, source, memory.scope, project)
+            .await
+    }
+
+    pub async fn updatememoryscoped(
+        &self,
+        id: i64,
+        body: &str,
+        source: Option<&str>,
+        scope: MemoryScope,
+        project: Option<&Path>,
+    ) -> Result<Option<Memory>> {
         let body = body.trim();
         anyhow::ensure!(!body.is_empty(), "memory content cannot be empty");
+        let project = scope.project(project)?;
+        let mut transaction = self.pool.begin().await?;
         let result =
             sqlx::query("UPDATE memory SET body = ?, source = COALESCE(?, source) WHERE rowid = ?")
                 .bind(body)
                 .bind(source.map(str::trim))
                 .bind(id)
-                .execute(&self.pool)
+                .execute(&mut *transaction)
                 .await
                 .context("could not update memory")?;
         if result.rows_affected() == 0 {
             return Ok(None);
         }
+        sqlx::query("UPDATE memorymeta SET scope = ?, project = ?, native = 1 WHERE memoryid = ?")
+            .bind(scope.value())
+            .bind(project)
+            .bind(id)
+            .execute(&mut *transaction)
+            .await?;
+        transaction.commit().await?;
         self.memory(id).await
     }
 
     pub async fn deletememory(&self, id: i64) -> Result<Option<Memory>> {
         let memory = self.memory(id).await?;
         if memory.is_some() {
+            let mut transaction = self.pool.begin().await?;
+            sqlx::query("DELETE FROM memoryorigin WHERE memoryid = ?")
+                .bind(id)
+                .execute(&mut *transaction)
+                .await?;
+            sqlx::query("DELETE FROM memorymeta WHERE memoryid = ?")
+                .bind(id)
+                .execute(&mut *transaction)
+                .await?;
             sqlx::query("DELETE FROM memory WHERE rowid = ?")
                 .bind(id)
-                .execute(&self.pool)
+                .execute(&mut *transaction)
                 .await
                 .context("could not delete memory")?;
+            transaction.commit().await?;
         }
         Ok(memory)
     }
 
     pub async fn wipememories(&self) -> Result<u64> {
-        sqlx::query("DELETE FROM memory")
-            .execute(&self.pool)
+        let mut transaction = self.pool.begin().await?;
+        sqlx::query("DELETE FROM memoryorigin")
+            .execute(&mut *transaction)
+            .await?;
+        sqlx::query("DELETE FROM importbatch")
+            .execute(&mut *transaction)
+            .await?;
+        sqlx::query("DELETE FROM memorymeta")
+            .execute(&mut *transaction)
+            .await?;
+        let count = sqlx::query("DELETE FROM memory")
+            .execute(&mut *transaction)
             .await
             .map(|result| result.rows_affected())
-            .context("could not wipe memories")
+            .context("could not wipe memories")?;
+        transaction.commit().await?;
+        Ok(count)
     }
 
     pub async fn settings(&self) -> Result<Settings> {
@@ -180,12 +296,17 @@ mod tests {
             .await
             .unwrap();
         brain
-            .remember("Prefer small focused Rust modules", Some("preferences"))
+            .rememberscoped(
+                "Prefer small focused Rust modules",
+                Some("preferences"),
+                MemoryScope::Global,
+                None,
+            )
             .await
             .unwrap();
 
         let matches = brain
-            .recallwith("focused modules", 8, None)
+            .recallscoped("focused modules", 8, None, None)
             .await
             .unwrap()
             .1;
@@ -200,7 +321,12 @@ mod tests {
         let brain = Brain::open(directory.path().join("brain.db"))
             .await
             .unwrap();
-        assert!(brain.remember("  ", None).await.is_err());
+        assert!(
+            brain
+                .rememberscoped("  ", None, MemoryScope::Global, None)
+                .await
+                .is_err()
+        );
     }
 
     #[tokio::test]
@@ -210,18 +336,33 @@ mod tests {
             .await
             .unwrap();
         brain
-            .remember("One   durable fact.", Some("test"))
+            .rememberscoped(
+                "One   durable fact.",
+                Some("test"),
+                MemoryScope::Global,
+                None,
+            )
             .await
             .unwrap();
         brain.setoptimization(Optimization::Lean).await.unwrap();
         assert_eq!(
-            brain.recallwith("durable", 8, None).await.unwrap().1[0].body,
+            brain
+                .recallscoped("durable", 8, None, None)
+                .await
+                .unwrap()
+                .1[0]
+                .body,
             "One durable fact."
         );
 
         brain.setoptimization(Optimization::Full).await.unwrap();
         assert_eq!(
-            brain.recallwith("durable", 8, None).await.unwrap().1[0].body,
+            brain
+                .recallscoped("durable", 8, None, None)
+                .await
+                .unwrap()
+                .1[0]
+                .body,
             "One   durable fact."
         );
         brain.setpreference("appearance", "dark").await.unwrap();
@@ -238,11 +379,14 @@ mod tests {
             .await
             .unwrap();
         let original = "detail ".repeat(1_000);
-        brain.remember(&original, Some("test")).await.unwrap();
+        brain
+            .rememberscoped(&original, Some("test"), MemoryScope::Global, None)
+            .await
+            .unwrap();
 
         brain.setoptimization(Optimization::Full).await.unwrap();
         let (lean, memories) = brain
-            .recallwith("detail", 25, Some(Optimization::Lean))
+            .recallscoped("detail", 25, Some(Optimization::Lean), None)
             .await
             .unwrap();
         assert_eq!(lean.optimization, Optimization::Lean);
@@ -250,7 +394,7 @@ mod tests {
 
         brain.setoptimization(Optimization::Lean).await.unwrap();
         let (stilllean, _) = brain
-            .recallwith("detail", 25, Some(Optimization::Full))
+            .recallscoped("detail", 25, Some(Optimization::Full), None)
             .await
             .unwrap();
         assert_eq!(stilllean.optimization, Optimization::Lean);
@@ -266,8 +410,14 @@ mod tests {
         let brain = Brain::open(directory.path().join("brain.db"))
             .await
             .unwrap();
-        let first = brain.remember("first", Some("old")).await.unwrap();
-        brain.remember("second", Some("test")).await.unwrap();
+        let first = brain
+            .rememberscoped("first", Some("old"), MemoryScope::Global, None)
+            .await
+            .unwrap();
+        brain
+            .rememberscoped("second", Some("test"), MemoryScope::Global, None)
+            .await
+            .unwrap();
 
         let updated = brain
             .updatememory(first, "updated", Some("new"))
@@ -280,5 +430,61 @@ mod tests {
         assert!(brain.deletememory(first).await.unwrap().is_some());
         assert_eq!(brain.wipememories().await.unwrap(), 1);
         assert!(brain.search("", 100).await.unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn scoped_recall_combines_global_and_current_project_only() {
+        let directory = tempfile::tempdir().unwrap();
+        let first = directory.path().join("first");
+        let second = directory.path().join("second");
+        std::fs::create_dir(&first).unwrap();
+        std::fs::create_dir(&second).unwrap();
+        let brain = Brain::open(directory.path().join("brain.db"))
+            .await
+            .unwrap();
+        brain
+            .rememberscoped("shared global convention", None, MemoryScope::Global, None)
+            .await
+            .unwrap();
+        brain
+            .rememberscoped(
+                "first project convention",
+                None,
+                MemoryScope::Project,
+                Some(&first),
+            )
+            .await
+            .unwrap();
+        brain
+            .rememberscoped(
+                "second project convention",
+                None,
+                MemoryScope::Project,
+                Some(&second),
+            )
+            .await
+            .unwrap();
+
+        let recalled = brain
+            .recallscoped("convention", 8, None, Some(&first))
+            .await
+            .unwrap()
+            .1;
+        assert_eq!(recalled.len(), 2);
+        assert!(
+            recalled
+                .iter()
+                .any(|memory| memory.body.starts_with("shared"))
+        );
+        assert!(
+            recalled
+                .iter()
+                .any(|memory| memory.body.starts_with("first"))
+        );
+        assert!(
+            !recalled
+                .iter()
+                .any(|memory| memory.body.starts_with("second"))
+        );
     }
 }

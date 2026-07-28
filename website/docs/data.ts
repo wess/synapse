@@ -16,11 +16,12 @@ export const data: Page = {
   ],
   body: `
     <h2 id="files">Files and permissions</h2>
-    <p>On macOS, the default data directory is <code>~/Library/Application Support/synapse</code>. Run <code>synapse path</code> to print the resolved home, data, database, and CLI paths for the current environment.</p>
+    <p>On macOS, the default data directory is <code>~/Library/Application Support/synapse</code>. Run <code>synapse path</code> to print the resolved data, shared-guidance, and CLI paths for the current environment.</p>
     <table>
       <thead><tr><th>Path</th><th>Purpose</th></tr></thead>
       <tbody>
-        <tr><td><code>brain.db</code></td><td>Memory, settings, vault metadata, global mappings, and scope approvals.</td></tr>
+        <tr><td><code>brain.db</code></td><td>Scoped memory, import provenance and batches, settings, vault metadata, global mappings, and scope approvals.</td></tr>
+        <tr><td><code>SOUL.md</code></td><td>The editable shared guidance loaded by both connected tools and the MCP server.</td></tr>
         <tr><td><code>brain.db-wal</code> and <code>brain.db-shm</code></td><td>SQLite write-ahead-log sidecars while the database is active.</td></tr>
         <tr><td><code>brain.lock</code></td><td>Shared lifecycle lock held by the app, CLI operations, and MCP server.</td></tr>
         <tr><td><code>backups/</code></td><td>Automatic pre-migration and pre-restore SQLite snapshots.</td></tr>
@@ -64,7 +65,7 @@ synapse data check`)}
     <p>When a current database exists, Synapse validates it and creates a recovery snapshot before atomically replacing it. WAL and SHM sidecars are cleared, file permissions are secured, and the containing directory is synced.</p>
 
     <h2 id="wipe">Memory wipe is not a reset</h2>
-    <p><code>synapse memory wipe --confirm</code> removes every memory entry but leaves settings, vault labels, Keychain values, global mappings, and scope approvals. Use it when you want a clean memory history without rebuilding credential setup.</p>
+    <p><code>synapse memory wipe --confirm</code> removes every memory entry and import batch but leaves <code>SOUL.md</code>, settings, vault labels, Keychain values, global mappings, and scope approvals. Use it when you want a clean memory history without rebuilding guidance or credential setup.</p>
     <p>There is no one-command factory reset. To remove Synapse completely, first forget each Keychain secret through the app or CLI, then quit all processes and remove the application, installed launcher, and data directory deliberately.</p>
   `,
 };

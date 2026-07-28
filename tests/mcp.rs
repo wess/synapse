@@ -60,7 +60,12 @@ fn mcp_stdio_lists_and_calls_every_tool() {
             "method": "tools/call",
             "params": {
                 "name": "remember",
-                "arguments": {"content": "mcp durable marker", "source": "protocoltest"}
+                "arguments": {
+                    "content": "mcp durable marker",
+                    "source": "protocoltest",
+                    "scope": "project",
+                    "project": root.path()
+                }
             }
         }),
         3,
@@ -72,7 +77,15 @@ fn mcp_stdio_lists_and_calls_every_tool() {
             "jsonrpc": "2.0",
             "id": 4,
             "method": "tools/call",
-            "params": {"name": "recall", "arguments": {"query": "durable marker", "limit": 4, "budget": "lean"}}
+            "params": {
+                "name": "recall",
+                "arguments": {
+                    "query": "durable marker",
+                    "limit": 4,
+                    "budget": "lean",
+                    "project": root.path()
+                }
+            }
         }),
         4,
     );
@@ -113,6 +126,10 @@ fn mcp_stdio_lists_and_calls_every_tool() {
         "lean"
     );
     assert!(recalled.to_string().contains("mcp durable marker"));
+    assert_eq!(
+        recalled["result"]["structuredContent"]["memories"][0]["scope"],
+        "project"
+    );
     assert!(vault.to_string().contains("Values stay in Keychain"));
 }
 

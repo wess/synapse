@@ -1,4 +1,6 @@
-use crate::brain::{Brain, RecallRequest, RecallResponse, RememberRequest, RememberResponse};
+use crate::brain::{
+    Brain, MemoryScope, RecallRequest, RecallResponse, RememberRequest, RememberResponse,
+};
 use crate::vault::{VaultStatusRequest, VaultStatusResponse, VaultStore};
 use rmcp::handler::server::{router::tool::ToolRouter, wrapper::Parameters};
 use rmcp::model::{Implementation, ServerCapabilities, ServerInfo};
@@ -8,15 +10,17 @@ use rmcp::{Json, ServerHandler, ServiceExt, tool, tool_handler, tool_router, tra
 struct MemoryServer {
     brain: Brain,
     vaults: VaultStore,
+    instructions: String,
     toolrouter: ToolRouter<Self>,
 }
 
 #[tool_router(router = toolrouter)]
 impl MemoryServer {
-    fn new(brain: Brain, vaults: VaultStore) -> Self {
+    fn new(brain: Brain, vaults: VaultStore, instructions: String) -> Self {
         Self {
             brain,
             vaults,
+            instructions,
             toolrouter: Self::toolrouter(),
         }
     }
@@ -26,8 +30,14 @@ impl MemoryServer {
         &self,
         Parameters(request): Parameters<RememberRequest>,
     ) -> Result<Json<RememberResponse>, String> {
+        let project = projectpath(request.project.as_deref());
         self.brain
-            .remember(&request.content, request.source.as_deref())
+            .rememberscoped(
+                &request.content,
+                request.source.as_deref(),
+                request.scope.unwrap_or(MemoryScope::Project),
+                project.as_deref(),
+            )
             .await
             .map(|id| Json(RememberResponse { id, stored: true }))
             .map_err(|error| error.to_string())
@@ -40,8 +50,14 @@ impl MemoryServer {
         &self,
         Parameters(request): Parameters<RecallRequest>,
     ) -> Result<Json<RecallResponse>, String> {
+        let project = projectpath(request.project.as_deref());
         self.brain
-            .recallwith(&request.query, request.limit.unwrap_or(8), request.budget)
+            .recallscoped(
+                &request.query,
+                request.limit.unwrap_or(8),
+                request.budget,
+                project.as_deref(),
+            )
             .await
             .map(|(settings, memories)| {
                 Json(RecallResponse {
@@ -88,11 +104,19 @@ impl MemoryServer {
     }
 }
 
+fn projectpath(requested: Option<&str>) -> Option<std::path::PathBuf> {
+    requested
+        .filter(|value| !value.trim().is_empty())
+        .map(std::path::PathBuf::from)
+        .or_else(|| std::env::var_os("SYNAPSE_PROJECT_DIR").map(Into::into))
+        .or_else(|| std::env::current_dir().ok())
+}
+
 #[tool_handler(router = self.toolrouter)]
 impl ServerHandler for MemoryServer {
     fn get_info(&self) -> ServerInfo {
         ServerInfo::new(ServerCapabilities::builder().enable_tools().build())
-            .with_instructions(crate::instructions::MEMORY)
+            .with_instructions(self.instructions.clone())
             .with_server_info(
                 Implementation::new("synapse", env!("CARGO_PKG_VERSION"))
                     .with_title("Synapse")
@@ -101,8 +125,10 @@ impl ServerHandler for MemoryServer {
     }
 }
 
-pub async fn run(brain: Brain, vaults: VaultStore) -> anyhow::Result<()> {
-    let service = MemoryServer::new(brain, vaults).serve(stdio()).await?;
+pub async fn run(brain: Brain, vaults: VaultStore, instructions: String) -> anyhow::Result<()> {
+    let service = MemoryServer::new(brain, vaults, instructions)
+        .serve(stdio())
+        .await?;
     service.waiting().await?;
     Ok(())
 }

@@ -247,7 +247,7 @@
       <h3>memory list</h3>
       <code>synapse memory list [query] [--json]</code>
     </div>
-    <p>Search the body with the joined query words or list recent memory when empty. Returns up to 100 entries. Text mode prints ID, source, and a compact preview.</p>
+    <p>Search the body with the joined query words or list recent memory when empty. Returns up to 100 entries. Text mode prints ID, scope, source, and a compact preview.</p>
   </section>
     
   <section class="command" id="memoryshow">
@@ -255,15 +255,15 @@
       <h3>memory show</h3>
       <code>synapse memory show &lt;id&gt; [--json]</code>
     </div>
-    <p>Print one exact memory with source and timestamp, or return structured JSON.</p>
+    <p>Print one exact memory with scope, project root, source, and timestamp, or return structured JSON.</p>
   </section>
     
   <section class="command" id="memoryadd">
     <div>
       <h3>memory add</h3>
-      <code>synapse memory add [source]</code>
+      <code>synapse memory add [source] [--global|--project &lt;folder&gt;]</code>
     </div>
-    <p>Read a non-empty body from stdin and store it with an optional source label.</p>
+    <p>Read a non-empty body from stdin. Project scope is the default and resolves from the current folder; use global only for context that belongs everywhere.</p>
   </section>
     
   <section class="command" id="memoryedit">
@@ -272,6 +272,30 @@
       <code>synapse memory edit &lt;id&gt; [source]</code>
     </div>
     <p>Read the replacement body from stdin and replace one existing memory. The optional source replaces the source label.</p>
+  </section>
+
+  <section class="command" id="memoryimport">
+    <div>
+      <h3>memory import</h3>
+      <code>synapse memory import &lt;claude|codex|markdown&gt; [path] [--confirm]</code>
+    </div>
+    <p>Preview recognized durable memory without changing its source. Add --confirm to import safe entries. Credential-shaped entries remain flagged unless the CLI also receives --include-flagged after source review.</p>
+  </section>
+
+  <section class="command" id="memoryimports">
+    <div>
+      <h3>memory imports</h3>
+      <code>synapse memory imports [--json]</code>
+    </div>
+    <p>List import batches, their provider, stored and linked counts, and whether each batch is active or undone.</p>
+  </section>
+
+  <section class="command" id="memoryundo">
+    <div>
+      <h3>memory undo</h3>
+      <code>synapse memory undo &lt;batch&gt; --confirm</code>
+    </div>
+    <p>Remove memories created only by that import batch. Preserve manually edited memories and records linked to another origin.</p>
   </section>
     
   <section class="command" id="memorydelete">
@@ -287,7 +311,7 @@
       <h3>memory wipe</h3>
       <code>synapse memory wipe --confirm</code>
     </div>
-    <p>Delete every memory entry while leaving settings, vaults, Keychain values, and scope approvals intact. The exact guard is required.</p>
+    <p>Delete every memory entry and import batch while leaving SOUL.md, settings, vaults, Keychain values, and scope approvals intact. The exact guard is required.</p>
   </section>
 
     <h2 id="data">Data and settings</h2>
@@ -332,6 +356,30 @@
     <p>Change the shared MCP recall response budget. Stored memory is not modified.</p>
   </section>
 
+  <section class="command" id="guidanceshow">
+    <div>
+      <h3>guidance show</h3>
+      <code>synapse guidance show [--json]</code>
+    </div>
+    <p>Print the SOUL.md path, whether it exists, pointer coverage, and whether both global instruction files are pointer-only.</p>
+  </section>
+
+  <section class="command" id="guidancesync">
+    <div>
+      <h3>guidance sync</h3>
+      <code>synapse guidance sync</code>
+    </div>
+    <p>Create SOUL.md when needed and refresh managed pointers in both global instruction files without removing unmanaged text.</p>
+  </section>
+
+  <section class="command" id="guidanceadopt">
+    <div>
+      <h3>guidance adopt</h3>
+      <code>synapse guidance adopt --confirm</code>
+    </div>
+    <p>Move unmanaged global guidance into SOUL.md, replace both global files with managed pointers, and retain backups.</p>
+  </section>
+
     <h2 id="install">Installation and paths</h2>
     
   <section class="command" id="install">
@@ -347,7 +395,7 @@
       <h3>path</h3>
       <code>synapse path</code>
     </div>
-    <p>Print the resolved home, data directory, database, and CLI destination.</p>
+    <p>Print the resolved data directory, SOUL.md, and CLI destination.</p>
   </section>
     
   <section class="command" id="version">

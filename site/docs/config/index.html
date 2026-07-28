@@ -92,6 +92,7 @@
         <tr><td>Home</td><td><code>~</code></td></tr>
         <tr><td>Data directory</td><td><code>~/Library/Application Support/synapse</code></td></tr>
         <tr><td>Database</td><td><code>~/Library/Application Support/synapse/brain.db</code></td></tr>
+        <tr><td>Shared guidance</td><td><code>~/Library/Application Support/synapse/SOUL.md</code></td></tr>
         <tr><td>Installed CLI</td><td><code>~/.local/bin/synapse</code></td></tr>
       </tbody>
     </table>
@@ -128,6 +129,7 @@ SYNAPSE_BIN=&quot;$HOME/bin/synapse&quot; synapse install</code></pre>
       </tbody>
     </table>
     <p>Connection detection parses the actual TOML or JSON entry named <code>synapse</code>. It reports connected only when the stored command resolves to the expected executable and the arguments equal <code>["mcp"]</code>. A deleted development binary therefore appears stale instead of healthy.</p>
+    <p>The two instruction files contain managed pointers to the central <code>SOUL.md</code>. A normal sync preserves other text in place. The optional consolidation action first moves that text into <code>SOUL.md</code>, then leaves both global files pointer-only so shared guidance has one editable source.</p>
 
     <h2 id="writes">Safe writes</h2>
     <p>The built-in document views validate JSON, TOML, and YAML before saving. A write with changed content:</p>
@@ -137,7 +139,7 @@ SYNAPSE_BIN=&quot;$HOME/bin/synapse&quot; synapse install</code></pre>
       <li>Writes the replacement to a temporary file, syncs it, preserves existing permissions, then renames it atomically.</li>
       <li>Syncs the containing directory.</li>
     </ol>
-    <p>Tool setup snapshots both its integration and instruction files. If registration or the instruction update fails, it restores both prior states. The CLI installer applies the same rollback model to its launcher and receipt.</p>
+    <p>Tool setup snapshots its integration file, instruction file, and shared guidance file. If registration or the instruction update fails, it restores every prior state. The CLI installer applies the same rollback model to its launcher and receipt.</p>
 
     <h2 id="settings">Settings and shell integration</h2>
     
