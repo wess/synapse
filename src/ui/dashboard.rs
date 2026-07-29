@@ -234,12 +234,17 @@ impl Dashboard {
 
     fn nevershowcli(&mut self, cx: &mut Context<Self>) {
         self.showclibanner = false;
-        if let Some(brain) = self.brain.clone()
-            && let Err(error) =
-                block(async move { brain.setpreference(CLIPROMPT, "dismissed").await })
-        {
-            self.notice = Notice::Error(format!("Could not save that preference: {error}"));
-        }
+        self.notice = match self.brain.clone() {
+            Some(brain) => {
+                match block(async move { brain.setpreference(CLIPROMPT, "dismissed").await }) {
+                    Ok(()) => Notice::Success(
+                        "The CLI prompt is off. Install it any time from Settings.".to_owned(),
+                    ),
+                    Err(error) => Notice::Error(format!("Could not save that preference: {error}")),
+                }
+            }
+            None => Notice::Error("Could not save that preference: no database.".to_owned()),
+        };
         cx.notify();
     }
 
@@ -1198,7 +1203,15 @@ impl Render for Dashboard {
                         clipath,
                         shellintegration,
                         shellerror,
-                        message: crate::ui::menu::message(cx),
+                        // Sync, adopt, and the recall budget all report through
+                        // the dashboard notice. Without this the page showed
+                        // only the app menu's message and every button on it
+                        // looked like it had done nothing.
+                        message: crate::ui::menu::message(cx).or_else(|| match &self.notice {
+                            Notice::Ready => None,
+                            Notice::Success(message) => Some((message.clone(), false)),
+                            Notice::Error(message) => Some((message.clone(), true)),
+                        }),
                         guidance: self.guidance.clone(),
                         pendingguidance: self.pendingguidance,
                     },
