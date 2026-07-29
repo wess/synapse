@@ -328,10 +328,14 @@ fn guidancepanel(
         "One source"
     } else if ready {
         "Pointers ready"
+    } else if guidance.stale > 0 {
+        "Update needed"
     } else {
         "Setup needed"
     };
-    let description = if !ready {
+    let description = if guidance.stale > 0 {
+        "These tools carry a Synapse block from an older release. Sync to update it so sessions announce whether Synapse is connected."
+    } else if !ready {
         "Create SOUL.md and connect both global instruction files with managed pointers."
     } else if guidance.consolidated {
         "Both global instruction files contain only managed pointers to SOUL.md."
