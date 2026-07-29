@@ -1,5 +1,6 @@
 mod agentrow;
 mod buffer;
+mod clibanner;
 mod dashboard;
 mod document;
 mod header;
