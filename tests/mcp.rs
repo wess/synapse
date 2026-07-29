@@ -39,6 +39,9 @@ fn mcp_stdio_lists_and_calls_every_tool() {
     assert!(instructions.contains("call `remember` without waiting to be asked"));
     assert!(instructions.contains("instead of ad hoc memory Markdown files"));
     assert!(instructions.contains("never returns secret values"));
+    assert!(instructions.contains("Synapse connected · <count> memories recalled"));
+    assert!(instructions.contains("Synapse unavailable · <short reason>"));
+    assert_eq!(instructions.matches("## Connection notice").count(), 1);
     writeln!(
         stdin,
         "{}",
@@ -131,6 +134,52 @@ fn mcp_stdio_lists_and_calls_every_tool() {
         "project"
     );
     assert!(vault.to_string().contains("Values stay in Keychain"));
+}
+
+#[test]
+fn existing_guidance_still_announces_the_connection() {
+    let root = tempfile::tempdir().unwrap();
+    let data = root.path().join("data");
+    std::fs::create_dir_all(&data).unwrap();
+    std::fs::write(data.join("SOUL.md"), "# Mine\n\nKeep this.\n").unwrap();
+    let mut child = Command::new(env!("CARGO_BIN_EXE_synapse"))
+        .arg("mcp")
+        .env("SYNAPSE_HOME", root.path().join("home"))
+        .env("SYNAPSE_DATA", &data)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+    let mut stdin = child.stdin.take().unwrap();
+    let mut stdout = BufReader::new(child.stdout.take().unwrap());
+
+    let initialized = call(
+        &mut stdin,
+        &mut stdout,
+        json!({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "initialize",
+            "params": {
+                "protocolVersion": "2025-11-25",
+                "capabilities": {},
+                "clientInfo": {"name": "synapsetest", "version": "1"}
+            }
+        }),
+        1,
+    );
+    drop(stdin);
+    drop(stdout);
+    child.wait().unwrap();
+
+    let instructions = initialized["result"]["instructions"].as_str().unwrap();
+    assert!(instructions.starts_with("# Mine\n\nKeep this."));
+    assert!(instructions.contains("Synapse connected · <count> memories recalled"));
+    assert_eq!(
+        std::fs::read_to_string(data.join("SOUL.md")).unwrap(),
+        "# Mine\n\nKeep this.\n"
+    );
 }
 
 fn call(stdin: &mut impl Write, stdout: &mut impl BufRead, request: Value, id: i64) -> Value {

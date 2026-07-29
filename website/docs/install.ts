@@ -62,6 +62,7 @@ synapse version`)}
       <li>It creates <code>SOUL.md</code> when needed and appends or refreshes a small managed pointer in the tool’s global instruction file. Existing user content remains outside that block.</li>
     </ol>
     <p>The connected tool follows that pointer on launch, and the MCP server loads the same <code>SOUL.md</code> during initialization. The default guidance tells both tools to recall global plus current-project context, save confirmed reusable facts with project scope by default, use a Lean response first, and keep secrets out of memory.</p>
+    <p>It also tells them to make the link visible: the first reply of a session opens with a single line such as <code>Synapse connected · 3 memories recalled</code>, or <code>Synapse unavailable</code> with a short reason when a call fails. The MCP server supplies that instruction itself, so guidance written before this behavior existed still produces the line without editing <code>SOUL.md</code>.</p>
     <table>
       <thead><tr><th>Tool</th><th>MCP store</th><th>Instruction file</th></tr></thead>
       <tbody>
