@@ -16,6 +16,10 @@ pub struct GuidanceState {
     pub path: PathBuf,
     pub exists: bool,
     pub synced: usize,
+    /// Files carrying a Synapse block written by an older release. They need a
+    /// sync to gain the current session notice, which is a different problem
+    /// from never having been set up at all.
+    pub stale: usize,
     pub total: usize,
     pub consolidated: bool,
 }
@@ -33,6 +37,10 @@ pub fn state(home: &Path, soul: &Path) -> GuidanceState {
         .iter()
         .filter(|agent| pointermatches(&agent.instructions, soul))
         .count();
+    let stale = agents
+        .iter()
+        .filter(|agent| pointerstale(&agent.instructions, soul))
+        .count();
     let consolidated = synced == agents.len()
         && agents.iter().all(|agent| {
             fs::read_to_string(&agent.instructions)
@@ -43,6 +51,7 @@ pub fn state(home: &Path, soul: &Path) -> GuidanceState {
         path: soul.to_path_buf(),
         exists: soul.is_file(),
         synced,
+        stale,
         total: agents.len(),
         consolidated,
     }
@@ -126,12 +135,21 @@ pub fn writepointer(path: &Path, soul: &Path, pointeronly: bool) -> Result<()> {
 }
 
 fn pointerblock(soul: &Path) -> String {
-    format!("{START}\n{}\n{END}", crate::instructions::pointer(soul))
+    format!("{START}\n{}\n{END}", crate::instructions::managed(soul))
 }
 
 fn pointermatches(path: &Path, soul: &Path) -> bool {
     fs::read_to_string(path)
         .map(|content| content.contains(&pointerblock(soul)))
+        .unwrap_or(false)
+}
+
+fn pointerstale(path: &Path, soul: &Path) -> bool {
+    fs::read_to_string(path)
+        .map(|content| {
+            (content.contains(START) || content.contains(OLDSTART))
+                && !content.contains(&pointerblock(soul))
+        })
         .unwrap_or(false)
 }
 
@@ -239,6 +257,44 @@ mod tests {
         assert_eq!(moved, 2);
         assert_eq!(merged.matches("# Use Bun").count(), 1);
         assert!(merged.contains("# Avoid secrets"));
+    }
+
+    #[test]
+    fn the_managed_block_carries_the_notice_so_it_loads_without_a_read() {
+        let directory = tempfile::tempdir().unwrap();
+        let file = directory.path().join("CLAUDE.md");
+        let soul = directory.path().join("SOUL.md");
+
+        writepointer(&file, &soul, false).unwrap();
+
+        let content = fs::read_to_string(&file).unwrap();
+        assert!(content.contains(soul.to_str().unwrap()));
+        assert!(content.contains("Synapse connected ·"));
+        assert!(content.contains("Synapse unavailable"));
+        assert!(pointermatches(&file, &soul));
+        assert!(!pointerstale(&file, &soul));
+    }
+
+    #[test]
+    fn a_block_from_an_older_release_reads_as_stale_rather_than_missing() {
+        let directory = tempfile::tempdir().unwrap();
+        let file = directory.path().join("CLAUDE.md");
+        let soul = directory.path().join("SOUL.md");
+        // The pointer-only block every release before this one wrote.
+        fs::write(
+            &file,
+            format!("{START}\n{}\n{END}\n", crate::instructions::pointer(&soul)),
+        )
+        .unwrap();
+
+        assert!(!pointermatches(&file, &soul));
+        assert!(pointerstale(&file, &soul));
+
+        writepointer(&file, &soul, false).unwrap();
+
+        assert!(pointermatches(&file, &soul));
+        assert!(!pointerstale(&file, &soul));
+        assert_eq!(fs::read_to_string(&file).unwrap().matches(START).count(), 1);
     }
 
     #[test]

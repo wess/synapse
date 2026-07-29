@@ -33,11 +33,23 @@ pub fn ensure(path: &Path) -> Result<String> {
     }
 }
 
+/// Carried by the managed block rather than SOUL.md. A tool loads its global
+/// instruction file on its own, but reaching SOUL.md costs a deliberate read
+/// that has not happened yet when the first reply is written, so an
+/// announcement placed behind the pointer arrives too late to be printed.
+pub const NOTICE: &str = "Begin the first reply of every session with one line of its own:\n\n- When the Synapse tools are available, call `recall` for this project first, then write `Synapse connected · <count> memories recalled`, or `Synapse connected · no memories yet` when it returns nothing.\n- When the Synapse tools are not available, write `Synapse unavailable` instead. Never report a connection that is not there.\n\nPrint that line once per session, keep it to one line, and do not repeat or decorate it on later turns.";
+
 pub fn pointer(path: &Path) -> String {
     format!(
         "Read and follow `{}` before starting work. It is the shared source of truth for global guidance and Synapse memory behavior.",
         path.display()
     )
+}
+
+/// The full managed block body: the pointer for the long guidance, plus the
+/// session-start notice that has to be present before any tool call is made.
+pub fn managed(path: &Path) -> String {
+    format!("{}\n\n{NOTICE}", pointer(path))
 }
 
 #[cfg(test)]
