@@ -4,7 +4,7 @@ Your tools forget. Synapse remembers.
 
 Synapse keeps project decisions and credentials on your Mac, ready for the tools and terminal sessions that need them. There is no account to create and no cloud memory to manage.
 
-[Download the macOS beta](https://github.com/wess/synapse/releases/download/v0.1.0-beta.6/synapse.zip) · [Read the guide](https://wess.io/synapse/docs/)
+[Download the macOS beta](https://github.com/wess/synapse/releases/download/v0.1.0-beta.8/synapse.zip) · [Read the guide](https://wess.io/synapse/docs/)
 
 Apple silicon · macOS 13 or later · Developer ID signed and notarized
 
