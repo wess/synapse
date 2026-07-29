@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Keep in sync with release.yml. guise-ui is a path dependency on a sibling
+  # checkout, so every job that builds Rust must resolve ../guise/crates/guise
+  # at the same ref the release build uses.
+  GUISE_REF: v0.12.0
+
+jobs:
+  # macOS because the Keychain, shell-hook, and bundle tests are macOS-only —
+  # on any other runner the suite silently skips the parts most worth checking.
+  check:
+    name: build · test · clippy
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: synapse
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          path: synapse
+
+      # Sibling checkout so Cargo.toml's ../guise/crates/guise path resolves.
+      - uses: actions/checkout@v5
+        with:
+          repository: wess/guise
+          ref: ${{ env.GUISE_REF }}
+          path: guise
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: synapse
+
+      - name: Build
+        run: cargo build --locked
+
+      - name: Test
+        run: cargo test --locked
+
+      # Advisory: surfaces lints without failing the pipeline.
+      - name: Clippy
+        run: cargo clippy --all-targets
+        continue-on-error: true
+
+  # Advisory formatting check (does not block — run `cargo fmt` to apply).
+  fmt:
+    name: rustfmt (advisory)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      # No --all: Synapse is a single package, and --all reaches through the
+      # guise path dependency and reports that project's formatting as ours.
+      - name: Format check
+        run: cargo fmt --check
+        continue-on-error: true
+
+  # Verify the documentation site builds and passes its own link check. pages.yml
+  # runs the same two commands on push to main; this extends the check to PRs.
+  site:
+    name: site build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: oven-sh/setup-bun@v2
+      - run: bun run site
+      - run: bun run sitecheck
