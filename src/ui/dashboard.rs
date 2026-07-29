@@ -4,8 +4,8 @@ use crate::files;
 use crate::imports::{ImportBatch, ImportProvider, ImportSummary};
 use crate::ui::buffer::{self, Buffer, Format};
 use crate::ui::{
-    Document, Notice, Page, Row, SaveDocument, agentrow, document, header, memories, settings,
-    summary, vaults,
+    Document, Notice, Page, Row, SaveDocument, agentrow, clibanner, document, header, memories,
+    settings, summary, vaults,
 };
 use crate::vault::{ScopeState, Secret, Vault, VaultStore};
 use gpui::prelude::*;
@@ -15,6 +15,9 @@ use guise::input::FileInputEvent;
 use guise::markdown::MarkdownEditorEvent;
 use guise::prelude::*;
 use std::path::PathBuf;
+
+/// Preference key recording that the CLI prompt was dismissed for good.
+const CLIPROMPT: &str = "cliprompt";
 
 pub struct Dashboard {
     rows: Vec<Row>,
@@ -54,6 +57,8 @@ pub struct Dashboard {
     optimization: Optimization,
     guidance: GuidanceState,
     pendingguidance: bool,
+    clistatus: crate::cli::InstallStatus,
+    showclibanner: bool,
 }
 
 struct VaultData {
@@ -113,7 +118,13 @@ impl Dashboard {
         let memoryscope = selected.map(|memory| memory.scope).unwrap_or_default();
         let home = files::home().unwrap_or_else(|_| PathBuf::from("."));
         let soul = files::soul().unwrap_or_else(|_| PathBuf::from("SOUL.md"));
+        // Synapse owns the data folder and SOUL.md, so create them on every
+        // launch when they are missing. Tool configuration is never touched
+        // here; connecting an agent stays an explicit choice on Connections.
+        let soulerror = crate::instructions::ensure(&soul).err();
         let guidance = agent::guidancestate(&home, &soul);
+        let clistatus = crate::cli::status().unwrap_or(crate::cli::InstallStatus::Missing);
+        let showclibanner = promptforcli(&clistatus, clidismissed(brain.as_ref()));
         let document = std::env::var_os("SYNAPSE_DOCUMENT")
             .map(PathBuf::from)
             .and_then(|path| Self::loaddocument("Synapse".to_owned(), path, cx).ok());
@@ -160,6 +171,9 @@ impl Dashboard {
         if let Some(error) = memoryerror {
             notice = Notice::Error(format!("Could not open memories: {error}"));
         }
+        if let Some(error) = soulerror {
+            notice = Notice::Error(format!("Could not create SOUL.md: {error}"));
+        }
         Self {
             rows: loadrows(),
             stats,
@@ -198,7 +212,35 @@ impl Dashboard {
             optimization,
             guidance,
             pendingguidance: false,
+            clistatus,
+            showclibanner,
         }
+    }
+
+    fn installcli(&mut self, cx: &mut Context<Self>) {
+        self.notice = match crate::cli::install() {
+            Ok(path) => Notice::Success(format!("CLI installed at {}.", path.display())),
+            Err(error) => Notice::Error(format!("Could not install the CLI: {error}")),
+        };
+        self.clistatus = crate::cli::status().unwrap_or(crate::cli::InstallStatus::Missing);
+        self.showclibanner = false;
+        cx.notify();
+    }
+
+    fn dismisscli(&mut self, cx: &mut Context<Self>) {
+        self.showclibanner = false;
+        cx.notify();
+    }
+
+    fn nevershowcli(&mut self, cx: &mut Context<Self>) {
+        self.showclibanner = false;
+        if let Some(brain) = self.brain.clone()
+            && let Err(error) =
+                block(async move { brain.setpreference(CLIPROMPT, "dismissed").await })
+        {
+            self.notice = Notice::Error(format!("Could not save that preference: {error}"));
+        }
+        cx.notify();
     }
 
     fn showconnections(&mut self, cx: &mut Context<Self>) {
@@ -1029,6 +1071,21 @@ impl Render for Dashboard {
                 .into_any_element();
         }
 
+        let banner = self.showclibanner.then(|| {
+            let path = crate::cli::destination()
+                .map(|path| path.display().to_string())
+                .unwrap_or_else(|_| "~/.local/bin".to_owned());
+            clibanner::render(
+                path,
+                clibanner::Actions {
+                    install: Box::new(cx.listener(|this, _, _, cx| this.installcli(cx))),
+                    later: Box::new(cx.listener(|this, _, _, cx| this.dismisscli(cx))),
+                    never: Box::new(cx.listener(|this, _, _, cx| this.nevershowcli(cx))),
+                },
+                cx,
+            )
+        });
+
         let shell = div()
             .size_full()
             .flex()
@@ -1043,7 +1100,8 @@ impl Render for Dashboard {
                 Box::new(cx.listener(|this, _, _, cx| this.showvaults(cx))),
                 Box::new(cx.listener(|this, _, _, cx| this.showsettings(cx))),
                 cx,
-            ));
+            ))
+            .children(banner);
 
         if self.page == Page::Memories {
             let selecthost = cx.entity().downgrade();
@@ -1487,6 +1545,44 @@ async fn importdata(
     Ok((summaries, batches))
 }
 
+/// Offer the prompt for a first install only. A conflicting file at the
+/// destination needs a decision the banner cannot offer, so Settings keeps
+/// that case where the path and the conflict are both visible.
+fn promptforcli(status: &crate::cli::InstallStatus, dismissed: bool) -> bool {
+    matches!(status, crate::cli::InstallStatus::Missing) && !dismissed
+}
+
+fn clidismissed(brain: Option<&Brain>) -> bool {
+    let Some(brain) = brain else {
+        return false;
+    };
+    block(async { brain.preference(CLIPROMPT).await })
+        .ok()
+        .flatten()
+        .as_deref()
+        == Some("dismissed")
+}
+
 fn block<T>(future: impl std::future::Future<Output = anyhow::Result<T>>) -> anyhow::Result<T> {
     tokio::runtime::Runtime::new()?.block_on(future)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::cli::InstallStatus;
+
+    #[test]
+    fn cli_prompt_appears_only_for_a_fresh_install_the_user_has_not_dismissed() {
+        assert!(promptforcli(&InstallStatus::Missing, false));
+        assert!(!promptforcli(&InstallStatus::Missing, true));
+        assert!(!promptforcli(
+            &InstallStatus::Installed(PathBuf::from("/bin/synapse")),
+            false
+        ));
+        assert!(!promptforcli(
+            &InstallStatus::Conflict(PathBuf::from("/bin/synapse")),
+            false
+        ));
+    }
 }
