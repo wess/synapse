@@ -11,6 +11,7 @@ pub fn render(
     onset: Click,
     oninstructions: Click,
     onsettings: Click,
+    onnotice: Click,
 ) -> AnyElement {
     let installed = row.detection.executable.is_some();
     let connected = row.detection.configured;
@@ -25,23 +26,21 @@ pub fn render(
         .detection
         .version
         .unwrap_or_else(|| "Command not found on PATH".to_owned());
-    // Only Claude Code can state the connection at startup, so the row says
-    // whether it is set to, and whose status line is in the bar.
+    // Only Claude Code can state the connection at startup, so only its row
+    // offers the control and reports what the tool's own settings currently say.
     let hooks = row.detection.hooks;
-    let extras = connected
-        .then(|| {
-            let mut parts = Vec::new();
-            if hooks.notice {
-                parts.push("Session notice");
+    let notice = (connected && row.agent.kind == crate::agent::Kind::Claude).then(|| {
+        let summary = if hooks.notice {
+            match (hooks.statusline, hooks.borrowed) {
+                (true, _) => "Announces Synapse at startup · status line on".to_owned(),
+                (_, true) => "Announces Synapse at startup · your status line kept".to_owned(),
+                _ => "Announces Synapse at startup".to_owned(),
             }
-            if hooks.statusline {
-                parts.push("Status line");
-            } else if hooks.borrowed {
-                parts.push("Status line kept as yours");
-            }
-            parts.join(" · ")
-        })
-        .filter(|parts| !parts.is_empty());
+        } else {
+            "Does not announce Synapse at startup".to_owned()
+        };
+        (summary, hooks.notice)
+    });
 
     div()
         .flex()
@@ -87,14 +86,26 @@ pub fn render(
                                 .child(Badge::new(status.0).size(Size::Sm).color(status.1)),
                         )
                         .child(Text::new(detail).size(Size::Xs).dimmed())
-                        .when_some(extras, |element, extras| {
+                        .when_some(notice, |element, (summary, installed)| {
                             element.child(
                                 div()
                                     .flex()
                                     .items_center()
                                     .gap(px(6.0))
                                     .child(Icon::new(IconName::Sparkles).size(Size::Xs))
-                                    .child(Text::new(extras).size(Size::Xs).dimmed()),
+                                    .child(Text::new(summary).size(Size::Xs).dimmed())
+                                    .child(
+                                        Button::new(
+                                            ("notice", index),
+                                            if installed { "Remove" } else { "Add" },
+                                        )
+                                        .variant(Variant::Subtle)
+                                        .color(ColorName::Violet)
+                                        .size(Size::Xs)
+                                        .on_click(
+                                            move |event, window, cx| onnotice(event, window, cx),
+                                        ),
+                                    ),
                             )
                         }),
                 ),

@@ -102,6 +102,43 @@ pub fn apply(settings: &Path, binary: &Path) -> Result<State> {
     Ok(state(settings, binary))
 }
 
+/// Take both settings back out, leaving anything Synapse did not write.
+pub fn remove(settings: &Path, binary: &Path) -> Result<()> {
+    if !settings.exists() {
+        return Ok(());
+    }
+    let mut value = read(settings)?;
+    let groups: Vec<Value> = sessionhooks(&value)
+        .into_iter()
+        .filter(|group| !ours(group, binary, "session") && !stale(group, "session"))
+        .collect();
+    let object = value
+        .as_object_mut()
+        .context("the settings file is not a JSON object")?;
+    if let Some(hooks) = object.get_mut("hooks").and_then(Value::as_object_mut) {
+        if groups.is_empty() {
+            hooks.remove("SessionStart");
+        } else {
+            hooks.insert("SessionStart".to_owned(), Value::Array(groups));
+        }
+        if hooks.is_empty() {
+            object.remove("hooks");
+        }
+    }
+    // Only a status line Synapse put there is taken away again.
+    if object
+        .get("statusLine")
+        .and_then(command)
+        .as_deref()
+        .is_some_and(|command| {
+            points(command, binary, "statusline") || stalecommand(command, "statusline")
+        })
+    {
+        object.remove("statusLine");
+    }
+    write(settings, &value)
+}
+
 fn read(settings: &Path) -> Result<Value> {
     let raw = match std::fs::read_to_string(settings) {
         Ok(raw) => raw,
@@ -316,6 +353,58 @@ mod tests {
             read(&settings).unwrap()["statusLine"]["command"],
             "my-prompt.sh"
         );
+    }
+
+    #[test]
+    fn removal_leaves_everything_synapse_did_not_write() {
+        let (_directory, settings, binary) = setup();
+        crate::files::write(
+            &settings,
+            &serde_json::to_string_pretty(&json!({
+                "model": "opus",
+                "statusLine": {"type": "command", "command": "my-prompt.sh"},
+                "hooks": {"SessionStart": [
+                    {"matcher": "startup", "hooks": [{"type": "command", "command": "mine.sh"}]}
+                ]}
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+        apply(&settings, &binary).unwrap();
+
+        remove(&settings, &binary).unwrap();
+
+        let value = read(&settings).unwrap();
+        assert_eq!(value["model"], "opus");
+        assert_eq!(
+            value["statusLine"]["command"], "my-prompt.sh",
+            "a status line Synapse never claimed must survive removal"
+        );
+        let groups = value["hooks"]["SessionStart"].as_array().unwrap();
+        assert_eq!(groups.len(), 1);
+        assert_eq!(groups[0]["hooks"][0]["command"], "mine.sh");
+    }
+
+    #[test]
+    fn removing_the_last_hook_takes_the_empty_containers_with_it() {
+        let (_directory, settings, binary) = setup();
+        apply(&settings, &binary).unwrap();
+
+        remove(&settings, &binary).unwrap();
+
+        let value = read(&settings).unwrap();
+        assert!(
+            value.get("hooks").is_none(),
+            "no empty scaffolding left behind"
+        );
+        assert!(value.get("statusLine").is_none());
+        assert_eq!(state(&settings, &binary), State::default());
+    }
+
+    #[test]
+    fn removing_when_nothing_was_installed_is_not_an_error() {
+        let (_directory, settings, binary) = setup();
+        assert!(remove(&settings, &binary).is_ok());
     }
 
     #[test]

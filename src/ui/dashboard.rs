@@ -965,6 +965,50 @@ impl Dashboard {
         cx.notify();
     }
 
+    /// Add or remove the startup notice for an already-connected tool, so
+    /// gaining it never means disconnecting and connecting again. The tool's
+    /// settings file is captured first and restored if the write fails.
+    fn togglenotice(&mut self, kind: Kind, cx: &mut Context<Self>) {
+        let Some(row) = self.rows.iter().find(|row| row.agent.kind == kind).cloned() else {
+            return;
+        };
+        let installed = row.detection.hooks.notice;
+        let result = connectionserver()
+            .ok_or_else(|| anyhow::anyhow!("could not locate the Synapse executable"))
+            .and_then(|server| {
+                let snapshot = files::Snapshot::capture(&row.agent.settings)?;
+                let applied = if installed {
+                    agent::removenotice(&row.agent.settings, &server)
+                        .map(|_| agent::HookState::default())
+                } else {
+                    agent::applynotice(&row.agent.settings, &server)
+                };
+                if applied.is_err() {
+                    snapshot.restore()?;
+                }
+                applied
+            });
+        self.notice = match (result, installed) {
+            (Ok(_), true) => Notice::Success(format!(
+                "{} no longer announces Synapse at startup.",
+                row.agent.name
+            )),
+            (Ok(state), false) if state.borrowed => Notice::Success(format!(
+                "{} announces Synapse at startup. Your own status line was left alone.",
+                row.agent.name
+            )),
+            (Ok(_), false) => Notice::Success(format!(
+                "{} announces Synapse at startup. Open a new session to see it.",
+                row.agent.name
+            )),
+            (Err(error), _) => {
+                Notice::Error(format!("Could not update {}: {error}", row.agent.name))
+            }
+        };
+        self.rows = loadrows();
+        cx.notify();
+    }
+
     fn openinstructions(&mut self, kind: Kind, window: &mut Window, cx: &mut Context<Self>) {
         self.opendocument(kind, instructionspath, "instructions", window, cx);
     }
@@ -1490,6 +1534,11 @@ impl Render for Dashboard {
                                                     this.opensettings(kind, window, cx);
                                                 },
                                             ));
+                                            let kind = row.agent.kind;
+                                            let notice =
+                                                Box::new(cx.listener(move |this, _, _, cx| {
+                                                    this.togglenotice(kind, cx);
+                                                }));
                                             let mut items = Vec::new();
                                             if index > 0 {
                                                 items.push(
@@ -1506,6 +1555,7 @@ impl Render for Dashboard {
                                                 setup,
                                                 instructions,
                                                 settings,
+                                                notice,
                                             ));
                                             items
                                         },

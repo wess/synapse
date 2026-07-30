@@ -79,14 +79,15 @@
       </header>
       
     <h2 id="navigation">Navigation and shared state</h2>
-    <p>The desktop app is a local control surface over the same SQLite database, Keychain items, scope files, and tool configuration used by the CLI and MCP server. The header moves between four screens:</p>
+    <p>The desktop app is a local control surface over the same SQLite database, Keychain items, scope files, and tool configuration used by the CLI and MCP server. The header moves between five screens:</p>
     <table>
       <thead><tr><th>Screen</th><th>Use it for</th><th>Material it can change</th></tr></thead>
       <tbody>
         <tr><td>Connections</td><td>Detect and connect supported developer tools.</td><td>Tool MCP configuration and managed instruction blocks.</td></tr>
         <tr><td>Memory</td><td>Import, scope, search, inspect, correct, or remove durable context.</td><td>Memory rows, scope metadata, and reversible import batches.</td></tr>
+        <tr><td>Mesh</td><td>Turn the agent mesh on and watch who has joined, what they report, and what they send each other.</td><td>One local preference. The roster and messages are written by the agents themselves.</td></tr>
         <tr><td>Vaults</td><td>Manage labels, Keychain values, mappings, and approved project scopes.</td><td>Vault metadata, Keychain items, and <code>.synapse.yaml</code>.</td></tr>
-        <tr><td>Settings</td><td>Manage shared guidance, recall, appearance, CLI, and shell integration.</td><td><code>SOUL.md</code>, global pointers, local preferences, the CLI launcher, and one managed shell block.</td></tr>
+        <tr><td>Settings</td><td>Manage shared guidance, recall, the agent mesh, appearance, CLI, and shell integration.</td><td><code>SOUL.md</code>, global pointers, local preferences, the CLI launcher, and one managed shell block.</td></tr>
       </tbody>
     </table>
     <p>Success and error notices appear inside the active screen. The app does not require an account and does not send this state to a hosted service.</p>
@@ -101,7 +102,8 @@
       <dt>Connected</dt>
       <dd>The stored executable and <code>["mcp"]</code> arguments match the expected Synapse server.</dd>
     </dl>
-    <p>Set up registers the MCP server, creates <code>SOUL.md</code> when needed, and adds a marked pointer to that shared file in the tool's global instructions. Existing settings and text outside the managed block remain in place; changed files receive <code>.synapsebackup</code> siblings. If setup fails, Synapse restores the affected files.</p>
+    <p>Set up registers the MCP server, creates <code>SOUL.md</code> when needed, and adds a marked pointer to that shared file in the tool's global instructions. For Claude Code it also installs the startup notice described below. Existing settings and text outside the managed block remain in place; changed files receive <code>.synapsebackup</code> siblings. If setup fails, Synapse restores the affected files.</p>
+    <p>A connected <strong>Claude Code</strong> row also reports whether it announces Synapse at startup, with an <strong>Add</strong> or <strong>Remove</strong> control beside it. Adding it writes a SessionStart hook into that tool's own settings, so the connection is stated beside its welcome message before the model has written anything, and it claims the status line when nothing else has. A status line you configured yourself is never replaced — the row says <em>your status line kept</em> instead. Removing takes back only what Synapse wrote. Either way the change applies to the next session that tool starts, and it never requires disconnecting and reconnecting.</p>
     <p><strong>Edit instructions</strong> and <strong>Edit config</strong> open the actual files in the built-in editor. Synapse does not currently provide a separate Disconnect button; remove the named <code>synapse</code> entry and managed instruction block through those files when you intentionally want to disconnect a tool. See <a href="../config/#tools">Tool integration files</a> for their exact paths.</p>
 
     <h2 id="memory">Memory</h2>
@@ -109,6 +111,11 @@
     <p>An empty search shows recent memory; a query searches the stored body and shows up to 100 results. Select an entry to inspect its ID, local creation time, full Markdown body, source, and visibility. <strong>Global</strong> makes it available everywhere; <strong>Project</strong> requires a project root. <strong>Save changes</strong> replaces the selected body, source, and scope in place.</p>
     <p><strong>Delete</strong> changes to <strong>Confirm delete</strong> before removing one entry. <strong>Wipe memories</strong> separately changes to <strong>Confirm wipe</strong> before deleting the entire memory table. A wipe does not affect vault labels, Keychain values, scope approvals, or settings.</p>
     <p>Recall optimization changes responses, not what this screen stores or displays. Read <a href="../memory/">Memory and recall</a> for search behavior, response budgets, and CLI equivalents.</p>
+
+    <h2 id="mesh">Mesh</h2>
+    <p>The Mesh screen is off until you turn it on, here or in Settings. While it is off the screen explains the trade: the coordination tools are loaded by every connected tool, and that costs context in each session.</p>
+    <p>Once on, it lists the agents that have joined with their role, project, and last reported work state; the background workers running under a Synapse session; and the recent messages between them. Nothing on this screen changes what agents do — it reports. <strong>Refresh</strong> re-reads the database, which is also what opening the screen does.</p>
+    <p>See <a href="../mesh/">Agent mesh</a> for roles, teams, and the command line.</p>
 
     <h2 id="vaults">Vaults and scopes</h2>
     <p>Create a vault, select it, then provide a label, environment name, and value under <strong>Add a secret</strong>. <strong>Save to Keychain</strong> writes the value directly to macOS Keychain while SQLite keeps only its label, environment name, account reference, and scope state. The app never shows a saved value again.</p>
@@ -125,6 +132,8 @@
     <p><strong>Open shared guidance</strong> edits <code>SOUL.md</code>. <strong>Sync pointers</strong> refreshes both global files without removing unmanaged content. <strong>Consolidate guidance</strong> requires confirmation, moves existing global text into the shared file, and leaves backups before making both global files pointer-only.</p>
     <h3>Recall optimization</h3>
     <p>Full, Balanced, and Lean change the shared MCP response limit and character budget. Original memory remains untouched. Balanced is the default; exact limits are documented in <a href="../memory/#budgets">Response budgets</a>.</p>
+    <h3>Agent mesh</h3>
+    <p>Off and On switch the coordination tools for every connected tool. Off keeps the tool list at its smallest, which is why it is the default. Tools already running keep the tool list they started with, so the change applies the next time each one starts. The same switch is on the <a href="#mesh">Mesh</a> screen.</p>
     <h3>Appearance</h3>
     <p>System follows the current macOS appearance as it changes. Light and Dark pin the app to that mode. The preference is stored locally.</p>
     <h3>Command line</h3>
@@ -155,7 +164,7 @@
     </main>
     <aside class="ontoc" aria-label="On this page">
         <span>On this page</span>
-        <ol><li><a href="#navigation">Navigation</a></li><li><a href="#connections">Connections</a></li><li><a href="#memory">Memory</a></li><li><a href="#vaults">Vaults</a></li><li><a href="#settings">Settings</a></li><li><a href="#editors">Editors and data</a></li></ol>
+        <ol><li><a href="#navigation">Navigation</a></li><li><a href="#connections">Connections</a></li><li><a href="#memory">Memory</a></li><li><a href="#mesh">Mesh</a></li><li><a href="#vaults">Vaults</a></li><li><a href="#settings">Settings</a></li><li><a href="#editors">Editors and data</a></li></ol>
       </aside>
   </div>
   
