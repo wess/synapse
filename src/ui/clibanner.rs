@@ -33,14 +33,25 @@ pub fn render(path: String, actions: Actions, cx: &App) -> AnyElement {
                 .border_color(theme.border().hsla())
                 .bg(theme.surface().hsla())
                 .p(px(16.0))
+                // A flex child sizes to its content by default, and an install
+                // path is one long unbreakable run, so without a zero minimum
+                // this column refuses to shrink and the text leaves the card.
                 .child(
                     div()
+                        .flex_1()
+                        .min_w(px(0.0))
                         .flex()
                         .items_center()
                         .gap(px(12.0))
-                        .child(Icon::new(IconName::Terminal).size(Size::Sm))
                         .child(
                             div()
+                                .flex_none()
+                                .child(Icon::new(IconName::Terminal).size(Size::Sm)),
+                        )
+                        .child(
+                            div()
+                                .flex_1()
+                                .min_w(px(0.0))
                                 .flex()
                                 .flex_col()
                                 .gap(px(2.0))

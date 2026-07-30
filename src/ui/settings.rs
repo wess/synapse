@@ -211,6 +211,7 @@ pub fn render(view: View, actions: Actions, cx: &App) -> AnyElement {
                         .child(
                             div()
                                 .flex_1()
+                                .min_w(px(0.0))
                                 .rounded(px(14.0))
                                 .border_1()
                                 .border_color(border)
@@ -259,6 +260,7 @@ pub fn render(view: View, actions: Actions, cx: &App) -> AnyElement {
                         .child(
                             div()
                                 .flex_1()
+                                .min_w(px(0.0))
                                 .rounded(px(14.0))
                                 .border_1()
                                 .border_color(border)
