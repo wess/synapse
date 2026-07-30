@@ -7,6 +7,7 @@ mod header;
 mod index;
 mod memories;
 mod menu;
+mod mesh;
 mod model;
 mod settings;
 #[cfg(target_os = "macos")]

@@ -15,11 +15,19 @@ pub fn detect(agent: &Agent, server: Option<&Path>) -> Detection {
         .map(|output| String::from_utf8_lossy(&output.stdout).trim().to_owned())
         .filter(|output| !output.is_empty());
     let (registered, configured) = crate::agent::config::state(agent, server);
+    // Only Claude Code has settings for a session notice and a status line.
+    let hooks = match (agent.kind, server) {
+        (crate::agent::Kind::Claude, Some(server)) => {
+            crate::agent::hooks::state(&agent.settings, server)
+        }
+        _ => crate::agent::HookState::default(),
+    };
     Detection {
         executable: Some(executable),
         version,
         registered,
         configured,
+        hooks,
     }
 }
 

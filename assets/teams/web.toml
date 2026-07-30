@@ -1,0 +1,17 @@
+name = "web"
+
+[[member]]
+name = "lead"
+role = "supervisor"
+
+[[member]]
+name = "frontend"
+role = "frontend"
+
+[[member]]
+name = "backend"
+role = "backend"
+
+[[member]]
+name = "reviewer"
+role = "reviewer"

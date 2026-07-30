@@ -3,7 +3,7 @@ use anyhow::{Context, Result};
 use sqlx::SqlitePool;
 use std::path::Path;
 
-pub const LATEST: i64 = 2;
+pub const LATEST: i64 = 3;
 
 struct Migration {
     version: i64,
@@ -53,6 +53,46 @@ const MIGRATIONS: &[Migration] = &[
              provider TEXT NOT NULL, externalid TEXT NOT NULL, digest TEXT NOT NULL, path TEXT NOT NULL, \
              UNIQUE(provider, externalid))",
             "CREATE INDEX memoryoriginbatch ON memoryorigin(batchid)",
+        ],
+    },
+    Migration {
+        version: 3,
+        statements: &[
+            "CREATE TABLE meshagent(\
+             name TEXT PRIMARY KEY, \
+             role TEXT NOT NULL DEFAULT '', \
+             capabilities TEXT NOT NULL DEFAULT '', \
+             project TEXT NOT NULL DEFAULT '', \
+             tool TEXT NOT NULL DEFAULT '', \
+             cursor INTEGER NOT NULL DEFAULT 0, \
+             registered INTEGER NOT NULL DEFAULT 1 CHECK(registered IN (0, 1)), \
+             status TEXT NOT NULL DEFAULT '', \
+             seen INTEGER NOT NULL DEFAULT 0)",
+            "CREATE TABLE meshsub(\
+             agent TEXT NOT NULL, channel TEXT NOT NULL, PRIMARY KEY(agent, channel))",
+            "CREATE INDEX meshsubchannel ON meshsub(channel)",
+            "CREATE TABLE meshmessage(\
+             id INTEGER PRIMARY KEY AUTOINCREMENT, \
+             sender TEXT NOT NULL, \
+             kind TEXT NOT NULL CHECK(kind IN ('direct', 'channel', 'broadcast')), \
+             target TEXT, \
+             body TEXT NOT NULL, \
+             created INTEGER NOT NULL)",
+            "CREATE INDEX meshmessagetarget ON meshmessage(target, id)",
+            "CREATE TABLE meshworker(\
+             name TEXT PRIMARY KEY, \
+             role TEXT NOT NULL DEFAULT '', \
+             program TEXT NOT NULL, \
+             arguments TEXT NOT NULL DEFAULT '[]', \
+             directory TEXT NOT NULL DEFAULT '', \
+             keepalive INTEGER NOT NULL DEFAULT 1 CHECK(keepalive IN (0, 1)), \
+             session TEXT, \
+             supervisor INTEGER NOT NULL DEFAULT 0, \
+             process INTEGER NOT NULL DEFAULT 0, \
+             log TEXT NOT NULL DEFAULT '', \
+             status TEXT NOT NULL DEFAULT '', \
+             restarts INTEGER NOT NULL DEFAULT 0, \
+             created INTEGER NOT NULL)",
         ],
     },
 ];

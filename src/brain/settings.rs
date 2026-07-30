@@ -16,6 +16,17 @@ pub async fn write(pool: &SqlitePool, optimization: Optimization) -> Result<()> 
     writevalue(pool, "optimization", optimization.value()).await
 }
 
+/// Whether the agent mesh is switched on. Off by default: its tools cost
+/// context in every session that loads them, so a user who does not run agent
+/// teams never sees them.
+pub async fn mesh(pool: &SqlitePool) -> Result<bool> {
+    Ok(value(pool, "mesh").await?.as_deref() == Some("on"))
+}
+
+pub async fn writemesh(pool: &SqlitePool, enabled: bool) -> Result<()> {
+    writevalue(pool, "mesh", if enabled { "on" } else { "off" }).await
+}
+
 pub async fn value(pool: &SqlitePool, key: &str) -> Result<Option<String>> {
     sqlx::query_scalar::<_, String>("SELECT value FROM setting WHERE key = ?")
         .bind(key)

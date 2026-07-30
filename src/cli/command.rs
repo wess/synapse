@@ -48,9 +48,26 @@ Commands:
   guidance show [--json]           Show SOUL.md and pointer status
   guidance sync                    Create SOUL.md and refresh both pointers
   guidance adopt --confirm         Move global guidance into SOUL.md
-  settings show                    Show recall and shell settings
+  relay status [--json]            Show mesh state, roster, and workers
+  relay agents [--json]            List agents on the mesh
+  relay channels [--json]          List channels and subscriber counts
+  relay feed [--follow] [--since <id>]
+                                   Print cross-agent messages
+  relay launch <name> [--role <role>] [--tool claude|codex] [--task <text>]
+                                   Open one agent wired into the mesh
+  relay team open <name>           Open a whole roster, lead in this terminal
+  relay role <list|show|create|edit|delete> [name] [--user]
+                                   Manage reusable agent roles
+  relay team <list|show|create|edit|delete> [name] [--user]
+                                   Manage team rosters
+  relay ps [--json]                List background workers
+  relay kill <name>                Stop a background worker
+  session [--json]                 Report this session's Synapse connection
+  statusline                       Print one status line for a connected tool
+  settings show                    Show recall, mesh, and shell settings
   settings optimize <full|balanced|lean>
                                    Set the MCP recall response budget
+  settings mesh <on|off>           Turn the agent mesh tools on or off
   install                          Install the synapse CLI for this user
   path                             Print the local data and CLI paths
   version                          Print the version
@@ -87,6 +104,9 @@ pub fn run(arguments: Vec<OsString>) -> Result<Outcome> {
         "data" => data(rest),
         "memory" => super::memory::run(rest),
         "guidance" => super::guidance::run(rest),
+        "relay" => super::relay::run(rest),
+        "session" => super::session::session(rest),
+        "statusline" => super::session::statusline(rest),
         "settings" => settings(rest),
         "install" => install(),
         "path" => paths(),
@@ -390,7 +410,7 @@ fn data(arguments: &[OsString]) -> Result<Outcome> {
 }
 
 fn settings(arguments: &[OsString]) -> Result<Outcome> {
-    let action = textarg(arguments, 0, "usage: synapse settings <show|optimize>")?;
+    let action = textarg(arguments, 0, "usage: synapse settings <show|optimize|mesh>")?;
     let runtime = runtime()?;
     let brain = runtime.block_on(crate::brain::Brain::open(crate::files::database()?))?;
     match action.as_str() {
@@ -405,8 +425,29 @@ fn settings(arguments: &[OsString]) -> Result<Outcome> {
                     .map(|value| value.to_string())
                     .unwrap_or_else(|| "unlimited".to_owned())
             );
+            println!(
+                "mesh\t{}",
+                if runtime.block_on(brain.mesh())? {
+                    "on"
+                } else {
+                    "off"
+                }
+            );
             println!("shell modes\tcommand-scoped, ambient directory");
             println!("zsh hook\teval \"$(synapse hook zsh)\"");
+        }
+        "mesh" => {
+            let enabled =
+                match textarg(arguments, 1, "usage: synapse settings mesh <on|off>")?.as_str() {
+                    "on" => true,
+                    "off" => false,
+                    value => anyhow::bail!("expected `on` or `off`, got `{value}`"),
+                };
+            runtime.block_on(brain.setmesh(enabled))?;
+            println!(
+                "Agent mesh {}. Connected tools pick this up the next time they start.",
+                if enabled { "on" } else { "off" }
+            );
         }
         "optimize" => {
             let value = textarg(

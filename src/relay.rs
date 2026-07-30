@@ -1,0 +1,26 @@
+mod bus;
+mod harness;
+mod launch;
+mod layer;
+mod model;
+mod process;
+pub mod role;
+mod store;
+pub mod team;
+mod worker;
+
+pub use bus::{
+    PARKSECONDS, PROGRESSSECONDS, ack, awaitmessages, awaitstatus, deliver, reportstatus,
+};
+pub use launch::{Launch, Options, launch};
+pub use layer::Source;
+pub use model::{AgentView, ChannelView, Message, MessageKind, Registration, WorkerView};
+pub use store::Mesh;
+pub use worker::{Spec, Supervisor, reapstrays};
+
+/// Where the mesh keeps the files a launched agent needs: the MCP config handed
+/// to a tool that is not connected yet, and one log per background worker. Under
+/// the data directory, so `SYNAPSE_DATA` keeps tests hermetic.
+pub fn directory() -> anyhow::Result<std::path::PathBuf> {
+    Ok(crate::files::data()?.join("relay"))
+}

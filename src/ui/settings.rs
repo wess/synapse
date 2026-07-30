@@ -11,6 +11,7 @@ pub type Click = Box<dyn Fn(&ClickEvent, &mut Window, &mut App) + 'static>;
 
 pub struct View {
     pub optimization: Optimization,
+    pub mesh: bool,
     pub thememode: Mode,
     pub clistatus: InstallStatus,
     pub clipath: String,
@@ -22,6 +23,8 @@ pub struct View {
 }
 
 pub struct Actions {
+    pub meshon: Click,
+    pub meshoff: Click,
     pub full: Click,
     pub balanced: Click,
     pub lean: Click,
@@ -41,6 +44,8 @@ pub fn render(view: View, actions: Actions, cx: &App) -> AnyElement {
     let border = theme.border().hsla();
     let surface = theme.surface().hsla();
     let Actions {
+        meshon,
+        meshoff,
         full,
         balanced,
         lean,
@@ -183,6 +188,7 @@ pub fn render(view: View, actions: Actions, cx: &App) -> AnyElement {
                             .dimmed(),
                         ),
                 )
+                .child(meshpanel(view.mesh, meshon, meshoff, border, surface))
                 .child(guidancepanel(
                     view.guidance,
                     view.pendingguidance,
@@ -308,6 +314,86 @@ pub fn render(view: View, actions: Actions, cx: &App) -> AnyElement {
                                 ),
                         ),
                 ),
+        )
+        .into_any_element()
+}
+
+/// The mesh switch. Its tools are loaded by every connected tool, so the panel
+/// says what turning it on costs as well as what it buys.
+fn meshpanel(
+    enabled: bool,
+    on: Click,
+    off: Click,
+    border: gpui::Hsla,
+    surface: gpui::Hsla,
+) -> AnyElement {
+    div()
+        .rounded(px(14.0))
+        .border_1()
+        .border_color(border)
+        .bg(surface)
+        .p(px(18.0))
+        .flex()
+        .flex_col()
+        .gap(px(13.0))
+        .child(
+            div()
+                .flex()
+                .items_start()
+                .justify_between()
+                .gap(px(24.0))
+                .child(
+                    div()
+                        .flex()
+                        .flex_col()
+                        .gap(px(4.0))
+                        .child(
+                            div()
+                                .flex()
+                                .items_center()
+                                .gap(px(8.0))
+                                .child(Icon::new(IconName::Waypoints).size(Size::Sm))
+                                .child(Text::new("Agent mesh").size(Size::Sm).bold()),
+                        )
+                        .child(
+                            Text::new(
+                                "Lets connected tools message each other, hand work back and forth, and wait for free between tasks.",
+                            )
+                            .size(Size::Xs)
+                            .dimmed(),
+                        ),
+                )
+                .child(
+                    Badge::new(if enabled { "On" } else { "Off" }).color(if enabled {
+                        ColorName::Teal
+                    } else {
+                        ColorName::Gray
+                    }),
+                ),
+        )
+        .child(
+            div()
+                .flex()
+                .gap(px(10.0))
+                .child(option(
+                    "Off",
+                    "Memory and vault tools only · the smallest tool list",
+                    !enabled,
+                    off,
+                ))
+                .child(option(
+                    "On",
+                    "Adds the coordination tools · costs context in every session",
+                    enabled,
+                    on,
+                )),
+        )
+        .child(
+            Text::new(
+                "Messages stay in the same local database as your memory. Tools already running pick this up the next time they start.",
+            )
+            .size(Size::Xs)
+            .dimmed(),
         )
         .into_any_element()
 }

@@ -1,0 +1,9 @@
+name = "pair"
+
+[[member]]
+name = "driver"
+role = "worker"
+
+[[member]]
+name = "reviewer"
+role = "reviewer"

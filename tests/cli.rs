@@ -433,3 +433,187 @@ fn keychain_secret_reaches_only_the_launched_process() {
     assert!(ambient.contains("export SYNAPSE_TEST_VALUE='keychainvalue'"));
     assert!(ambient.contains("__synapse_state='active'"));
 }
+
+#[test]
+fn the_mesh_stays_off_until_it_is_switched_on_and_then_reports_itself() {
+    let root = tempfile::tempdir().unwrap();
+    let project = root.path().join("project");
+    fs::create_dir_all(project.join(".git")).unwrap();
+
+    assert!(success(run(root.path(), &["settings", "show"], None)).contains("mesh\toff"));
+    let off = success(run(root.path(), &["relay", "status"], None));
+    assert!(off.contains("Mesh: off"));
+    assert!(
+        off.contains("synapse settings mesh on"),
+        "an off mesh should say how to turn it on: {off}"
+    );
+
+    success(run(root.path(), &["settings", "mesh", "on"], None));
+
+    assert!(success(run(root.path(), &["settings", "show"], None)).contains("mesh\ton"));
+    let on = success(run(root.path(), &["relay", "status"], None));
+    assert!(on.contains("Mesh: on"));
+    assert!(on.contains("Agents: 0 online of 0"));
+
+    let status: Value = serde_json::from_str(&success(run(
+        root.path(),
+        &["relay", "status", "--json"],
+        None,
+    )))
+    .unwrap();
+    assert_eq!(status["enabled"], true);
+    assert!(status["agents"].as_array().unwrap().is_empty());
+
+    // Turning it back off is the same switch, not a separate teardown.
+    success(run(root.path(), &["settings", "mesh", "off"], None));
+    assert!(success(run(root.path(), &["relay", "status"], None)).contains("Mesh: off"));
+}
+
+#[test]
+fn roles_and_teams_resolve_from_the_project_before_the_built_ins() {
+    let root = tempfile::tempdir().unwrap();
+    let project = root.path().join("project");
+    fs::create_dir_all(project.join(".synapse").join("roles")).unwrap();
+
+    let builtins = success(run(root.path(), &["relay", "role", "list"], None));
+    for name in [
+        "supervisor",
+        "worker",
+        "frontend",
+        "backend",
+        "reviewer",
+        "devops",
+        "qa",
+    ] {
+        assert!(builtins.contains(name), "{name} is missing from {builtins}");
+    }
+    assert!(success(run(root.path(), &["relay", "team", "list"], None)).contains("web"));
+
+    fs::write(
+        project.join(".synapse").join("roles").join("worker.toml"),
+        "channels = [\"mine\"]\ndescription = \"Local worker brief.\"\n",
+    )
+    .unwrap();
+
+    let shown = success(runfrom(
+        root.path(),
+        Some(&project),
+        &["relay", "role", "show", "worker"],
+        None,
+    ));
+    assert!(shown.contains("· project"), "got {shown}");
+    assert!(shown.contains("Local worker brief."));
+
+    // Standing somewhere else, the same name resolves to the shipped template.
+    let elsewhere = success(run(root.path(), &["relay", "role", "show", "worker"], None));
+    assert!(elsewhere.contains("· built-in"), "got {elsewhere}");
+}
+
+#[test]
+fn a_launch_resolves_its_role_into_a_command_without_running_anything() {
+    let root = tempfile::tempdir().unwrap();
+    let project = root.path().join("project");
+    fs::create_dir_all(&project).unwrap();
+
+    let printed = success(runfrom(
+        root.path(),
+        Some(&project),
+        &[
+            "relay",
+            "launch",
+            "backend",
+            "--role",
+            "backend",
+            "--task",
+            "build the api",
+            "--command",
+            "mytool --prompt {prompt}",
+            "--print",
+        ],
+        None,
+    ));
+
+    assert!(printed.starts_with("mytool --prompt '"), "got {printed}");
+    assert!(printed.contains("You are \\\"backend\\\"") || printed.contains("You are \"backend\""));
+    assert!(printed.contains("Call `wait` to receive work"));
+    assert!(printed.contains("standing focus: build the api"));
+    assert!(
+        printed.contains("You own the backend and API"),
+        "the role brief must reach the harness: {printed}"
+    );
+
+    // A lead stays interactive instead of parking.
+    let lead = success(runfrom(
+        root.path(),
+        Some(&project),
+        &[
+            "relay",
+            "launch",
+            "lead",
+            "--role",
+            "supervisor",
+            "--command",
+            "mytool {prompt}",
+            "--print",
+        ],
+        None,
+    ));
+    assert!(lead.contains("do NOT call `wait` yet"), "got {lead}");
+}
+
+#[test]
+fn the_session_hook_reports_real_numbers_and_a_status_line_follows() {
+    let root = tempfile::tempdir().unwrap();
+    let project = root.path().join("project");
+    fs::create_dir_all(project.join(".git")).unwrap();
+    let folder = project.display().to_string();
+
+    let empty: Value = serde_json::from_str(&success(runfrom(
+        root.path(),
+        Some(&project),
+        &["session"],
+        Some(&format!("{{\"cwd\":\"{folder}\"}}")),
+    )))
+    .unwrap();
+    assert_eq!(
+        empty["systemMessage"], "Synapse connected · no memories yet",
+        "an empty store should say so rather than claim memories"
+    );
+    assert_eq!(
+        empty["hookSpecificOutput"]["hookEventName"], "SessionStart",
+        "Claude Code only reads hook output under this name"
+    );
+
+    success(runfrom(
+        root.path(),
+        Some(&project),
+        &["memory", "add", "meshtest", "--project", &folder],
+        Some("Ship the beta on Fridays."),
+    ));
+
+    let stored: Value = serde_json::from_str(&success(runfrom(
+        root.path(),
+        Some(&project),
+        &["session"],
+        Some(&format!("{{\"cwd\":\"{folder}\"}}")),
+    )))
+    .unwrap();
+    assert_eq!(stored["systemMessage"], "Synapse connected · 1 memory");
+    let context = stored["hookSpecificOutput"]["additionalContext"]
+        .as_str()
+        .unwrap();
+    assert!(
+        context.contains("do not print a `Synapse connected` line yourself"),
+        "the model must not repeat a notice the user has already seen: {context}"
+    );
+
+    let line = success(runfrom(
+        root.path(),
+        Some(&project),
+        &["statusline"],
+        Some(&format!(
+            "{{\"model\":{{\"display_name\":\"Opus 5\"}},\"workspace\":{{\"current_dir\":\"{folder}\"}}}}"
+        )),
+    ));
+    assert_eq!(line.trim(), "Opus 5 · project · ◆ Synapse 1");
+}

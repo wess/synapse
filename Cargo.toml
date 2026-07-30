@@ -19,8 +19,11 @@ serde_json = "1.0"
 serde-saphyr = "1.0.0-rc.1"
 sha2 = "0.10"
 sqlx = { version = "0.8", default-features = false, features = ["macros", "runtime-tokio", "sqlite"] }
-tokio = { version = "1.0", features = ["macros", "rt-multi-thread"] }
+tokio = { version = "1.0", features = ["macros", "process", "rt-multi-thread", "sync", "time"] }
 toml = "0.9"
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 async-channel = "2.5"

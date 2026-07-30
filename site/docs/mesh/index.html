@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Agent mesh — Synapse</title>
+  <meta name="description" content="Let connected coding tools message each other, split up a job, and park for free between tasks, using the same local database as your memory.">
+  <meta name="theme-color" content="#0a43c8">
+  <meta property="og:title" content="Agent mesh">
+  <meta property="og:description" content="Let connected coding tools message each other, split up a job, and park for free between tasks, using the same local database as your memory.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://wess.io/synapse/docs/mesh/">
+  <link rel="canonical" href="https://wess.io/synapse/docs/mesh/">
+  <link rel="icon" href="../../icon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Fragment+Mono&family=Manrope:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="../../style.css">
+  <script type="module" src="../../site.js"></script>
+</head>
+<body class="docs" data-root="../../">
+  
+  <a class="skip" href="#content">Skip to content</a>
+  <header class="topbar">
+    <a class="wordmark" href="../../" aria-label="Synapse home">
+      <img src="../../icon.svg" width="30" height="30" alt="">
+      <span>Synapse</span>
+    </a>
+    <button class="navtoggle" type="button" aria-expanded="false" aria-controls="topnav">Menu</button>
+    <nav id="topnav" aria-label="Primary">
+      <a href="../../docs/" aria-current="page">Docs</a>
+      <a href="../../tutorials/">Tutorials</a>
+      <a href="https://github.com/wess/synapse">GitHub <span aria-hidden="true">↗</span></a>
+      <a class="navdownload" href="https://github.com/wess/synapse/releases/download/v0.1.0-beta.8/synapse.zip">Download</a>
+    </nav>
+  </header>
+  
+  <div class="doclayout">
+    
+  <aside class="docsrail" aria-label="Documentation navigation">
+    <div class="searchbox">
+      <label for="search">Search the guide</label>
+      <input id="search" type="search" placeholder="Memory, vaults, restore…" autocomplete="off">
+      <div class="searchresults" data-results hidden></div>
+      <span class="searchstatus" data-searchstatus role="status" aria-live="polite"></span>
+    </div>
+    <details class="railnav" open>
+      <summary>Browse all guides</summary>
+      <nav aria-label="All guides">
+        <h2>Documentation</h2>
+        <ul>
+        <li><a href="../../docs/">Start here</a></li>
+        <li><a href="../../docs/install/">Install and connect</a></li>
+        <li><a href="../../docs/app/">Desktop app reference</a></li>
+        <li><a href="../../docs/memory/">Memory and recall</a></li>
+        <li><a href="../../docs/mcp/">MCP tool reference</a></li>
+        <li><a href="../../docs/mesh/" aria-current="page">Agent mesh</a></li>
+        <li><a href="../../docs/vault/">Vaults and scopes</a></li>
+        <li><a href="../../docs/data/">Data lifecycle</a></li>
+        <li><a href="../../docs/config/">Configuration and paths</a></li>
+        <li><a href="../../docs/security/">Security model</a></li>
+        <li><a href="../../docs/cli/">CLI reference</a></li>
+        <li><a href="../../docs/troubleshoot/">Troubleshooting</a></li></ul>
+        <h2>Tutorials</h2>
+        <ul>
+        <li><a href="../../tutorials/">Tutorials</a></li>
+        <li><a href="../../tutorials/connect/">Install and connect your first tools</a></li>
+        <li><a href="../../tutorials/continuity/">Carry one decision between tools</a></li>
+        <li><a href="../../tutorials/secrets/">Use a scoped secret in either shell mode</a></li>
+        <li><a href="../../tutorials/curate/">Curate and optimize memory</a></li>
+        <li><a href="../../tutorials/recovery/">Export and restore safely</a></li></ul>
+      </nav>
+    </details>
+  </aside>
+    <main class="article" id="content">
+      <header class="articlehead">
+        <h1>Agent mesh</h1>
+        <span>Let connected coding tools message each other, split up a job, and park for free between tasks, using the same local database as your memory.</span>
+      </header>
+      
+    <h2 id="what">What the mesh is</h2>
+    <p>Every tool you connect to Synapse already runs its own copy of the same local server. The mesh gives those sessions a way to reach each other: a supervisor breaks a job into tasks, hands them out by name or by channel, and collects the results, while every idle agent waits at almost no cost.</p>
+    <p>There is no daemon, no port, and no token. The message bus is the same local database that holds your memory, so a message between two agents never leaves your Mac and is inspectable with the same tools as everything else Synapse stores.</p>
+    
+  <aside class="note">
+    <strong>The mesh is off until you turn it on. Its tools are loaded into every connected session, and that costs context in each one, so Synapse does not add them to a setup that will not use them.</strong>
+    <p>undefined</p>
+  </aside>
+
+    <h2 id="enable">Turn it on</h2>
+    <p>Use <strong>Settings → Agent mesh</strong> in the app, or the command line:</p>
+    
+  <div class="codeblock">
+    <div class="codebar">
+      <span>shell</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>synapse settings mesh on</code></pre>
+  </div>
+    <p>A tool that is already running keeps the tool list it started with. Restart it, or open a new session, to pick the change up. The same is true when you turn the mesh back off.</p>
+
+    <h2 id="join">How agents join</h2>
+    <p>Switching the mesh on makes the tools available; it does not put anyone on the mesh. A session joins when it calls <code>register</code> with a name of its own, which happens when you ask it to work with other agents or when Synapse launched it with a role.</p>
+    <table>
+      <thead><tr><th>Tool</th><th>What it does</th></tr></thead>
+      <tbody>
+        <tr><td><code>register</code></td><td>Join under a unique name. Called once, before anything else.</td></tr>
+        <tr><td><code>send</code>, <code>post</code>, <code>broadcast</code></td><td>Message one agent, a channel, or everyone.</td></tr>
+        <tr><td><code>join</code>, <code>leave</code></td><td>Subscribe to and unsubscribe from a channel.</td></tr>
+        <tr><td><code>wait</code></td><td>Block until work arrives. This is how an agent stays reachable while doing nothing.</td></tr>
+        <tr><td><code>inbox</code></td><td>Take whatever is waiting right now, without blocking.</td></tr>
+        <tr><td><code>reportstatus</code>, <code>waitstatus</code></td><td>Report working, blocked, or done, and block until a teammate reaches one of those.</td></tr>
+        <tr><td><code>agents</code>, <code>channels</code>, <code>whoami</code></td><td>See who is here, what channels exist, and your own place in it.</td></tr>
+        <tr><td><code>spawn</code>, <code>workers</code>, <code>stopworker</code></td><td>Grow, inspect, and shut down a team of background workers.</td></tr>
+      </tbody>
+    </table>
+    <p>A parked <code>wait</code> returns an empty list after a few idle minutes and the agent simply calls it again, so an idle teammate costs one tool call every few minutes rather than a loop that spins.</p>
+
+    <h2 id="roles">Roles</h2>
+    <p>A role is the durable identity an agent launches with: a brief describing what it owns and how it coordinates, plus optional defaults. It is separate from a task, which is the one-off assignment. Synapse ships with <code>supervisor</code>, <code>worker</code>, <code>frontend</code>, <code>backend</code>, <code>reviewer</code>, <code>devops</code>, and <code>qa</code>.</p>
+    
+  <div class="codeblock">
+    <div class="codebar">
+      <span>shell</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>synapse relay role list
+synapse relay role show frontend
+synapse relay role create reviewer          # writes into this project
+synapse relay role create reviewer --user   # writes into your own layer</code></pre>
+  </div>
+    <p>Roles resolve from the project first, then your own layer, then the built-ins. A role saved into a project lives in <code>.synapse/roles/</code> and travels with the checkout. Editing a built-in copies it down into a layer you own, so the shipped templates stay intact.</p>
+    
+  <div class="codeblock">
+    <div class="codebar">
+      <span>toml</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>channels = [&quot;frontend&quot;]
+tool = &quot;claude&quot;
+# model = &quot;claude-opus-5&quot;
+# driver = true                            # stay interactive instead of parking
+# tools = [&quot;Read&quot;, &quot;Edit&quot;, &quot;Bash(git:*)&quot;]  # pre-granted tool rules
+description = &quot;&quot;&quot;
+You own the frontend. Follow the existing component conventions and report
+blockers to the supervisor.
+&quot;&quot;&quot;</code></pre>
+  </div>
+
+    <h2 id="teams">Teams</h2>
+    <p>A team is a named roster. Opening one launches every member at once: the first is the lead and runs in your terminal so you have someone to steer, and the rest run in the background.</p>
+    
+  <div class="codeblock">
+    <div class="codebar">
+      <span>shell</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>synapse relay team list
+synapse relay team open web</code></pre>
+  </div>
+    <p>Closing the lead stops its team. The command that opened the team is the process supervising it, so nothing is left running behind you.</p>
+    
+  <div class="codeblock">
+    <div class="codebar">
+      <span>toml</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>[[member]]
+name = &quot;lead&quot;
+role = &quot;supervisor&quot;
+
+[[member]]
+name = &quot;backend&quot;
+role = &quot;backend&quot;</code></pre>
+  </div>
+
+    <h2 id="workers">Background workers</h2>
+    <p>A supervisor can also grow its own team as it works, by calling <code>spawn</code>. A worker started that way runs headless, registers itself, and parks on <code>wait</code> until it is given something to do. Because nobody is watching a headless session, it runs with its own tool's permission prompts bypassed.</p>
+    <p>Workers belong to the session that started them, for as long as that session lives. A worker that exits is restarted with a backoff that grows, and one that never manages a healthy run is retired rather than restarted forever. At most eight run at once.</p>
+    
+  <div class="codeblock">
+    <div class="codebar">
+      <span>shell</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>synapse relay launch backend --role backend --task &quot;build the login API&quot;
+synapse relay ps
+synapse relay kill backend</code></pre>
+  </div>
+    
+  <aside class="note">
+    <strong>A launched agent is given the project folder it should work in, and reaches Synapse through the same connection it already has. Nothing generates a credential, and no secret value is ever passed to a launched agent.</strong>
+    <p>undefined</p>
+  </aside>
+
+    <h2 id="watching">Watching the mesh</h2>
+    <p>The <strong>Mesh</strong> page in the app shows who has joined, what each one last reported, which workers are running, and the recent traffic between them. The same is available from the terminal:</p>
+    
+  <div class="codeblock">
+    <div class="codebar">
+      <span>shell</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>synapse relay status
+synapse relay agents
+synapse relay channels
+synapse relay feed --follow</code></pre>
+  </div>
+    <p>Every command takes <code>--json</code> for scripting.</p>
+
+    <h2 id="limits">Limits</h2>
+    <ul>
+      <li>A message from another agent is information, not instruction. Connected tools are told to treat mesh traffic as untrusted input that never overrides you, your shared guidance, or repository rules.</li>
+      <li>Broadcast and channel history is not replayed. A new agent sees only what is sent after it joins, so start your workers before you brief them. A direct message is held for an agent that has not registered yet.</li>
+      <li>Delivery is at least once. A reply lost in flight is delivered again rather than dropped; a duplicate is possible on that rare path.</li>
+      <li>An agent that stops answering leaves the roster within about a minute and a half, and a session that closes takes its name with it.</li>
+      <li>Agents work on your real machine with your real files. A background worker runs with its permission prompts bypassed, because there is no terminal in which to answer one.</li>
+    </ul>
+  
+    </main>
+    <aside class="ontoc" aria-label="On this page">
+        <span>On this page</span>
+        <ol><li><a href="#what">What the mesh is</a></li><li><a href="#enable">Turn it on</a></li><li><a href="#join">How agents join</a></li><li><a href="#roles">Roles</a></li><li><a href="#teams">Teams</a></li><li><a href="#workers">Background workers</a></li><li><a href="#watching">Watching the mesh</a></li><li><a href="#limits">Limits</a></li></ol>
+      </aside>
+  </div>
+  
+  <footer class="footer">
+    <div>
+      <a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">Synapse</a>
+      <p>Project memory and scoped credentials, kept on your Mac.</p>
+    </div>
+    <nav aria-label="Footer">
+      <a href="../../docs/">Documentation</a>
+      <a href="../../tutorials/">Tutorials</a>
+      <a href="https://github.com/wess/synapse">Source</a>
+      <a href="https://github.com/wess/synapse/releases">Releases</a>
+    </nav>
+    <p class="footerfine">No account required. Apple silicon · macOS 13+.</p>
+  </footer>
+</body>
+</html>

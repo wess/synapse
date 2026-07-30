@@ -10,6 +10,7 @@ pub fn render(
     appmenu: Option<Entity<MenuBar>>,
     connections: Click,
     memories: Click,
+    mesh: Click,
     vaults: Click,
     settings: Click,
     cx: &App,
@@ -73,6 +74,18 @@ pub fn render(
                         .size(Size::Xs)
                         .left_section(Icon::new(IconName::Brain).size(Size::Xs))
                         .on_click(move |event, window, cx| memories(event, window, cx)),
+                )
+                .child(
+                    Button::new("meshnav", "Mesh")
+                        .variant(if page == Page::Mesh {
+                            Variant::Light
+                        } else {
+                            Variant::Subtle
+                        })
+                        .color(ColorName::Violet)
+                        .size(Size::Xs)
+                        .left_section(Icon::new(IconName::Waypoints).size(Size::Xs))
+                        .on_click(move |event, window, cx| mesh(event, window, cx)),
                 )
                 .child(
                     Button::new("vaultsnav", "Vaults")

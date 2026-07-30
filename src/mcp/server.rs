@@ -1,27 +1,46 @@
 use crate::brain::{
     Brain, MemoryScope, RecallRequest, RecallResponse, RememberRequest, RememberResponse,
 };
+use crate::relay::{Mesh, Supervisor};
 use crate::vault::{VaultStatusRequest, VaultStatusResponse, VaultStore};
 use rmcp::handler::server::{router::tool::ToolRouter, wrapper::Parameters};
 use rmcp::model::{Implementation, ServerCapabilities, ServerInfo};
 use rmcp::{Json, ServerHandler, ServiceExt, tool, tool_handler, tool_router, transport::stdio};
+use std::sync::Arc;
+use tokio::sync::Mutex;
 
 #[derive(Clone)]
-struct MemoryServer {
-    brain: Brain,
-    vaults: VaultStore,
+pub struct Server {
+    pub(super) brain: Brain,
+    pub(super) vaults: VaultStore,
+    /// Present only when the mesh is switched on. Every mesh tool is absent from
+    /// the router otherwise, so a user who does not run agent teams never pays
+    /// for their definitions in context.
+    pub(super) mesh: Option<Mesh>,
+    /// The background workers this session owns.
+    pub(super) supervisor: Supervisor,
+    /// The name this session registered on the mesh under. One session is one
+    /// agent, so binding it here is the whole of identity.
+    pub(super) identity: Arc<Mutex<Option<String>>>,
     instructions: String,
     toolrouter: ToolRouter<Self>,
 }
 
-#[tool_router(router = toolrouter)]
-impl MemoryServer {
-    fn new(brain: Brain, vaults: VaultStore, instructions: String) -> Self {
+#[tool_router(router = memorytools)]
+impl Server {
+    fn new(brain: Brain, vaults: VaultStore, mesh: Option<Mesh>, instructions: String) -> Self {
+        let mut toolrouter = Self::memorytools();
+        if mesh.is_some() {
+            toolrouter += Self::meshtools();
+        }
         Self {
             brain,
             vaults,
+            mesh,
+            supervisor: Supervisor::new(),
+            identity: Arc::new(Mutex::new(None)),
             instructions,
-            toolrouter: Self::toolrouter(),
+            toolrouter,
         }
     }
 
@@ -104,7 +123,7 @@ impl MemoryServer {
     }
 }
 
-fn projectpath(requested: Option<&str>) -> Option<std::path::PathBuf> {
+pub(super) fn projectpath(requested: Option<&str>) -> Option<std::path::PathBuf> {
     requested
         .filter(|value| !value.trim().is_empty())
         .map(std::path::PathBuf::from)
@@ -113,22 +132,44 @@ fn projectpath(requested: Option<&str>) -> Option<std::path::PathBuf> {
 }
 
 #[tool_handler(router = self.toolrouter)]
-impl ServerHandler for MemoryServer {
+impl ServerHandler for Server {
     fn get_info(&self) -> ServerInfo {
         ServerInfo::new(ServerCapabilities::builder().enable_tools().build())
             .with_instructions(self.instructions.clone())
             .with_server_info(
                 Implementation::new("synapse", env!("CARGO_PKG_VERSION"))
                     .with_title("Synapse")
-                    .with_description("Local memory and scoped credential metadata"),
+                    .with_description("Local memory, agent mesh, and scoped credential metadata"),
             )
     }
 }
 
-pub async fn run(brain: Brain, vaults: VaultStore, instructions: String) -> anyhow::Result<()> {
-    let service = MemoryServer::new(brain, vaults, instructions)
-        .serve(stdio())
-        .await?;
+pub async fn run(
+    brain: Brain,
+    vaults: VaultStore,
+    mesh: Option<Mesh>,
+    instructions: String,
+) -> anyhow::Result<()> {
+    let server = Server::new(brain, vaults, mesh, instructions);
+    let closing = server.clone();
+    let service = server.serve(stdio()).await?;
     service.waiting().await?;
+    closing.depart().await;
     Ok(())
+}
+
+impl Server {
+    /// Take this session off the mesh when it ends: stop the workers it owns and
+    /// drop its roster row, so a closed session neither leaves headless agents
+    /// running nor keeps answering as a live teammate.
+    async fn depart(&self) {
+        let Some(mesh) = &self.mesh else {
+            return;
+        };
+        self.supervisor.stopall(mesh).await;
+        let identity = self.identity.lock().await.clone();
+        if let Some(name) = identity {
+            let _ = mesh.forget(&name).await;
+        }
+    }
 }

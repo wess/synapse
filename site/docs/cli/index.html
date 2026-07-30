@@ -54,6 +54,7 @@
         <li><a href="../../docs/app/">Desktop app reference</a></li>
         <li><a href="../../docs/memory/">Memory and recall</a></li>
         <li><a href="../../docs/mcp/">MCP tool reference</a></li>
+        <li><a href="../../docs/mesh/">Agent mesh</a></li>
         <li><a href="../../docs/vault/">Vaults and scopes</a></li>
         <li><a href="../../docs/data/">Data lifecycle</a></li>
         <li><a href="../../docs/config/">Configuration and paths</a></li>
@@ -314,6 +315,105 @@
     <p>Delete every memory entry and import batch while leaving SOUL.md, settings, vaults, Keychain values, and scope approvals intact. The exact guard is required.</p>
   </section>
 
+    <h2 id="mesh">Agent mesh</h2>
+    <p>These commands need the mesh switched on with <code>synapse settings mesh on</code>. See the <a href="../mesh/">agent mesh guide</a> for what each part is for.</p>
+    
+  <section class="command" id="relaystatus">
+    <div>
+      <h3>relay status</h3>
+      <code>synapse relay status [--json]</code>
+    </div>
+    <p>Show whether the mesh is on, how many agents are reachable, and how many background workers are running.</p>
+  </section>
+    
+  <section class="command" id="relayagents">
+    <div>
+      <h3>relay agents</h3>
+      <code>synapse relay agents [--json]</code>
+    </div>
+    <p>List every agent with its role, reachability, last reported work state, and the project it is working in.</p>
+  </section>
+    
+  <section class="command" id="relaychannels">
+    <div>
+      <h3>relay channels</h3>
+      <code>synapse relay channels [--json]</code>
+    </div>
+    <p>List the channels in use and how many agents subscribe to each.</p>
+  </section>
+    
+  <section class="command" id="relayfeed">
+    <div>
+      <h3>relay feed</h3>
+      <code>synapse relay feed [--follow] [--since &amp;lt;id&amp;gt;] [--json]</code>
+    </div>
+    <p>Print the messages agents have sent each other. With <code>--follow</code> the command keeps printing new ones until interrupted.</p>
+  </section>
+    
+  <section class="command" id="relaylaunch">
+    <div>
+      <h3>relay launch</h3>
+      <code>synapse relay launch &amp;lt;name&amp;gt; [options]</code>
+    </div>
+    <p>Open one agent in this terminal, wired into the mesh with a role. Options: <code>--role</code>, <code>--tool claude|codex</code>, <code>--task</code>, <code>--channel</code> (repeatable), <code>--allow-tool</code> (repeatable), <code>--model</code>, <code>--directory</code>, <code>--lead</code>, <code>--optimize</code>, <code>--strict</code>, <code>--skip-permissions</code>, <code>--command &lt;template&gt;</code>, and <code>--print</code> to show the resolved command without running it.</p>
+  </section>
+    
+  <section class="command" id="relayteamopen">
+    <div>
+      <h3>relay team open</h3>
+      <code>synapse relay team open &amp;lt;name&amp;gt; [--directory &amp;lt;folder&amp;gt;]</code>
+    </div>
+    <p>Open a whole roster. The first member runs in this terminal as the lead; the rest run in the background and stop when the lead closes.</p>
+  </section>
+    
+  <section class="command" id="relayrole">
+    <div>
+      <h3>relay role</h3>
+      <code>synapse relay role &amp;lt;list|show|create|edit|delete&amp;gt; [name] [--user] [--json]</code>
+    </div>
+    <p>Manage reusable agent roles. Create, edit, and delete write into the project by default, or into your own layer with <code>--user</code>. Editing a built-in copies it down first, and a file that does not parse is never saved.</p>
+  </section>
+    
+  <section class="command" id="relayteam">
+    <div>
+      <h3>relay team</h3>
+      <code>synapse relay team &amp;lt;list|show|create|edit|delete&amp;gt; [name] [--user] [--json]</code>
+    </div>
+    <p>Manage team rosters, resolved and edited exactly like roles.</p>
+  </section>
+    
+  <section class="command" id="relayps">
+    <div>
+      <h3>relay ps</h3>
+      <code>synapse relay ps [--json]</code>
+    </div>
+    <p>List background workers with their state, process id, and log path.</p>
+  </section>
+    
+  <section class="command" id="relaykill">
+    <div>
+      <h3>relay kill</h3>
+      <code>synapse relay kill &amp;lt;name&amp;gt;</code>
+    </div>
+    <p>Stop a background worker. A worker owned by a Synapse session that is still running has to be stopped from there.</p>
+  </section>
+    
+  <section class="command" id="session">
+    <div>
+      <h3>session</h3>
+      <code>synapse session [--json]</code>
+    </div>
+    <p>Report this session's Synapse connection as Claude Code session-hook output. Synapse installs this for you when you connect Claude Code; run it by hand to see exactly what a session will be told. Reads the calling tool's JSON on stdin.</p>
+  </section>
+    
+  <section class="command" id="statusline">
+    <div>
+      <h3>statusline</h3>
+      <code>synapse statusline</code>
+    </div>
+    <p>Print one status line for a connected tool, reading that tool's JSON on stdin.</p>
+  </section>
+
     <h2 id="data">Data and settings</h2>
     
   <section class="command" id="datacheck">
@@ -354,6 +454,14 @@
       <code>synapse settings optimize &lt;full|balanced|lean&gt;</code>
     </div>
     <p>Change the shared MCP recall response budget. Stored memory is not modified.</p>
+  </section>
+    
+  <section class="command" id="settingsmesh">
+    <div>
+      <h3>settings mesh</h3>
+      <code>synapse settings mesh &amp;lt;on|off&amp;gt;</code>
+    </div>
+    <p>Turn the agent mesh tools on or off. Connected tools pick the change up the next time they start.</p>
   </section>
 
   <section class="command" id="guidanceshow">
@@ -417,7 +525,7 @@
     </main>
     <aside class="ontoc" aria-label="On this page">
         <span>On this page</span>
-        <ol><li><a href="#invocation">Invocation</a></li><li><a href="#application">Application and server</a></li><li><a href="#shell">Shell environments</a></li><li><a href="#vault">Vault and scope</a></li><li><a href="#memory">Memory</a></li><li><a href="#data">Data and settings</a></li><li><a href="#install">Installation and paths</a></li></ol>
+        <ol><li><a href="#invocation">Invocation</a></li><li><a href="#application">Application and server</a></li><li><a href="#shell">Shell environments</a></li><li><a href="#vault">Vault and scope</a></li><li><a href="#memory">Memory</a></li><li><a href="#mesh">Agent mesh</a></li><li><a href="#data">Data and settings</a></li><li><a href="#install">Installation and paths</a></li></ol>
       </aside>
   </div>
   

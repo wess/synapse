@@ -25,6 +25,23 @@ pub fn render(
         .detection
         .version
         .unwrap_or_else(|| "Command not found on PATH".to_owned());
+    // Only Claude Code can state the connection at startup, so the row says
+    // whether it is set to, and whose status line is in the bar.
+    let hooks = row.detection.hooks;
+    let extras = connected
+        .then(|| {
+            let mut parts = Vec::new();
+            if hooks.notice {
+                parts.push("Session notice");
+            }
+            if hooks.statusline {
+                parts.push("Status line");
+            } else if hooks.borrowed {
+                parts.push("Status line kept as yours");
+            }
+            parts.join(" · ")
+        })
+        .filter(|parts| !parts.is_empty());
 
     div()
         .flex()
@@ -69,7 +86,17 @@ pub fn render(
                                 )
                                 .child(Badge::new(status.0).size(Size::Sm).color(status.1)),
                         )
-                        .child(Text::new(detail).size(Size::Xs).dimmed()),
+                        .child(Text::new(detail).size(Size::Xs).dimmed())
+                        .when_some(extras, |element, extras| {
+                            element.child(
+                                div()
+                                    .flex()
+                                    .items_center()
+                                    .gap(px(6.0))
+                                    .child(Icon::new(IconName::Sparkles).size(Size::Xs))
+                                    .child(Text::new(extras).size(Size::Xs).dimmed()),
+                            )
+                        }),
                 ),
         )
         .child(

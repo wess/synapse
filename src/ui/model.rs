@@ -10,6 +10,7 @@ pub struct Row {
 pub enum Page {
     Connections,
     Memories,
+    Mesh,
     Vaults,
     Settings,
 }

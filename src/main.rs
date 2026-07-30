@@ -6,6 +6,7 @@ mod files;
 mod imports;
 mod instructions;
 mod mcp;
+mod relay;
 mod shellsetup;
 mod ui;
 mod vault;

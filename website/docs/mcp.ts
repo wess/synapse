@@ -11,6 +11,7 @@ export const mcp: Page = {
     { label: "remember", id: "remember" },
     { label: "recall", id: "recall" },
     { label: "vaultstatus", id: "vaultstatus" },
+    { label: "Mesh tools", id: "mesh" },
     { label: "Operational behavior", id: "behavior" },
   ],
   body: `
@@ -98,6 +99,10 @@ export const mcp: Page = {
   "note": "Values stay in Keychain. Use synapse run for one child or install the shell hook for an approved directory."
 }`)}
     ${note("Metadata, not a secret channel", "The names in available tell a tool what a scoped command or activated shell could receive. vaultstatus never reads the corresponding Keychain values and cannot change a connected tool’s environment.")}
+
+    <h2 id="mesh">Mesh tools</h2>
+    <p>Three tools are always present. Sixteen more appear only while the agent mesh is switched on, because a tool definition costs context in every session that loads it. They let connected sessions register under a name, message each other directly or by channel, park on <code>wait</code> until work arrives, report and watch work state, and start or stop background workers.</p>
+    <p>The guidance explaining them is sent with them and withdrawn with them, so the tool list and the instructions can never be out of step. See the <a href="../mesh/">agent mesh guide</a> for the full list and what each one is for.</p>
 
     <h2 id="behavior">Operational behavior</h2>
     <ul>

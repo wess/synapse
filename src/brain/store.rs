@@ -143,6 +143,26 @@ impl Brain {
         }
     }
 
+    /// How many memories a recall from `project` could draw on: everything
+    /// global, plus everything stored for that project. The same scope rule
+    /// `recall` uses, so the number a session reports is the number it can see.
+    pub async fn reach(&self, project: Option<&Path>) -> Result<i64> {
+        let project = project
+            .map(crate::brain::projectroot)
+            .transpose()?
+            .flatten()
+            .map(|path| path.display().to_string())
+            .unwrap_or_default();
+        sqlx::query_scalar::<_, i64>(
+            "SELECT count(*) FROM memorymeta \
+             WHERE scope = 'global' OR (scope = 'project' AND project = ?)",
+        )
+        .bind(project)
+        .fetch_one(&self.pool)
+        .await
+        .context("could not count memories for this project")
+    }
+
     pub async fn memory(&self, id: i64) -> Result<Option<Memory>> {
         sqlx::query_as(
             "SELECT memory.rowid AS id, memory.body, memory.source, meta.scope, meta.project, \
@@ -256,6 +276,14 @@ impl Brain {
 
     pub async fn setoptimization(&self, optimization: Optimization) -> Result<()> {
         crate::brain::settings::write(&self.pool, optimization).await
+    }
+
+    pub async fn mesh(&self) -> Result<bool> {
+        crate::brain::settings::mesh(&self.pool).await
+    }
+
+    pub async fn setmesh(&self, enabled: bool) -> Result<()> {
+        crate::brain::settings::writemesh(&self.pool, enabled).await
     }
 
     pub async fn preference(&self, key: &str) -> Result<Option<String>> {

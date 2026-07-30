@@ -1,7 +1,11 @@
 mod command;
 mod guidance;
 mod install;
+mod launch;
 mod memory;
+mod relay;
+mod roles;
+mod session;
 mod shell;
 
 pub use install::{InstallStatus, destination, install, status};

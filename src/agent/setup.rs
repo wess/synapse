@@ -7,6 +7,7 @@ use std::process::Command;
 pub fn setup(agent: &Agent, detection: &Detection, server: &Path, soul: &Path) -> Result<()> {
     let integration = files::Snapshot::capture(&agent.integration)?;
     let instructions = files::Snapshot::capture(&agent.instructions)?;
+    let settings = files::Snapshot::capture(&agent.settings)?;
     let shared = files::Snapshot::capture(soul)?;
     if !detection.configured {
         integration.backup()?;
@@ -14,8 +15,9 @@ pub fn setup(agent: &Agent, detection: &Detection, server: &Path, soul: &Path) -
     crate::instructions::ensure(soul)?;
 
     if let Err(error) = runsetup(agent, detection, server, soul) {
-        if let Err(rollback) = instructions
+        if let Err(rollback) = settings
             .restore()
+            .and_then(|_| instructions.restore())
             .and_then(|_| integration.restore())
             .and_then(|_| shared.restore())
         {
@@ -66,7 +68,15 @@ fn runsetup(agent: &Agent, detection: &Detection, server: &Path, soul: &Path) ->
         );
     }
 
-    writeinstructions(&agent.instructions, soul)
+    writeinstructions(&agent.instructions, soul)?;
+
+    // Only Claude Code can show the connection before the model has written
+    // anything. Everywhere else the notice rides on the guidance pointer.
+    if agent.kind == Kind::Claude {
+        crate::agent::hooks::apply(&agent.settings, server)
+            .context("could not add the Synapse session notice to Claude Code")?;
+    }
+    Ok(())
 }
 
 pub fn writeinstructions(path: &Path, soul: &Path) -> Result<()> {
@@ -137,6 +147,7 @@ mod tests {
             version: None,
             registered: false,
             configured: false,
+            hooks: crate::agent::HookState::default(),
         };
 
         assert!(
@@ -185,6 +196,7 @@ mod tests {
             version: None,
             registered: false,
             configured: false,
+            hooks: crate::agent::HookState::default(),
         };
 
         assert!(
@@ -221,11 +233,13 @@ mod tests {
         fs::set_permissions(&executable, fs::Permissions::from_mode(0o700)).unwrap();
         let mut agent = testagent(integration, instructions);
         agent.kind = Kind::Claude;
+        agent.settings = directory.path().join("settings.json");
         let detection = Detection {
             executable: Some(executable),
             version: None,
             registered: true,
             configured: false,
+            hooks: crate::agent::HookState::default(),
         };
 
         setup(
@@ -240,16 +254,21 @@ mod tests {
             fs::read_to_string(log).unwrap(),
             "mcp remove --scope user synapse\nmcp add --scope user synapse -- /synapse mcp\n"
         );
+        // Claude Code is the one tool that can print the notice at startup, so
+        // connecting it also installs the session hook.
+        let settings = fs::read_to_string(&agent.settings).unwrap();
+        assert!(settings.contains("SessionStart"), "got {settings}");
+        assert!(settings.contains("/synapse session"), "got {settings}");
     }
 
-    fn testagent(settings: PathBuf, instructions: PathBuf) -> Agent {
+    fn testagent(integration: PathBuf, instructions: PathBuf) -> Agent {
         Agent {
             kind: Kind::Codex,
             name: "Test",
             command: "fake",
             instructions,
-            settings: settings.clone(),
-            integration: settings,
+            settings: integration.clone(),
+            integration,
         }
     }
 }

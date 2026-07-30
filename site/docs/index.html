@@ -54,6 +54,7 @@
         <li><a href="../docs/app/">Desktop app reference</a></li>
         <li><a href="../docs/memory/">Memory and recall</a></li>
         <li><a href="../docs/mcp/">MCP tool reference</a></li>
+        <li><a href="../docs/mesh/">Agent mesh</a></li>
         <li><a href="../docs/vault/">Vaults and scopes</a></li>
         <li><a href="../docs/data/">Data lifecycle</a></li>
         <li><a href="../docs/config/">Configuration and paths</a></li>
@@ -79,7 +80,7 @@
       
     <h2 id="model">The model</h2>
     <p>Synapse is a local service with two deliberately separate jobs. Its <strong>memory layer</strong> gives connected developer tools one durable, searchable context store. Its <strong>vault layer</strong> gives commands or opted-in shells carefully scoped environment variables while keeping secret values in macOS Keychain.</p>
-    <p>The desktop app is the control surface. The CLI exposes the same memory, vault, scope, settings, and data-lifecycle operations. The MCP stdio server gives connected tools three narrow capabilities: remember durable context, recall it, and inspect value-free vault status.</p>
+    <p>The desktop app is the control surface. The CLI exposes the same memory, vault, scope, settings, and data-lifecycle operations. The MCP stdio server gives connected tools three narrow capabilities: remember durable context, recall it, and inspect value-free vault status. An optional <strong>agent mesh</strong> adds a fourth job on top of the same store: letting those connected tools coordinate with each other.</p>
 
     <h2 id="stores">What Synapse stores</h2>
     <table>
@@ -91,6 +92,8 @@
         <tr><td>Secret values</td><td>macOS Keychain</td><td>Synapse, a child launched with <code>synapse run</code>, or processes launched from an activated shell</td></tr>
         <tr><td>Project and folder mappings</td><td>Approved <code>.synapse.yaml</code> files</td><td>You, Synapse, and the repository if you commit the file</td></tr>
         <tr><td>Scope approvals</td><td>Local SQLite database as a path and content digest</td><td>Synapse</td></tr>
+        <tr><td>Mesh roster, channels, and messages between agents</td><td>Local SQLite database, while the mesh is on</td><td>Desktop app, CLI, and agents that have joined</td></tr>
+        <tr><td>Agent roles and team rosters</td><td>TOML in the project's <code>.synapse</code> folder or the Synapse data directory</td><td>You, Synapse, and the repository if you commit them</td></tr>
       </tbody>
     </table>
 
@@ -114,6 +117,8 @@
       <dd>Read <a href="memory/">Memory and recall</a>, then follow <a href="../tutorials/continuity/">Carry one decision between tools</a>.</dd>
       <dt>I need credentials for local commands.</dt>
       <dd>Read <a href="vault/">Vaults and scopes</a>, then build a complete approved scope in <a href="../tutorials/secrets/">Use a scoped secret in either shell mode</a>.</dd>
+      <dt>I want my tools to work together.</dt>
+      <dd>Read <a href="mesh/">Agent mesh</a>. It covers turning it on, roles, teams, background workers, and what the mesh deliberately does not do.</dd>
       <dt>I need automation or exact syntax.</dt>
       <dd>Use the <a href="cli/">complete CLI reference</a> and <a href="mcp/">MCP tool reference</a>.</dd>
       <dt>I am planning backups or a recovery.</dt>

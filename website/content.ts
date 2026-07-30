@@ -7,6 +7,7 @@ import { install } from "./docs/install";
 import { overview } from "./docs/index";
 import { mcp } from "./docs/mcp";
 import { memory } from "./docs/memory";
+import { mesh } from "./docs/mesh";
 import { security } from "./docs/security";
 import { troubleshoot } from "./docs/troubleshoot";
 import { vault } from "./docs/vault";
@@ -25,6 +26,7 @@ export const pages: Page[] = [
   app,
   memory,
   mcp,
+  mesh,
   vault,
   data,
   config,

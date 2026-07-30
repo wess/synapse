@@ -22,6 +22,9 @@ pub struct Detection {
     pub version: Option<String>,
     pub registered: bool,
     pub configured: bool,
+    /// What the tool's own settings say about the Synapse session notice and
+    /// status line. Only Claude Code supports them, so it stays empty elsewhere.
+    pub hooks: crate::agent::HookState,
 }
 
 impl Detection {
@@ -31,6 +34,7 @@ impl Detection {
             version: None,
             registered: false,
             configured: false,
+            hooks: crate::agent::HookState::default(),
         }
     }
 }

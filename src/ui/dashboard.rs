@@ -5,7 +5,7 @@ use crate::imports::{ImportBatch, ImportProvider, ImportSummary};
 use crate::ui::buffer::{self, Buffer, Format};
 use crate::ui::{
     Document, Notice, Page, Row, SaveDocument, agentrow, clibanner, document, header, memories,
-    settings, summary, vaults,
+    mesh, settings, summary, vaults,
 };
 use crate::vault::{ScopeState, Secret, Vault, VaultStore};
 use gpui::prelude::*;
@@ -55,6 +55,11 @@ pub struct Dashboard {
     pendingvault: Option<i64>,
     appmenu: Option<Entity<MenuBar>>,
     optimization: Optimization,
+    meshenabled: bool,
+    meshagents: Vec<crate::relay::AgentView>,
+    meshworkers: Vec<crate::relay::WorkerView>,
+    meshfeed: Vec<crate::relay::Message>,
+    mesherror: Option<String>,
     guidance: GuidanceState,
     pendingguidance: bool,
     clistatus: crate::cli::InstallStatus,
@@ -80,6 +85,7 @@ impl Dashboard {
         let database = files::database().unwrap_or_else(|_| PathBuf::from("brain.db"));
         let stats = loadstats(&database).unwrap_or_default();
         let optimization = loadoptimization(&database).unwrap_or_default();
+        let meshon = loadmesh(&database).unwrap_or(false);
         let (brain, memories, imports, importbatches, memoryerror) = match loadmemories(&database) {
             Ok(data) => (
                 Some(data.brain),
@@ -210,6 +216,11 @@ impl Dashboard {
             pendingvault: None,
             appmenu,
             optimization,
+            meshenabled: meshon,
+            meshagents: Vec::new(),
+            meshworkers: Vec::new(),
+            meshfeed: Vec::new(),
+            mesherror: None,
             guidance,
             pendingguidance: false,
             clistatus,
@@ -506,6 +517,66 @@ impl Dashboard {
     fn showvaults(&mut self, cx: &mut Context<Self>) {
         self.page = Page::Vaults;
         self.refreshvaults(cx);
+    }
+
+    fn showmesh(&mut self, cx: &mut Context<Self>) {
+        self.page = Page::Mesh;
+        self.refreshmesh(cx);
+    }
+
+    /// Read the roster, the workers, and the tail of the feed in one pass. The
+    /// mesh has no push channel to subscribe to, so the page reloads when it is
+    /// opened and when the refresh button is used.
+    fn refreshmesh(&mut self, cx: &mut Context<Self>) {
+        self.meshenabled = loadmesh(&self.database).unwrap_or(false);
+        if !self.meshenabled {
+            self.meshagents.clear();
+            self.meshworkers.clear();
+            self.meshfeed.clear();
+            self.mesherror = None;
+            cx.notify();
+            return;
+        }
+        let database = self.database.clone();
+        match block(async {
+            let mesh = crate::relay::Mesh::open(database).await?;
+            Ok((
+                mesh.agents().await?,
+                mesh.workers().await?,
+                mesh.feed(0, 40).await?,
+            ))
+        }) {
+            Ok((agents, workers, feed)) => {
+                self.meshagents = agents;
+                self.meshworkers = workers;
+                self.meshfeed = feed;
+                self.mesherror = None;
+            }
+            Err(error) => self.mesherror = Some(format!("Could not read the mesh: {error}")),
+        }
+        cx.notify();
+    }
+
+    fn setmesh(&mut self, enabled: bool, cx: &mut Context<Self>) {
+        let database = self.database.clone();
+        let result = block(async {
+            let brain = crate::brain::Brain::open(database).await?;
+            brain.setmesh(enabled).await
+        });
+        match result {
+            Ok(()) => {
+                self.meshenabled = enabled;
+                self.notice = Notice::Success(format!(
+                    "Agent mesh {}. Connected tools pick this up the next time they start.",
+                    if enabled { "on" } else { "off" }
+                ));
+                self.refreshmesh(cx);
+            }
+            Err(error) => {
+                self.notice = Notice::Error(format!("Could not change the mesh: {error}"));
+                cx.notify();
+            }
+        }
     }
 
     fn showsettings(&mut self, cx: &mut Context<Self>) {
@@ -1068,6 +1139,7 @@ impl Render for Dashboard {
                     self.appmenu.clone(),
                     Box::new(cx.listener(|this, _, _, cx| this.showconnections(cx))),
                     Box::new(cx.listener(|this, _, _, cx| this.showmemories(cx))),
+                    Box::new(cx.listener(|this, _, _, cx| this.showmesh(cx))),
                     Box::new(cx.listener(|this, _, _, cx| this.showvaults(cx))),
                     Box::new(cx.listener(|this, _, _, cx| this.showsettings(cx))),
                     cx,
@@ -1102,6 +1174,7 @@ impl Render for Dashboard {
                 self.appmenu.clone(),
                 Box::new(cx.listener(|this, _, _, cx| this.showconnections(cx))),
                 Box::new(cx.listener(|this, _, _, cx| this.showmemories(cx))),
+                Box::new(cx.listener(|this, _, _, cx| this.showmesh(cx))),
                 Box::new(cx.listener(|this, _, _, cx| this.showvaults(cx))),
                 Box::new(cx.listener(|this, _, _, cx| this.showsettings(cx))),
                 cx,
@@ -1183,6 +1256,31 @@ impl Render for Dashboard {
                 .into_any_element();
         }
 
+        if self.page == Page::Mesh {
+            return shell
+                .child(mesh::render(
+                    mesh::View {
+                        enabled: self.meshenabled,
+                        agents: self.meshagents.clone(),
+                        workers: self.meshworkers.clone(),
+                        feed: self.meshfeed.clone(),
+                        error: self.mesherror.clone(),
+                    },
+                    mesh::Actions {
+                        enable: Box::new(cx.listener(|this, _, _, cx| this.setmesh(true, cx))),
+                        refresh: Box::new(cx.listener(|this, _, _, cx| this.refreshmesh(cx))),
+                    },
+                    cx,
+                ))
+                .child(
+                    StatusBar::new()
+                        .height(36.0)
+                        .left(Text::new("Agent mesh · local SQLite bus").size(Size::Xs))
+                        .right(Text::new("Messages stay on this Mac").size(Size::Xs)),
+                )
+                .into_any_element();
+        }
+
         if self.page == Page::Settings {
             let clistatus = crate::cli::status().unwrap_or(crate::cli::InstallStatus::Missing);
             let clipath = crate::cli::destination()
@@ -1198,6 +1296,7 @@ impl Render for Dashboard {
                 .child(settings::render(
                     settings::View {
                         optimization: self.optimization,
+                        mesh: self.meshenabled,
                         thememode: crate::ui::theme::mode(cx),
                         clistatus,
                         clipath,
@@ -1216,6 +1315,8 @@ impl Render for Dashboard {
                         pendingguidance: self.pendingguidance,
                     },
                     settings::Actions {
+                        meshon: Box::new(cx.listener(|this, _, _, cx| this.setmesh(true, cx))),
+                        meshoff: Box::new(cx.listener(|this, _, _, cx| this.setmesh(false, cx))),
                         full: Box::new(cx.listener(|this, _, _, cx| {
                             this.setoptimization(Optimization::Full, cx)
                         })),
@@ -1453,6 +1554,7 @@ fn connectionserver() -> Option<PathBuf> {
 fn initialpage() -> Page {
     match std::env::var("SYNAPSE_PAGE").as_deref() {
         Ok("memory") => Page::Memories,
+        Ok("mesh") => Page::Mesh,
         Ok("vaults") => Page::Vaults,
         Ok("settings") => Page::Settings,
         _ => Page::Connections,
@@ -1489,6 +1591,13 @@ fn loadstats(database: &std::path::Path) -> anyhow::Result<Stats> {
     tokio::runtime::Runtime::new()?.block_on(async {
         let brain = crate::brain::Brain::open(database).await?;
         brain.stats().await
+    })
+}
+
+fn loadmesh(database: &std::path::Path) -> anyhow::Result<bool> {
+    block(async {
+        let brain = crate::brain::Brain::open(database).await?;
+        brain.mesh().await
     })
 }
 

@@ -12,6 +12,7 @@ export const cli: Page = {
     { label: "Shell environments", id: "shell" },
     { label: "Vault and scope", id: "vault" },
     { label: "Memory", id: "memory" },
+    { label: "Agent mesh", id: "mesh" },
     { label: "Data and settings", id: "data" },
     { label: "Installation and paths", id: "install" },
   ],
@@ -56,12 +57,28 @@ ${command("memory undo", "synapse memory undo <batch> --confirm", "Remove memori
     ${command("memory delete", "synapse memory delete <id> --confirm", "Delete one memory. The exact <code>--confirm</code> guard is required.")}
     ${command("memory wipe", "synapse memory wipe --confirm", "Delete every memory entry and import batch while leaving SOUL.md, settings, vaults, Keychain values, and scope approvals intact. The exact guard is required.")}
 
+    <h2 id="mesh">Agent mesh</h2>
+    <p>These commands need the mesh switched on with <code>synapse settings mesh on</code>. See the <a href="../mesh/">agent mesh guide</a> for what each part is for.</p>
+    ${command("relay status", "synapse relay status [--json]", "Show whether the mesh is on, how many agents are reachable, and how many background workers are running.")}
+    ${command("relay agents", "synapse relay agents [--json]", "List every agent with its role, reachability, last reported work state, and the project it is working in.")}
+    ${command("relay channels", "synapse relay channels [--json]", "List the channels in use and how many agents subscribe to each.")}
+    ${command("relay feed", "synapse relay feed [--follow] [--since &lt;id&gt;] [--json]", "Print the messages agents have sent each other. With <code>--follow</code> the command keeps printing new ones until interrupted.")}
+    ${command("relay launch", "synapse relay launch &lt;name&gt; [options]", "Open one agent in this terminal, wired into the mesh with a role. Options: <code>--role</code>, <code>--tool claude|codex</code>, <code>--task</code>, <code>--channel</code> (repeatable), <code>--allow-tool</code> (repeatable), <code>--model</code>, <code>--directory</code>, <code>--lead</code>, <code>--optimize</code>, <code>--strict</code>, <code>--skip-permissions</code>, <code>--command &lt;template&gt;</code>, and <code>--print</code> to show the resolved command without running it.")}
+    ${command("relay team open", "synapse relay team open &lt;name&gt; [--directory &lt;folder&gt;]", "Open a whole roster. The first member runs in this terminal as the lead; the rest run in the background and stop when the lead closes.")}
+    ${command("relay role", "synapse relay role &lt;list|show|create|edit|delete&gt; [name] [--user] [--json]", "Manage reusable agent roles. Create, edit, and delete write into the project by default, or into your own layer with <code>--user</code>. Editing a built-in copies it down first, and a file that does not parse is never saved.")}
+    ${command("relay team", "synapse relay team &lt;list|show|create|edit|delete&gt; [name] [--user] [--json]", "Manage team rosters, resolved and edited exactly like roles.")}
+    ${command("relay ps", "synapse relay ps [--json]", "List background workers with their state, process id, and log path.")}
+    ${command("relay kill", "synapse relay kill &lt;name&gt;", "Stop a background worker. A worker owned by a Synapse session that is still running has to be stopped from there.")}
+    ${command("session", "synapse session [--json]", "Report this session's Synapse connection as Claude Code session-hook output. Synapse installs this for you when you connect Claude Code; run it by hand to see exactly what a session will be told. Reads the calling tool's JSON on stdin.")}
+    ${command("statusline", "synapse statusline", "Print one status line for a connected tool, reading that tool's JSON on stdin.")}
+
     <h2 id="data">Data and settings</h2>
     ${command("data check", "synapse data check [--json]", "Open the database, run page and foreign-key integrity checks, apply supported migrations, and report the path, schema version, and <code>ok</code> integrity state.")}
     ${command("data export", "synapse data export <file>", "Create and validate a consistent SQLite snapshot at a destination that does not already exist. Secret values remain in Keychain and are not included.")}
     ${command("data restore", "synapse data restore <file>", "Validate a current-version snapshot and restore it while the app and MCP servers are closed. Preserves the previous database as a recovery backup and refuses without the exclusive lock.")}
     ${command("settings show", "synapse settings show", "Print the active recall optimization, result limit, character budget, supported shell modes, and zsh hook example.")}
     ${command("settings optimize", "synapse settings optimize <full|balanced|lean>", "Change the shared MCP recall response budget. Stored memory is not modified.")}
+    ${command("settings mesh", "synapse settings mesh &lt;on|off&gt;", "Turn the agent mesh tools on or off. Connected tools pick the change up the next time they start.")}
 ${command("guidance show", "synapse guidance show [--json]", "Print the SOUL.md path, whether it exists, pointer coverage, and whether both global instruction files are pointer-only.")}
 ${command("guidance sync", "synapse guidance sync", "Create SOUL.md when needed and refresh managed pointers in both global instruction files without removing unmanaged text.")}
 ${command("guidance adopt", "synapse guidance adopt --confirm", "Move unmanaged global guidance into SOUL.md, replace both global files with managed pointers, and retain backups.")}

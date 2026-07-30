@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Synapse is a quiet local memory service for developer tools. It gives every connected coding tool the same durable, inspectable memory without requiring a general-purpose notes application.
+Synapse is a quiet local memory service for developer tools. It gives every connected coding tool the same durable, inspectable memory without requiring a general-purpose notes application, and lets those tools coordinate with each other through the same local store.
 
 ## Primary users
 
@@ -11,9 +11,10 @@ Developers who move between multiple coding tools and want decisions, preference
 ## Core loop
 
 1. Connect a supported tool once.
-2. The tool recalls relevant memory before work and stores durable context after work.
-3. The user can inspect health, usage, and connections from a small native dashboard.
-4. The user grants credential names to one command or an opted-in shell through explicit global or YAML-backed scopes.
+2. The tool says so at startup, recalls relevant memory before work, and stores durable context after work.
+3. Optionally, connected tools join one mesh: they message each other, hand work back and forth, and park for free between tasks.
+4. The user can inspect health, usage, connections, and the mesh from a small native dashboard.
+5. The user grants credential names to one command or an opted-in shell through explicit global or YAML-backed scopes.
 
 ## First release
 
@@ -22,7 +23,9 @@ Developers who move between multiple coding tools and want decisions, preference
 - Enforced global and project memory scopes shared by every connected tool.
 - Previewed, idempotent, reversible imports from Claude, Codex, and selected Markdown.
 - An MCP stdio server exposing `remember`, `recall`, and value-free vault status.
-- One-click user-level setup for Codex and Claude Code.
+- An opt-in agent mesh over the same local database: register, direct messages, channels, broadcasts, free parking on `wait`, reported work state, and supervised background workers. Off by default, because its tools cost context in every session that loads them.
+- Reusable agent roles and team rosters as layered TOML, resolved project, then user, then built-in.
+- One-click user-level setup for Codex and Claude Code, including a Claude Code session notice and status line that state the connection before the model has written anything.
 - One editable `SOUL.md` for shared guidance, with managed pointers in each tool's global instruction file.
 - Safe pointer sync plus explicit, backed-up consolidation of existing global guidance.
 - Keychain-backed vaults managed from the dashboard.
