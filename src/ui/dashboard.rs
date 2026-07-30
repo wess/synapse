@@ -88,7 +88,24 @@ impl Dashboard {
         let database = files::database().unwrap_or_else(|_| PathBuf::from("brain.db"));
         let stats = loadstats(&database).unwrap_or_default();
         let optimization = loadoptimization(&database).unwrap_or_default();
-        let meshon = loadmesh(&database).unwrap_or(false);
+        let page = initialpage();
+        // A page opened directly has to arrive with its data, not fill in only
+        // once the user navigates away and back.
+        let meshdata = match page {
+            Page::Mesh => loadmeshdata(&database),
+            _ => MeshData {
+                enabled: loadmesh(&database).unwrap_or(false),
+                ..MeshData::default()
+            },
+        };
+        let skilldata = match page {
+            Page::Skills => loadskills(),
+            _ => SkillData {
+                rows: Vec::new(),
+                unmanaged: Vec::new(),
+                problems: Vec::new(),
+            },
+        };
         let (brain, memories, imports, importbatches, memoryerror) = match loadmemories(&database) {
             Ok(data) => (
                 Some(data.brain),
@@ -189,7 +206,7 @@ impl Dashboard {
             database,
             notice,
             document,
-            page: initialpage(),
+            page,
             brain,
             memories,
             selectedmemory,
@@ -219,14 +236,14 @@ impl Dashboard {
             pendingvault: None,
             appmenu,
             optimization,
-            meshenabled: meshon,
-            meshagents: Vec::new(),
-            meshworkers: Vec::new(),
-            meshfeed: Vec::new(),
-            mesherror: None,
-            skillrows: Vec::new(),
-            skillunmanaged: Vec::new(),
-            skillproblems: Vec::new(),
+            meshenabled: meshdata.enabled,
+            meshagents: meshdata.agents,
+            meshworkers: meshdata.workers,
+            meshfeed: meshdata.feed,
+            mesherror: meshdata.error,
+            skillrows: skilldata.rows,
+            skillunmanaged: skilldata.unmanaged,
+            skillproblems: skilldata.problems,
             guidance,
             pendingguidance: false,
             clistatus,
@@ -532,38 +549,10 @@ impl Dashboard {
 
     /// Re-read the library and ask every tool what it currently has.
     fn refreshskills(&mut self, cx: &mut Context<Self>) {
-        let home = files::home().unwrap_or_else(|_| PathBuf::from("."));
-        match block(crate::skill::survey(&home)) {
-            Ok((statuses, problems)) => {
-                let (library, _) = crate::skill::library::all().unwrap_or_default();
-                let known: Vec<String> = library.iter().map(|skill| skill.name.clone()).collect();
-                self.skillrows = library
-                    .into_iter()
-                    .map(|skill| skills::Row {
-                        places: statuses
-                            .iter()
-                            .filter(|status| status.skill == skill.name)
-                            .cloned()
-                            .collect(),
-                        name: skill.name,
-                        description: skill.description,
-                        files: skill.files.len(),
-                    })
-                    .collect();
-                self.skillunmanaged = agent::agents(&home)
-                    .into_iter()
-                    .flat_map(|agent| {
-                        crate::skill::unknown(&agent, &known)
-                            .into_iter()
-                            .map(move |name| (agent.name.to_owned(), name))
-                    })
-                    .collect();
-                self.skillproblems = problems;
-            }
-            Err(error) => {
-                self.skillproblems = vec![format!("the library could not be read: {error}")];
-            }
-        }
+        let loaded = loadskills();
+        self.skillrows = loaded.rows;
+        self.skillunmanaged = loaded.unmanaged;
+        self.skillproblems = loaded.problems;
         cx.notify();
     }
 
@@ -639,32 +628,12 @@ impl Dashboard {
     /// mesh has no push channel to subscribe to, so the page reloads when it is
     /// opened and when the refresh button is used.
     fn refreshmesh(&mut self, cx: &mut Context<Self>) {
-        self.meshenabled = loadmesh(&self.database).unwrap_or(false);
-        if !self.meshenabled {
-            self.meshagents.clear();
-            self.meshworkers.clear();
-            self.meshfeed.clear();
-            self.mesherror = None;
-            cx.notify();
-            return;
-        }
-        let database = self.database.clone();
-        match block(async {
-            let mesh = crate::relay::Mesh::open(database).await?;
-            Ok((
-                mesh.agents().await?,
-                mesh.workers().await?,
-                mesh.feed(0, 40).await?,
-            ))
-        }) {
-            Ok((agents, workers, feed)) => {
-                self.meshagents = agents;
-                self.meshworkers = workers;
-                self.meshfeed = feed;
-                self.mesherror = None;
-            }
-            Err(error) => self.mesherror = Some(format!("Could not read the mesh: {error}")),
-        }
+        let loaded = loadmeshdata(&self.database);
+        self.meshenabled = loaded.enabled;
+        self.meshagents = loaded.agents;
+        self.meshworkers = loaded.workers;
+        self.meshfeed = loaded.feed;
+        self.mesherror = loaded.error;
         cx.notify();
     }
 
@@ -1810,6 +1779,92 @@ fn loadstats(database: &std::path::Path) -> anyhow::Result<Stats> {
         let brain = crate::brain::Brain::open(database).await?;
         brain.stats().await
     })
+}
+
+/// Everything the Skills screen shows. Opening the app straight onto a page has
+/// to fill it the same way navigating to it does, or the screen reports an
+/// empty library that is not empty.
+struct SkillData {
+    rows: Vec<skills::Row>,
+    unmanaged: Vec<(String, String)>,
+    problems: Vec<String>,
+}
+
+fn loadskills() -> SkillData {
+    let home = files::home().unwrap_or_else(|_| PathBuf::from("."));
+    let (statuses, mut problems) = match block(crate::skill::survey(&home)) {
+        Ok(surveyed) => surveyed,
+        Err(error) => (
+            Vec::new(),
+            vec![format!("the library could not be read: {error}")],
+        ),
+    };
+    let (library, listing) = crate::skill::library::all().unwrap_or_default();
+    problems.extend(listing);
+    let known: Vec<String> = library.iter().map(|skill| skill.name.clone()).collect();
+    SkillData {
+        rows: library
+            .into_iter()
+            .map(|skill| skills::Row {
+                places: statuses
+                    .iter()
+                    .filter(|status| status.skill == skill.name)
+                    .cloned()
+                    .collect(),
+                name: skill.name,
+                description: skill.description,
+                files: skill.files.len(),
+            })
+            .collect(),
+        unmanaged: agent::agents(&home)
+            .into_iter()
+            .flat_map(|agent| {
+                crate::skill::unknown(&agent, &known)
+                    .into_iter()
+                    .map(move |name| (agent.name.to_owned(), name))
+            })
+            .collect(),
+        problems,
+    }
+}
+
+/// Everything the Mesh screen shows, for the same reason.
+#[derive(Default)]
+struct MeshData {
+    enabled: bool,
+    agents: Vec<crate::relay::AgentView>,
+    workers: Vec<crate::relay::WorkerView>,
+    feed: Vec<crate::relay::Message>,
+    error: Option<String>,
+}
+
+fn loadmeshdata(database: &std::path::Path) -> MeshData {
+    let enabled = loadmesh(database).unwrap_or(false);
+    if !enabled {
+        return MeshData::default();
+    }
+    let path = database.to_path_buf();
+    match block(async {
+        let mesh = crate::relay::Mesh::open(path).await?;
+        Ok((
+            mesh.agents().await?,
+            mesh.workers().await?,
+            mesh.feed(0, 40).await?,
+        ))
+    }) {
+        Ok((agents, workers, feed)) => MeshData {
+            enabled,
+            agents,
+            workers,
+            feed,
+            error: None,
+        },
+        Err(error) => MeshData {
+            enabled,
+            error: Some(format!("Could not read the mesh: {error}")),
+            ..MeshData::default()
+        },
+    }
 }
 
 fn loadmesh(database: &std::path::Path) -> anyhow::Result<bool> {
