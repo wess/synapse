@@ -14,6 +14,8 @@ pub struct Agent {
     pub instructions: PathBuf,
     pub settings: PathBuf,
     pub integration: PathBuf,
+    /// Where this tool reads personal Agent Skills from.
+    pub skills: PathBuf,
 }
 
 #[derive(Debug, Clone)]

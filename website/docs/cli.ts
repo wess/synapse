@@ -13,6 +13,7 @@ export const cli: Page = {
     { label: "Vault and scope", id: "vault" },
     { label: "Memory", id: "memory" },
     { label: "Agent mesh", id: "mesh" },
+    { label: "Skills", id: "skills" },
     { label: "Data and settings", id: "data" },
     { label: "Installation and paths", id: "install" },
   ],
@@ -71,6 +72,18 @@ ${command("memory undo", "synapse memory undo <batch> --confirm", "Remove memori
     ${command("relay kill", "synapse relay kill &lt;name&gt;", "Stop a background worker. A worker owned by a Synapse session that is still running has to be stopped from there.")}
     ${command("session", "synapse session [--json]", "Report this session's Synapse connection as Claude Code session-hook output. Synapse installs this for you when you connect Claude Code; run it by hand to see exactly what a session will be told. Reads the calling tool's JSON on stdin.")}
     ${command("statusline", "synapse statusline", "Print one status line for a connected tool, reading that tool's JSON on stdin.")}
+
+    <h2 id="skills">Skills</h2>
+    <p>One Agent Skills library, installed into every connected tool. See the <a href="../skills/">skills guide</a> for the format and the folders involved.</p>
+    ${command("skill list", "synapse skill list [--json]", "List the library with each skill's file count and description. A skill whose <code>SKILL.md</code> does not parse is reported on stderr and skipped.")}
+    ${command("skill show", "synapse skill show &lt;name&gt;", "Print one skill's <code>SKILL.md</code>.")}
+    ${command("skill create", "synapse skill create &lt;name&gt;", "Start a skill from a template. Names follow the standard: lowercase letters, digits, and single inner hyphens.")}
+    ${command("skill edit", "synapse skill edit &lt;name&gt;", "Open a skill in <code>$VISUAL</code> or <code>$EDITOR</code>. A draft that does not parse is never saved over the working one.")}
+    ${command("skill delete", "synapse skill delete &lt;name&gt; --confirm", "Remove a skill from the library. Copies already installed in tools are left alone.")}
+    ${command("skill install", "synapse skill install [name] [--tool &lt;tool&gt;] [--replace]", "Copy the library into your tools. Without a name it installs everything; without <code>--tool</code> it installs into every connected tool. A copy that was edited in place, or a skill Synapse never wrote, is refused unless <code>--replace</code> is given.")}
+    ${command("skill remove", "synapse skill remove &lt;name&gt; [--tool &lt;tool&gt;] [--force]", "Take a skill back out of a tool. Only a copy Synapse installed and nobody has changed is removed; <code>--force</code> overrides that.")}
+    ${command("skill status", "synapse skill status [name] [--json]", "Show where each skill stands in each tool, and any skill a tool has that the library does not.")}
+    ${command("skill adopt", "synapse skill adopt &lt;name&gt; [--tool &lt;tool&gt;]", "Copy a skill a tool already has into the library and record that tool as having it, so it stops reading as unmanaged.")}
 
     <h2 id="data">Data and settings</h2>
     ${command("data check", "synapse data check [--json]", "Open the database, run page and foreign-key integrity checks, apply supported migrations, and report the path, schema version, and <code>ok</code> integrity state.")}

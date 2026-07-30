@@ -11,6 +11,7 @@ pub fn render(
     connections: Click,
     memories: Click,
     mesh: Click,
+    skills: Click,
     vaults: Click,
     settings: Click,
     cx: &App,
@@ -86,6 +87,18 @@ pub fn render(
                         .size(Size::Xs)
                         .left_section(Icon::new(IconName::Waypoints).size(Size::Xs))
                         .on_click(move |event, window, cx| mesh(event, window, cx)),
+                )
+                .child(
+                    Button::new("skillsnav", "Skills")
+                        .variant(if page == Page::Skills {
+                            Variant::Light
+                        } else {
+                            Variant::Subtle
+                        })
+                        .color(ColorName::Violet)
+                        .size(Size::Xs)
+                        .left_section(Icon::new(IconName::Sparkles).size(Size::Xs))
+                        .on_click(move |event, window, cx| skills(event, window, cx)),
                 )
                 .child(
                     Button::new("vaultsnav", "Vaults")

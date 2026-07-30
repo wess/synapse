@@ -8,6 +8,7 @@ mod instructions;
 mod mcp;
 mod relay;
 mod shellsetup;
+mod skill;
 mod ui;
 mod vault;
 

@@ -152,6 +152,7 @@ mod tests {
             command: "test",
             instructions: PathBuf::new(),
             settings: PathBuf::new(),
+            skills: PathBuf::new(),
             integration,
         }
     }

@@ -5,7 +5,7 @@ use crate::imports::{ImportBatch, ImportProvider, ImportSummary};
 use crate::ui::buffer::{self, Buffer, Format};
 use crate::ui::{
     Document, Notice, Page, Row, SaveDocument, agentrow, clibanner, document, header, memories,
-    mesh, settings, summary, vaults,
+    mesh, settings, skills, summary, vaults,
 };
 use crate::vault::{ScopeState, Secret, Vault, VaultStore};
 use gpui::prelude::*;
@@ -60,6 +60,9 @@ pub struct Dashboard {
     meshworkers: Vec<crate::relay::WorkerView>,
     meshfeed: Vec<crate::relay::Message>,
     mesherror: Option<String>,
+    skillrows: Vec<skills::Row>,
+    skillunmanaged: Vec<(String, String)>,
+    skillproblems: Vec<String>,
     guidance: GuidanceState,
     pendingguidance: bool,
     clistatus: crate::cli::InstallStatus,
@@ -221,6 +224,9 @@ impl Dashboard {
             meshworkers: Vec::new(),
             meshfeed: Vec::new(),
             mesherror: None,
+            skillrows: Vec::new(),
+            skillunmanaged: Vec::new(),
+            skillproblems: Vec::new(),
             guidance,
             pendingguidance: false,
             clistatus,
@@ -517,6 +523,111 @@ impl Dashboard {
     fn showvaults(&mut self, cx: &mut Context<Self>) {
         self.page = Page::Vaults;
         self.refreshvaults(cx);
+    }
+
+    fn showskills(&mut self, cx: &mut Context<Self>) {
+        self.page = Page::Skills;
+        self.refreshskills(cx);
+    }
+
+    /// Re-read the library and ask every tool what it currently has.
+    fn refreshskills(&mut self, cx: &mut Context<Self>) {
+        let home = files::home().unwrap_or_else(|_| PathBuf::from("."));
+        match block(crate::skill::survey(&home)) {
+            Ok((statuses, problems)) => {
+                let (library, _) = crate::skill::library::all().unwrap_or_default();
+                let known: Vec<String> = library.iter().map(|skill| skill.name.clone()).collect();
+                self.skillrows = library
+                    .into_iter()
+                    .map(|skill| skills::Row {
+                        places: statuses
+                            .iter()
+                            .filter(|status| status.skill == skill.name)
+                            .cloned()
+                            .collect(),
+                        name: skill.name,
+                        description: skill.description,
+                        files: skill.files.len(),
+                    })
+                    .collect();
+                self.skillunmanaged = agent::agents(&home)
+                    .into_iter()
+                    .flat_map(|agent| {
+                        crate::skill::unknown(&agent, &known)
+                            .into_iter()
+                            .map(move |name| (agent.name.to_owned(), name))
+                    })
+                    .collect();
+                self.skillproblems = problems;
+            }
+            Err(error) => {
+                self.skillproblems = vec![format!("the library could not be read: {error}")];
+            }
+        }
+        cx.notify();
+    }
+
+    /// Copy skills into the tools that read them. `only` narrows it to one.
+    fn installskills(&mut self, only: Option<String>, cx: &mut Context<Self>) {
+        let home = files::home().unwrap_or_else(|_| PathBuf::from("."));
+        let result = block(async move {
+            let receipts = crate::skill::Receipts::open(crate::files::database()?).await?;
+            let (library, _) = crate::skill::library::all()?;
+            let mut done = 0_usize;
+            let mut refused = Vec::new();
+            for agent in agent::agents(&home) {
+                for skill in &library {
+                    if only.as_ref().is_some_and(|name| name != &skill.name) {
+                        continue;
+                    }
+                    match crate::skill::install(&receipts, &agent, skill, false).await {
+                        Ok(_) => done += 1,
+                        Err(error) => refused.push(format!("{}: {error}", agent.name)),
+                    }
+                }
+            }
+            Ok::<_, anyhow::Error>((done, refused))
+        });
+        self.notice = match result {
+            Ok((done, refused)) if refused.is_empty() => {
+                Notice::Success(format!("Installed {done} skill copies."))
+            }
+            // A skill Synapse does not own is left alone, and the page says so
+            // rather than reporting a clean success it did not have.
+            Ok((done, refused)) => Notice::Error(format!(
+                "Installed {done}; left {} alone: {}",
+                refused.len(),
+                refused.join("; ")
+            )),
+            Err(error) => Notice::Error(format!("Could not install skills: {error}")),
+        };
+        self.refreshskills(cx);
+    }
+
+    fn adoptskill(&mut self, tool: String, name: String, cx: &mut Context<Self>) {
+        let home = files::home().unwrap_or_else(|_| PathBuf::from("."));
+        let result = block(async move {
+            let receipts = crate::skill::Receipts::open(crate::files::database()?).await?;
+            let agent = agent::agents(&home)
+                .into_iter()
+                .find(|agent| agent.name == tool)
+                .ok_or_else(|| anyhow::anyhow!("that tool is no longer connected"))?;
+            crate::skill::adopt(&receipts, &agent, &name).await
+        });
+        self.notice = match result {
+            Ok(path) => Notice::Success(format!("Copied it into {}.", path.display())),
+            Err(error) => Notice::Error(format!("Could not adopt it: {error}")),
+        };
+        self.refreshskills(cx);
+    }
+
+    fn openskills(&mut self) {
+        self.notice = match crate::skill::library::directory()
+            .and_then(|path| files::reveal(&path).map(|_| path))
+        {
+            Ok(_) => Notice::Ready,
+            Err(error) => Notice::Error(format!("Could not open the library: {error}")),
+        };
     }
 
     fn showmesh(&mut self, cx: &mut Context<Self>) {
@@ -1184,6 +1295,7 @@ impl Render for Dashboard {
                     Box::new(cx.listener(|this, _, _, cx| this.showconnections(cx))),
                     Box::new(cx.listener(|this, _, _, cx| this.showmemories(cx))),
                     Box::new(cx.listener(|this, _, _, cx| this.showmesh(cx))),
+                    Box::new(cx.listener(|this, _, _, cx| this.showskills(cx))),
                     Box::new(cx.listener(|this, _, _, cx| this.showvaults(cx))),
                     Box::new(cx.listener(|this, _, _, cx| this.showsettings(cx))),
                     cx,
@@ -1219,6 +1331,7 @@ impl Render for Dashboard {
                 Box::new(cx.listener(|this, _, _, cx| this.showconnections(cx))),
                 Box::new(cx.listener(|this, _, _, cx| this.showmemories(cx))),
                 Box::new(cx.listener(|this, _, _, cx| this.showmesh(cx))),
+                Box::new(cx.listener(|this, _, _, cx| this.showskills(cx))),
                 Box::new(cx.listener(|this, _, _, cx| this.showvaults(cx))),
                 Box::new(cx.listener(|this, _, _, cx| this.showsettings(cx))),
                 cx,
@@ -1321,6 +1434,60 @@ impl Render for Dashboard {
                         .height(36.0)
                         .left(Text::new("Agent mesh · local SQLite bus").size(Size::Xs))
                         .right(Text::new("Messages stay on this Mac").size(Size::Xs)),
+                )
+                .into_any_element();
+        }
+
+        if self.page == Page::Skills {
+            let host = cx.entity().downgrade();
+            let install = move |name: String| -> skills::Click {
+                let host = host.clone();
+                Box::new(move |_, _, cx| {
+                    host.update(cx, |this, cx| this.installskills(Some(name.clone()), cx))
+                        .ok();
+                })
+            };
+            let adopthost = cx.entity().downgrade();
+            let adopt = move |tool: String, name: String| -> skills::Click {
+                let host = adopthost.clone();
+                Box::new(move |_, _, cx| {
+                    host.update(cx, |this, cx| {
+                        this.adoptskill(tool.clone(), name.clone(), cx)
+                    })
+                    .ok();
+                })
+            };
+            return shell
+                .child(skills::render(
+                    skills::View {
+                        rows: self.skillrows.clone(),
+                        unmanaged: self.skillunmanaged.clone(),
+                        problems: self.skillproblems.clone(),
+                        folder: crate::skill::library::directory()
+                            .map(|path| path.display().to_string())
+                            .unwrap_or_default(),
+                        message: match &self.notice {
+                            Notice::Ready => None,
+                            Notice::Success(message) => Some((message.clone(), false)),
+                            Notice::Error(message) => Some((message.clone(), true)),
+                        },
+                    },
+                    skills::Actions {
+                        installall: Box::new(
+                            cx.listener(|this, _, _, cx| this.installskills(None, cx)),
+                        ),
+                        refresh: Box::new(cx.listener(|this, _, _, cx| this.refreshskills(cx))),
+                        openfolder: Box::new(cx.listener(|this, _, _, _| this.openskills())),
+                        install: Box::new(install),
+                        adopt: Box::new(adopt),
+                    },
+                    cx,
+                ))
+                .child(
+                    StatusBar::new()
+                        .height(36.0)
+                        .left(Text::new("Skills · one library, every tool").size(Size::Xs))
+                        .right(Text::new("Agent Skills open format").size(Size::Xs)),
                 )
                 .into_any_element();
         }
@@ -1605,6 +1772,7 @@ fn initialpage() -> Page {
     match std::env::var("SYNAPSE_PAGE").as_deref() {
         Ok("memory") => Page::Memories,
         Ok("mesh") => Page::Mesh,
+        Ok("skills") => Page::Skills,
         Ok("vaults") => Page::Vaults,
         Ok("settings") => Page::Settings,
         _ => Page::Connections,

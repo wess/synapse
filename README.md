@@ -14,6 +14,7 @@ Apple silicon · macOS 13 or later · Developer ID signed and notarized
 - **Says so at startup.** Claude Code shows `Synapse connected · 128 memories` beside its welcome message, so you can see the link before the first reply.
 - **Brings history with you.** Preview and import existing Claude and Codex memory into project-scoped Synapse records without changing the originals.
 - **Shares one playbook.** Keep global working guidance in one editable `SOUL.md`, with both tools pointed at it.
+- **Writes a skill once.** Keep your Agent Skills in one library and install them into Claude Code and Codex together, instead of copying folders by hand and watching the copies drift apart.
 - **Lets agents work together.** Turn on the mesh and your connected tools can message each other, split up a job, and wait for free between tasks. Off by default.
 - **Scopes credentials.** Keep secret values in macOS Keychain and choose which approved folders may receive which environment variables.
 - **Leaves you in control.** Search, edit, export, restore, or delete what Synapse stores. Nothing is hidden behind an account or remote service.
@@ -32,6 +33,20 @@ synapse run -- your-command
 ```
 
 Or enable shell integration in Settings to load approved project environments when you enter their folders.
+
+## One skill library
+
+Claude Code and Codex both read the [Agent Skills](https://agentskills.io) format, from different folders. Synapse keeps one copy and installs it into each:
+
+```sh
+synapse skill list                # what is in your library
+synapse skill adopt humanize      # bring in a skill a tool already has
+synapse skill create my-workflow  # start a new one
+synapse skill install             # copy them all into every connected tool
+synapse skill status              # where each one is, and what has drifted
+```
+
+Editing a skill in the library marks the installed copies as out of date; `install` brings them back in step. A skill Synapse did not put there is left alone.
 
 ## Working as a team
 

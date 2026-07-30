@@ -9,6 +9,7 @@ import { mcp } from "./docs/mcp";
 import { memory } from "./docs/memory";
 import { mesh } from "./docs/mesh";
 import { security } from "./docs/security";
+import { skills } from "./docs/skills";
 import { troubleshoot } from "./docs/troubleshoot";
 import { vault } from "./docs/vault";
 import { connect } from "./tutorials/connect";
@@ -27,6 +28,7 @@ export const pages: Page[] = [
   memory,
   mcp,
   mesh,
+  skills,
   vault,
   data,
   config,

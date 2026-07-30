@@ -12,19 +12,21 @@ export const app: Page = {
     { label: "Connections", id: "connections" },
     { label: "Memory", id: "memory" },
     { label: "Mesh", id: "mesh" },
+    { label: "Skills", id: "skills" },
     { label: "Vaults", id: "vaults" },
     { label: "Settings", id: "settings" },
     { label: "Editors and data", id: "editors" },
   ],
   body: `
     <h2 id="navigation">Navigation and shared state</h2>
-    <p>The desktop app is a local control surface over the same SQLite database, Keychain items, scope files, and tool configuration used by the CLI and MCP server. The header moves between five screens:</p>
+    <p>The desktop app is a local control surface over the same SQLite database, Keychain items, scope files, and tool configuration used by the CLI and MCP server. The header moves between six screens:</p>
     <table>
       <thead><tr><th>Screen</th><th>Use it for</th><th>Material it can change</th></tr></thead>
       <tbody>
         <tr><td>Connections</td><td>Detect and connect supported developer tools.</td><td>Tool MCP configuration and managed instruction blocks.</td></tr>
         <tr><td>Memory</td><td>Import, scope, search, inspect, correct, or remove durable context.</td><td>Memory rows, scope metadata, and reversible import batches.</td></tr>
         <tr><td>Mesh</td><td>Turn the agent mesh on and watch who has joined, what they report, and what they send each other.</td><td>One local preference. The roster and messages are written by the agents themselves.</td></tr>
+        <tr><td>Skills</td><td>Keep one Agent Skills library and install it into every connected tool.</td><td>The library in the Synapse data directory, and skill folders inside each tool.</td></tr>
         <tr><td>Vaults</td><td>Manage labels, Keychain values, mappings, and approved project scopes.</td><td>Vault metadata, Keychain items, and <code>.synapse.yaml</code>.</td></tr>
         <tr><td>Settings</td><td>Manage shared guidance, recall, the agent mesh, appearance, CLI, and shell integration.</td><td><code>SOUL.md</code>, global pointers, local preferences, the CLI launcher, and one managed shell block.</td></tr>
       </tbody>
@@ -55,6 +57,11 @@ export const app: Page = {
     <p>The Mesh screen is off until you turn it on, here or in Settings. While it is off the screen explains the trade: the coordination tools are loaded by every connected tool, and that costs context in each session.</p>
     <p>Once on, it lists the agents that have joined with their role, project, and last reported work state; the background workers running under a Synapse session; and the recent messages between them. Nothing on this screen changes what agents do — it reports. <strong>Refresh</strong> re-reads the database, which is also what opening the screen does.</p>
     <p>See <a href="../mesh/">Agent mesh</a> for roles, teams, and the command line.</p>
+
+    <h2 id="skills">Skills</h2>
+    <p>The Skills screen lists your library, and beside each skill a badge per connected tool saying whether that tool has it, has an older copy, or has one Synapse did not write. <strong>Install</strong> on a skill copies it wherever it is missing or behind; <strong>Install all</strong> does the lot.</p>
+    <p>Skills a tool already has that the library does not know about appear under <strong>Already in your tools</strong> with an <strong>Adopt</strong> button, which copies one into the library and starts managing it. A skill Synapse did not install is never overwritten or deleted from this screen — it is reported instead, and the result line says how many were left alone.</p>
+    <p>See <a href="../skills/">Skills</a> for the format, the exact folders, and what each state means.</p>
 
     <h2 id="vaults">Vaults and scopes</h2>
     <p>Create a vault, select it, then provide a label, environment name, and value under <strong>Add a secret</strong>. <strong>Save to Keychain</strong> writes the value directly to macOS Keychain while SQLite keeps only its label, environment name, account reference, and scope state. The app never shows a saved value again.</p>

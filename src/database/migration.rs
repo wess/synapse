@@ -3,7 +3,7 @@ use anyhow::{Context, Result};
 use sqlx::SqlitePool;
 use std::path::Path;
 
-pub const LATEST: i64 = 3;
+pub const LATEST: i64 = 4;
 
 struct Migration {
     version: i64,
@@ -93,6 +93,21 @@ const MIGRATIONS: &[Migration] = &[
              status TEXT NOT NULL DEFAULT '', \
              restarts INTEGER NOT NULL DEFAULT 0, \
              created INTEGER NOT NULL)",
+        ],
+    },
+    Migration {
+        version: 4,
+        statements: &[
+            // What Synapse copied where, so a later run can tell its own work
+            // from a skill somebody wrote by hand under the same name.
+            "CREATE TABLE skillinstall(\
+             skill TEXT NOT NULL, \
+             tool TEXT NOT NULL, \
+             path TEXT NOT NULL, \
+             digest TEXT NOT NULL, \
+             source TEXT NOT NULL DEFAULT '', \
+             installed INTEGER NOT NULL, \
+             PRIMARY KEY(skill, tool))",
         ],
     },
 ];

@@ -55,6 +55,7 @@
         <li><a href="../docs/memory/">Memory and recall</a></li>
         <li><a href="../docs/mcp/">MCP tool reference</a></li>
         <li><a href="../docs/mesh/">Agent mesh</a></li>
+        <li><a href="../docs/skills/">Skills</a></li>
         <li><a href="../docs/vault/">Vaults and scopes</a></li>
         <li><a href="../docs/data/">Data lifecycle</a></li>
         <li><a href="../docs/config/">Configuration and paths</a></li>
@@ -93,6 +94,7 @@
         <tr><td>Project and folder mappings</td><td>Approved <code>.synapse.yaml</code> files</td><td>You, Synapse, and the repository if you commit the file</td></tr>
         <tr><td>Scope approvals</td><td>Local SQLite database as a path and content digest</td><td>Synapse</td></tr>
         <tr><td>Mesh roster, channels, and messages between agents</td><td>Local SQLite database, while the mesh is on</td><td>Desktop app, CLI, and agents that have joined</td></tr>
+        <tr><td>Agent Skills library</td><td>The Synapse data directory, copied into each tool's own skills folder</td><td>You, and every tool that reads the Agent Skills format</td></tr>
         <tr><td>Agent roles and team rosters</td><td>TOML in the project's <code>.synapse</code> folder or the Synapse data directory</td><td>You, Synapse, and the repository if you commit them</td></tr>
       </tbody>
     </table>
@@ -119,6 +121,8 @@
       <dd>Read <a href="vault/">Vaults and scopes</a>, then build a complete approved scope in <a href="../tutorials/secrets/">Use a scoped secret in either shell mode</a>.</dd>
       <dt>I want my tools to work together.</dt>
       <dd>Read <a href="mesh/">Agent mesh</a>. It covers turning it on, roles, teams, background workers, and what the mesh deliberately does not do.</dd>
+      <dt>I keep copying the same skill into every tool.</dt>
+      <dd>Read <a href="skills/">Skills</a>. One library, installed into Claude Code and Codex together, with drift reported rather than silently resolved.</dd>
       <dt>I need automation or exact syntax.</dt>
       <dd>Use the <a href="cli/">complete CLI reference</a> and <a href="mcp/">MCP tool reference</a>.</dd>
       <dt>I am planning backups or a recovery.</dt>

@@ -10,6 +10,7 @@ mod menu;
 mod mesh;
 mod model;
 mod settings;
+mod skills;
 #[cfg(target_os = "macos")]
 mod statusbar;
 mod summary;

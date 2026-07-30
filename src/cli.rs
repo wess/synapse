@@ -7,6 +7,7 @@ mod relay;
 mod roles;
 mod session;
 mod shell;
+mod skills;
 
 pub use install::{InstallStatus, destination, install, status};
 

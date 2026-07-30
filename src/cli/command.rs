@@ -62,6 +62,18 @@ Commands:
                                    Manage team rosters
   relay ps [--json]                List background workers
   relay kill <name>                Stop a background worker
+  skill list [--json]              List the skills in your library
+  skill show <name>                Print one skill
+  skill create <name>              Start a new skill from a template
+  skill edit <name>                Edit a skill in $EDITOR
+  skill delete <name> --confirm    Remove a skill from the library
+  skill install [name] [--tool <tool>] [--replace]
+                                   Copy skills into your connected tools
+  skill remove <name> [--tool <tool>] [--force]
+                                   Take a skill back out of a tool
+  skill status [name] [--json]     Show where each skill is installed
+  skill adopt <name> [--tool <tool>]
+                                   Copy a tool's own skill into the library
   session [--json]                 Report this session's Synapse connection
   statusline                       Print one status line for a connected tool
   settings show                    Show recall, mesh, and shell settings
@@ -105,6 +117,7 @@ pub fn run(arguments: Vec<OsString>) -> Result<Outcome> {
         "memory" => super::memory::run(rest),
         "guidance" => super::guidance::run(rest),
         "relay" => super::relay::run(rest),
+        "skill" => super::skills::run(rest),
         "session" => super::session::session(rest),
         "statusline" => super::session::statusline(rest),
         "settings" => settings(rest),

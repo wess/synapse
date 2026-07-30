@@ -25,6 +25,7 @@ Developers who move between multiple coding tools and want decisions, preference
 - An MCP stdio server exposing `remember`, `recall`, and value-free vault status.
 - An opt-in agent mesh over the same local database: register, direct messages, channels, broadcasts, free parking on `wait`, reported work state, and supervised background workers. Off by default, because its tools cost context in every session that loads them.
 - Reusable agent roles and team rosters as layered TOML, resolved project, then user, then built-in.
+- One Agent Skills library installed into every connected tool, so a skill is written once instead of copied by hand into each one and left to drift. Skills Synapse did not install are reported, never overwritten.
 - One-click user-level setup for Codex and Claude Code, including a Claude Code session notice and status line that state the connection before the model has written anything.
 - One editable `SOUL.md` for shared guidance, with managed pointers in each tool's global instruction file.
 - Safe pointer sync plus explicit, backed-up consolidation of existing global guidance.

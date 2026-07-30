@@ -283,12 +283,6 @@ pub async fn reapstrays(mesh: &Mesh) -> Result<Vec<WorkerView>> {
 mod tests {
     use super::*;
 
-    /// `SYNAPSE_DATA` decides where worker logs land, and it is process-global
-    /// while these tests run in parallel threads. Anything that sets it holds
-    /// this first, so two tests cannot point the same supervisor at two
-    /// different folders halfway through a launch.
-    static DATA: std::sync::Mutex<()> = std::sync::Mutex::new(());
-
     /// A mesh whose worker logs are written inside `directory`, held for as long
     /// as the returned guard lives.
     async fn mesh() -> (Mesh, tempfile::TempDir) {
@@ -297,10 +291,10 @@ mod tests {
         (mesh, directory)
     }
 
+    /// Worker logs land under the data directory, so a test that starts one
+    /// redirects `SYNAPSE_DATA` and holds the shared lock while it does.
     fn logsinto(directory: &tempfile::TempDir) -> std::sync::MutexGuard<'static, ()> {
-        let guard = DATA.lock().unwrap_or_else(|error| error.into_inner());
-        unsafe { std::env::set_var("SYNAPSE_DATA", directory.path()) };
-        guard
+        crate::files::scopeddata(directory.path())
     }
 
     fn spec(name: &str) -> Spec {

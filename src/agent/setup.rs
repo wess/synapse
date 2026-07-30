@@ -268,6 +268,7 @@ mod tests {
             command: "fake",
             instructions,
             settings: integration.clone(),
+            skills: PathBuf::new(),
             integration,
         }
     }

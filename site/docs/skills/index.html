@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Skills — Synapse</title>
+  <meta name="description" content="Keep your Agent Skills in one library and install them into every connected tool, instead of copying folders by hand and watching the copies drift.">
+  <meta name="theme-color" content="#0a43c8">
+  <meta property="og:title" content="Skills">
+  <meta property="og:description" content="Keep your Agent Skills in one library and install them into every connected tool, instead of copying folders by hand and watching the copies drift.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://wess.io/synapse/docs/skills/">
+  <link rel="canonical" href="https://wess.io/synapse/docs/skills/">
+  <link rel="icon" href="../../icon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Fragment+Mono&family=Manrope:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="../../style.css">
+  <script type="module" src="../../site.js"></script>
+</head>
+<body class="docs" data-root="../../">
+  
+  <a class="skip" href="#content">Skip to content</a>
+  <header class="topbar">
+    <a class="wordmark" href="../../" aria-label="Synapse home">
+      <img src="../../icon.svg" width="30" height="30" alt="">
+      <span>Synapse</span>
+    </a>
+    <button class="navtoggle" type="button" aria-expanded="false" aria-controls="topnav">Menu</button>
+    <nav id="topnav" aria-label="Primary">
+      <a href="../../docs/" aria-current="page">Docs</a>
+      <a href="../../tutorials/">Tutorials</a>
+      <a href="https://github.com/wess/synapse">GitHub <span aria-hidden="true">↗</span></a>
+      <a class="navdownload" href="https://github.com/wess/synapse/releases/download/v0.1.0-beta.11/synapse.zip">Download</a>
+    </nav>
+  </header>
+  
+  <div class="doclayout">
+    
+  <aside class="docsrail" aria-label="Documentation navigation">
+    <div class="searchbox">
+      <label for="search">Search the guide</label>
+      <input id="search" type="search" placeholder="Memory, vaults, restore…" autocomplete="off">
+      <div class="searchresults" data-results hidden></div>
+      <span class="searchstatus" data-searchstatus role="status" aria-live="polite"></span>
+    </div>
+    <details class="railnav" open>
+      <summary>Browse all guides</summary>
+      <nav aria-label="All guides">
+        <h2>Documentation</h2>
+        <ul>
+        <li><a href="../../docs/">Start here</a></li>
+        <li><a href="../../docs/install/">Install and connect</a></li>
+        <li><a href="../../docs/app/">Desktop app reference</a></li>
+        <li><a href="../../docs/memory/">Memory and recall</a></li>
+        <li><a href="../../docs/mcp/">MCP tool reference</a></li>
+        <li><a href="../../docs/mesh/">Agent mesh</a></li>
+        <li><a href="../../docs/skills/" aria-current="page">Skills</a></li>
+        <li><a href="../../docs/vault/">Vaults and scopes</a></li>
+        <li><a href="../../docs/data/">Data lifecycle</a></li>
+        <li><a href="../../docs/config/">Configuration and paths</a></li>
+        <li><a href="../../docs/security/">Security model</a></li>
+        <li><a href="../../docs/cli/">CLI reference</a></li>
+        <li><a href="../../docs/troubleshoot/">Troubleshooting</a></li></ul>
+        <h2>Tutorials</h2>
+        <ul>
+        <li><a href="../../tutorials/">Tutorials</a></li>
+        <li><a href="../../tutorials/connect/">Install and connect your first tools</a></li>
+        <li><a href="../../tutorials/continuity/">Carry one decision between tools</a></li>
+        <li><a href="../../tutorials/secrets/">Use a scoped secret in either shell mode</a></li>
+        <li><a href="../../tutorials/curate/">Curate and optimize memory</a></li>
+        <li><a href="../../tutorials/recovery/">Export and restore safely</a></li></ul>
+      </nav>
+    </details>
+  </aside>
+    <main class="article" id="content">
+      <header class="articlehead">
+        <h1>Skills</h1>
+        <span>Keep your Agent Skills in one library and install them into every connected tool, instead of copying folders by hand and watching the copies drift.</span>
+      </header>
+      
+    <h2 id="why">Why a library</h2>
+    <p>Claude Code and Codex both read the <a href="https://agentskills.io">Agent Skills</a> open format, and both read it from their own folder. A skill you want in both gets copied twice, and the two copies start drifting the first time you improve one of them.</p>
+    <p>Synapse keeps one copy. You edit it in one place, install it into every connected tool, and the app tells you which copies have fallen behind.</p>
+
+    <h2 id="locations">Where skills go</h2>
+    <table>
+      <thead><tr><th>Place</th><th>Path</th></tr></thead>
+      <tbody>
+        <tr><td>The Synapse library</td><td><code>&lt;data&gt;/skills/&lt;name&gt;/SKILL.md</code></td></tr>
+        <tr><td>Claude Code</td><td><code>~/.claude/skills/&lt;name&gt;/SKILL.md</code></td></tr>
+        <tr><td>Codex</td><td><code>~/.agents/skills/&lt;name&gt;/SKILL.md</code></td></tr>
+      </tbody>
+    </table>
+    
+  <aside class="note">
+    <strong>Codex reads personal skills from the shared &lt;code&gt;~/.agents/skills&lt;/code&gt; folder rather than from its own home. &lt;code&gt;~/.codex/skills&lt;/code&gt; holds the set Codex ships with, and Synapse does not write there.</strong>
+    <p>undefined</p>
+  </aside>
+
+    <h2 id="format">The format</h2>
+    <p>A skill is a directory with a <code>SKILL.md</code> at its root. The frontmatter needs a <code>name</code> that matches the directory and a <code>description</code> saying what the skill does and when to reach for it. Everything after the frontmatter is the instructions.</p>
+    
+  <div class="codeblock">
+    <div class="codebar">
+      <span>markdown</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>---
+name: release-checklist
+description: Walk the release checklist for this project. Use when cutting a release, tagging a version, or when the user asks what still needs doing before shipping.
+---
+
+## Steps
+
+1. Run the full test suite.
+2. Bump the version.
+3. Write the release notes.</code></pre>
+  </div>
+    <p>A skill can carry more than its <code>SKILL.md</code> — <code>scripts/</code>, <code>references/</code>, and <code>assets/</code> travel with it, and Synapse copies the whole directory. Agents load only the name and description until a task calls for the skill, so a long reference file costs nothing until it is needed.</p>
+    
+  <aside class="note">
+    <strong>A description containing a colon followed by a space has to be quoted, or YAML reads it as a nested key. Synapse says so by name rather than passing the raw parser error through.</strong>
+    <p>undefined</p>
+  </aside>
+    <p>Synapse ships one skill, <code>synapse-mesh</code>, covering how to actually run a team of agents. It lands in your library on first use and is an ordinary editable skill from then on.</p>
+
+    <h2 id="installing">Installing</h2>
+    
+  <div class="codeblock">
+    <div class="codebar">
+      <span>shell</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>synapse skill list                     # what is in the library
+synapse skill create my-workflow       # start one from a template
+synapse skill edit my-workflow         # open it in $EDITOR
+synapse skill install                  # copy everything into every tool
+synapse skill install my-workflow      # or just one
+synapse skill install --tool claude    # or into just one tool
+synapse skill status                   # where each one is
+synapse skill remove my-workflow       # take it back out</code></pre>
+  </div>
+    <p>Editing a skill in the library leaves the installed copies behind, and <code>status</code> says so. Running <code>install</code> again brings them back in step. In the app, the <strong>Skills</strong> screen does the same thing with a button per skill and one that installs everything.</p>
+
+    <h2 id="states">What each state means</h2>
+    <table>
+      <thead><tr><th>State</th><th>What it means</th><th>What Synapse will do</th></tr></thead>
+      <tbody>
+        <tr><td>not installed</td><td>The tool does not have this skill.</td><td>Install it.</td></tr>
+        <tr><td>installed</td><td>The copy matches the library.</td><td>Nothing needed.</td></tr>
+        <tr><td>update available</td><td>Synapse installed it, and the library has changed since.</td><td>Install again to sync.</td></tr>
+        <tr><td>changed in place</td><td>Synapse installed it, and it has been edited inside the tool.</td><td>Refuse, unless you pass <code>--replace</code>.</td></tr>
+        <tr><td>not ours</td><td>A skill of the same name that Synapse never wrote.</td><td>Refuse. It is yours, not Synapse's.</td></tr>
+        <tr><td>not in the library</td><td>The tool has a skill Synapse does not know about.</td><td>Nothing, until you adopt it.</td></tr>
+      </tbody>
+    </table>
+    <p>Synapse knows which copies are its own because it records the digest it wrote and the library digest it came from. Without that record, "the library moved on" and "somebody wrote this by hand" look identical, and the safe response to both would be to do nothing.</p>
+
+    <h2 id="adopting">Adopting what you already have</h2>
+    <p>If a tool already has a skill you want managed, adopt it. That copies it into the library and records the tool it came from as already having it, so the original stops reading as somebody else's and starts staying in step.</p>
+    
+  <div class="codeblock">
+    <div class="codebar">
+      <span>shell</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>synapse skill adopt humanize --tool claude
+synapse skill install humanize</code></pre>
+  </div>
+    <p>The app lists these under <strong>Already in your tools</strong> on the Skills screen, with an Adopt button beside each.</p>
+
+    <h2 id="limits">Limits</h2>
+    <ul>
+      <li>Personal skills only. Project skills, in a repository's own <code>.claude/skills</code> or <code>.agents/skills</code>, belong to that repository and Synapse leaves them alone.</li>
+      <li>Installing copies the directory rather than linking it, so a copy stays put if the library moves. The cost is that an edit in the library has to be installed again to reach the tools, which is what <code>status</code> is for.</li>
+      <li>Deleting a skill from the library does not remove the copies already installed. Use <code>synapse skill remove</code> for that, before or after.</li>
+      <li>A skill whose <code>SKILL.md</code> does not parse is reported and skipped rather than copied anywhere.</li>
+    </ul>
+  
+    </main>
+    <aside class="ontoc" aria-label="On this page">
+        <span>On this page</span>
+        <ol><li><a href="#why">Why a library</a></li><li><a href="#locations">Where skills go</a></li><li><a href="#format">The format</a></li><li><a href="#installing">Installing</a></li><li><a href="#states">What each state means</a></li><li><a href="#adopting">Adopting what you already have</a></li><li><a href="#limits">Limits</a></li></ol>
+      </aside>
+  </div>
+  
+  <footer class="footer">
+    <div>
+      <a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">Synapse</a>
+      <p>Project memory and scoped credentials, kept on your Mac.</p>
+    </div>
+    <nav aria-label="Footer">
+      <a href="../../docs/">Documentation</a>
+      <a href="../../tutorials/">Tutorials</a>
+      <a href="https://github.com/wess/synapse">Source</a>
+      <a href="https://github.com/wess/synapse/releases">Releases</a>
+    </nav>
+    <p class="footerfine">No account required. Apple silicon · macOS 13+.</p>
+  </footer>
+</body>
+</html>

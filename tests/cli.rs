@@ -617,3 +617,160 @@ fn the_session_hook_reports_real_numbers_and_a_status_line_follows() {
     ));
     assert_eq!(line.trim(), "Opus 5 · project · ◆ Synapse 1");
 }
+
+#[test]
+fn one_skill_library_installs_into_every_connected_tool() {
+    let root = tempfile::tempdir().unwrap();
+    let home = root.path().join("home");
+
+    // The shipped skill appears without anyone creating it.
+    let listed = success(run(root.path(), &["skill", "list"], None));
+    assert!(listed.contains("synapse-mesh"), "got {listed}");
+
+    let before = success(run(root.path(), &["skill", "status"], None));
+    assert!(
+        before.contains("synapse-mesh\tCodex\tnot installed"),
+        "got {before}"
+    );
+    assert!(
+        before.contains("synapse-mesh\tClaude Code\tnot installed"),
+        "got {before}"
+    );
+
+    success(run(root.path(), &["skill", "install"], None));
+
+    // Each tool reads personal skills from its own folder, and both got a copy.
+    let claude = home.join(".claude/skills/synapse-mesh/SKILL.md");
+    let codex = home.join(".agents/skills/synapse-mesh/SKILL.md");
+    assert!(claude.is_file(), "Claude Code did not get the skill");
+    assert!(codex.is_file(), "Codex did not get the skill");
+    assert_eq!(
+        fs::read_to_string(&claude).unwrap(),
+        fs::read_to_string(&codex).unwrap(),
+        "the whole point is that the two copies cannot drift"
+    );
+
+    let after = success(run(root.path(), &["skill", "status"], None));
+    assert!(
+        after.contains("synapse-mesh\tCodex\tinstalled"),
+        "got {after}"
+    );
+
+    // Editing the library marks every copy as out of date, and installing again
+    // brings them back in step.
+    let library = root.path().join("data/skills/synapse-mesh/SKILL.md");
+    let edited = fs::read_to_string(&library).unwrap().replace(
+        "Coordination is cheap",
+        "A change in the library. Coordination is cheap",
+    );
+    fs::write(&library, edited).unwrap();
+
+    let stale = success(run(root.path(), &["skill", "status"], None));
+    assert!(
+        stale.contains("synapse-mesh\tCodex\tupdate available"),
+        "got {stale}"
+    );
+
+    success(run(
+        root.path(),
+        &["skill", "install", "synapse-mesh"],
+        None,
+    ));
+    assert!(
+        fs::read_to_string(&codex)
+            .unwrap()
+            .contains("A change in the library"),
+        "the sync should have reached the installed copy"
+    );
+}
+
+#[test]
+fn a_skill_synapse_did_not_write_is_never_overwritten() {
+    let root = tempfile::tempdir().unwrap();
+    let home = root.path().join("home");
+    let theirs = home.join(".claude/skills/mine");
+    fs::create_dir_all(&theirs).unwrap();
+    let body = "---\nname: mine\ndescription: I wrote this by hand and it is not Synapse business.\n---\n\nMine alone.\n";
+    fs::write(theirs.join("SKILL.md"), body).unwrap();
+
+    // It is reported as present but unmanaged, rather than ignored.
+    let status = success(run(root.path(), &["skill", "status"], None));
+    assert!(
+        status.contains("mine\tClaude Code\tnot in the library"),
+        "got {status}"
+    );
+
+    // Adopting copies it into the library and claims the copy it came from, so
+    // the tool it was already in does not read as somebody else's.
+    success(run(
+        root.path(),
+        &["skill", "adopt", "mine", "--tool", "claude"],
+        None,
+    ));
+    let adopted = success(run(root.path(), &["skill", "status", "mine"], None));
+    assert!(
+        adopted.contains("mine\tClaude Code\tinstalled"),
+        "got {adopted}"
+    );
+
+    success(run(root.path(), &["skill", "install", "mine"], None));
+    assert!(home.join(".agents/skills/mine/SKILL.md").is_file());
+
+    // A copy edited inside the tool is protected until asked for explicitly.
+    fs::write(
+        home.join(".agents/skills/mine/SKILL.md"),
+        "---\nname: mine\ndescription: Edited right here inside the tool.\n---\n\nTheirs.\n",
+    )
+    .unwrap();
+    let changed = success(run(root.path(), &["skill", "status", "mine"], None));
+    assert!(
+        changed.contains("mine\tCodex\tchanged in place"),
+        "got {changed}"
+    );
+
+    let refused = run(root.path(), &["skill", "install", "mine"], None);
+    assert!(
+        !refused.status.success(),
+        "a changed copy must not be replaced silently"
+    );
+    assert!(
+        fs::read_to_string(home.join(".agents/skills/mine/SKILL.md"))
+            .unwrap()
+            .contains("Theirs."),
+        "the edit inside the tool has to survive"
+    );
+
+    success(run(
+        root.path(),
+        &["skill", "install", "mine", "--replace"],
+        None,
+    ));
+    assert!(
+        !fs::read_to_string(home.join(".agents/skills/mine/SKILL.md"))
+            .unwrap()
+            .contains("Theirs."),
+        "asking explicitly should still work"
+    );
+}
+
+#[test]
+fn a_broken_skill_is_reported_and_never_reaches_a_tool() {
+    let root = tempfile::tempdir().unwrap();
+    let broken = root.path().join("data/skills/broken");
+    fs::create_dir_all(&broken).unwrap();
+    fs::write(broken.join("SKILL.md"), "no frontmatter at all\n").unwrap();
+
+    let output = run(root.path(), &["skill", "list"], None);
+    assert!(
+        output.status.success(),
+        "one bad skill must not sink the list"
+    );
+    let warnings = String::from_utf8_lossy(&output.stderr);
+    assert!(warnings.contains("skipped broken:"), "got {warnings}");
+
+    success(run(root.path(), &["skill", "install"], None));
+    assert!(
+        !root.path().join("home/.claude/skills/broken").exists(),
+        "a skill that does not parse must not be copied anywhere"
+    );
+}
