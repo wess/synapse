@@ -203,8 +203,28 @@ mod tests {
         installtarget(&executable, &target).unwrap();
 
         assert!(bundled(&executable));
-        let output = Command::new(&target).arg("success").output().unwrap();
-        assert!(output.status.success());
+        assert_eq!(fs::read_to_string(&target).unwrap(), launcher(&executable));
+        assert_eq!(
+            fs::metadata(&target).unwrap().permissions().mode() & 0o111,
+            0o111,
+            "the launcher has to be executable by anyone who can read it"
+        );
+
+        // macOS occasionally SIGKILLs a script the moment it is renamed into
+        // place, while the system scans the newly materialised file. That is a
+        // platform race, not a result, so a run cut short by a signal is retried
+        // rather than believed. A real failure carries an exit code and stands.
+        let mut output = Command::new(&target).arg("success").output().unwrap();
+        for _ in 0..8 {
+            if output.status.code().is_some() {
+                break;
+            }
+            output = Command::new(&target).arg("success").output().unwrap();
+        }
+        assert!(
+            output.status.success(),
+            "the installed launcher failed: {output:?}"
+        );
         assert_eq!(
             String::from_utf8(output.stdout).unwrap(),
             "launched success\n"
