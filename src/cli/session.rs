@@ -194,16 +194,32 @@ fn gather(root: Option<&Path>) -> Result<Report> {
     })
 }
 
+/// How long to wait for the calling tool to say where it is working. A client
+/// writes its JSON and closes immediately; anything that holds the pipe open
+/// without writing gets a report scoped to this process's own folder instead.
+const INPUTWAIT: std::time::Duration = std::time::Duration::from_secs(2);
+
 /// The JSON the calling tool writes on stdin, or nothing when it wrote none.
+///
+/// Read on a separate thread against a deadline, because this runs on every
+/// turn of every session: a caller that leaves the pipe open and never writes
+/// would otherwise park one of these forever, and go on doing it every time it
+/// redrew. Nothing on stdin is a supported case — it only costs the report its
+/// folder — so waiting indefinitely for it is never the better answer.
 fn stdin() -> serde_json::Value {
     if std::io::stdin().is_terminal() {
         return serde_json::Value::Null;
     }
-    let mut raw = String::new();
-    if std::io::stdin().read_to_string(&mut raw).is_err() {
-        return serde_json::Value::Null;
+    let (sender, receiver) = std::sync::mpsc::channel();
+    std::thread::spawn(move || {
+        let mut raw = String::new();
+        let read = std::io::stdin().read_to_string(&mut raw);
+        let _ = sender.send(read.map(|_| raw));
+    });
+    match receiver.recv_timeout(INPUTWAIT) {
+        Ok(Ok(raw)) => serde_json::from_str(&raw).unwrap_or(serde_json::Value::Null),
+        _ => serde_json::Value::Null,
     }
-    serde_json::from_str(&raw).unwrap_or(serde_json::Value::Null)
 }
 
 /// Where the calling session is working. Claude Code sends both `cwd` and
