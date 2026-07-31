@@ -134,11 +134,37 @@ pub fn writepointer(path: &Path, soul: &Path, pointeronly: bool) -> Result<()> {
     files::write(path, &merged).with_context(|| format!("could not update {}", path.display()))
 }
 
+/// Take the Synapse block back out of a tool's instruction file, leaving
+/// everything the user wrote around it exactly where it was.
+///
+/// Returns whether there was a block to remove. A file Synapse never wrote to
+/// is left untouched rather than rewritten, so disconnecting cannot reformat
+/// somebody's instructions as a side effect.
+pub fn removepointer(path: &Path) -> Result<bool> {
+    let Ok(current) = fs::read_to_string(path) else {
+        return Ok(false);
+    };
+    let stripped = stripmanaged(&current);
+    if stripped == current {
+        return Ok(false);
+    }
+    let trimmed = stripped.trim();
+    let content = if trimmed.is_empty() {
+        String::new()
+    } else {
+        format!("{trimmed}\n")
+    };
+    files::write(path, &content).with_context(|| format!("could not update {}", path.display()))?;
+    Ok(true)
+}
+
 fn pointerblock(soul: &Path) -> String {
     format!("{START}\n{}\n{END}", crate::instructions::managed(soul))
 }
 
-fn pointermatches(path: &Path, soul: &Path) -> bool {
+/// Whether one tool's instruction file carries a current pointer, so a
+/// report can say which tool is set up rather than only how many are.
+pub fn pointermatches(path: &Path, soul: &Path) -> bool {
     fs::read_to_string(path)
         .map(|content| content.contains(&pointerblock(soul)))
         .unwrap_or(false)

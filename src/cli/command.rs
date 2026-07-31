@@ -76,11 +76,14 @@ Commands:
                                    Copy a tool's own skill into the library
   session [--json]                 Report this session's Synapse connection
   statusline                       Print one status line for a connected tool
+  doctor [--json]                  Report everything a bug report needs
   settings show                    Show recall, mesh, and shell settings
   settings optimize <full|balanced|lean>
                                    Set the MCP recall response budget
   settings mesh <on|off>           Turn the agent mesh tools on or off
   install                          Install the synapse CLI for this user
+  disconnect [claude|codex]        Undo one tool's connection, or every tool's
+  uninstall [--data] [--confirm]   Remove everything Synapse installed
   path                             Print the local data and CLI paths
   version                          Print the version
   help                             Show this help
@@ -120,8 +123,11 @@ pub fn run(arguments: Vec<OsString>) -> Result<Outcome> {
         "skill" => super::skills::run(rest),
         "session" => super::session::session(rest),
         "statusline" => super::session::statusline(rest),
+        "doctor" => super::doctor::doctor(rest),
         "settings" => settings(rest),
         "install" => install(),
+        "disconnect" => super::remove::disconnect(rest),
+        "uninstall" => super::remove::uninstall(rest),
         "path" => paths(),
         unknown => anyhow::bail!("unknown command `{unknown}`\n\n{HELP}"),
     }

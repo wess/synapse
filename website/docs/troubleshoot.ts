@@ -1,4 +1,4 @@
-import { code } from "../markup";
+import { code, note } from "../markup";
 import type { Page } from "../types";
 
 export const troubleshoot: Page = {
@@ -8,6 +8,7 @@ export const troubleshoot: Page = {
   kind: "docs",
   toc: [
     { label: "Start with status", id: "status" },
+    { label: "One command for a bug report", id: "doctor" },
     { label: "App and CLI", id: "app" },
     { label: "Tool connection", id: "connection" },
     { label: "Scopes and secrets", id: "scopes" },
@@ -22,6 +23,13 @@ synapse data check
 synapse status .
 synapse settings show`)}
     <p>These commands establish which executable is running, which database it opens, whether the database is healthy, which scopes apply to the current folder, and which response budget connected tools use.</p>
+
+    <h2 id="doctor">One command for a bug report</h2>
+    <p><code>synapse doctor</code> gathers everything anyone would ask you for: version, store state and size, which tools are connected and what each is set up with, skill and mesh state, shell and CLI integration, resolved paths, and any crash Synapse has recorded.</p>
+    ${code("shell", `synapse doctor
+synapse doctor --json`)}
+    <p>Every check reports rather than fails, so a damaged store is described in the report instead of ending it. Synapse sends nothing anywhere &mdash; the report is printed for you to read or paste.</p>
+    ${note("The desktop application writes panics to <code>crash.log</code> in the data folder, because a window that disappears leaves nothing to read. The log holds only the crash itself and is bounded, so a crash loop cannot fill a disk. <code>doctor</code> prints the most recent entries.")}
 
     <h2 id="app">App and CLI</h2>
     <h3>macOS will not open the app</h3>

@@ -5,6 +5,9 @@ use gpui::{
 };
 
 pub fn run() {
+    // The window is the one place a crash has nowhere to be seen, so write it
+    // down before the process goes.
+    crate::crashes::capture();
     gpui::Application::new().run(|cx: &mut App| {
         crate::ui::theme::initialize(cx);
         cx.bind_keys([

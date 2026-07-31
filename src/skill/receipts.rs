@@ -79,6 +79,16 @@ impl Receipts {
         Ok(())
     }
 
+    /// Every skill Synapse has installed into one tool, which is what
+    /// disconnecting that tool has to take back out.
+    pub async fn installed(&self, tool: &str) -> Result<Vec<String>> {
+        sqlx::query_scalar("SELECT skill FROM skillinstall WHERE tool = ? ORDER BY skill")
+            .bind(tool)
+            .fetch_all(&self.pool)
+            .await
+            .context("could not read the installed skills")
+    }
+
     pub async fn forget(&self, skill: &str, tool: &str) -> Result<()> {
         sqlx::query("DELETE FROM skillinstall WHERE skill = ? AND tool = ?")
             .bind(skill)

@@ -582,6 +582,30 @@
     <p>Print the resolved data directory, SOUL.md, and CLI destination.</p>
   </section>
     
+  <section class="command" id="doctor">
+    <div>
+      <h3>doctor</h3>
+      <code>synapse doctor [--json]</code>
+    </div>
+    <p>Report everything a bug report needs: version, store state and size, connected tools and what each is set up with, skill and mesh state, shell and CLI integration, resolved paths, and recent crashes. Every check reports rather than fails, so a broken store is described instead of stopping the report. Nothing is sent anywhere.</p>
+  </section>
+    
+  <section class="command" id="disconnect">
+    <div>
+      <h3>disconnect</h3>
+      <code>synapse disconnect [claude|codex]</code>
+    </div>
+    <p>Undo one tool's connection, or every tool's when no name is given: the MCP registration, the managed block in its instruction file, the Claude Code session notice and status line, and any skill Synapse installed for it. A skill you wrote, or a status line somebody else configured, is left alone.</p>
+  </section>
+    
+  <section class="command" id="uninstall">
+    <div>
+      <h3>uninstall</h3>
+      <code>synapse uninstall [--data] [--confirm]</code>
+    </div>
+    <p>Remove everything Synapse installed: every tool connection, the shell hook, and the command line tool. Without <code>--confirm</code> it prints what it would remove and stops. Your memory is left alone unless you also pass <code>--data</code>, which cannot be undone.</p>
+  </section>
+    
   <section class="command" id="version">
     <div>
       <h3>version</h3>

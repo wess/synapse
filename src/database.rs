@@ -5,7 +5,9 @@ mod permission;
 #[cfg(test)]
 mod tests;
 
+pub use backup::{folder as backupfolder, snapshots};
 pub use lifecycle::{check, export, restore};
+pub use permission::securefile;
 
 use anyhow::{Context, Result};
 use sqlx::SqlitePool;

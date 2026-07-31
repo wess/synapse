@@ -1,10 +1,12 @@
 mod command;
+mod doctor;
 mod editor;
 mod guidance;
 mod install;
 mod launch;
 mod memory;
 mod relay;
+mod remove;
 mod roles;
 mod session;
 mod shell;

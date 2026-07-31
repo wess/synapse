@@ -99,6 +99,9 @@ ${command("guidance adopt", "synapse guidance adopt --confirm", "Move unmanaged 
     <h2 id="install">Installation and paths</h2>
     ${command("install", "synapse install", "Install the current executable for this user. A packaged app creates a launcher into the signed bundle; a development binary is copied atomically. Unrelated destination files are never overwritten.")}
     ${command("path", "synapse path", "Print the resolved data directory, SOUL.md, and CLI destination.")}
+    ${command("doctor", "synapse doctor [--json]", "Report everything a bug report needs: version, store state and size, connected tools and what each is set up with, skill and mesh state, shell and CLI integration, resolved paths, and recent crashes. Every check reports rather than fails, so a broken store is described instead of stopping the report. Nothing is sent anywhere.")}
+    ${command("disconnect", "synapse disconnect [claude|codex]", "Undo one tool's connection, or every tool's when no name is given: the MCP registration, the managed block in its instruction file, the Claude Code session notice and status line, and any skill Synapse installed for it. A skill you wrote, or a status line somebody else configured, is left alone.")}
+    ${command("uninstall", "synapse uninstall [--data] [--confirm]", "Remove everything Synapse installed: every tool connection, the shell hook, and the command line tool. Without <code>--confirm</code> it prints what it would remove and stops. Your memory is left alone unless you also pass <code>--data</code>, which cannot be undone.")}
     ${command("version", "synapse version", "Print the application version. <code>--version</code> and <code>-V</code> are aliases.")}
     ${command("help", "synapse help", "Print the command summary. <code>--help</code> and <code>-h</code> are aliases at the top level.")}
   `,

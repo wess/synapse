@@ -774,3 +774,138 @@ fn a_broken_skill_is_reported_and_never_reaches_a_tool() {
         "a skill that does not parse must not be copied anywhere"
     );
 }
+
+/// Software that edits configuration it did not create owes the user a way
+/// back out, and the way back out must take only what it put there.
+#[test]
+fn disconnecting_removes_only_what_synapse_wrote() {
+    let root = tempfile::tempdir().unwrap();
+    let home = root.path().join("home");
+    let claude = home.join(".claude");
+    fs::create_dir_all(claude.join("skills/mine")).unwrap();
+
+    // Everything here belongs to the user and must survive untouched.
+    fs::write(
+        claude.join("CLAUDE.md"),
+        "# My rules\n\nAlways write tests first.\n",
+    )
+    .unwrap();
+    fs::write(
+        claude.join("settings.json"),
+        "{\"model\":\"opus\",\
+         \"statusLine\":{\"type\":\"command\",\"command\":\"my-own-statusline\"},\
+         \"hooks\":{\"PreToolUse\":[{\"matcher\":\"Bash\",\
+         \"hooks\":[{\"type\":\"command\",\"command\":\"my-guard\"}]}]}}\n",
+    )
+    .unwrap();
+    fs::write(
+        claude.join("skills/mine/SKILL.md"),
+        "---\nname: mine\ndescription: A skill I wrote myself.\n---\n\nMine alone.\n",
+    )
+    .unwrap();
+
+    success(run(root.path(), &["guidance", "sync"], None));
+    let pointed = fs::read_to_string(claude.join("CLAUDE.md")).unwrap();
+    assert!(pointed.contains("synapse:begin"), "setup did not point");
+
+    success(run(root.path(), &["disconnect", "claude"], None));
+
+    let instructions = fs::read_to_string(claude.join("CLAUDE.md")).unwrap();
+    assert!(
+        !instructions.contains("synapse:begin"),
+        "the managed block should be gone: {instructions}"
+    );
+    assert!(
+        instructions.contains("Always write tests first."),
+        "the user's own words must survive: {instructions}"
+    );
+
+    let settings: Value =
+        serde_json::from_str(&fs::read_to_string(claude.join("settings.json")).unwrap()).unwrap();
+    assert_eq!(settings["statusLine"]["command"], "my-own-statusline");
+    assert_eq!(
+        settings["hooks"]["PreToolUse"][0]["hooks"][0]["command"],
+        "my-guard"
+    );
+    assert_eq!(settings["model"], "opus");
+    assert!(
+        claude.join("skills/mine/SKILL.md").is_file(),
+        "a skill Synapse never installed is not Synapse's to remove"
+    );
+}
+
+/// Uninstalling is the one operation where a surprise cannot be undone, so
+/// saying what would go is the default and doing it needs asking.
+#[test]
+fn uninstall_says_what_it_would_do_before_it_does_anything() {
+    let root = tempfile::tempdir().unwrap();
+    success(run(root.path(), &["guidance", "sync"], None));
+    let instructions = root.path().join("home/.claude/CLAUDE.md");
+
+    let preview = success(run(root.path(), &["uninstall"], None));
+    assert!(preview.contains("would remove"), "got {preview}");
+    assert!(
+        preview.contains("would be left alone"),
+        "it must say memory is safe: {preview}"
+    );
+    assert!(
+        fs::read_to_string(&instructions)
+            .unwrap()
+            .contains("synapse:begin"),
+        "the preview must not remove anything"
+    );
+
+    let asked = success(run(root.path(), &["uninstall", "--data"], None));
+    assert!(
+        asked.contains("cannot be undone"),
+        "asking for the data folder must say so plainly: {asked}"
+    );
+    assert!(root.path().join("data").exists(), "still only a preview");
+
+    success(run(root.path(), &["uninstall", "--confirm"], None));
+    assert!(
+        !fs::read_to_string(&instructions)
+            .unwrap()
+            .contains("synapse:begin"),
+        "confirming should actually disconnect"
+    );
+    assert!(
+        root.path().join("data/brain.db").is_file(),
+        "memory is never removed without being asked for by name"
+    );
+}
+
+/// A report is the thing you ask a person to paste into an issue, so it has to
+/// come back even when what it is describing is broken.
+#[test]
+fn doctor_reports_a_damaged_store_instead_of_failing() {
+    let root = tempfile::tempdir().unwrap();
+    success(run(
+        root.path(),
+        &["memory", "add", "note"],
+        Some("a memory"),
+    ));
+
+    let healthy = success(run(root.path(), &["doctor", "--json"], None));
+    let report: Value = serde_json::from_str(&healthy).unwrap();
+    assert_eq!(report["store"]["state"], "ok");
+    assert_eq!(report["store"]["memories"], 1);
+    assert!(report["crashes"].as_array().unwrap().is_empty());
+
+    let database = root.path().join("data/brain.db");
+    let mut bytes = fs::read(&database).unwrap();
+    let middle = bytes.len() / 2;
+    bytes[middle..middle + 4096].fill(0xAB);
+    fs::write(&database, bytes).unwrap();
+
+    let broken = success(run(root.path(), &["doctor", "--json"], None));
+    let report: Value = serde_json::from_str(&broken).unwrap();
+    assert_ne!(
+        report["store"]["state"], "ok",
+        "damage must be reported, not glossed over"
+    );
+    assert!(
+        report["version"].as_str().is_some(),
+        "the rest of the report still has to arrive"
+    );
+}

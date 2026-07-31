@@ -1,6 +1,7 @@
 mod agent;
 mod brain;
 mod cli;
+mod crashes;
 mod database;
 mod files;
 mod imports;

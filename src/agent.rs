@@ -5,10 +5,12 @@ mod guidance;
 mod hooks;
 mod model;
 mod setup;
+mod teardown;
 
 pub use catalog::agents;
 pub use detect::detect;
-pub use guidance::{GuidanceState, adopt, state as guidancestate, sync};
+pub use guidance::{GuidanceState, adopt, pointermatches, state as guidancestate, sync};
 pub use hooks::{State as HookState, apply as applynotice, remove as removenotice};
 pub use model::{Agent, Detection, Kind};
 pub use setup::setup;
+pub use teardown::{Removed, disconnect};
