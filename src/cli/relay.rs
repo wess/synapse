@@ -75,7 +75,13 @@ async fn agents(mesh: &Mesh, json: bool) -> Result<()> {
             } else {
                 &agent.role
             },
-            if agent.online { "online" } else { "offline" },
+            if agent.human {
+                "you"
+            } else if agent.online {
+                "online"
+            } else {
+                "offline"
+            },
             if agent.status.is_empty() {
                 "-"
             } else {

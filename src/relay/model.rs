@@ -59,6 +59,10 @@ pub struct Registration {
     pub project: String,
     /// The connected tool, when it identified itself (`Claude Code`, `Codex`).
     pub tool: String,
+    /// Whether this is a person at a keyboard rather than an agent. Agents
+    /// address a human for decisions they cannot make alone, and never delegate
+    /// work to one.
+    pub human: bool,
 }
 
 /// A roster row, as returned to agents and the dashboard.
@@ -70,6 +74,8 @@ pub struct AgentView {
     pub status: String,
     pub project: String,
     pub tool: String,
+    /// Whether this row is a person rather than an agent.
+    pub human: bool,
     /// Whether this agent has actually called `register`, rather than being a
     /// placeholder created to hold a message addressed to it.
     pub registered: bool,

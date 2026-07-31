@@ -12,7 +12,11 @@ Usage: synapse [command]
 Commands:
   app                              Open the desktop application
   mcp                              Run the MCP stdio server
+  launch <claude|codex> [-- <flags>]
+                                   Start a tool wired into memory and the vault
   run -- <command> [arguments]     Run with resolved vault variables
+  mux [--as <name>] [--team <team>]
+                                   Drive a team of agents from this terminal
   hook <zsh|bash|fish>             Print automatic shell activation setup
   allow [folder]                   Approve the closest .synapse.yaml digest
   deny [folder]                    Revoke approval for the closest scope
@@ -119,6 +123,8 @@ pub fn run(arguments: Vec<OsString>) -> Result<Outcome> {
         "data" => data(rest),
         "memory" => super::memory::run(rest),
         "guidance" => super::guidance::run(rest),
+        "launch" => super::wrap::run(rest),
+        "mux" => super::mux::run(rest),
         "relay" => super::relay::run(rest),
         "skill" => super::skills::run(rest),
         "session" => super::session::session(rest),

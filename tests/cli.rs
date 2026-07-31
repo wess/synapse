@@ -909,3 +909,148 @@ fn doctor_reports_a_damaged_store_instead_of_failing() {
         "the rest of the report still has to arrive"
     );
 }
+
+/// A stand-in tool on PATH, so a launch test can never reach the real one.
+fn faketool(folder: &Path, name: &str) {
+    fs::create_dir_all(folder).unwrap();
+    let path = folder.join(name);
+    fs::write(&path, "#!/bin/sh\necho \"argv: $@\"\n").unwrap();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(&path, fs::Permissions::from_mode(0o755)).unwrap();
+    }
+}
+
+#[test]
+fn launch_hands_the_tool_its_own_flags_and_keeps_synapse_out_of_them() {
+    let root = tempfile::tempdir().unwrap();
+    let project = root.path().join("project");
+    fs::create_dir_all(&project).unwrap();
+    let tools = root.path().join("tools");
+    faketool(&tools, "claude");
+
+    let mut command = command(root.path());
+    command
+        .current_dir(&project)
+        .env("PATH", format!("{}:{}", tools.display(), env!("PATH")))
+        .args([
+            "launch", "claude", "--print", "--", "--model", "opus", "--resume",
+        ])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+    let printed = success(command.spawn().unwrap().wait_with_output().unwrap());
+
+    // `--model` after the separator is the tool's, not Synapse's to interpret.
+    assert!(printed.contains("--model opus"), "got {printed}");
+    assert!(printed.contains("--resume"), "got {printed}");
+    // A tool with no connection of its own is wired for the life of the run.
+    assert!(printed.contains("--mcp-config"), "got {printed}");
+    assert!(
+        printed.contains("SYNAPSE_PROJECT_DIR"),
+        "the tool has to be told which checkout it is in: {printed}"
+    );
+    // No mesh name was asked for, so no harness prompt is prepended.
+    assert!(
+        !printed.contains("register"),
+        "an unnamed launch is the person's own session: {printed}"
+    );
+}
+
+#[test]
+fn launch_refuses_a_scope_that_has_not_been_approved() {
+    let root = tempfile::tempdir().unwrap();
+    let project = root.path().join("project");
+    fs::create_dir_all(&project).unwrap();
+    let tools = root.path().join("tools");
+    faketool(&tools, "claude");
+    success(run(
+        root.path(),
+        &["scope", "init", project.to_str().unwrap()],
+        None,
+    ));
+
+    let mut command = command(root.path());
+    command
+        .current_dir(&project)
+        .env("PATH", format!("{}:{}", tools.display(), env!("PATH")))
+        .args(["launch", "claude"])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+    let output = command.spawn().unwrap().wait_with_output().unwrap();
+
+    assert!(
+        !output.status.success(),
+        "an unapproved scope must not reach a tool that can run a shell"
+    );
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("not been approved"), "got {stderr}");
+}
+
+#[test]
+fn the_mux_joins_as_a_person_and_takes_its_name_back_when_it_leaves() {
+    let root = tempfile::tempdir().unwrap();
+    success(run(root.path(), &["settings", "mesh", "on"], None));
+
+    let session = success(run(
+        root.path(),
+        &["mux", "--as", "wess"],
+        Some("/agents\n/quit\n"),
+    ));
+    assert!(
+        session.contains("You are `wess` on the mesh"),
+        "got {session}"
+    );
+    assert!(
+        session.contains("wess"),
+        "the roster has to show them: {session}"
+    );
+
+    // Leaving is not a state anyone has to clean up after.
+    let roster = success(run(root.path(), &["relay", "agents"], None));
+    assert!(
+        !roster.contains("wess"),
+        "a closed mux must not leave a name nothing answers to: {roster}"
+    );
+}
+
+#[test]
+fn the_mux_holds_a_message_for_an_agent_that_has_not_registered_and_says_so() {
+    let root = tempfile::tempdir().unwrap();
+    success(run(root.path(), &["settings", "mesh", "on"], None));
+
+    let output = runfrom(
+        root.path(),
+        None,
+        &["mux", "--as", "wess"],
+        Some("@backend look at the migration\n/quit\n"),
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stdout.contains("→ backend"), "got {stdout}");
+    assert!(
+        stderr.contains("nobody is registered as `backend`"),
+        "a typo'd name should not look like a delivery: {stderr}"
+    );
+
+    // Held, not dropped: the placeholder is the mechanism, so it stays off the
+    // roster as something reachable.
+    let roster = success(run(root.path(), &["relay", "agents"], None));
+    assert!(
+        !roster.contains("online"),
+        "a name nobody has answered to is not online: {roster}"
+    );
+}
+
+#[test]
+fn the_mux_refuses_a_name_a_live_agent_is_already_answering_to() {
+    let root = tempfile::tempdir().unwrap();
+    success(run(root.path(), &["settings", "mesh", "on"], None));
+    // Two people opening a mux under one name would drain each other's inbox.
+    success(run(root.path(), &["mux", "--as", "wess"], Some("/quit\n")));
+    let again = success(run(root.path(), &["mux", "--as", "wess"], Some("/quit\n")));
+    assert!(
+        again.contains("You are `wess` on the mesh"),
+        "one person reopening their own mux is fine: {again}"
+    );
+}

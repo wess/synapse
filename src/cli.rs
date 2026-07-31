@@ -5,12 +5,14 @@ mod guidance;
 mod install;
 mod launch;
 mod memory;
+mod mux;
 mod relay;
 mod remove;
 mod roles;
 mod session;
 mod shell;
 mod skills;
+mod wrap;
 
 pub use install::{InstallStatus, destination, install, status};
 

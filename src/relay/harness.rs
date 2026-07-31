@@ -84,6 +84,9 @@ pub fn prompt(
              - `wait` returning no messages, or failing with an error, is normal and expected \
              — it just means nothing arrived in time. Call `wait` again immediately. Never \
              treat it as a reason to stop or to report a problem.\n\
+             - If you hit a decision you should not make alone, call `agents` and look for a \
+             row marked `human`. That is a person. `send` them the specific question, \
+             `reportstatus` `blocked`, and `wait` for their answer rather than guessing.\n\
              - ALWAYS end your turn by calling `wait` again so you stay reachable. Never stop \
              the wait loop.\n"
         }

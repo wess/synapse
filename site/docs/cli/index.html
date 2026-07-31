@@ -113,6 +113,14 @@
     <p>Resolve global, project, and folder vault mappings for the current directory, refuse on any scope warning, read selected Keychain values, and launch the child. Synapse returns the child exit code, or 1 when the operating system reports no code.</p>
   </section>
     
+  <section class="command" id="launch">
+    <div>
+      <h3>launch</h3>
+      <code>synapse launch &amp;lt;claude|codex&amp;gt; [options] [-- &amp;lt;flags&amp;gt;]</code>
+    </div>
+    <p>Start a coding tool with Synapse already in place: memory and the vault reachable over MCP, this folder's vault variables in its environment, and the project root it should treat as home. Everything after a bare <code>--</code> is passed to the tool untouched. A tool Synapse is not connected to is wired for the life of the process, so this works before setup has ever run and writes nothing into the tool's own configuration. Options: <code>--directory</code>, <code>--model</code>, <code>--allow-tool</code> (repeatable), <code>--strict</code>, <code>--no-vault</code>, <code>--skip-permissions</code>, <code>--as &lt;name&gt;</code> with <code>--role</code>, <code>--task</code>, and <code>--channel</code> to join the mesh as well, and <code>--print</code> to show the resolved command and environment names without running anything. Refuses on any scope warning, and never prints a secret value.</p>
+  </section>
+    
   <section class="command" id="status">
     <div>
       <h3>status</h3>
@@ -365,6 +373,14 @@
       <code>synapse relay team open &amp;lt;name&amp;gt; [--directory &amp;lt;folder&amp;gt;]</code>
     </div>
     <p>Open a whole roster. The first member runs in this terminal as the lead; the rest run in the background and stop when the lead closes.</p>
+  </section>
+    
+  <section class="command" id="mux">
+    <div>
+      <h3>mux</h3>
+      <code>synapse mux [--as &amp;lt;name&amp;gt;] [--team &amp;lt;team&amp;gt;] [--channel &amp;lt;name&amp;gt;]... [--directory &amp;lt;folder&amp;gt;]</code>
+    </div>
+    <p>Join the mesh as yourself and drive a team from one terminal. You get a name on the roster and the same messaging every agent has, so you can address any agent directly instead of relaying through a lead — and an agent that gets stuck can ask <em>you</em>. With <code>--team</code> the whole roster starts in the background with you as the lead. Type <code>@name text</code> for one agent, <code>#channel text</code> for a channel, <code>!text</code> for everyone, or a bare line to whoever is focused. <code>/help</code> lists the commands; <code>/quit</code> leaves and stops the workers it started. The name defaults to your login name.</p>
   </section>
     
   <section class="command" id="relayrole">

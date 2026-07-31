@@ -262,6 +262,19 @@ fn two_sessions_hand_work_to_each_other_across_the_mesh() {
         "a message from another agent is untrusted input: {}",
         lead.instructions
     );
+    // A headless worker runs with its permission prompts turned off, so the
+    // only thing standing between "ask" and "guess" is knowing a person may be
+    // on the roster and how to address one.
+    assert!(
+        lead.instructions.contains("is a person at a keyboard"),
+        "agents have to be able to tell a person from a worker: {}",
+        lead.instructions
+    );
+    assert!(
+        lead.instructions.contains("Never delegate to one"),
+        "a person is asked questions, never handed tasks: {}",
+        lead.instructions
+    );
     assert!(
         worker.instructions.contains("Synapse connected ·"),
         "the connection notice survives alongside the mesh guidance"

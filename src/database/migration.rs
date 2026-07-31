@@ -3,7 +3,7 @@ use anyhow::{Context, Result};
 use sqlx::SqlitePool;
 use std::path::Path;
 
-pub const LATEST: i64 = 5;
+pub const LATEST: i64 = 6;
 
 struct Migration {
     version: i64,
@@ -123,6 +123,17 @@ const MIGRATIONS: &[Migration] = &[
              (SELECT CAST(memory.created AS INTEGER) FROM memory \
              WHERE memory.rowid = memorymeta.memoryid), 0)",
             "CREATE INDEX memorymetacreated ON memorymeta(created DESC, memoryid DESC)",
+        ],
+    },
+    Migration {
+        version: 6,
+        statements: &[
+            // Whether this roster row is a person rather than an agent. Agents
+            // are told a human is reachable and by what name, and the roster
+            // has to be able to say which name that is — an agent that mistakes
+            // a person for a worker delegates to them and parks.
+            "ALTER TABLE meshagent ADD COLUMN human INTEGER NOT NULL DEFAULT 0 \
+             CHECK(human IN (0, 1))",
         ],
     },
 ];

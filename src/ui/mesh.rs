@@ -241,7 +241,11 @@ fn panel(
 }
 
 fn agentrow(agent: AgentView, theme: guise::Theme) -> AnyElement {
-    let (label, color) = if !agent.registered {
+    // A person on the roster reads differently from an agent: they are not
+    // something the mesh is waiting on, and nothing should be delegated to them.
+    let (label, color) = if agent.human {
+        ("You", ColorName::Blue)
+    } else if !agent.registered {
         ("Expected", ColorName::Gray)
     } else if agent.online {
         ("Online", ColorName::Teal)

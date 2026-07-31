@@ -14,6 +14,7 @@ export const mesh: Page = {
     { label: "Roles", id: "roles" },
     { label: "Teams", id: "teams" },
     { label: "Background workers", id: "workers" },
+    { label: "Driving a team yourself", id: "mux" },
     { label: "Watching the mesh", id: "watching" },
     { label: "Limits", id: "limits" },
   ],
@@ -82,6 +83,21 @@ role = "backend"`)}
 synapse relay ps
 synapse relay kill backend`)}
     ${note("A launched agent is given the project folder it should work in, and reaches Synapse through the same connection it already has. Nothing generates a credential, and no secret value is ever passed to a launched agent.")}
+
+    <h2 id="mux">Driving a team yourself</h2>
+    <p>Everything above puts a lead agent between you and the work: you brief the lead, the lead hands out tasks and relays the answers back. That costs the lead's context on every message and makes it a bottleneck for a job it is not doing.</p>
+    <p><code>synapse mux</code> puts <em>you</em> on the mesh instead. You get a name on the roster and the same messaging every agent already has, so you can address any agent directly.</p>
+    ${code("shell", `synapse mux --team pair
+
+@backend the created column needs a default, not a backfill
+#build   freezing the schema in ten minutes
+!        stop and report where you are
+/focus backend
+and the index too`)}
+    <p>A bare line goes to whoever is focused, so a back-and-forth with one agent reads like a conversation. <code>/help</code> lists the rest: <code>/agents</code>, <code>/workers</code>, <code>/log &lt;name&gt;</code> for what a worker has been doing, <code>/kill</code>, and <code>/quit</code>. Leaving takes the workers it started with it.</p>
+    <p>The more useful direction is the other one. A headless worker runs with its permission prompts bypassed, so when it reaches a decision it should not make alone, it has had nobody to ask — and has had to guess. With a person on the roster it can send you the question, report itself blocked, and wait for the answer.</p>
+    ${note("Agents can tell a person from an agent. A roster entry for a human is marked as one, and connected tools are told to ask them questions and never delegate work to them.")}
+    ${note("Messages reach an agent at its next check, not as an interrupt. One parked between tasks answers in about a second; one in the middle of a long build sees you when it comes back. The roster shows which is which.")}
 
     <h2 id="watching">Watching the mesh</h2>
     <p>The <strong>Mesh</strong> page in the app shows who has joined, what each one last reported, which workers are running, and the recent traffic between them. The same is available from the terminal:</p>

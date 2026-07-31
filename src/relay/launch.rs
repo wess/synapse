@@ -15,7 +15,11 @@ use anyhow::{Context, Result};
 use std::path::{Path, PathBuf};
 
 pub struct Options<'a> {
-    pub name: &'a str,
+    /// The name the agent joins the mesh under. `None` launches the tool
+    /// wired into Synapse but outside the mesh — no harness prompt, no
+    /// registration — which is what `synapse launch` wants and what a plain
+    /// interactive session is.
+    pub name: Option<&'a str>,
     pub role: &'a str,
     /// Project root the agent works in. The role's project layer resolves here,
     /// and the child is told about it through `SYNAPSE_PROJECT_DIR` so its
@@ -63,7 +67,9 @@ pub fn launch(options: &Options) -> Result<Launch> {
     // The name the agent will join the mesh under is also the name of the
     // config file written for it, and a model chooses it. Refuse it here, where
     // it first becomes a path, rather than after something has been written.
-    crate::relay::store::validname(options.name)?;
+    if let Some(name) = options.name {
+        crate::relay::store::validname(name)?;
+    }
     let role = role::resolve(Some(options.root), options.role)?;
     let brief = role
         .as_ref()
@@ -100,15 +106,19 @@ pub fn launch(options: &Options) -> Result<Launch> {
     let interactive =
         !options.headless && (options.lead || role.as_ref().is_some_and(|role| role.driver));
 
-    let prompt = harness::prompt(
-        options.name,
-        options.role,
-        &brief,
-        &channels,
-        options.task,
-        interactive,
-        options.optimize,
-    );
+    // A launch with no mesh name gets no harness: it is a person's own session,
+    // and the opening turn belongs to them, not to a protocol.
+    let prompt = options.name.map(|name| {
+        harness::prompt(
+            name,
+            options.role,
+            &brief,
+            &channels,
+            options.task,
+            interactive,
+            options.optimize,
+        )
+    });
 
     let environment = vec![(
         "SYNAPSE_PROJECT_DIR".to_owned(),
@@ -116,9 +126,14 @@ pub fn launch(options: &Options) -> Result<Launch> {
     )];
 
     if let Some(template) = options.command {
-        let config = configpath(options.name)?;
+        let config = configpath(options.name, options.root)?;
         writeconfig(&config, options.root)?;
-        let mut launch = fromtemplate(template, &prompt, &config, options.name);
+        let mut launch = fromtemplate(
+            template,
+            prompt.as_deref().unwrap_or_default(),
+            &config,
+            options.name.unwrap_or_default(),
+        );
         launch.arguments.extend(options.extra.iter().cloned());
         launch.environment = environment;
         return Ok(launch);
@@ -145,7 +160,7 @@ pub fn launch(options: &Options) -> Result<Launch> {
     let config = if detection.configured {
         None
     } else {
-        let path = configpath(options.name)?;
+        let path = configpath(options.name, options.root)?;
         writeconfig(&path, options.root)?;
         Some(path)
     };
@@ -153,7 +168,7 @@ pub fn launch(options: &Options) -> Result<Launch> {
     let mut launch = match kind {
         Kind::Claude => claude(
             &program,
-            &prompt,
+            prompt.as_deref(),
             config.as_deref(),
             options,
             &allowed,
@@ -161,7 +176,7 @@ pub fn launch(options: &Options) -> Result<Launch> {
         ),
         Kind::Codex => codex(
             &program,
-            &prompt,
+            prompt.as_deref(),
             config.as_deref(),
             options,
             model.as_deref(),
@@ -175,23 +190,27 @@ pub fn launch(options: &Options) -> Result<Launch> {
 
 fn claude(
     program: &Path,
-    prompt: &str,
+    prompt: Option<&str>,
     config: Option<&Path>,
     options: &Options,
     allowed: &[String],
     model: Option<&str>,
 ) -> Launch {
     let mut arguments = Vec::new();
-    if options.headless {
-        arguments.extend([
+    match prompt {
+        // A headless run needs something to do, so its harness is the argument
+        // that starts it.
+        Some(prompt) if options.headless => arguments.extend([
             "-p".to_owned(),
             prompt.to_owned(),
             "--output-format".to_owned(),
             "stream-json".to_owned(),
             "--verbose".to_owned(),
-        ]);
-    } else {
-        arguments.push(prompt.to_owned());
+        ]),
+        Some(prompt) => arguments.push(prompt.to_owned()),
+        // No harness: the tool opens on an empty prompt, exactly as it would
+        // if the person had typed its name.
+        None => {}
     }
     // A headless worker has no terminal to prompt in, and an unattended session
     // has nobody to answer.
@@ -228,7 +247,7 @@ fn claude(
 
 fn codex(
     program: &Path,
-    prompt: &str,
+    prompt: Option<&str>,
     config: Option<&Path>,
     options: &Options,
     model: Option<&str>,
@@ -237,7 +256,9 @@ fn codex(
     if options.headless {
         arguments.push("exec".to_owned());
     }
-    arguments.push(prompt.to_owned());
+    if let Some(prompt) = prompt {
+        arguments.push(prompt.to_owned());
+    }
     if options.skippermissions || options.headless {
         arguments.extend(["-c".to_owned(), "approval_policy=\"never\"".to_owned()]);
     }
@@ -297,8 +318,26 @@ fn binary() -> Result<PathBuf> {
     std::env::current_exe().context("could not locate the running Synapse executable")
 }
 
-fn configpath(name: &str) -> Result<PathBuf> {
-    Ok(crate::relay::directory()?.join(format!("{name}.mcp.json")))
+/// Where the generated MCP config for this launch is written.
+///
+/// A mesh agent keys it on its own name, which is already unique and already
+/// checked. A launch outside the mesh has no name, so it keys on a digest of the
+/// project root: two `synapse launch` runs in one folder reuse one file, and two
+/// in different folders do not race to overwrite each other's.
+fn configpath(name: Option<&str>, root: &Path) -> Result<PathBuf> {
+    let key = match name {
+        Some(name) => name.to_owned(),
+        None => {
+            use sha2::{Digest, Sha256};
+            let digest = Sha256::digest(root.display().to_string().as_bytes());
+            let hex: String = digest[..6]
+                .iter()
+                .map(|byte| format!("{byte:02x}"))
+                .collect();
+            format!("launch.{hex}")
+        }
+    };
+    Ok(crate::relay::directory()?.join(format!("{key}.mcp.json")))
 }
 
 /// The MCP config handed to a tool that Synapse is not connected to yet: this
@@ -358,7 +397,7 @@ mod tests {
 
     fn options<'a>(root: &'a Path, tool: &'a str) -> Options<'a> {
         Options {
-            name: "backend",
+            name: Some("backend"),
             role: "worker",
             root,
             tool: Some(tool),
@@ -402,7 +441,7 @@ mod tests {
     fn a_headless_claude_can_never_stop_to_ask() {
         let launch = claude(
             Path::new("/usr/bin/claude"),
-            "hi",
+            Some("hi"),
             None,
             &Options {
                 headless: true,
@@ -423,7 +462,7 @@ mod tests {
     fn an_attended_session_keeps_its_permission_prompts() {
         let launch = claude(
             Path::new("/usr/bin/claude"),
-            "hi",
+            Some("hi"),
             None,
             &options(Path::new("/tmp"), "claude"),
             &[],
@@ -443,7 +482,7 @@ mod tests {
         let allowed = ["Read".to_owned(), "Bash(git commit:*)".to_owned()];
         let launch = claude(
             Path::new("/usr/bin/claude"),
-            "hi",
+            Some("hi"),
             None,
             &options(Path::new("/tmp"), "claude"),
             &allowed,
@@ -463,7 +502,7 @@ mod tests {
     fn a_connected_tool_is_not_handed_a_second_server_of_its_own() {
         let launch = claude(
             Path::new("/usr/bin/claude"),
-            "hi",
+            Some("hi"),
             None,
             &options(Path::new("/tmp"), "claude"),
             &[],
@@ -479,7 +518,7 @@ mod tests {
     fn an_unconnected_tool_is_pointed_at_this_binary() {
         let launch = claude(
             Path::new("/usr/bin/claude"),
-            "hi",
+            Some("hi"),
             Some(Path::new("/tmp/backend.mcp.json")),
             &options(Path::new("/tmp"), "claude"),
             &[],
@@ -504,7 +543,7 @@ mod tests {
     fn a_headless_codex_never_approves_its_own_actions() {
         let launch = codex(
             Path::new("/usr/bin/codex"),
-            "hi",
+            Some("hi"),
             None,
             &Options {
                 headless: true,

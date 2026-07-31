@@ -19,8 +19,9 @@ const RETENTION: i64 = 10_000;
 const MAXBACKLOG: i64 = 50_000;
 
 /// One roster row as the query returns it: name, role, status, project, tool,
-/// whether it registered, how many channels it is in, and when it was last seen.
-type AgentRow = (String, String, String, String, String, i64, i64, i64);
+/// whether it is a person, whether it registered, how many channels it is in,
+/// and when it was last seen.
+type AgentRow = (String, String, String, String, String, i64, i64, i64, i64);
 
 /// One worker row: name, role, status, process id, directory, log path,
 /// restarts, whether it is kept alive, and the session supervising it.
@@ -55,17 +56,19 @@ impl Mesh {
         let name = validname(&registration.name)?;
         let tip = self.tip().await?;
         sqlx::query(
-            "INSERT INTO meshagent(name, role, capabilities, project, tool, cursor, registered, seen) \
-             VALUES (?, ?, ?, ?, ?, ?, 1, ?) \
+            "INSERT INTO meshagent(name, role, capabilities, project, tool, human, cursor, registered, seen) \
+             VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?) \
              ON CONFLICT(name) DO UPDATE SET \
              role = excluded.role, capabilities = excluded.capabilities, \
-             project = excluded.project, tool = excluded.tool, registered = 1, seen = excluded.seen",
+             project = excluded.project, tool = excluded.tool, human = excluded.human, \
+             registered = 1, seen = excluded.seen",
         )
         .bind(&name)
         .bind(&registration.role)
         .bind(&registration.capabilities)
         .bind(&registration.project)
         .bind(&registration.tool)
+        .bind(i64::from(registration.human))
         .bind(tip)
         .bind(now()?)
         .execute(&self.pool)
@@ -221,10 +224,12 @@ impl Mesh {
 
     pub async fn agents(&self) -> Result<Vec<AgentView>> {
         let horizon = now()? - LIVEWINDOW;
+        // People first: an agent reading the roster to find someone to ask
+        // should not have to scan past a dozen workers to find them.
         let rows: Vec<AgentRow> = sqlx::query_as(
-            "SELECT a.name, a.role, a.status, a.project, a.tool, a.registered, \
+            "SELECT a.name, a.role, a.status, a.project, a.tool, a.human, a.registered, \
              (SELECT COUNT(*) FROM meshsub s WHERE s.agent = a.name), a.seen \
-             FROM meshagent a ORDER BY a.registered DESC, a.name ASC",
+             FROM meshagent a ORDER BY a.human DESC, a.registered DESC, a.name ASC",
         )
         .fetch_all(&self.pool)
         .await
@@ -232,16 +237,23 @@ impl Mesh {
         Ok(rows
             .into_iter()
             .map(
-                |(name, role, status, project, tool, registered, channels, seen)| AgentView {
-                    name,
-                    role,
-                    status,
-                    project,
-                    tool,
-                    registered: registered != 0,
-                    online: seen > horizon,
-                    channels,
-                    seen,
+                |(name, role, status, project, tool, human, registered, channels, seen)| {
+                    AgentView {
+                        name,
+                        role,
+                        status,
+                        project,
+                        tool,
+                        human: human != 0,
+                        registered: registered != 0,
+                        // A placeholder is stamped with the moment it was
+                        // created, so recency alone would report a name nobody
+                        // has ever answered to as reachable. Never report a
+                        // connection that is not there.
+                        online: registered != 0 && seen > horizon,
+                        channels,
+                        seen,
+                    }
                 },
             )
             .collect())
@@ -600,6 +612,46 @@ mod tests {
             .unwrap();
 
         assert!(mesh.pending("lead").await.unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn a_person_is_listed_before_the_agents_and_marked_as_one() {
+        let (mesh, _directory) = mesh().await;
+        mesh.register(&registration("zulu")).await.unwrap();
+        mesh.register(&Registration {
+            name: "wess".to_owned(),
+            role: "human".to_owned(),
+            human: true,
+            ..Registration::default()
+        })
+        .await
+        .unwrap();
+
+        let roster = mesh.agents().await.unwrap();
+
+        assert_eq!(
+            roster[0].name, "wess",
+            "an agent scanning for someone to ask should find them first"
+        );
+        assert!(roster[0].human);
+        assert!(!roster[1].human, "a tool that registers is never a person");
+    }
+
+    /// A placeholder is stamped with the moment it was created, so recency
+    /// alone would report a name nobody has ever answered to as reachable.
+    #[tokio::test]
+    async fn a_name_nobody_has_answered_to_is_never_reported_as_online() {
+        let (mesh, _directory) = mesh().await;
+        mesh.placeholder("typo").await.unwrap();
+
+        let roster = mesh.agents().await.unwrap();
+
+        assert_eq!(roster.len(), 1);
+        assert!(!roster[0].registered);
+        assert!(
+            !roster[0].online,
+            "never report a connection that is not there"
+        );
     }
 
     #[test]

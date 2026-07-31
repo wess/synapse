@@ -194,6 +194,36 @@ synapse relay kill backend</code></pre>
     <p>undefined</p>
   </aside>
 
+    <h2 id="mux">Driving a team yourself</h2>
+    <p>Everything above puts a lead agent between you and the work: you brief the lead, the lead hands out tasks and relays the answers back. That costs the lead's context on every message and makes it a bottleneck for a job it is not doing.</p>
+    <p><code>synapse mux</code> puts <em>you</em> on the mesh instead. You get a name on the roster and the same messaging every agent already has, so you can address any agent directly.</p>
+    
+  <div class="codeblock">
+    <div class="codebar">
+      <span>shell</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>synapse mux --team pair
+
+@backend the created column needs a default, not a backfill
+#build   freezing the schema in ten minutes
+!        stop and report where you are
+/focus backend
+and the index too</code></pre>
+  </div>
+    <p>A bare line goes to whoever is focused, so a back-and-forth with one agent reads like a conversation. <code>/help</code> lists the rest: <code>/agents</code>, <code>/workers</code>, <code>/log &lt;name&gt;</code> for what a worker has been doing, <code>/kill</code>, and <code>/quit</code>. Leaving takes the workers it started with it.</p>
+    <p>The more useful direction is the other one. A headless worker runs with its permission prompts bypassed, so when it reaches a decision it should not make alone, it has had nobody to ask — and has had to guess. With a person on the roster it can send you the question, report itself blocked, and wait for the answer.</p>
+    
+  <aside class="note">
+    <strong>Agents can tell a person from an agent. A roster entry for a human is marked as one, and connected tools are told to ask them questions and never delegate work to them.</strong>
+    <p>undefined</p>
+  </aside>
+    
+  <aside class="note">
+    <strong>Messages reach an agent at its next check, not as an interrupt. One parked between tasks answers in about a second; one in the middle of a long build sees you when it comes back. The roster shows which is which.</strong>
+    <p>undefined</p>
+  </aside>
+
     <h2 id="watching">Watching the mesh</h2>
     <p>The <strong>Mesh</strong> page in the app shows who has joined, what each one last reported, which workers are running, and the recent traffic between them. The same is available from the terminal:</p>
     
@@ -221,7 +251,7 @@ synapse relay feed --follow</code></pre>
     </main>
     <aside class="ontoc" aria-label="On this page">
         <span>On this page</span>
-        <ol><li><a href="#what">What the mesh is</a></li><li><a href="#enable">Turn it on</a></li><li><a href="#join">How agents join</a></li><li><a href="#roles">Roles</a></li><li><a href="#teams">Teams</a></li><li><a href="#workers">Background workers</a></li><li><a href="#watching">Watching the mesh</a></li><li><a href="#limits">Limits</a></li></ol>
+        <ol><li><a href="#what">What the mesh is</a></li><li><a href="#enable">Turn it on</a></li><li><a href="#join">How agents join</a></li><li><a href="#roles">Roles</a></li><li><a href="#teams">Teams</a></li><li><a href="#workers">Background workers</a></li><li><a href="#mux">Driving a team yourself</a></li><li><a href="#watching">Watching the mesh</a></li><li><a href="#limits">Limits</a></li></ol>
       </aside>
   </div>
   

@@ -9,7 +9,7 @@ pub use model::{
     Resolved, ScopeConfig, ScopeKind, ScopeState, Secret, Vault, VaultStatusRequest,
     VaultStatusResponse,
 };
-pub use run::run;
+pub use run::{environment, names, run};
 pub use scope::{CONFIG, discover, read as readscope, resolve, template, templatefor};
 pub use shell::{
     Shell, changes as shellchanges, clear as shellclear, hook as shellhook,

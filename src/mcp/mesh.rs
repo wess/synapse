@@ -43,6 +43,9 @@ impl Server {
             capabilities: request.capabilities.unwrap_or_default(),
             project,
             tool,
+            // Only `synapse mux` registers a person; a tool calling `register`
+            // is always an agent, whoever is sitting in front of it.
+            human: false,
         };
         mesh.register(&registration).await.map_err(text)?;
         *self.identity.lock().await = Some(registration.name.clone());
@@ -212,7 +215,7 @@ impl Server {
     }
 
     #[tool(
-        description = "List every agent on the mesh with its role, project, reported status, and whether it is currently reachable."
+        description = "List every agent on the mesh with its role, project, reported status, and whether it is currently reachable. A row with human set to true is a person at a keyboard: ask them questions, never delegate work to them."
     )]
     async fn agents(&self) -> Result<Json<AgentsResponse>, String> {
         let mesh = self.mesh()?;
@@ -259,7 +262,7 @@ impl Server {
         let channels = request.channels.unwrap_or_default();
         let tools = request.tools.unwrap_or_default();
         let built = relay::launch(&relay::Options {
-            name: &request.name,
+            name: Some(&request.name),
             role: &role,
             root: &directory,
             tool: request.tool.as_deref(),

@@ -29,7 +29,7 @@ pub fn launch(arguments: &[OsString]) -> Result<Outcome> {
     let command = value(arguments, "--command");
 
     let built = relay::launch(&relay::Options {
-        name: &name,
+        name: Some(&name),
         role: &role,
         root: &root,
         tool: tool.as_deref(),
@@ -86,7 +86,7 @@ async fn runteam(team: &relay::team::Team, root: &Path) -> Result<Outcome> {
     for member in rest {
         let role = member.role.clone().unwrap_or_else(|| "worker".to_owned());
         let built = relay::launch(&relay::Options {
-            name: &member.name,
+            name: Some(&member.name),
             role: &role,
             root,
             tool: member.tool.as_deref(),
@@ -123,7 +123,7 @@ async fn runteam(team: &relay::team::Team, root: &Path) -> Result<Outcome> {
 
     let role = lead.role.clone().unwrap_or_else(|| "supervisor".to_owned());
     let built = relay::launch(&relay::Options {
-        name: &lead.name,
+        name: Some(&lead.name),
         role: &role,
         root,
         tool: lead.tool.as_deref(),
@@ -156,7 +156,7 @@ async fn runteam(team: &relay::team::Team, root: &Path) -> Result<Outcome> {
 }
 
 /// Launching wires an agent into a mesh it can only reach when the mesh is on.
-fn requiremesh() -> Result<()> {
+pub fn requiremesh() -> Result<()> {
     let runtime = tokio::runtime::Runtime::new()?;
     let brain = runtime.block_on(crate::brain::Brain::open(crate::files::database()?))?;
     anyhow::ensure!(
