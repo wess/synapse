@@ -64,14 +64,20 @@ pub fn uninstall(arguments: &[OsString]) -> Result<Outcome> {
         removed.problems.extend(outcome.problems);
     }
 
-    match crate::shellsetup::remove(&server) {
-        Ok(integration) if integration.state == crate::shellsetup::IntegrationState::Missing => {
-            removed.done.push(format!("{} hook", integration.shell));
-        }
-        Ok(integration) => removed.problems.push(format!(
-            "the {} hook was edited after Synapse wrote it, so it was left in place",
-            integration.shell
-        )),
+    // Ask what is there before taking it out, so a hook that was never
+    // installed is not reported as one that was just removed.
+    match crate::shellsetup::status(&server) {
+        Ok(before) if before.state == crate::shellsetup::IntegrationState::Missing => {}
+        Ok(_) => match crate::shellsetup::remove(&server) {
+            Ok(after) if after.state == crate::shellsetup::IntegrationState::Missing => {
+                removed.done.push(format!("the {} hook", after.shell));
+            }
+            Ok(after) => removed.problems.push(format!(
+                "the {} hook was edited after Synapse wrote it, so it was left in place",
+                after.shell
+            )),
+            Err(error) => removed.problems.push(format!("shell hook: {error:#}")),
+        },
         Err(error) => removed.problems.push(format!("shell hook: {error:#}")),
     }
 
