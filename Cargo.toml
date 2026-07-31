@@ -1,6 +1,6 @@
 [package]
 name = "synapse"
-version = "0.1.0-beta.12"
+version = "0.1.0-beta.13"
 edition = "2024"
 description = "Local memory and scoped credentials for developer tools"
 
