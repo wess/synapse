@@ -379,10 +379,11 @@ fn scope(arguments: &[OsString]) -> Result<Outcome> {
 fn install() -> Result<Outcome> {
     let target = crate::cli::install()?;
     println!("Installed {}", target.display());
-    if !pathcontains(target.parent().unwrap_or_else(|| Path::new("."))) {
+    let folder = target.parent().unwrap_or_else(|| Path::new("."));
+    if !pathcontains(folder) {
         println!(
             "Add {} to PATH to use synapse from your shell.",
-            target.parent().unwrap().display()
+            folder.display()
         );
     }
     Ok(Outcome::Exit(0))

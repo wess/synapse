@@ -282,6 +282,19 @@ impl Dashboard {
         cx.notify();
     }
 
+    /// The handlers behind the navigation buttons, built once so the two places
+    /// that draw the header cannot drift apart.
+    fn navigation(&self, cx: &mut Context<Self>) -> header::Navigation {
+        header::Navigation {
+            connections: Box::new(cx.listener(|this, _, _, cx| this.showconnections(cx))),
+            memories: Box::new(cx.listener(|this, _, _, cx| this.showmemories(cx))),
+            mesh: Box::new(cx.listener(|this, _, _, cx| this.showmesh(cx))),
+            skills: Box::new(cx.listener(|this, _, _, cx| this.showskills(cx))),
+            vaults: Box::new(cx.listener(|this, _, _, cx| this.showvaults(cx))),
+            settings: Box::new(cx.listener(|this, _, _, cx| this.showsettings(cx))),
+        }
+    }
+
     fn showconnections(&mut self, cx: &mut Context<Self>) {
         self.page = Page::Connections;
         cx.notify();
@@ -1261,12 +1274,7 @@ impl Render for Dashboard {
                 .child(header::render(
                     self.page,
                     self.appmenu.clone(),
-                    Box::new(cx.listener(|this, _, _, cx| this.showconnections(cx))),
-                    Box::new(cx.listener(|this, _, _, cx| this.showmemories(cx))),
-                    Box::new(cx.listener(|this, _, _, cx| this.showmesh(cx))),
-                    Box::new(cx.listener(|this, _, _, cx| this.showskills(cx))),
-                    Box::new(cx.listener(|this, _, _, cx| this.showvaults(cx))),
-                    Box::new(cx.listener(|this, _, _, cx| this.showsettings(cx))),
+                    self.navigation(cx),
                     cx,
                 ))
                 .child(document::render(document, save, close, discard, cx))
@@ -1297,12 +1305,7 @@ impl Render for Dashboard {
             .child(header::render(
                 self.page,
                 self.appmenu.clone(),
-                Box::new(cx.listener(|this, _, _, cx| this.showconnections(cx))),
-                Box::new(cx.listener(|this, _, _, cx| this.showmemories(cx))),
-                Box::new(cx.listener(|this, _, _, cx| this.showmesh(cx))),
-                Box::new(cx.listener(|this, _, _, cx| this.showskills(cx))),
-                Box::new(cx.listener(|this, _, _, cx| this.showvaults(cx))),
-                Box::new(cx.listener(|this, _, _, cx| this.showsettings(cx))),
+                self.navigation(cx),
                 cx,
             ))
             .children(banner);

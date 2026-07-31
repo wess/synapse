@@ -1,4 +1,5 @@
 mod command;
+mod editor;
 mod guidance;
 mod install;
 mod launch;

@@ -4,6 +4,7 @@
 //! stay intact.
 
 use crate::cli::Outcome;
+use crate::cli::editor::editor;
 use crate::cli::relay::{directory, text};
 use crate::relay::{self, Source};
 use anyhow::{Context, Result};
@@ -132,46 +133,6 @@ fn edit(kind: &Kind, name: &str, user: bool, root: &Path, seed: String) -> Resul
         }
         Err(error) => {
             Err(error).with_context(|| format!("your draft is still at {}", draft.display()))
-        }
-    }
-}
-
-fn editor() -> String {
-    for name in ["VISUAL", "EDITOR"] {
-        if let Ok(value) = std::env::var(name) {
-            if !value.trim().is_empty() {
-                return value;
-            }
-        }
-    }
-    "vi".to_owned()
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn the_editor_falls_back_through_visual_and_editor() {
-        let restore = (std::env::var("VISUAL").ok(), std::env::var("EDITOR").ok());
-        unsafe {
-            std::env::remove_var("VISUAL");
-            std::env::set_var("EDITOR", "");
-        }
-        assert_eq!(editor(), "vi", "an empty EDITOR is not a usable editor");
-        unsafe { std::env::set_var("EDITOR", "nano") };
-        assert_eq!(editor(), "nano");
-        unsafe { std::env::set_var("VISUAL", "code -w") };
-        assert_eq!(editor(), "code -w");
-        unsafe {
-            match restore.0 {
-                Some(value) => std::env::set_var("VISUAL", value),
-                None => std::env::remove_var("VISUAL"),
-            }
-            match restore.1 {
-                Some(value) => std::env::set_var("EDITOR", value),
-                None => std::env::remove_var("EDITOR"),
-            }
         }
     }
 }

@@ -35,11 +35,12 @@ export const data: Page = {
       <li>Create and secure the data directory if needed.</li>
       <li>Acquire a shared lifecycle lock.</li>
       <li>Open SQLite with foreign keys enabled, a five-second busy timeout, and WAL journal mode.</li>
-      <li>Run <code>PRAGMA quick_check</code> and <code>PRAGMA foreign_key_check</code>.</li>
+      <li>Run <code>PRAGMA foreign_key_check</code>, and <code>PRAGMA quick_check</code> when this store has not already been read.</li>
       <li>Reject a database newer than the current application supports.</li>
       <li>Create a pre-migration snapshot when an existing database needs a numbered migration, then apply the migration transactionally.</li>
       <li>Reapply owner-only file permissions.</li>
     </ol>
+    ${note("<code>quick_check</code> reads every page, so its cost grows with everything you have stored. Synapse runs it once for a given file rather than once per handle, and reporting commands such as the status line skip it: they redraw constantly, and a whole-store scan there would cost far more than the number they print. <code>synapse data check</code> always runs the full check.")}
     ${code("shell", `synapse data check
 synapse data check --json`)}
 

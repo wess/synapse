@@ -147,6 +147,11 @@ pub fn skillish(path: &Path) -> bool {
 }
 
 #[cfg(test)]
+#[allow(
+    clippy::await_holding_lock,
+    reason = "the guard serialises tests over one process-wide SYNAPSE_DATA; \
+              holding it across the await is the point"
+)]
 mod tests {
     use super::*;
     use crate::agent::Kind;

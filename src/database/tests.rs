@@ -116,18 +116,11 @@ async fn exports_checks_and_restores_consistent_database() {
     );
 }
 
-#[tokio::test]
-async fn rejects_foreign_key_corruption() {
-    let directory = tempfile::tempdir().unwrap();
-    let folder = directory.path().join("synapse");
-    let path = folder.join("brain.db");
-    let opened = open(&path).await.unwrap();
-    opened.pool.close().await;
-    drop(opened.lock);
-
+/// Break a reference so the relationship check has something to find.
+async fn orphan(path: &Path) {
     let options = SqliteConnectOptions::from_str("sqlite://corrupt")
         .unwrap()
-        .filename(&path)
+        .filename(path)
         .foreign_keys(false);
     let pool = SqlitePoolOptions::new()
         .connect_with(options)
@@ -141,10 +134,56 @@ async fn rejects_foreign_key_corruption() {
     .await
     .unwrap();
     pool.close().await;
+}
+
+#[tokio::test]
+async fn rejects_foreign_key_corruption() {
+    let directory = tempfile::tempdir().unwrap();
+    let folder = directory.path().join("synapse");
+    let path = folder.join("brain.db");
+    let opened = open(&path).await.unwrap();
+    opened.pool.close().await;
+    drop(opened.lock);
+
+    orphan(&path).await;
 
     let error = match open(&path).await {
         Ok(_) => panic!("foreign key corruption was accepted"),
         Err(error) => error,
     };
     assert!(error.to_string().contains("relationship check failed"));
+}
+
+/// Reporting skips reading every page, but it is still an open, and a store
+/// whose references have come apart is not one to report from.
+#[tokio::test]
+async fn a_glance_still_refuses_a_store_whose_references_are_broken() {
+    let directory = tempfile::tempdir().unwrap();
+    let path = directory.path().join("synapse").join("brain.db");
+    let opened = open(&path).await.unwrap();
+    opened.pool.close().await;
+    drop(opened.lock);
+
+    orphan(&path).await;
+
+    let error = match glance(&path).await {
+        Ok(_) => panic!("a glance accepted broken references"),
+        Err(error) => error,
+    };
+    assert!(error.to_string().contains("relationship check failed"));
+}
+
+/// A glance never records the store as scanned, so asking for the whole check
+/// afterwards still reads every page rather than trusting a cheaper answer.
+#[tokio::test]
+async fn a_glance_does_not_stand_in_for_the_whole_check() {
+    let directory = tempfile::tempdir().unwrap();
+    let path = directory.path().join("synapse").join("brain.db");
+    let state = identity(&path);
+    glance(&path).await.unwrap();
+
+    assert!(
+        unverified(&path, state),
+        "a glance must not leave the store looking scanned"
+    );
 }

@@ -39,7 +39,7 @@ pub fn state(settings: &Path, binary: &Path) -> State {
     let Some(value) = read(settings).ok() else {
         return State::default();
     };
-    let existing = value.get("statusLine").and_then(|line| command(line));
+    let existing = value.get("statusLine").and_then(command);
     State {
         notice: sessionhooks(&value)
             .iter()

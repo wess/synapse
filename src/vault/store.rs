@@ -14,8 +14,15 @@ pub struct VaultStore {
 
 impl VaultStore {
     pub async fn open(path: impl AsRef<Path>) -> Result<Self> {
-        let path = path.as_ref();
-        let opened = crate::database::open(path).await?;
+        Self::from(crate::database::open(path.as_ref()).await?)
+    }
+
+    /// Open only to report on scope and trust. See [`crate::database::glance`].
+    pub async fn glance(path: impl AsRef<Path>) -> Result<Self> {
+        Self::from(crate::database::glance(path.as_ref()).await?)
+    }
+
+    fn from(opened: crate::database::Opened) -> Result<Self> {
         Ok(Self {
             pool: opened.pool,
             _lock: opened.lock,

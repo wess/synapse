@@ -35,6 +35,12 @@ const HEALTHY: Duration = Duration::from_secs(60);
 const BACKOFF: Duration = Duration::from_secs(3);
 const BACKOFFCEILING: Duration = Duration::from_secs(60);
 
+/// How much of a worker's output to keep. A worker writes to its log for as
+/// long as it runs and a crash-looping one writes on every attempt, so without
+/// a bound the file grows until the disk does not want it. What anyone reads a
+/// worker log for is the most recent output, so the tail is what survives.
+const MAXLOG: u64 = 4 * 1024 * 1024;
+
 #[derive(Clone, Debug)]
 pub struct Spec {
     pub name: String,
@@ -62,6 +68,12 @@ impl Supervisor {
 
     /// Start `spec` as a monitored background process, returning its log path.
     pub async fn launch(&self, mesh: &Mesh, spec: Spec) -> Result<PathBuf> {
+        // The same gate `register` applies, because this name is also a file
+        // name. A model picks it, and one containing a separator would put the
+        // log somewhere other than the workers folder — and would then be
+        // refused when the worker it started tried to join the mesh under it.
+        let name = crate::relay::store::validname(&spec.name)?;
+        let spec = Spec { name, ..spec };
         let directory = crate::relay::directory()?;
         std::fs::create_dir_all(&directory)
             .with_context(|| format!("could not create {}", directory.display()))?;
@@ -167,6 +179,7 @@ async fn monitor(
         if stop.load(Ordering::SeqCst) {
             break;
         }
+        trim(&log);
         let Ok(output) = std::fs::OpenOptions::new()
             .create(true)
             .append(true)
@@ -256,6 +269,28 @@ async fn monitor(
     let _ = mesh.deleteworker(&spec.name).await;
 }
 
+/// Keep a worker log under [`MAXLOG`] by dropping the oldest half, between runs
+/// so nothing is holding the file open. Failing to trim is not worth stopping a
+/// worker for; the log simply stays long.
+fn trim(log: &std::path::Path) {
+    let Ok(metadata) = std::fs::metadata(log) else {
+        return;
+    };
+    if metadata.len() <= MAXLOG {
+        return;
+    }
+    let Ok(content) = std::fs::read(log) else {
+        return;
+    };
+    let keep = content.len() - (MAXLOG / 2) as usize;
+    // Resume at a line boundary, so the log does not open mid-sentence.
+    let from = content[keep..]
+        .iter()
+        .position(|byte| *byte == b'\n')
+        .map_or(keep, |at| keep + at + 1);
+    let _ = std::fs::write(log, &content[from..]);
+}
+
 /// Delay before restart `n`: [`BACKOFF`] doubling per consecutive rapid failure,
 /// capped at [`BACKOFFCEILING`]. A worker that had been healthy restarts at the
 /// base delay.
@@ -280,6 +315,11 @@ pub async fn reapstrays(mesh: &Mesh) -> Result<Vec<WorkerView>> {
 }
 
 #[cfg(test)]
+#[allow(
+    clippy::await_holding_lock,
+    reason = "the guard serialises tests over one process-wide SYNAPSE_DATA; \
+              holding it across the await is the point"
+)]
 mod tests {
     use super::*;
 
@@ -367,6 +407,66 @@ mod tests {
 
         assert!(error.contains("worker limit"), "got {error}");
         assert!(!supervisor.owns("overflow").await);
+    }
+
+    #[tokio::test]
+    async fn a_name_that_would_escape_the_workers_folder_is_refused() {
+        let (mesh, directory) = mesh().await;
+        let _logs = logsinto(&directory);
+        let supervisor = Supervisor::new();
+
+        for bad in ["../escape", "with space", "a/b", ""] {
+            let error = supervisor
+                .launch(
+                    &mesh,
+                    Spec {
+                        name: bad.to_owned(),
+                        ..spec("placeholder")
+                    },
+                )
+                .await
+                .unwrap_err()
+                .to_string();
+            assert!(error.contains("name"), "`{bad}` gave {error}");
+        }
+        // And nothing was written outside the workers folder on the way.
+        assert!(
+            !crate::relay::directory()
+                .unwrap()
+                .join("../escape.log")
+                .exists()
+        );
+    }
+
+    #[test]
+    fn a_long_worker_log_is_trimmed_to_its_most_recent_output() {
+        let directory = tempfile::tempdir().unwrap();
+        let log = directory.path().join("noisy.log");
+        let mut content = "old line\n".repeat((MAXLOG / 9) as usize + 1);
+        content.push_str("the newest line\n");
+        std::fs::write(&log, &content).unwrap();
+        assert!(std::fs::metadata(&log).unwrap().len() > MAXLOG);
+
+        trim(&log);
+
+        let kept = std::fs::read_to_string(&log).unwrap();
+        assert!(std::fs::metadata(&log).unwrap().len() <= MAXLOG / 2);
+        assert!(kept.ends_with("the newest line\n"), "the tail must survive");
+        assert!(
+            kept.starts_with("old line\n"),
+            "must resume at a line break"
+        );
+    }
+
+    #[test]
+    fn a_log_that_fits_is_left_exactly_as_it_was() {
+        let directory = tempfile::tempdir().unwrap();
+        let log = directory.path().join("quiet.log");
+        std::fs::write(&log, "one line\n").unwrap();
+
+        trim(&log);
+
+        assert_eq!(std::fs::read_to_string(&log).unwrap(), "one line\n");
     }
 
     #[tokio::test]

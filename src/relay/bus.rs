@@ -6,10 +6,10 @@
 //! query per agent per tick and needs no daemon, no port, and no token.
 //!
 //! Delivery is at-least-once. [`awaitmessages`] only *reads* pending messages;
-//! the read cursor advances through [`ack`] once the reply has reached the
-//! client. A drain whose caller died before acknowledging is simply re-read by
-//! the next `wait`: duplicates are possible on that rare path, silent loss is
-//! not.
+//! the read cursor advances through [`ack`] once the reply carrying them has
+//! been built. A drain whose caller died before that is simply re-read by the
+//! next `wait`, so duplicates are possible on that rare path and loss needs a
+//! process to die inside the moment between building a reply and writing it.
 
 use crate::relay::{Mesh, Message, MessageKind};
 use anyhow::Result;

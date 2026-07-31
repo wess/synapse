@@ -16,7 +16,16 @@ pub struct Brain {
 impl Brain {
     pub async fn open(path: impl AsRef<Path>) -> Result<Self> {
         let path = path.as_ref().to_path_buf();
-        let opened = crate::database::open(&path).await?;
+        Self::from(crate::database::open(&path).await?, path)
+    }
+
+    /// Open only to report on what is stored. See [`crate::database::glance`].
+    pub async fn glance(path: impl AsRef<Path>) -> Result<Self> {
+        let path = path.as_ref().to_path_buf();
+        Self::from(crate::database::glance(&path).await?, path)
+    }
+
+    fn from(opened: crate::database::Opened, path: PathBuf) -> Result<Self> {
         Ok(Self {
             pool: opened.pool,
             path,

@@ -145,12 +145,15 @@ fn collect(root: Option<&Path>) -> Report {
 fn gather(root: Option<&Path>) -> Result<Report> {
     let database = crate::files::database()?;
     let runtime = tokio::runtime::Runtime::new()?;
+    // Reporting only, so none of these opens reads the whole store to find out
+    // whether it is sound: a status line redraws on every turn and has to stay
+    // far cheaper than the work it sits beside.
     runtime.block_on(async {
-        let brain = crate::brain::Brain::open(&database).await?;
+        let brain = crate::brain::Brain::glance(&database).await?;
         let memories = brain.reach(root).await?;
         let mesh = brain.mesh().await?;
         let agents = if mesh {
-            crate::relay::Mesh::open(&database)
+            crate::relay::Mesh::glance(&database)
                 .await?
                 .agents()
                 .await?
@@ -162,7 +165,7 @@ fn gather(root: Option<&Path>) -> Result<Report> {
         };
         let vault = match root {
             Some(root) => {
-                let vaults = crate::vault::VaultStore::open(&database).await?;
+                let vaults = crate::vault::VaultStore::glance(&database).await?;
                 let resolved = crate::vault::resolve(&vaults, root).await?;
                 if resolved.scopes.is_empty() {
                     "inactive"

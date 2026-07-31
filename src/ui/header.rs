@@ -5,17 +5,32 @@ use guise::prelude::*;
 
 type Click = Box<dyn Fn(&ClickEvent, &mut Window, &mut App) + 'static>;
 
+/// Where each navigation button goes. Named rather than passed in a row,
+/// because six handlers of one type in sequence is six chances to wire a button
+/// to the wrong page and have nothing about it look wrong.
+pub struct Navigation {
+    pub connections: Click,
+    pub memories: Click,
+    pub mesh: Click,
+    pub skills: Click,
+    pub vaults: Click,
+    pub settings: Click,
+}
+
 pub fn render(
     page: Page,
     appmenu: Option<Entity<MenuBar>>,
-    connections: Click,
-    memories: Click,
-    mesh: Click,
-    skills: Click,
-    vaults: Click,
-    settings: Click,
+    go: Navigation,
     cx: &App,
 ) -> impl IntoElement {
+    let Navigation {
+        connections,
+        memories,
+        mesh,
+        skills,
+        vaults,
+        settings,
+    } = go;
     let theme = guise::theme(cx);
     div()
         .flex_none()

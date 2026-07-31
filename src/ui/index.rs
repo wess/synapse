@@ -44,8 +44,18 @@ pub fn run() {
             use gpui::Task;
 
             let (sender, receiver) = async_channel::unbounded();
-            let statusbar = statusbar::install(sender).expect("create Synapse status item");
-            cx.set_global(statusbar);
+            // The menu bar item is a convenience, and the window is already
+            // open. Losing it is worth a line on the console, not the app.
+            let statusbar = match statusbar::install(sender) {
+                Ok(statusbar) => Some(statusbar),
+                Err(error) => {
+                    eprintln!("Synapse could not add its menu bar item: {error:#}");
+                    None
+                }
+            };
+            if let Some(statusbar) = statusbar {
+                cx.set_global(statusbar);
+            }
             let data = crate::files::data().ok();
             let task: Task<()> = cx.spawn(async move |cx| {
                 while let Ok(action) = receiver.recv().await {

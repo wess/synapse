@@ -5,7 +5,7 @@ mod layer;
 mod model;
 mod process;
 pub mod role;
-mod store;
+pub(crate) mod store;
 pub mod team;
 mod worker;
 

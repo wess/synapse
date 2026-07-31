@@ -2,6 +2,7 @@
 
 use crate::agent::Agent;
 use crate::cli::Outcome;
+use crate::cli::editor::editor;
 use crate::skill::{self, Receipts};
 use anyhow::{Context, Result};
 use std::ffi::OsString;
@@ -276,17 +277,6 @@ fn report(problems: &[String]) {
     for problem in problems {
         eprintln!("warning: skipped {problem}");
     }
-}
-
-fn editor() -> String {
-    for name in ["VISUAL", "EDITOR"] {
-        if let Ok(value) = std::env::var(name) {
-            if !value.trim().is_empty() {
-                return value;
-            }
-        }
-    }
-    "vi".to_owned()
 }
 
 #[cfg(test)]

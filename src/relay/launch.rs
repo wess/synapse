@@ -60,6 +60,10 @@ pub struct Launch {
 
 /// Resolve `options` into a launchable command.
 pub fn launch(options: &Options) -> Result<Launch> {
+    // The name the agent will join the mesh under is also the name of the
+    // config file written for it, and a model chooses it. Refuse it here, where
+    // it first becomes a path, rather than after something has been written.
+    crate::relay::store::validname(options.name)?;
     let role = role::resolve(Some(options.root), options.role)?;
     let brief = role
         .as_ref()
@@ -239,15 +243,15 @@ fn codex(
     }
     // Codex reads no MCP config file, so an unconnected Codex is pointed at this
     // binary through its own settings syntax instead.
-    if config.is_some() {
-        if let Ok(binary) = binary() {
-            arguments.extend([
-                "-c".to_owned(),
-                format!("mcp_servers.synapse.command=\"{}\"", binary.display()),
-                "-c".to_owned(),
-                "mcp_servers.synapse.args=[\"mcp\"]".to_owned(),
-            ]);
-        }
+    if config.is_some()
+        && let Ok(binary) = binary()
+    {
+        arguments.extend([
+            "-c".to_owned(),
+            format!("mcp_servers.synapse.command=\"{}\"", binary.display()),
+            "-c".to_owned(),
+            "mcp_servers.synapse.args=[\"mcp\"]".to_owned(),
+        ]);
     }
     if let Some(model) = model {
         arguments.extend(["-c".to_owned(), format!("model=\"{model}\"")]);

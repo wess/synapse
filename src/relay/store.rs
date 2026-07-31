@@ -18,6 +18,14 @@ const RETENTION: i64 = 10_000;
 /// [`RETENTION`], but never beyond this.
 const MAXBACKLOG: i64 = 50_000;
 
+/// One roster row as the query returns it: name, role, status, project, tool,
+/// whether it registered, how many channels it is in, and when it was last seen.
+type AgentRow = (String, String, String, String, String, i64, i64, i64);
+
+/// One worker row: name, role, status, process id, directory, log path,
+/// restarts, whether it is kept alive, and the session supervising it.
+type WorkerRow = (String, String, String, i64, String, String, i64, i64, i64);
+
 #[derive(Clone)]
 pub struct Mesh {
     pool: SqlitePool,
@@ -26,7 +34,15 @@ pub struct Mesh {
 
 impl Mesh {
     pub async fn open(path: impl AsRef<Path>) -> Result<Self> {
-        let opened = crate::database::open(path.as_ref()).await?;
+        Self::from(crate::database::open(path.as_ref()).await?)
+    }
+
+    /// Open only to report on the mesh. See [`crate::database::glance`].
+    pub async fn glance(path: impl AsRef<Path>) -> Result<Self> {
+        Self::from(crate::database::glance(path.as_ref()).await?)
+    }
+
+    fn from(opened: crate::database::Opened) -> Result<Self> {
         Ok(Self {
             pool: opened.pool,
             _lock: opened.lock,
@@ -205,7 +221,7 @@ impl Mesh {
 
     pub async fn agents(&self) -> Result<Vec<AgentView>> {
         let horizon = now()? - LIVEWINDOW;
-        let rows: Vec<(String, String, String, String, String, i64, i64, i64)> = sqlx::query_as(
+        let rows: Vec<AgentRow> = sqlx::query_as(
             "SELECT a.name, a.role, a.status, a.project, a.tool, a.registered, \
              (SELECT COUNT(*) FROM meshsub s WHERE s.agent = a.name), a.seen \
              FROM meshagent a ORDER BY a.registered DESC, a.name ASC",
@@ -321,14 +337,13 @@ impl Mesh {
     }
 
     pub async fn workers(&self) -> Result<Vec<WorkerView>> {
-        let rows: Vec<(String, String, String, i64, String, String, i64, i64, i64)> =
-            sqlx::query_as(
-                "SELECT name, role, status, process, directory, log, restarts, keepalive, \
-                 supervisor FROM meshworker ORDER BY name",
-            )
-            .fetch_all(&self.pool)
-            .await
-            .context("could not read the worker list")?;
+        let rows: Vec<WorkerRow> = sqlx::query_as(
+            "SELECT name, role, status, process, directory, log, restarts, keepalive, \
+             supervisor FROM meshworker ORDER BY name",
+        )
+        .fetch_all(&self.pool)
+        .await
+        .context("could not read the worker list")?;
         Ok(rows
             .into_iter()
             .map(
@@ -417,9 +432,11 @@ fn prunefloor(tip: i64, slowest: Option<i64>) -> i64 {
     soft.max(tip - MAXBACKLOG)
 }
 
-/// Agent and channel names address rows and appear in prompts, so they stay
-/// short, printable, and free of the whitespace that would break a roster line.
-fn validname(value: &str) -> Result<String> {
+/// Agent, channel, and worker names address rows, appear in prompts, and become
+/// the name of a log file, so they stay short, printable, free of the
+/// whitespace that would break a roster line, and free of anything a path could
+/// read as a separator.
+pub(crate) fn validname(value: &str) -> Result<String> {
     let value = value.trim();
     anyhow::ensure!(!value.is_empty(), "a name cannot be empty");
     anyhow::ensure!(
@@ -431,6 +448,12 @@ fn validname(value: &str) -> Result<String> {
             .chars()
             .all(|item| item.is_ascii_alphanumeric() || matches!(item, '-' | '.' | '_')),
         "a name may only contain letters, digits, dashes, dots, and underscores"
+    );
+    // Which also rules out `.` and `..`, names a filesystem already means
+    // something by, and leaves every name something a person can read aloud.
+    anyhow::ensure!(
+        value.starts_with(|item: char| item.is_ascii_alphanumeric()),
+        "a name has to start with a letter or a digit"
     );
     Ok(value.to_owned())
 }
@@ -594,5 +617,15 @@ mod tests {
         assert!(validname("  ").is_err());
         assert!(validname("two words").is_err());
         assert!(validname(&"x".repeat(65)).is_err());
+    }
+
+    /// The same name becomes a log file and a config file, so anything a path
+    /// would read as a separator, or already means something by, is refused
+    /// before it is written rather than after.
+    #[test]
+    fn names_that_would_reach_outside_the_workers_folder_are_refused() {
+        for bad in ["../escape", "a/b", "..", ".", "./x", ".hidden", "a\\b"] {
+            assert!(validname(bad).is_err(), "`{bad}` should be refused");
+        }
     }
 }
