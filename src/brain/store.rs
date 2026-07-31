@@ -56,12 +56,16 @@ impl Brain {
             .execute(&mut *transaction)
             .await?;
         let id = result.last_insert_rowid();
-        sqlx::query("INSERT INTO memorymeta(memoryid, scope, project, native) VALUES (?, ?, ?, 1)")
-            .bind(id)
-            .bind(scope.value())
-            .bind(project)
-            .execute(&mut *transaction)
-            .await?;
+        sqlx::query(
+            "INSERT INTO memorymeta(memoryid, scope, project, native, created) \
+             VALUES (?, ?, ?, 1, ?)",
+        )
+        .bind(id)
+        .bind(scope.value())
+        .bind(project)
+        .bind(created)
+        .execute(&mut *transaction)
+        .await?;
         transaction.commit().await?;
         Ok(id)
     }
@@ -89,20 +93,7 @@ impl Brain {
 
     pub async fn search(&self, query: &str, limit: u32) -> Result<Vec<Memory>> {
         let limit = limit.clamp(1, 200) as i64;
-        let query = query.trim();
-        if query.is_empty() {
-            sqlx::query_as::<_, Memory>(
-                "SELECT memory.rowid AS id, memory.body, memory.source, meta.scope, meta.project, \
-                 CAST(memory.created AS INTEGER) AS created \
-                 FROM memory JOIN memorymeta meta ON meta.memoryid = memory.rowid \
-                 ORDER BY memory.created DESC LIMIT ?",
-            )
-            .bind(limit)
-            .fetch_all(&self.pool)
-            .await
-            .context("could not read recent memories")
-        } else {
-            let expression = search_expression(query);
+        if let Some(expression) = search_expression(query.trim()) {
             sqlx::query_as::<_, Memory>(
                 "SELECT memory.rowid AS id, memory.body, memory.source, meta.scope, meta.project, \
                  CAST(memory.created AS INTEGER) AS created \
@@ -114,27 +105,29 @@ impl Brain {
             .fetch_all(&self.pool)
             .await
             .context("could not search memories")
+        } else {
+            sqlx::query_as::<_, Memory>(
+                "SELECT memory.rowid AS id, memory.body, memory.source, meta.scope, meta.project, \
+                 CAST(memory.created AS INTEGER) AS created \
+                 FROM memorymeta meta JOIN memory ON memory.rowid = meta.memoryid \
+                 WHERE meta.memoryid IN (\
+                 SELECT memoryid FROM memorymeta ORDER BY created DESC, memoryid DESC LIMIT ?) \
+                 ORDER BY meta.created DESC, meta.memoryid DESC",
+            )
+            .bind(limit)
+            .fetch_all(&self.pool)
+            .await
+            .context("could not read recent memories")
         }
     }
 
     async fn searchscoped(&self, query: &str, limit: u32, project: &str) -> Result<Vec<Memory>> {
         let limit = limit.clamp(1, 200) as i64;
-        let query = query.trim();
-        if query.is_empty() {
-            sqlx::query_as::<_, Memory>(
-                "SELECT memory.rowid AS id, memory.body, memory.source, meta.scope, meta.project, \
-                 CAST(memory.created AS INTEGER) AS created \
-                 FROM memory JOIN memorymeta meta ON meta.memoryid = memory.rowid \
-                 WHERE meta.scope = 'global' OR (meta.scope = 'project' AND meta.project = ?) \
-                 ORDER BY memory.created DESC LIMIT ?",
-            )
-            .bind(project)
-            .bind(limit)
-            .fetch_all(&self.pool)
-            .await
-            .context("could not read scoped memories")
-        } else {
-            let expression = search_expression(query);
+        // A query of nothing but function words asks for nothing in particular,
+        // so it is answered the way an empty one is — with what is most recent,
+        // rather than with whatever happened to contain the word `the`.
+        let expression = search_expression(query.trim());
+        if let Some(expression) = expression {
             sqlx::query_as::<_, Memory>(
                 "SELECT memory.rowid AS id, memory.body, memory.source, meta.scope, meta.project, \
                  CAST(memory.created AS INTEGER) AS created \
@@ -149,6 +142,26 @@ impl Brain {
             .fetch_all(&self.pool)
             .await
             .context("could not search scoped memories")
+        } else {
+            // Choose the newest ids from the index first, then fetch only
+            // those. Filtering and ordering in the outer join instead lets the
+            // planner drive from the full-text table, which means reading every
+            // memory and sorting all of them to answer for the newest handful.
+            sqlx::query_as::<_, Memory>(
+                "SELECT memory.rowid AS id, memory.body, memory.source, meta.scope, meta.project, \
+                 CAST(memory.created AS INTEGER) AS created \
+                 FROM memorymeta meta JOIN memory ON memory.rowid = meta.memoryid \
+                 WHERE meta.memoryid IN (\
+                 SELECT memoryid FROM memorymeta \
+                 WHERE scope = 'global' OR (scope = 'project' AND project = ?) \
+                 ORDER BY created DESC, memoryid DESC LIMIT ?) \
+                 ORDER BY meta.created DESC, meta.memoryid DESC",
+            )
+            .bind(project)
+            .bind(limit)
+            .fetch_all(&self.pool)
+            .await
+            .context("could not read scoped memories")
         }
     }
 
@@ -314,12 +327,55 @@ impl Brain {
     }
 }
 
-fn search_expression(query: &str) -> String {
-    query
+/// Words that appear in almost every memory, so matching one says nothing about
+/// whether a memory is the right one.
+///
+/// Only function words are here. Anything a developer might mean — `not`, `no`,
+/// `use`, `never`, `always` — carries signal in a stored preference and stays.
+const STOPWORDS: &[&str] = &[
+    "a", "an", "and", "any", "are", "as", "at", "be", "been", "but", "by", "can", "could", "did",
+    "do", "does", "for", "from", "had", "has", "have", "how", "i", "if", "in", "into", "is", "it",
+    "its", "me", "my", "of", "on", "or", "our", "should", "so", "than", "that", "the", "their",
+    "them", "then", "there", "these", "they", "this", "to", "was", "we", "were", "what", "when",
+    "where", "which", "who", "why", "will", "with", "would", "you", "your",
+];
+
+/// The FTS expression for `query`, or nothing when the query carries no term
+/// worth searching for.
+///
+/// Every term used to be ORed together, stopwords included, which was wrong and
+/// slow for the same reason: `where are credentials stored` became a search for
+/// `where OR are OR credentials OR stored`, so a memory that merely contained
+/// *are* was ranked and returned as the answer. An agent acts on that, which
+/// makes a confident wrong answer worse than none. It also meant asking SQLite
+/// to rank every memory containing a common word — at 200k memories that is a
+/// 437ms query where the same search without the noise takes 0.3ms.
+fn search_expression(query: &str) -> Option<String> {
+    let terms: Vec<&str> = query
         .split_whitespace()
-        .map(|part| format!("\"{}\"", part.replace('"', "\"\"")))
-        .collect::<Vec<_>>()
-        .join(" OR ")
+        .filter(|term| !stopword(term))
+        .collect();
+    if terms.is_empty() {
+        return None;
+    }
+    Some(
+        terms
+            .into_iter()
+            .map(|term| format!("\"{}\"", term.replace('"', "\"\"")))
+            .collect::<Vec<_>>()
+            .join(" OR "),
+    )
+}
+
+/// Whether a term is one of the words that match nearly everything, ignoring
+/// the punctuation a spoken-sounding query carries.
+fn stopword(term: &str) -> bool {
+    let bare: String = term
+        .chars()
+        .filter(char::is_ascii_alphanumeric)
+        .flat_map(char::to_lowercase)
+        .collect();
+    bare.is_empty() || STOPWORDS.contains(&bare.as_str())
 }
 
 #[cfg(test)]
@@ -350,6 +406,131 @@ mod tests {
         assert_eq!(matches.len(), 1);
         assert_eq!(matches[0].source, "preferences");
         assert_eq!(brain.stats().await.unwrap().entries, 1);
+    }
+
+    /// The bug this replaced: `where are credentials stored` matched a memory
+    /// on the word *are* and returned it as the answer. An agent acts on a
+    /// confident wrong answer, so nothing is the better result.
+    #[tokio::test]
+    async fn a_query_never_matches_on_its_function_words_alone() {
+        let directory = tempfile::tempdir().unwrap();
+        let brain = Brain::open(directory.path().join("brain.db"))
+            .await
+            .unwrap();
+        brain
+            .rememberscoped(
+                "Postgres connections are pooled at five",
+                None,
+                MemoryScope::Global,
+                None,
+            )
+            .await
+            .unwrap();
+
+        let matches = brain
+            .recallscoped("where are credentials stored", 8, None, None)
+            .await
+            .unwrap()
+            .1;
+
+        assert!(
+            matches.is_empty(),
+            "matched on a function word: {:?}",
+            matches.first().map(|memory| &memory.body)
+        );
+    }
+
+    /// A query with nothing but function words asks for nothing in particular,
+    /// so it is answered the way an empty query is.
+    #[tokio::test]
+    async fn a_query_of_only_function_words_falls_back_to_what_is_recent() {
+        let directory = tempfile::tempdir().unwrap();
+        let brain = Brain::open(directory.path().join("brain.db"))
+            .await
+            .unwrap();
+        brain
+            .rememberscoped(
+                "Deploys run from the deploy branch",
+                None,
+                MemoryScope::Global,
+                None,
+            )
+            .await
+            .unwrap();
+
+        let matches = brain
+            .recallscoped("how do i", 8, None, None)
+            .await
+            .unwrap()
+            .1;
+
+        assert_eq!(
+            matches.len(),
+            1,
+            "should read as an empty query, not a miss"
+        );
+    }
+
+    #[test]
+    fn the_expression_keeps_words_a_developer_might_have_meant() {
+        // Negation and emphasis carry the whole meaning of a stored preference.
+        for kept in ["not", "no", "never", "always", "use", "run", "all"] {
+            assert!(
+                search_expression(kept).is_some(),
+                "`{kept}` carries meaning and must survive"
+            );
+        }
+        assert_eq!(search_expression("the and of").as_deref(), None);
+        assert_eq!(search_expression("").as_deref(), None);
+        assert_eq!(
+            search_expression("Where, are THE credentials?").as_deref(),
+            Some("\"credentials?\""),
+            "punctuation and case must not hide a stopword or drop a real term"
+        );
+    }
+
+    /// Recent means most recently *stored*, which an import can set to a date
+    /// long before the row existed — so insertion order is not the answer.
+    #[tokio::test]
+    async fn the_recent_list_orders_by_when_a_memory_was_made_not_when_it_was_written() {
+        let directory = tempfile::tempdir().unwrap();
+        let brain = Brain::open(directory.path().join("brain.db"))
+            .await
+            .unwrap();
+        for body in ["first", "second"] {
+            brain
+                .rememberscoped(body, None, MemoryScope::Global, None)
+                .await
+                .unwrap();
+        }
+        // Stand in for an import: written last, dated long ago.
+        let old = brain
+            .rememberscoped("imported", None, MemoryScope::Global, None)
+            .await
+            .unwrap();
+        for table in ["memory", "memorymeta"] {
+            let column = if table == "memory" {
+                "rowid"
+            } else {
+                "memoryid"
+            };
+            sqlx::query(&format!(
+                "UPDATE {table} SET created = 1 WHERE {column} = ?"
+            ))
+            .bind(old)
+            .execute(&brain.pool)
+            .await
+            .unwrap();
+        }
+
+        let recent = brain.search("", 10).await.unwrap();
+
+        assert_eq!(recent.len(), 3);
+        assert_eq!(
+            recent.last().unwrap().body,
+            "imported",
+            "the oldest memory belongs last however recently it was written"
+        );
     }
 
     #[tokio::test]

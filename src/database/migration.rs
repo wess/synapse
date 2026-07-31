@@ -3,7 +3,7 @@ use anyhow::{Context, Result};
 use sqlx::SqlitePool;
 use std::path::Path;
 
-pub const LATEST: i64 = 4;
+pub const LATEST: i64 = 5;
 
 struct Migration {
     version: i64,
@@ -108,6 +108,21 @@ const MIGRATIONS: &[Migration] = &[
              source TEXT NOT NULL DEFAULT '', \
              installed INTEGER NOT NULL, \
              PRIMARY KEY(skill, tool))",
+        ],
+    },
+    Migration {
+        version: 5,
+        statements: &[
+            // When a memory was stored, kept beside its scope so the most
+            // recent can be found from an index. It lives in the FTS table too,
+            // but only as an unindexed column, so ordering by it there meant
+            // reading every memory and sorting the lot to answer a question
+            // about the newest handful.
+            "ALTER TABLE memorymeta ADD COLUMN created INTEGER NOT NULL DEFAULT 0",
+            "UPDATE memorymeta SET created = COALESCE(\
+             (SELECT CAST(memory.created AS INTEGER) FROM memory \
+             WHERE memory.rowid = memorymeta.memoryid), 0)",
+            "CREATE INDEX memorymetacreated ON memorymeta(created DESC, memoryid DESC)",
         ],
     },
 ];

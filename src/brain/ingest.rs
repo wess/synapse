@@ -120,12 +120,13 @@ impl Brain {
                             .await?
                             .last_insert_rowid();
                     sqlx::query(
-                        "INSERT INTO memorymeta(memoryid, scope, project, native) \
-                         VALUES (?, ?, ?, 0)",
+                        "INSERT INTO memorymeta(memoryid, scope, project, native, created) \
+                         VALUES (?, ?, ?, 0, ?)",
                     )
                     .bind(id)
                     .bind(candidate.scope.value())
                     .bind(&candidate.project)
+                    .bind(timestamp)
                     .execute(&mut *transaction)
                     .await?;
                     imported += 1;
