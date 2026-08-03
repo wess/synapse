@@ -47,6 +47,8 @@ pub enum Record {
         created: i64,
     },
     Del {
+        /// The identity being removed. A deletion does not mint one of its own.
+        uid: String,
         at: i64,
     },
 }
@@ -57,7 +59,7 @@ impl Record {
     pub fn at(&self) -> i64 {
         match self {
             Self::Put { created, .. } => *created,
-            Self::Del { at } => *at,
+            Self::Del { at, .. } => *at,
         }
     }
 }
@@ -85,6 +87,13 @@ mod tests {
     #[test]
     fn both_variants_report_when_they_happened() {
         assert_eq!(put().at(), 1_700_000_000);
-        assert_eq!(Record::Del { at: 42 }.at(), 42);
+        assert_eq!(
+            Record::Del {
+                uid: "abc".into(),
+                at: 42
+            }
+            .at(),
+            42
+        );
     }
 }

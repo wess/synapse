@@ -1,5 +1,11 @@
 [workspace]
-members = ["crates/*"]
+members = ["crates/synapse", "crates/synapsesync"]
+# synapseserve is its own workspace root, not a member here. Cargo loads every
+# member's manifest whatever you asked it to build, so as a member it could not
+# be built without ../guise on disk — a headless Linux server would have needed
+# a checkout of a GPUI theming library it never links. It keeps its own
+# lockfile, which also matches how it ships: on its own schedule.
+exclude = ["crates/synapseserve"]
 resolver = "3"
 
 [workspace.package]
@@ -15,6 +21,7 @@ guise-ui = { path = "../guise/crates/guise", default-features = false }
 # tray-icon, rmcp, and the rest) stay in the package that needs them, so a
 # server build never resolves them.
 anyhow = "1.0"
+base64 = "0.22"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 sha2 = "0.10"

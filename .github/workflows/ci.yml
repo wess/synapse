@@ -92,6 +92,32 @@ jobs:
         run: cargo fmt --check
         continue-on-error: true
 
+  # The sync server, built the way somebody self-hosting would build it: Linux,
+  # no guise checkout, no macOS, nothing from the desktop half on disk. The
+  # workspace-level jobs cannot check this — synapseserve is its own workspace
+  # root precisely so that it does not need any of that — so this job is what
+  # keeps the server from quietly growing a dependency on the app.
+  server:
+    name: synapseserve · linux, no guise
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: crates/synapseserve
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: crates/synapseserve
+
+      - name: Build
+        run: cargo build --locked
+
+      - name: Test
+        run: cargo test --locked
+
   # Verify the documentation site builds and passes its own link check. pages.yml
   # runs the same two commands on push to main; this extends the check to PRs.
   site:

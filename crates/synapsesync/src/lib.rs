@@ -12,6 +12,6 @@ pub mod record;
 pub mod wire;
 
 pub use envelope::{Key, open, seal};
-pub use op::{Numbered, Op, uid};
+pub use op::{Numbered, Op, opid, uid};
 pub use record::{Record, Scope};
 pub use wire::{PROTOCOL, PullRequest, PullResponse, PushRequest, PushResponse};

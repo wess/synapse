@@ -1,0 +1,51 @@
+# Its own workspace root rather than a member of the one above.
+#
+# Cargo loads every workspace member's manifest whatever you asked it to build,
+# so as a member this crate could not be built without ../guise on disk — a
+# headless Linux server would have needed a checkout of a GPUI theming library
+# it never links. Standing on its own means `cd crates/synapseserve && cargo
+# build` works on a bare machine with nothing but a Rust toolchain.
+#
+# The cost is that dependency versions are written out here instead of
+# inherited, and that a workspace-wide `cargo test` does not reach these tests.
+# CI runs them in their own job, on Linux, with no guise checked out — which is
+# also what keeps the property above from quietly regressing.
+[workspace]
+
+[package]
+name = "synapseserve"
+version = "0.1.0"
+edition = "2024"
+description = "Sync server for Synapse: an append-only log of sealed envelopes"
+
+# A library with a thin binary over it. Integration tests bind an ephemeral
+# port and call serve() directly, which is both faster than supervising a child
+# process and what lets the desktop crate drive a real server from its tests.
+[dependencies]
+anyhow = "1.0"
+axum = "0.8"
+fs2 = "0.4"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+sha2 = "0.10"
+sqlx = { version = "0.8", default-features = false, features = [
+    "macros",
+    "runtime-tokio",
+    "sqlite",
+] }
+subtle = "2.6"
+synapsesync = { path = "../synapsesync" }
+# No "process" feature: the server starts nothing.
+tokio = { version = "1.0", features = [
+    "macros",
+    "net",
+    "rt-multi-thread",
+    "signal",
+    "sync",
+    "time",
+] }
+
+[dev-dependencies]
+base64 = "0.22"
+tempfile = "3.20"
+tower = { version = "0.5", features = ["util"] }

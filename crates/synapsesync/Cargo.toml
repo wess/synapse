@@ -8,7 +8,7 @@ description = "Wire protocol and sealed envelopes shared by the Synapse client a
 # server depend on this crate, so anything added here is added to both.
 [dependencies]
 anyhow.workspace = true
-base64 = "0.22"
+base64.workspace = true
 chacha20poly1305 = "0.10"
 serde.workspace = true
 serde_json.workspace = true

@@ -63,7 +63,7 @@ mod tests {
         let request = PushRequest {
             protocol: PROTOCOL,
             ops: vec![Op {
-                uid: "abc".into(),
+                opid: "abc".into(),
                 envelope: vec![1, 2, 3],
             }],
         };
@@ -76,7 +76,7 @@ mod tests {
         let response = PullResponse {
             ops: vec![Numbered {
                 seq: 9,
-                uid: "abc".into(),
+                opid: "abc".into(),
                 envelope: vec![4, 5],
             }],
             head: 9,
