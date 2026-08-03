@@ -1,0 +1,15 @@
+[package]
+name = "synapsesync"
+version = "0.1.0"
+edition.workspace = true
+description = "Wire protocol and sealed envelopes shared by the Synapse client and its sync server"
+
+# No sqlx, no gpui, no tokio, no keychain. Both a desktop app and a headless
+# server depend on this crate, so anything added here is added to both.
+[dependencies]
+anyhow.workspace = true
+base64 = "0.22"
+chacha20poly1305 = "0.10"
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
