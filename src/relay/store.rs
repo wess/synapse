@@ -18,10 +18,21 @@ const RETENTION: i64 = 10_000;
 /// [`RETENTION`], but never beyond this.
 const MAXBACKLOG: i64 = 50_000;
 
-/// One roster row as the query returns it: name, role, status, project, tool,
-/// whether it is a person, whether it registered, how many channels it is in,
-/// and when it was last seen.
-type AgentRow = (String, String, String, String, String, i64, i64, i64, i64);
+/// One roster row as the query returns it: name, role, status, progress note,
+/// project, tool, whether it is a person, whether it registered, how many
+/// channels it is in, and when it was last seen.
+type AgentRow = (
+    String,
+    String,
+    String,
+    String,
+    String,
+    String,
+    i64,
+    i64,
+    i64,
+    i64,
+);
 
 /// One worker row: name, role, status, process id, directory, log path,
 /// restarts, whether it is kept alive, and the session supervising it.
@@ -105,25 +116,33 @@ impl Mesh {
         Ok(())
     }
 
-    pub async fn setstatus(&self, name: &str, status: &str) -> Result<()> {
+    /// Record a work state, and what the agent is doing in it. `None` leaves any
+    /// existing note alone: an agent that reports `working` twice without saying
+    /// more has not stopped doing the thing it described the first time, and
+    /// blanking the note there would lose the only detail on the roster.
+    pub async fn setstatus(&self, name: &str, status: &str, note: Option<&str>) -> Result<()> {
         self.placeholder(name).await?;
-        sqlx::query("UPDATE meshagent SET status = ?, seen = ? WHERE name = ?")
-            .bind(status)
-            .bind(now()?)
-            .bind(name)
-            .execute(&self.pool)
-            .await?;
+        sqlx::query(
+            "UPDATE meshagent SET status = ?, note = COALESCE(?, note), seen = ? WHERE name = ?",
+        )
+        .bind(status)
+        .bind(note)
+        .bind(now()?)
+        .bind(name)
+        .execute(&self.pool)
+        .await?;
         Ok(())
     }
 
-    pub async fn statusof(&self, name: &str) -> Result<String> {
-        Ok(
-            sqlx::query_scalar::<_, String>("SELECT status FROM meshagent WHERE name = ?")
-                .bind(name)
-                .fetch_optional(&self.pool)
-                .await?
-                .unwrap_or_default(),
+    /// The state an agent last reported and the note it gave with it.
+    pub async fn statusof(&self, name: &str) -> Result<(String, String)> {
+        Ok(sqlx::query_as::<_, (String, String)>(
+            "SELECT status, note FROM meshagent WHERE name = ?",
         )
+        .bind(name)
+        .fetch_optional(&self.pool)
+        .await?
+        .unwrap_or_default())
     }
 
     pub async fn insert(
@@ -227,7 +246,7 @@ impl Mesh {
         // People first: an agent reading the roster to find someone to ask
         // should not have to scan past a dozen workers to find them.
         let rows: Vec<AgentRow> = sqlx::query_as(
-            "SELECT a.name, a.role, a.status, a.project, a.tool, a.human, a.registered, \
+            "SELECT a.name, a.role, a.status, a.note, a.project, a.tool, a.human, a.registered, \
              (SELECT COUNT(*) FROM meshsub s WHERE s.agent = a.name), a.seen \
              FROM meshagent a ORDER BY a.human DESC, a.registered DESC, a.name ASC",
         )
@@ -237,11 +256,12 @@ impl Mesh {
         Ok(rows
             .into_iter()
             .map(
-                |(name, role, status, project, tool, human, registered, channels, seen)| {
+                |(name, role, status, note, project, tool, human, registered, channels, seen)| {
                     AgentView {
                         name,
                         role,
                         status,
+                        note,
                         project,
                         tool,
                         human: human != 0,

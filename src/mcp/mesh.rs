@@ -174,24 +174,29 @@ impl Server {
     }
 
     #[tool(
-        description = "Report your current work state so the rest of the mesh, and the person watching, can see it at a glance: working, idle, blocked, or done. It is cheap; call it whenever your state changes."
+        description = "Report your current work state so the rest of the mesh, and the person watching, can see it at a glance: working, idle, blocked, or done. Add a one-line note saying what you are actually doing, and what you need if you are blocked — the state alone says only that you have not stalled. It is cheap; call it whenever your state or your task changes."
     )]
     async fn reportstatus(
         &self,
         Parameters(request): Parameters<ReportStatusRequest>,
     ) -> Result<Json<StatusResponse>, String> {
         let (mesh, me) = self.identify().await?;
-        relay::reportstatus(mesh, &me, &request.status)
+        relay::reportstatus(mesh, &me, &request.status, request.note.as_deref())
             .await
             .map_err(text)?;
+        // Report the note as stored rather than as given: it is trimmed to one
+        // bounded line, and an agent that reads back what it sent should see
+        // what the roster will show.
+        let (status, note) = mesh.statusof(&me).await.map_err(text)?;
         Ok(Json(StatusResponse {
             name: me,
-            status: request.status,
+            status,
+            note,
         }))
     }
 
     #[tool(
-        description = "Block until another agent reaches one of the given states, then return its status. Use it to coordinate, such as waiting for a worker to be done or blocked. Returns the current status on timeout; call again to keep waiting."
+        description = "Block until another agent reaches one of the given states, then return its status and the note it reported with. Use it to coordinate, such as waiting for a worker to be done or blocked. Returns the current status on timeout; call again to keep waiting."
     )]
     async fn waitstatus(
         &self,
@@ -199,7 +204,7 @@ impl Server {
     ) -> Result<Json<StatusResponse>, String> {
         let (mesh, _) = self.identify().await?;
         let want = request.status.unwrap_or_default();
-        let status = relay::awaitstatus(
+        let (status, note) = relay::awaitstatus(
             mesh,
             &request.name,
             &want,
@@ -211,6 +216,7 @@ impl Server {
         Ok(Json(StatusResponse {
             name: request.name,
             status,
+            note,
         }))
     }
 

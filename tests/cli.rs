@@ -606,6 +606,45 @@ fn the_session_hook_reports_real_numbers_and_a_status_line_follows() {
         context.contains("do not print a `Synapse connected` line yourself"),
         "the model must not repeat a notice the user has already seen: {context}"
     );
+    // The memory itself, not a count of it. Asking the model to call `recall`
+    // is guidance it may skip; handing it over is not.
+    assert!(
+        context.contains("Ship the beta on Fridays."),
+        "the hook should carry the memory, not only its number: {context}"
+    );
+
+    // Another project's memory stays out of it. The hook recalls without being
+    // asked, so the scope rule has to hold here or a session opens holding
+    // somebody else's decisions.
+    let other = root.path().join("other");
+    fs::create_dir_all(other.join(".git")).unwrap();
+    success(runfrom(
+        root.path(),
+        Some(&other),
+        &[
+            "memory",
+            "add",
+            "meshtest",
+            "--project",
+            &other.display().to_string(),
+        ],
+        Some("Never deploy on Fridays."),
+    ));
+    let scoped: Value = serde_json::from_str(&success(runfrom(
+        root.path(),
+        Some(&project),
+        &["session"],
+        Some(&format!("{{\"cwd\":\"{folder}\"}}")),
+    )))
+    .unwrap();
+    let scoped = scoped["hookSpecificOutput"]["additionalContext"]
+        .as_str()
+        .unwrap();
+    assert!(scoped.contains("Ship the beta on Fridays."));
+    assert!(
+        !scoped.contains("Never deploy on Fridays."),
+        "another project's memory must not reach this session: {scoped}"
+    );
 
     let line = success(runfrom(
         root.path(),

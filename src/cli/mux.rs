@@ -340,6 +340,14 @@ async fn roster(mesh: &Mesh) -> Result<()> {
         } else {
             "offline"
         };
+        // The note is what someone reading this actually wants: the state says
+        // a worker has not stalled, the note says whether to leave it alone.
+        let doing = match (agent.status.is_empty(), agent.note.is_empty()) {
+            (true, true) => "-".to_owned(),
+            (false, true) => agent.status.clone(),
+            (true, false) => agent.note.clone(),
+            (false, false) => format!("{} · {}", agent.status, agent.note),
+        };
         println!(
             "  {:<16} {:<9} {:<10} {}",
             agent.name,
@@ -349,11 +357,7 @@ async fn roster(mesh: &Mesh) -> Result<()> {
             } else {
                 &agent.role
             },
-            if agent.status.is_empty() {
-                "-"
-            } else {
-                &agent.status
-            }
+            doing
         );
     }
     Ok(())

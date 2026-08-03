@@ -334,7 +334,12 @@ fn two_sessions_hand_work_to_each_other_across_the_mesh() {
         "an acknowledged message must not come back: {again}"
     );
 
-    tool(&mut worker, 7, "reportstatus", json!({"status": "done"}));
+    tool(
+        &mut worker,
+        7,
+        "reportstatus",
+        json!({"status": "done", "note": "parser rewritten, tests green"}),
+    );
     let watched = tool(
         &mut lead,
         8,
@@ -342,6 +347,13 @@ fn two_sessions_hand_work_to_each_other_across_the_mesh() {
         json!({"name": "worker", "status": ["done"]}),
     );
     assert_eq!(watched["result"]["structuredContent"]["status"], "done");
+    // The note crosses the process boundary with the state. A supervisor that
+    // has to go and read a log to find out what `done` meant has lost the point
+    // of asking.
+    assert_eq!(
+        watched["result"]["structuredContent"]["note"],
+        "parser rewritten, tests green"
+    );
 
     let roster = tool(&mut lead, 9, "agents", json!({}));
     let agents = roster["result"]["structuredContent"]["agents"]
@@ -349,6 +361,13 @@ fn two_sessions_hand_work_to_each_other_across_the_mesh() {
         .unwrap();
     assert_eq!(agents.len(), 2, "got {roster}");
     assert!(agents.iter().all(|agent| agent["online"] == json!(true)));
+    // And it is on the roster everyone reads, not only in the reply to whoever
+    // happened to be waiting on it.
+    let reported = agents
+        .iter()
+        .find(|agent| agent["name"] == json!("worker"))
+        .expect("the worker should be on the roster");
+    assert_eq!(reported["note"], "parser rewritten, tests green");
 
     // A session that ends takes its name off the roster rather than lingering
     // as a teammate that never answers.

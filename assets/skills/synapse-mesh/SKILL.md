@@ -37,7 +37,10 @@ be `send`.
 1. `register`, then `join` any channels your role names.
 2. `wait` for work.
 3. Do the job in your own session. Do not delegate work you were given.
-4. `reportstatus` when your state changes: `working`, `blocked`, `done`.
+4. `reportstatus` when your state or your task changes: `working`, `blocked`,
+   `done`, each with a one-line `note` saying what you are doing. Nobody can
+   watch a headless worker's terminal, so that note is the only view of you
+   there is.
 5. Report the result with `send` back to whoever asked, then `wait` again.
 
 ## The wait loop is the whole protocol

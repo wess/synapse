@@ -63,6 +63,10 @@ pub struct MessagesResponse {
 pub struct ReportStatusRequest {
     /// One of `working`, `idle`, `blocked`, `done`, or a short label of your own.
     pub status: String,
+    /// One line saying what you are actually doing, such as `rewriting the auth
+    /// middleware` or `blocked: need the staging database name`. Omit it to keep
+    /// the note you last gave.
+    pub note: Option<String>,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -78,6 +82,8 @@ pub struct WaitStatusRequest {
 pub struct StatusResponse {
     pub name: String,
     pub status: String,
+    /// What the agent said it was doing, empty when it gave no note.
+    pub note: String,
 }
 
 #[derive(Debug, Serialize, JsonSchema)]

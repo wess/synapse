@@ -72,6 +72,10 @@ pub struct AgentView {
     pub role: String,
     /// Last self-reported semantic work state, empty when never reported.
     pub status: String,
+    /// What the agent said it was doing when it last reported, empty when it
+    /// said only which state it was in. A state tells you a worker has not
+    /// stalled; this is the part that tells you whether to leave it alone.
+    pub note: String,
     pub project: String,
     pub tool: String,
     /// Whether this row is a person rather than an agent.

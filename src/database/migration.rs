@@ -3,7 +3,7 @@ use anyhow::{Context, Result};
 use sqlx::SqlitePool;
 use std::path::Path;
 
-pub const LATEST: i64 = 6;
+pub const LATEST: i64 = 7;
 
 struct Migration {
     version: i64,
@@ -134,6 +134,16 @@ const MIGRATIONS: &[Migration] = &[
             // a person for a worker delegates to them and parks.
             "ALTER TABLE meshagent ADD COLUMN human INTEGER NOT NULL DEFAULT 0 \
              CHECK(human IN (0, 1))",
+        ],
+    },
+    Migration {
+        version: 7,
+        statements: &[
+            // What an agent is doing, beside the state it is in. `working` says
+            // a worker has not stalled; it does not say what it is working on,
+            // and the only place that was legible before was its own log — which
+            // meant reading another tool's stream format to find out.
+            "ALTER TABLE meshagent ADD COLUMN note TEXT NOT NULL DEFAULT ''",
         ],
     },
 ];

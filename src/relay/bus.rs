@@ -111,40 +111,61 @@ pub async fn ack(mesh: &Mesh, name: &str, id: i64) -> Result<()> {
     mesh.ack(name, id).await
 }
 
-/// Record an agent's semantic work state.
-pub async fn reportstatus(mesh: &Mesh, name: &str, status: &str) -> Result<()> {
+/// How much detail a note may carry. Every roster row holds one and the whole
+/// roster is returned by `register` and `agents`, so an unbounded note is a
+/// per-agent tax on every session that asks who else is here.
+const MAXNOTE: usize = 200;
+
+/// Record an agent's semantic work state, and optionally what it is doing in
+/// that state. An absent note leaves the last one standing; an empty one clears
+/// it, which is how an agent going idle drops a note about work it has finished.
+pub async fn reportstatus(mesh: &Mesh, name: &str, status: &str, note: Option<&str>) -> Result<()> {
     let status = status.trim();
     anyhow::ensure!(!status.is_empty(), "a status cannot be empty");
     anyhow::ensure!(
         status.len() <= 64,
         "a status cannot be longer than 64 characters"
     );
-    mesh.setstatus(name, status).await
+    // A note is one line on a roster. Keeping it to one here means nobody
+    // downstream has to decide what to do with the rest of it.
+    let note = note.map(|note| {
+        let note = note.trim().lines().next().unwrap_or_default().trim();
+        match note.char_indices().nth(MAXNOTE) {
+            Some((at, _)) => format!("{}…", &note[..at]),
+            None => note.to_owned(),
+        }
+    });
+    mesh.setstatus(name, status, note.as_deref()).await
 }
 
-/// Park until `target` reports one of `want`, then return the matching status.
-/// Returns the current status immediately when it already matches, and the
-/// current status — matching or not — on timeout. An empty `want` matches any
-/// reported state.
+/// Park until `target` reports one of `want`, then return the matching status
+/// and the note it reported with. Returns the current status immediately when it
+/// already matches, and the current status — matching or not — on timeout. An
+/// empty `want` matches any reported state.
+///
+/// The note comes back with it because the states worth waiting for are the ones
+/// that raise a question: a worker that reports `blocked` has said what it is
+/// blocked on, and a supervisor that has to go and read a log to find out has
+/// lost the point of asking.
 pub async fn awaitstatus(
     mesh: &Mesh,
     target: &str,
     want: &[String],
     block: bool,
     maxwait: Duration,
-) -> Result<String> {
+) -> Result<(String, String)> {
     let deadline = Instant::now() + maxwait;
     loop {
-        let status = mesh.statusof(target).await?;
-        if matches(&status, want) {
-            return Ok(status);
+        let reported = mesh.statusof(target).await?;
+        if matches(&reported.0, want) {
+            return Ok(reported);
         }
         if !block {
-            return Ok(status);
+            return Ok(reported);
         }
         let now = Instant::now();
         if now >= deadline {
-            return Ok(status);
+            return Ok(reported);
         }
         tokio::time::sleep(TICK.min(deadline - now)).await;
     }
@@ -234,10 +255,12 @@ mod tests {
         let writer = mesh.clone();
         tokio::spawn(async move {
             tokio::time::sleep(Duration::from_millis(120)).await;
-            reportstatus(&writer, "builder", "done").await.unwrap();
+            reportstatus(&writer, "builder", "done", Some("shipped the parser"))
+                .await
+                .unwrap();
         });
 
-        let status = awaitstatus(
+        let reported = awaitstatus(
             &mesh,
             "builder",
             &["done".to_owned()],
@@ -247,16 +270,21 @@ mod tests {
         .await
         .unwrap();
 
-        assert_eq!(status, "done");
+        assert_eq!(
+            reported,
+            ("done".to_owned(), "shipped the parser".to_owned())
+        );
     }
 
     #[tokio::test]
     async fn a_status_wait_reports_the_current_state_when_it_does_not_match() {
         let (mesh, _directory) = mesh().await;
         join(&mesh, "builder").await;
-        reportstatus(&mesh, "builder", "working").await.unwrap();
+        reportstatus(&mesh, "builder", "working", None)
+            .await
+            .unwrap();
 
-        let status = awaitstatus(
+        let reported = awaitstatus(
             &mesh,
             "builder",
             &["done".to_owned()],
@@ -266,7 +294,58 @@ mod tests {
         .await
         .unwrap();
 
-        assert_eq!(status, "working");
+        assert_eq!(reported.0, "working");
+    }
+
+    #[tokio::test]
+    async fn a_note_survives_a_state_report_that_does_not_carry_one() {
+        let (mesh, _directory) = mesh().await;
+        join(&mesh, "builder").await;
+        reportstatus(
+            &mesh,
+            "builder",
+            "working",
+            Some("rewriting the auth middleware"),
+        )
+        .await
+        .unwrap();
+        // Still doing the thing it described; it just said so again.
+        reportstatus(&mesh, "builder", "working", None)
+            .await
+            .unwrap();
+
+        assert_eq!(
+            mesh.statusof("builder").await.unwrap(),
+            (
+                "working".to_owned(),
+                "rewriting the auth middleware".to_owned()
+            )
+        );
+
+        // An empty note is a choice, not an omission: the work it described is
+        // over.
+        reportstatus(&mesh, "builder", "idle", Some(""))
+            .await
+            .unwrap();
+        assert_eq!(
+            mesh.statusof("builder").await.unwrap(),
+            ("idle".to_owned(), String::new())
+        );
+    }
+
+    #[tokio::test]
+    async fn a_note_is_kept_to_one_bounded_line() {
+        let (mesh, _directory) = mesh().await;
+        join(&mesh, "builder").await;
+        let sprawling = format!("{}\nand a second line", "x".repeat(400));
+        reportstatus(&mesh, "builder", "working", Some(&sprawling))
+            .await
+            .unwrap();
+
+        let (_, note) = mesh.statusof("builder").await.unwrap();
+        assert!(note.ends_with('…'));
+        assert!(!note.contains('\n'));
+        assert!(note.chars().count() <= MAXNOTE + 1);
     }
 
     #[test]

@@ -68,7 +68,7 @@ async fn agents(mesh: &Mesh, json: bool) -> Result<()> {
     }
     for agent in agents {
         println!(
-            "{}\t{}\t{}\t{}\t{}",
+            "{}\t{}\t{}\t{}\t{}\t{}",
             agent.name,
             if agent.role.is_empty() {
                 "-"
@@ -86,6 +86,11 @@ async fn agents(mesh: &Mesh, json: bool) -> Result<()> {
                 "-"
             } else {
                 &agent.status
+            },
+            if agent.note.is_empty() {
+                "-"
+            } else {
+                &agent.note
             },
             if agent.project.is_empty() {
                 "-"

@@ -54,8 +54,9 @@ pub fn prompt(
         }
         (true, false) => {
             "Protocol: `register` name=\"{name}\" role=\"{role}\".{join} Then loop: `wait` for \
-             work, do it, report with `send`/`post`, `wait` again. An empty or failed `wait` is \
-             normal — call it again. Never stop the loop.\n"
+             work, do it, report with `send`/`post`, `wait` again. `reportstatus` with a \
+             one-line `note` as your task changes — it is the only view anyone has of you. An \
+             empty or failed `wait` is normal — call it again. Never stop the loop.\n"
         }
         (false, true) => {
             "Protocol — follow exactly:\n\
@@ -79,8 +80,9 @@ pub fn prompt(
              - Call `wait` to receive work; it blocks until a message arrives.\n\
              - Do the requested work in this session, then report back with `send` to the \
              message's sender, or `post` to the relevant channel.\n\
-             - Call `reportstatus` whenever your state changes, so the rest of the mesh can \
-             see whether you are working, blocked, or done.\n\
+             - Call `reportstatus` whenever your state or your task changes, and give it a \
+             one-line `note` saying what you are doing. You have no terminal anyone can watch, \
+             so that note is the only way a person can see what you are working on.\n\
              - `wait` returning no messages, or failing with an error, is normal and expected \
              — it just means nothing arrived in time. Call `wait` again immediately. Never \
              treat it as a reason to stop or to report a problem.\n\

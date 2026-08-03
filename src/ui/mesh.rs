@@ -285,6 +285,12 @@ fn agentrow(agent: AgentView, theme: guise::Theme) -> AnyElement {
                 )
                 .when(!detail.is_empty(), |element| {
                     element.child(Text::new(detail).size(Size::Xs).dimmed())
+                })
+                // What it is doing gets its own line rather than joining the
+                // detail run: it is the one part of a row that changes while you
+                // are watching, and it is a sentence, not a label.
+                .when(!agent.note.is_empty(), |element| {
+                    element.child(Text::new(agent.note.clone()).size(Size::Xs).dimmed())
                 }),
         )
         .when(!agent.status.is_empty(), |element| {
