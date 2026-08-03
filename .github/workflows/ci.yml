@@ -62,13 +62,32 @@ jobs:
   fmt:
     name: rustfmt (advisory)
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: synapse
     steps:
       - uses: actions/checkout@v5
+        with:
+          path: synapse
+
+      # cargo fmt shells out to `cargo metadata`, which loads every workspace
+      # member's manifest and so has to resolve ../guise/crates/guise. Without
+      # this checkout the command fails before rustfmt runs at all, and
+      # continue-on-error hides it — an advisory check that silently checks
+      # nothing.
+      - uses: actions/checkout@v5
+        with:
+          repository: wess/guise
+          ref: ${{ env.GUISE_REF }}
+          path: guise
+
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt
-      # No --all: Synapse is a single package, and --all reaches through the
-      # guise path dependency and reports that project's formatting as ours.
+
+      # No --all: it resolves through the guise path dependency and reports
+      # that project's formatting as ours. The bare form covers every workspace
+      # member and stops at the workspace boundary.
       - name: Format check
         run: cargo fmt --check
         continue-on-error: true

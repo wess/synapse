@@ -1,45 +1,33 @@
-[package]
-name = "synapse"
-version = "0.1.0-beta.18"
-edition = "2024"
-description = "Local memory and scoped credentials for developer tools"
+[workspace]
+members = ["crates/*"]
+resolver = "3"
 
-[dependencies]
-anyhow = "1.0"
-chrono = { version = "0.4", default-features = false, features = ["clock"] }
-directories = "6.0"
-fs2 = "0.4"
-gpui = "0.2.2"
+[workspace.package]
+edition = "2024"
+
+[workspace.dependencies]
+# guise-ui is a path dependency on a sibling checkout. It is declared here
+# rather than in the package so the path stays relative to the workspace root:
+# CI checks guise out beside this repository, not beside the crate.
 guise-ui = { path = "../guise/crates/guise", default-features = false }
-rmcp = { version = "2.2.0", default-features = false, features = ["macros", "server", "transport-io"] }
-rpassword = "7.5"
-schemars = "1.0"
+
+# Shared by more than one crate. Desktop-only dependencies (gpui, cocoa,
+# tray-icon, rmcp, and the rest) stay in the package that needs them, so a
+# server build never resolves them.
+anyhow = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-serde-saphyr = "1.0.0-rc.1"
 sha2 = "0.10"
-sqlx = { version = "0.8", default-features = false, features = ["macros", "runtime-tokio", "sqlite"] }
-tokio = { version = "1.0", features = ["macros", "process", "rt-multi-thread", "sync", "time"] }
-toml = "0.9"
-
-[target.'cfg(unix)'.dependencies]
-libc = "0.2"
-
-[target.'cfg(target_os = "macos")'.dependencies]
-async-channel = "2.5"
-cocoa = "0.26"
-security-framework = "3.7"
-tray-icon = { version = "0.24.2", default-features = false }
-
-[dev-dependencies]
+sqlx = { version = "0.8", default-features = false, features = [
+    "macros",
+    "runtime-tokio",
+    "sqlite",
+] }
 tempfile = "3.20"
-
-[package.metadata.bundle]
-name = "Synapse"
-identifier = "app.synapse.desktop"
-icon = ["assets/icon.icns"]
-category = "Developer Tool"
-short_description = "Local memory and scoped credentials for developer tools"
-long_description = "A quiet local memory service and Keychain-backed credential bridge for developer tools."
-osx_minimum_system_version = "13.0"
-osx_info_plist_exts = ["assets/info.plist"]
+tokio = { version = "1.0", features = [
+    "macros",
+    "process",
+    "rt-multi-thread",
+    "sync",
+    "time",
+] }

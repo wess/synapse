@@ -1,0 +1,45 @@
+[package]
+name = "synapse"
+version = "0.1.0-beta.18"
+edition.workspace = true
+description = "Local memory and scoped credentials for developer tools"
+
+[dependencies]
+anyhow.workspace = true
+chrono = { version = "0.4", default-features = false, features = ["clock"] }
+directories = "6.0"
+fs2 = "0.4"
+gpui = "0.2.2"
+guise-ui.workspace = true
+rmcp = { version = "2.2.0", default-features = false, features = ["macros", "server", "transport-io"] }
+rpassword = "7.5"
+schemars = "1.0"
+serde.workspace = true
+serde_json.workspace = true
+serde-saphyr = "1.0.0-rc.1"
+sha2.workspace = true
+sqlx.workspace = true
+tokio.workspace = true
+toml = "0.9"
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+async-channel = "2.5"
+cocoa = "0.26"
+security-framework = "3.7"
+tray-icon = { version = "0.24.2", default-features = false }
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[package.metadata.bundle]
+name = "Synapse"
+identifier = "app.synapse.desktop"
+icon = ["assets/icon.icns"]
+category = "Developer Tool"
+short_description = "Local memory and scoped credentials for developer tools"
+long_description = "A quiet local memory service and Keychain-backed credential bridge for developer tools."
+osx_minimum_system_version = "13.0"
+osx_info_plist_exts = ["assets/info.plist"]

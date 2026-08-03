@@ -8,7 +8,10 @@ output="$root/dist"
 stage=$(mktemp -d "${TMPDIR:-/tmp}/synapserelease.XXXXXX")
 trap 'rm -rf "$stage"' EXIT INT TERM
 
-cd "$root"
+# cargo-bundle reads [package.metadata.bundle], so it runs from the package
+# rather than the virtual workspace root. The bundle still lands in the shared
+# workspace target directory, which is why $bundle is rooted above.
+cd "$root/crates/synapse"
 rustc -vV | grep -q '^host: aarch64-apple-darwin$'
 cargo bundle --release --format osx
 ditto --norsrc --noextattr --noqtn --noacl "$bundle" "$stage/synapse.app"

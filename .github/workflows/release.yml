@@ -4,7 +4,10 @@ on:
   push:
     branches: [main]
     paths:
-      - "Cargo.toml"
+      # The desktop app's own manifest. Crates version independently, so a
+      # server-only release must not drag the signed, notarized Mac build
+      # along with it.
+      - "crates/synapse/Cargo.toml"
   workflow_dispatch: {}
 
 permissions:
@@ -31,7 +34,7 @@ jobs:
       - name: Read package version
         id: version
         run: |
-          VERSION=$(sed -n 's/^version = "\([0-9][^"]*\)".*/\1/p' Cargo.toml | head -1)
+          VERSION=$(sed -n 's/^version = "\([0-9][^"]*\)".*/\1/p' crates/synapse/Cargo.toml | head -1)
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           case "$VERSION" in
             *-*) echo "prerelease=true" >> "$GITHUB_OUTPUT" ;;
