@@ -4,10 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Curate and optimize memory — Synapse</title>
-  <meta name="description" content="Build a small memory set, search it, correct the durable source, compare recall budgets, and remove only the tutorial entries.">
+  <meta name="description" content="Build a small memory set, learn how search actually behaves, correct entries at the source, tune the recall budget, import existing notes reversibly, and remove only what you added.">
   <meta name="theme-color" content="#0a43c8">
   <meta property="og:title" content="Curate and optimize memory">
-  <meta property="og:description" content="Build a small memory set, search it, correct the durable source, compare recall budgets, and remove only the tutorial entries.">
+  <meta property="og:description" content="Build a small memory set, learn how search actually behaves, correct entries at the source, tune the recall budget, import existing notes reversibly, and remove only what you added.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://wess.io/synapse/tutorials/curate/">
   <link rel="canonical" href="https://wess.io/synapse/tutorials/curate/">
@@ -67,44 +67,62 @@
         <li><a href="../../tutorials/">Tutorials</a></li>
         <li><a href="../../tutorials/connect/">Install and connect your first tools</a></li>
         <li><a href="../../tutorials/continuity/">Carry one decision between tools</a></li>
-        <li><a href="../../tutorials/secrets/">Use a scoped secret in either shell mode</a></li>
         <li><a href="../../tutorials/curate/" aria-current="page">Curate and optimize memory</a></li>
-        <li><a href="../../tutorials/recovery/">Export and restore safely</a></li></ul>
+        <li><a href="../../tutorials/secrets/">Use a scoped secret in either shell mode</a></li>
+        <li><a href="../../tutorials/skills/">Keep one skill library across every tool</a></li>
+        <li><a href="../../tutorials/launch/">Start a tool with everything in place</a></li>
+        <li><a href="../../tutorials/mesh/">Run a team of agents and drive it yourself</a></li>
+        <li><a href="../../tutorials/recovery/">Export and restore safely</a></li>
+        <li><a href="../../tutorials/lifecycle/">Check, migrate, and remove Synapse</a></li></ul>
       </nav>
     </details>
   </aside>
     <main class="article" id="content">
       <header class="articlehead">
         <h1>Curate and optimize memory</h1>
-        <span>Build a small memory set, search it, correct the durable source, compare recall budgets, and remove only the tutorial entries.</span>
+        <span>Build a small memory set, learn how search actually behaves, correct entries at the source, tune the recall budget, import existing notes reversibly, and remove only what you added.</span>
       </header>
       
-    <h2>Outcome and prerequisites</h2>
-    <p>You will create three harmless entries from stdin, use text and JSON search, correct one entry in place, compare Full and Lean response settings, then delete only the IDs created by this tutorial.</p>
+    <h2 id="outcome">Outcome and prerequisites</h2>
+    <p>You will build a small set of entries, understand why search returns what it returns, correct one at the source, compare what each recall budget actually sends to a model, import a Markdown file reversibly, and then undo it. This is the tutorial to read when recall is returning too much, too little, or the wrong thing.</p>
+    <ul>
+      <li>The <code>synapse</code> CLI installed and at least one tool connected.</li>
+      <li>A project folder. Steps here create and delete entries under one source label.</li>
+    </ul>
     
   <aside class="note">
-    <strong>Record the returned IDs</strong>
-    <p>Every add command prints its new numeric ID. Save those three numbers for the cleanup step; do not use memory wipe in a store that contains real context.</p>
+    <strong>Write down the IDs</strong>
+    <p>Every add prints its new numeric ID. Keep those numbers for the cleanup step. Do not reach for <code>synapse memory wipe</code> in a store that has real context in it — it removes everything, and it is meant for starting over rather than tidying.</p>
   </aside>
 
     <ol class="steps">
       <li>
         <h3 id="add">Add focused entries</h3>
+        <p>Content is read from stdin, never from an argument, so a memory can contain anything without shell quoting getting in the way:</p>
         
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
       <button type="button" data-copy aria-live="polite">Copy</button>
     </div>
-    <pre><code>printf &#039;%s
-&#039; &#039;Tutorial apps use port 4100.&#039; | synapse memory add synapsetutorial
-printf &#039;%s
-&#039; &#039;Tutorial commands use Bun.&#039; | synapse memory add synapsetutorial
-printf &#039;%s
-&#039; &#039;Tutorial backups go in the backups folder.&#039; | synapse memory add synapsetutorial</code></pre>
+    <pre><code>printf &#039;%s\n&#039; &#039;Tutorial apps use port 4100.&#039; | synapse memory add synapsetutorial
+printf &#039;%s\n&#039; &#039;Tutorial commands use Bun.&#039; | synapse memory add synapsetutorial
+printf &#039;%s\n&#039; &#039;Tutorial backups go in the backups folder.&#039; | synapse memory add synapsetutorial</code></pre>
   </div>
-        <p>Write down the three IDs. Each entry contains one durable idea, which makes later recall easier to interpret and correct.</p>
+        
+  <div class="codeblock">
+    <div class="codebar">
+      <span>text</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>Stored memory #1
+Stored memory #2
+Stored memory #3</code></pre>
+  </div>
+        <p><code>synapsetutorial</code> is the <em>source</em> — a label saying where the fact came from. Give every memory one. It is what lets you find a set later, audit what a particular session stored, and delete a batch without hunting.</p>
+        <p>One durable idea per entry. Three entries about ports, runtimes, and backups can each be recalled, corrected, and deleted on their own; one entry containing all three is returned whole every time any part of it is relevant, and cannot be corrected without rewriting the rest.</p>
       </li>
+
       <li>
         <h3 id="search">Search and inspect</h3>
         
@@ -113,40 +131,154 @@ printf &#039;%s
       <span>shell</span>
       <button type="button" data-copy aria-live="polite">Copy</button>
     </div>
-    <pre><code>synapse memory list tutorial
-synapse memory list &quot;Tutorial Bun&quot; --json
-synapse memory show &lt;bunid&gt;</code></pre>
+    <pre><code>synapse memory list tutorial</code></pre>
   </div>
-        <p>Text output is optimized for scanning. JSON output includes exact bodies, sources, IDs, and timestamps for local scripts.</p>
-      </li>
-      <li>
-        <h3 id="correct">Correct the source in place</h3>
-        <p>Suppose the runtime convention becomes more precise. Replace the original instead of adding a contradiction:</p>
+        
+  <div class="codeblock">
+    <div class="codebar">
+      <span>text</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>2	project:/Users/example/project	synapsetutorial	Tutorial commands use Bun.
+1	project:/Users/example/project	synapsetutorial	Tutorial apps use port 4100.</code></pre>
+  </div>
+        <p>The columns are the ID, the scope with its project, the source, and the body. For anything scripted, ask for JSON instead:</p>
         
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
       <button type="button" data-copy aria-live="polite">Copy</button>
     </div>
-    <pre><code>printf &#039;%s
-&#039; &#039;Tutorial commands use Bun unless a task requires another runtime.&#039; \
-  | synapse memory edit &lt;bunid&gt; synapsetutorial
-synapse memory show &lt;bunid&gt;</code></pre>
+    <pre><code>synapse memory list &quot;Bun&quot; --json</code></pre>
   </div>
-        <p>The ID remains stable and future recall returns the correction.</p>
-      </li>
-      <li>
-        <h3 id="budgets">Compare response budgets</h3>
+        
+  <div class="codeblock">
+    <div class="codebar">
+      <span>text</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>[
+  {
+    &quot;id&quot;: 2,
+    &quot;body&quot;: &quot;Tutorial commands use Bun.&quot;,
+    &quot;source&quot;: &quot;synapsetutorial&quot;,
+    &quot;scope&quot;: &quot;project&quot;,
+    &quot;project&quot;: &quot;/Users/example/project&quot;,
+    &quot;created&quot;: 1785776940
+  }
+]</code></pre>
+  </div>
+        <p>And for one exact record, with nothing trimmed:</p>
         
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
       <button type="button" data-copy aria-live="polite">Copy</button>
     </div>
-    <pre><code>synapse settings show
-synapse settings optimize full</code></pre>
+    <pre><code>synapse memory show 2</code></pre>
   </div>
-        <p>Ask a connected tool to recall <code>synapsetutorial</code> and inspect the formatting and number of results. Then switch:</p>
+        
+  <div class="codeblock">
+    <div class="codebar">
+      <span>text</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>Memory #2
+Scope: project
+Project: /Users/example/project
+Source: synapsetutorial
+Created: 1785776940
+
+Tutorial commands use Bun.</code></pre>
+  </div>
+      </li>
+
+      <li>
+        <h3 id="behavior">Understand how search behaves</h3>
+        <p>Recall is full-text search with two behaviors worth knowing, because both explain results that otherwise look wrong.</p>
+        <p><strong>Common words are dropped.</strong> A query is stripped of words that carry no meaning on their own. Try it:</p>
+        
+  <div class="codeblock">
+    <div class="codebar">
+      <span>shell</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>synapse memory list &quot;what are the&quot;</code></pre>
+  </div>
+        <p>Nothing in that query survives, so instead of matching every memory containing <em>the</em>, Synapse answers the way it answers an empty query — with the most recent entries. That is deliberate. Matching on a common word is both wrong, because a memory that happens to contain <em>are</em> is not the answer to anything, and slow, because a common word makes the index rank most of the store.</p>
+        <p><strong>An empty query is a real question.</strong> It means "what should I know here", and it returns the most recent memory in scope. This is exactly what a session opening asks, and it is what the Claude Code session hook uses.</p>
+        
+  <div class="codeblock">
+    <div class="codebar">
+      <span>shell</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>synapse memory list</code></pre>
+  </div>
+        <p><strong>Words that carry a preference are kept.</strong> <code>not</code>, <code>never</code>, and <code>use</code> look like function words but change the meaning of a convention completely, so they stay in the query. "Never use npm" and "use npm" must not search identically.</p>
+        
+  <aside class="note">
+    <strong>Scope is applied in the query, not after it</strong>
+    <p>Every search returns everything global plus everything for the current project, and nothing from any other project. That is enforced where the rows are selected rather than filtered afterwards, so there is no path where another project's memory is read and then discarded.</p>
+  </aside>
+      </li>
+
+      <li>
+        <h3 id="correct">Correct at the source</h3>
+        <p>A convention becomes more precise. Replace the record rather than adding a second one that disagrees with it:</p>
+        
+  <div class="codeblock">
+    <div class="codebar">
+      <span>shell</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>printf &#039;%s\n&#039; &#039;Tutorial commands use Bun unless a task requires another runtime.&#039; \
+  | synapse memory edit 2 synapsetutorial
+synapse memory show 2</code></pre>
+  </div>
+        
+  <div class="codeblock">
+    <div class="codebar">
+      <span>text</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>Updated memory #2</code></pre>
+  </div>
+        <p>The ID is stable, so anything referring to this memory still refers to the right thing, and future recall returns only the corrected text. Two entries that contradict each other are the single most common way a memory store gets worse as it grows: recall returns both and the model has to guess which is current.</p>
+      </li>
+
+      <li>
+        <h3 id="budgets">Tune what recall actually sends</h3>
+        <p>The budget controls how much a <code>recall</code> response costs a model in context. Look at where you are:</p>
+        
+  <div class="codeblock">
+    <div class="codebar">
+      <span>shell</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>synapse settings show</code></pre>
+  </div>
+        
+  <div class="codeblock">
+    <div class="codebar">
+      <span>text</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>optimization	balanced
+result limit	8
+character budget	6000
+mesh	off
+shell modes	command-scoped, ambient directory
+zsh hook	eval &quot;$(synapse hook zsh)&quot;</code></pre>
+  </div>
+        <table>
+          <thead><tr><th>Budget</th><th>Results</th><th>Characters</th><th>When to use it</th></tr></thead>
+          <tbody>
+            <tr><td>Full</td><td>25</td><td>unbounded</td><td>A small store, or when you want everything and context is cheap.</td></tr>
+            <tr><td>Balanced</td><td>8</td><td>6,000</td><td>The default, and the right answer for most stores.</td></tr>
+            <tr><td>Lean</td><td>4</td><td>2,800</td><td>A large store, a long session, or a model whose context you are protecting.</td></tr>
+          </tbody>
+        </table>
         
   <div class="codeblock">
     <div class="codebar">
@@ -155,10 +287,16 @@ synapse settings optimize full</code></pre>
     </div>
     <pre><code>synapse settings optimize lean</code></pre>
   </div>
-        <p>Recall the same query. Lean returns at most four compacted entries within 2,800 characters. The stored bodies visible through <code>memory show</code> remain unchanged.</p>
-      </li>
-      <li>
-        <h3>Restore your preferred setting</h3>
+        
+  <div class="codeblock">
+    <div class="codebar">
+      <span>text</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>Recall optimization set to Lean</code></pre>
+  </div>
+        <p>Ask a connected tool to recall <code>synapsetutorial</code> and note how many entries come back. Switch to <code>full</code> and ask again. The stored bodies never change — <code>synapse memory show</code> returns the same text at every setting. The budget only shapes the response.</p>
+        <p>A tool can request a smaller budget for one call, and that request can only ever shrink your configured ceiling. A session cannot talk its way into a larger response than you have allowed.</p>
         
   <div class="codeblock">
     <div class="codebar">
@@ -167,28 +305,153 @@ synapse settings optimize full</code></pre>
     </div>
     <pre><code>synapse settings optimize balanced</code></pre>
   </div>
-        <p>Balanced is the default: up to eight results and 6,000 characters, with prose whitespace compaction and exact duplicate removal.</p>
+      </li>
+
+      <li>
+        <h3 id="import">Import notes you already have</h3>
+        <p>If you have been keeping conventions in a Markdown file, bring them in. Every import previews first:</p>
+        
+  <div class="codeblock">
+    <div class="codebar">
+      <span>shell</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>synapse memory import markdown notes.md</code></pre>
+  </div>
+        
+  <div class="codeblock">
+    <div class="codebar">
+      <span>text</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>Markdown: 1 found · 1 ready · 0 existing · 0 flagged
+ready	notes.md	# Conventions - Use Bun, never npm. - Deploys target Apple silicon only. …
+Preview only. Add --confirm to import safe entries.</code></pre>
+  </div>
+        <p>Now try one with a credential in it and watch what happens:</p>
+        
+  <div class="codeblock">
+    <div class="codebar">
+      <span>text</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>Markdown: 1 found · 0 ready · 0 existing · 1 flagged
+review	flagged.md	Content hidden until the source file is reviewed.
+	warning: mentions a credential-shaped environment variable
+Preview only. Add --confirm to import safe entries.</code></pre>
+  </div>
+        <p>Flagged content is not merely skipped — it is not even displayed, because printing it to your terminal to warn you about it would defeat the point. <code>--confirm</code> imports the ready entries and leaves flagged ones untouched.</p>
+        
+  <aside class="note">
+    <strong>The flagging is conservative, not exhaustive</strong>
+    <p>It looks for private-key markers, credential-shaped variable names, assignments to password- and token-like keys, and bearer tokens. A secret that matches none of those patterns will not be caught. Read your own preview — the flag is a safety net, not a substitute for looking.</p>
+  </aside>
+        
+  <div class="codeblock">
+    <div class="codebar">
+      <span>shell</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>synapse memory import markdown notes.md --confirm</code></pre>
+  </div>
+        
+  <div class="codeblock">
+    <div class="codebar">
+      <span>text</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>Import batch #1: 1 stored, 0 linked, 0 already imported, 0 flagged and left untouched
+Undo with: synapse memory undo 1 --confirm</code></pre>
+  </div>
+        <p>Imports are idempotent. Running the same file again reports the entries as already imported rather than creating duplicates, so a repeated import is harmless. Claude and Codex memory stores import the same way with <code>synapse memory import claude</code> and <code>synapse memory import codex</code>.</p>
+      </li>
+
+      <li>
+        <h3 id="undo">Undo the whole batch</h3>
+        
+  <div class="codeblock">
+    <div class="codebar">
+      <span>shell</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>synapse memory imports</code></pre>
+  </div>
+        
+  <div class="codeblock">
+    <div class="codebar">
+      <span>text</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>1	markdown	1 stored	0 linked	active</code></pre>
+  </div>
+        
+  <div class="codeblock">
+    <div class="codebar">
+      <span>shell</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>synapse memory undo 1 --confirm
+synapse memory imports</code></pre>
+  </div>
+        
+  <div class="codeblock">
+    <div class="codebar">
+      <span>text</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>Undid import batch #1; removed 1 imported memories</code></pre>
+  </div>
+        
+  <div class="codeblock">
+    <div class="codebar">
+      <span>text</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>1	markdown	1 stored	0 linked	undone</code></pre>
+  </div>
+        <p>The batch is recorded rather than forgotten, so an import you regret is one command to reverse and the record of it having happened survives. Anything you wrote by hand is untouched — undo removes only what that batch stored.</p>
       </li>
     </ol>
 
-    <h2 id="cleanup">Delete only the tutorial entries</h2>
+    <h2 id="cleanup">Delete only what you added</h2>
     
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
       <button type="button" data-copy aria-live="polite">Copy</button>
     </div>
-    <pre><code>synapse memory delete &lt;portid&gt; --confirm
-synapse memory delete &lt;bunid&gt; --confirm
-synapse memory delete &lt;backupid&gt; --confirm
-synapse memory list synapsetutorial</code></pre>
+    <pre><code>synapse memory list synapsetutorial
+synapse memory delete 1 --confirm
+synapse memory delete 2 --confirm
+synapse memory delete 3 --confirm</code></pre>
   </div>
-    <p>The final search should be empty unless another tutorial created the same source. Use the Memories screen for a visual review before deleting any additional record.</p>
+    
+  <div class="codeblock">
+    <div class="codebar">
+      <span>text</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>Deleted memory #1</code></pre>
+  </div>
+    <p>Both destructive commands refuse without <code>--confirm</code>, and say which record they mean:</p>
+    
+  <div class="codeblock">
+    <div class="codebar">
+      <span>text</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>Error: add --confirm to delete memory #3
+Error: add --confirm to delete every memory</code></pre>
+  </div>
+    <p>A final <code>synapse memory list synapsetutorial</code> should return nothing. Use the <strong>Memories</strong> screen for a visual review before deleting anything you did not create in this tutorial.</p>
+
+    <h2>Next step</h2>
+    <p>Continue with <a href="../secrets/">Use a scoped secret in either shell mode</a>, which is the other half of what Synapse hands a tool — and the half where the boundaries matter most.</p>
   
     </main>
     <aside class="ontoc" aria-label="On this page">
         <span>On this page</span>
-        <ol><li><a href="#add">Add entries</a></li><li><a href="#search">Search and inspect</a></li><li><a href="#correct">Correct</a></li><li><a href="#budgets">Compare budgets</a></li><li><a href="#cleanup">Clean up</a></li></ol>
+        <ol><li><a href="#outcome">Outcome</a></li><li><a href="#add">Add entries</a></li><li><a href="#search">Search and inspect</a></li><li><a href="#behavior">How search behaves</a></li><li><a href="#correct">Correct at the source</a></li><li><a href="#budgets">Tune the budget</a></li><li><a href="#import">Import existing notes</a></li><li><a href="#undo">Undo an import</a></li><li><a href="#cleanup">Clean up</a></li></ol>
       </aside>
   </div>
   

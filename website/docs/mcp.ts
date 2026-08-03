@@ -8,6 +8,7 @@ export const mcp: Page = {
   kind: "docs",
   toc: [
     { label: "Server", id: "server" },
+    { label: "Session start", id: "sessionstart" },
     { label: "remember", id: "remember" },
     { label: "recall", id: "recall" },
     { label: "vaultstatus", id: "vaultstatus" },
@@ -19,6 +20,30 @@ export const mcp: Page = {
     <p>Synapse implements an MCP stdio server. A tool launches the same signed or installed executable with the <code>mcp</code> argument:</p>
     ${code("shell", `~/.local/bin/synapse mcp`)}
     <p>The process uses stdin and stdout for protocol messages. Do not wrap it in a command that writes banners or shell setup output to stdout. The server opens the same local database as the desktop app and holds a shared lifecycle lock while connected.</p>
+
+    <h2 id="sessionstart">Session start</h2>
+    <p>Connecting Claude Code also installs a <code>SessionStart</code> hook that runs <code>synapse session</code>. It does two things a tool cannot do for itself: it prints a line in the terminal before the model has written anything, and it puts this project's memory into the session's context before the first turn.</p>
+    ${code("shell", `synapse session --json`)}
+    ${code("json", `{
+  "systemMessage": "Synapse connected · 128 memories",
+  "hookSpecificOutput": {
+    "hookEventName": "SessionStart",
+    "additionalContext": "Synapse is connected and holds 128 memories for /Users/example/project. …"
+  }
+}`)}
+    <p><code>additionalContext</code> carries the memories themselves, most recent first, under the same scope rule <code>recall</code> uses: everything global, plus everything stored for this project, and nothing from any other project. A session therefore opens already holding what the project has decided, rather than being asked to go and look.</p>
+    <p>That matters because the alternative was guidance. Asking a model to call <code>recall</code> before it starts is an instruction it may or may not follow, and a session that skipped it worked from nothing while still reporting a connection. Guidance still asks for <code>recall</code>, because a focused query in the middle of a task is the case a session-start recall cannot cover.</p>
+    <table>
+      <thead><tr><th>Behavior</th><th>Detail</th></tr></thead>
+      <tbody>
+        <tr><td>Budget</td><td>Recalls under a <code>balanced</code> ceiling. A per-call budget can only shrink your configured one, so a store set to <code>lean</code> still returns <code>lean</code>.</td></tr>
+        <tr><td>Scope</td><td>Global memory plus the project the calling tool reports through <code>cwd</code> or <code>workspace.current_dir</code>, falling back to <code>SYNAPSE_PROJECT_DIR</code>.</td></tr>
+        <tr><td>Empty store</td><td>No block is injected. The context asks the tool to call <code>remember</code> once something durable is settled.</td></tr>
+        <tr><td>Failure</td><td>Reports <code>Synapse unavailable</code> with a short reason and tells the model not to claim a connection that is not there. The hook never exits non-zero, because a failing hook is noise in your terminal.</td></tr>
+        <tr><td>Trust</td><td>Recalled content is labelled as context, never as instruction. It does not override the current request, repository guidance, or what you say next.</td></tr>
+      </tbody>
+    </table>
+    ${note("Codex has no equivalent hook", "Codex does not expose a session-start hook, so a Codex session still opens by calling recall itself as the shared guidance in SOUL.md asks. Everything else — the tools, the scope rule, the response budget — is identical.")}
 
     <h2 id="remember">remember</h2>
     <p>Stores a durable fact, decision, preference, convention, or correction.</p>
@@ -110,7 +135,7 @@ export const mcp: Page = {
       <li>The server identifies itself as <code>synapse</code> using the application version and advertises tool capability only.</li>
       <li>Opening the database runs integrity and relationship checks, applies numbered migrations, and secures database permissions.</li>
       <li>A running MCP process holds a shared database lock. <code>synapse data restore</code> requires an exclusive lock and therefore refuses while any connected server or the desktop app is using the database.</li>
-      <li>Connected tools should recall before decisions that depend on project history and remember only stable confirmed context after it is established.</li>
+      <li>Connected tools should recall before decisions that depend on project history and remember only stable confirmed context after it is established. A Claude Code session starts with that memory already in context; see <a href="#sessionstart">Session start</a>.</li>
     </ul>
   `,
 };

@@ -39,7 +39,7 @@ export const mesh: Page = {
         <tr><td><code>join</code>, <code>leave</code></td><td>Subscribe to and unsubscribe from a channel.</td></tr>
         <tr><td><code>wait</code></td><td>Block until work arrives. This is how an agent stays reachable while doing nothing.</td></tr>
         <tr><td><code>inbox</code></td><td>Take whatever is waiting right now, without blocking.</td></tr>
-        <tr><td><code>reportstatus</code>, <code>waitstatus</code></td><td>Report working, blocked, or done, and block until a teammate reaches one of those.</td></tr>
+        <tr><td><code>reportstatus</code>, <code>waitstatus</code></td><td>Report working, blocked, or done with a one-line note saying what you are doing, and block until a teammate reaches one of those.</td></tr>
         <tr><td><code>agents</code>, <code>channels</code>, <code>whoami</code></td><td>See who is here, what channels exist, and your own place in it.</td></tr>
         <tr><td><code>spawn</code>, <code>workers</code>, <code>stopworker</code></td><td>Grow, inspect, and shut down a team of background workers.</td></tr>
       </tbody>
@@ -106,6 +106,17 @@ synapse relay agents
 synapse relay channels
 synapse relay feed --follow`)}
     <p>Every command takes <code>--json</code> for scripting.</p>
+
+    <h3 id="notes">What an agent is doing</h3>
+    <p>A state on its own tells you an agent has not stalled. It does not tell you what it is working on, and for a headless worker there is no terminal to look at. So <code>reportstatus</code> takes a note as well as a state, and that note is what the roster shows:</p>
+    ${code("shell", `synapse relay agents
+
+lead      supervisor  online   working  splitting the migration into three tasks  /work/api
+backend   backend     online   blocked  need the staging database name            /work/api
+frontend  frontend    online   working  rewriting the auth middleware             /work/api`)}
+    <p>The note is one line, bounded, and kept when a later report does not carry one — an agent that says <code>working</code> twice has not stopped doing the thing it described the first time. Reporting an empty note clears it, which is how an agent going idle drops a note about work it has finished.</p>
+    <p><code>waitstatus</code> returns the note with the state, so a supervisor blocking until a worker reaches <code>blocked</code> is told what it is blocked on in the same reply. Without that it would have to go and read the worker's log to find out, which is the thing the note exists to avoid.</p>
+    ${note("Notes are guidance, not a guarantee", "Writing one is something connected tools are told to do, not something Synapse can enforce inside another tool's session. An agent that reports a state without a note leaves the previous one standing, so a stale note is possible; the roster's last-seen time is what tells you whether the agent itself is still live.")}
 
     <h2 id="limits">Limits</h2>
     <ul>

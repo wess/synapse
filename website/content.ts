@@ -16,8 +16,12 @@ import { connect } from "./tutorials/connect";
 import { continuity } from "./tutorials/continuity";
 import { curate } from "./tutorials/curate";
 import { tutorials } from "./tutorials/index";
+import { launch } from "./tutorials/launch";
+import { lifecycle } from "./tutorials/lifecycle";
+import { meshtutorial } from "./tutorials/mesh";
 import { recovery } from "./tutorials/recovery";
 import { secrets } from "./tutorials/secrets";
+import { skills as skillstutorial } from "./tutorials/skills";
 import type { Page } from "./types";
 
 export const pages: Page[] = [
@@ -38,7 +42,11 @@ export const pages: Page[] = [
   tutorials,
   connect,
   continuity,
-  secrets,
   curate,
+  secrets,
+  skillstutorial,
+  launch,
+  meshtutorial,
   recovery,
+  lifecycle,
 ];

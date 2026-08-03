@@ -17,7 +17,11 @@
   <url><loc>https://wess.io/synapse/tutorials/</loc></url>
   <url><loc>https://wess.io/synapse/tutorials/connect/</loc></url>
   <url><loc>https://wess.io/synapse/tutorials/continuity/</loc></url>
-  <url><loc>https://wess.io/synapse/tutorials/secrets/</loc></url>
   <url><loc>https://wess.io/synapse/tutorials/curate/</loc></url>
+  <url><loc>https://wess.io/synapse/tutorials/secrets/</loc></url>
+  <url><loc>https://wess.io/synapse/tutorials/skills/</loc></url>
+  <url><loc>https://wess.io/synapse/tutorials/launch/</loc></url>
+  <url><loc>https://wess.io/synapse/tutorials/mesh/</loc></url>
   <url><loc>https://wess.io/synapse/tutorials/recovery/</loc></url>
+  <url><loc>https://wess.io/synapse/tutorials/lifecycle/</loc></url>
 </urlset>

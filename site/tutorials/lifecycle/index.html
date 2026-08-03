@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Check, migrate, and remove Synapse — Synapse</title>
+  <meta name="description" content="Read a full health report, understand what a schema migration does to your store, disconnect one tool, and remove everything Synapse installed while keeping your memory and your own files.">
+  <meta name="theme-color" content="#0a43c8">
+  <meta property="og:title" content="Check, migrate, and remove Synapse">
+  <meta property="og:description" content="Read a full health report, understand what a schema migration does to your store, disconnect one tool, and remove everything Synapse installed while keeping your memory and your own files.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://wess.io/synapse/tutorials/lifecycle/">
+  <link rel="canonical" href="https://wess.io/synapse/tutorials/lifecycle/">
+  <link rel="icon" href="../../icon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Fragment+Mono&family=Manrope:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="../../style.css">
+  <script type="module" src="../../site.js"></script>
+</head>
+<body class="tutorial" data-root="../../">
+  
+  <a class="skip" href="#content">Skip to content</a>
+  <header class="topbar">
+    <a class="wordmark" href="../../" aria-label="Synapse home">
+      <img src="../../icon.svg" width="30" height="30" alt="">
+      <span>Synapse</span>
+    </a>
+    <button class="navtoggle" type="button" aria-expanded="false" aria-controls="topnav">Menu</button>
+    <nav id="topnav" aria-label="Primary">
+      <a href="../../docs/">Docs</a>
+      <a href="../../tutorials/" aria-current="page">Tutorials</a>
+      <a href="https://github.com/wess/synapse">GitHub <span aria-hidden="true">↗</span></a>
+      <a class="navdownload" href="https://github.com/wess/synapse/releases/download/v0.1.0-beta.17/synapse.zip">Download</a>
+    </nav>
+  </header>
+  
+  <div class="doclayout">
+    
+  <aside class="docsrail" aria-label="Documentation navigation">
+    <div class="searchbox">
+      <label for="search">Search the guide</label>
+      <input id="search" type="search" placeholder="Memory, vaults, restore…" autocomplete="off">
+      <div class="searchresults" data-results hidden></div>
+      <span class="searchstatus" data-searchstatus role="status" aria-live="polite"></span>
+    </div>
+    <details class="railnav" open>
+      <summary>Browse all guides</summary>
+      <nav aria-label="All guides">
+        <h2>Documentation</h2>
+        <ul>
+        <li><a href="../../docs/">Start here</a></li>
+        <li><a href="../../docs/install/">Install and connect</a></li>
+        <li><a href="../../docs/app/">Desktop app reference</a></li>
+        <li><a href="../../docs/memory/">Memory and recall</a></li>
+        <li><a href="../../docs/mcp/">MCP tool reference</a></li>
+        <li><a href="../../docs/mesh/">Agent mesh</a></li>
+        <li><a href="../../docs/skills/">Skills</a></li>
+        <li><a href="../../docs/vault/">Vaults and scopes</a></li>
+        <li><a href="../../docs/data/">Data lifecycle</a></li>
+        <li><a href="../../docs/config/">Configuration and paths</a></li>
+        <li><a href="../../docs/security/">Security model</a></li>
+        <li><a href="../../docs/cli/">CLI reference</a></li>
+        <li><a href="../../docs/troubleshoot/">Troubleshooting</a></li></ul>
+        <h2>Tutorials</h2>
+        <ul>
+        <li><a href="../../tutorials/">Tutorials</a></li>
+        <li><a href="../../tutorials/connect/">Install and connect your first tools</a></li>
+        <li><a href="../../tutorials/continuity/">Carry one decision between tools</a></li>
+        <li><a href="../../tutorials/curate/">Curate and optimize memory</a></li>
+        <li><a href="../../tutorials/secrets/">Use a scoped secret in either shell mode</a></li>
+        <li><a href="../../tutorials/skills/">Keep one skill library across every tool</a></li>
+        <li><a href="../../tutorials/launch/">Start a tool with everything in place</a></li>
+        <li><a href="../../tutorials/mesh/">Run a team of agents and drive it yourself</a></li>
+        <li><a href="../../tutorials/recovery/">Export and restore safely</a></li>
+        <li><a href="../../tutorials/lifecycle/" aria-current="page">Check, migrate, and remove Synapse</a></li></ul>
+      </nav>
+    </details>
+  </aside>
+    <main class="article" id="content">
+      <header class="articlehead">
+        <h1>Check, migrate, and remove Synapse</h1>
+        <span>Read a full health report, understand what a schema migration does to your store, disconnect one tool, and remove everything Synapse installed while keeping your memory and your own files.</span>
+      </header>
+      
+    <h2 id="outcome">Outcome and prerequisites</h2>
+    <p>You will produce the report to attach to a bug, verify the store's integrity and schema version, understand what happens when a release changes the schema, and then walk both removal paths — one tool, and everything — reading what each will do before it does it.</p>
+    <ul>
+      <li>The <code>synapse</code> CLI installed and at least one tool connected.</li>
+      <li><a href="../recovery/">Export and restore safely</a> read first. This tutorial assumes you know how to take a snapshot; the removal steps are more comfortable when you have one.</li>
+    </ul>
+    
+  <aside class="note">
+    <strong>Read before you confirm</strong>
+    <p>Every destructive command here refuses to act without <code>--confirm</code> and prints what it would do instead. That preview is the feature. Run each command once without the flag and actually read the output before adding it.</p>
+  </aside>
+
+    <ol class="steps">
+      <li>
+        <h3 id="doctor">Get the whole picture in one command</h3>
+        
+  <div class="codeblock">
+    <div class="codebar">
+      <span>shell</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>synapse doctor</code></pre>
+  </div>
+        
+  <div class="codeblock">
+    <div class="codebar">
+      <span>text</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>Synapse 0.1.0-beta.17
+
+Store
+  State          ok
+  Schema         v7
+  Memories       0
+  Size           0 MB
+  Backups        0
+  Recall budget  balanced
+
+Connected tools
+  Codex          installed, not connected
+    version      codex-cli 0.145.0
+    guidance     no
+    notice       no
+    status line  none
+  Claude Code    installed, not connected
+    version      2.1.220 (Claude Code)
+    guidance     no
+    notice       no
+    status line  none
+
+Skills
+  In the library 2
+  Installed      2</code></pre>
+  </div>
+        <p>This is what to attach to a bug report. It answers most first questions without a round trip: which version, whether the store is sound, what schema it is on, whether each tool is actually connected rather than merely installed, and whether the guidance pointer, session notice, and status line are in place.</p>
+        <p><code>--json</code> gives the same thing structured. Note what is <em>not</em> here: no memory contents, no secret names, no file paths outside Synapse's own. A doctor report is safe to paste into a public issue.</p>
+        <p>Read the tool rows carefully. <code>installed, not connected</code> means the tool is on the machine but has no Synapse entry. A tool that was connected and whose executable later moved reports as stale rather than healthy, because detection resolves the stored command rather than trusting the entry exists.</p>
+      </li>
+
+      <li>
+        <h3 id="check">Check the store itself</h3>
+        
+  <div class="codeblock">
+    <div class="codebar">
+      <span>shell</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>synapse data check
+synapse data check --json</code></pre>
+  </div>
+        
+  <div class="codeblock">
+    <div class="codebar">
+      <span>text</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>{
+  &quot;path&quot;: &quot;~/Library/Application Support/synapse/brain.db&quot;,
+  &quot;version&quot;: 7,
+  &quot;integrity&quot;: &quot;ok&quot;
+}</code></pre>
+  </div>
+        <p>Two different checks run when the database opens, with very different costs. A relationship check is index-driven and runs every single time. A full page-by-page scan reads the whole file, so it runs once per process against an unchanged file — which is why a status line redrawing on every turn stays cheap while <code>data check</code> is thorough.</p>
+        <p><code>integrity: ok</code> means both passed. Anything else is reported rather than worked around, and <a href="../recovery/">restoring a snapshot</a> is the answer.</p>
+      </li>
+
+      <li>
+        <h3 id="migrations">Understand what a migration does</h3>
+        <p><code>Schema v7</code> in the report above is the store's version. Each release that changes the schema adds a numbered migration and raises that number. Opening the database applies any that are missing, in order.</p>
+        <p>Three things are true of every migration and worth knowing before you upgrade:</p>
+        <ul>
+          <li><strong>A backup is taken first.</strong> Before any migration runs against an existing store, Synapse copies it into the backups folder. If a migration fails, that copy is what you restore.</li>
+          <li><strong>Shipped migrations are never edited.</strong> A release only ever appends. That is what makes the upgrade path from any older version deterministic rather than dependent on which releases you happened to install.</li>
+          <li><strong>A newer store refuses an older binary.</strong> If the database reports a version this release does not know about, Synapse says so and stops rather than guessing at a schema from the future.</li>
+        </ul>
+        
+  <div class="codeblock">
+    <div class="codebar">
+      <span>shell</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>ls ~/Library/Application\ Support/synapse/backups/</code></pre>
+  </div>
+        <p>Backups are bounded — only the newest few are kept — so the folder cannot grow without limit. The same rule applies everywhere Synapse writes something unbounded: worker logs and the crash log keep their tail rather than the whole history.</p>
+        
+  <aside class="note">
+    <strong>Upgrading is just opening it</strong>
+    <p>There is no migrate command and nothing to run by hand. Install a new release, run any <code>synapse</code> command or open the app, and the store is brought forward with a backup beside it. <code>synapse doctor</code> afterwards will show the new schema number.</p>
+  </aside>
+      </li>
+
+      <li>
+        <h3 id="disconnect">Disconnect one tool</h3>
+        <p>Disconnecting undoes one tool's integration and nothing else:</p>
+        
+  <div class="codeblock">
+    <div class="codebar">
+      <span>shell</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>synapse disconnect claude</code></pre>
+  </div>
+        
+  <div class="codeblock">
+    <div class="codebar">
+      <span>text</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>Removed Claude Code skill `synapse-mesh`
+warning: Claude Code skill `release-checklist`: `release-checklist` in Claude Code has been changed since Synapse installed it</code></pre>
+  </div>
+        <p>Read that second line closely, because it is the whole design in one sentence. Synapse removed the skill it had written and left untouched. It refused to remove the one that had been edited since — because at that point the file is partly yours, and Synapse will not delete work it cannot prove is its own.</p>
+        <p>The same run also asks the tool's own CLI to forget the MCP server, strips the managed block from its instruction file while leaving your text in place, and removes the session hook and status line from its settings — but only if they are the ones Synapse wrote. A status line you configured yourself is reported and left alone.</p>
+        <p>Every step reports rather than aborts. A disconnect that stopped at the first problem would leave the tool half-connected, which is the worst available outcome; finishing and telling you what it could not do is better.</p>
+        
+  <div class="codeblock">
+    <div class="codebar">
+      <span>shell</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>synapse disconnect</code></pre>
+  </div>
+        <p>With no tool named, it disconnects every one.</p>
+      </li>
+
+      <li>
+        <h3 id="preview">Read the uninstall preview</h3>
+        <p>Run it without <code>--confirm</code> first. It always previews:</p>
+        
+  <div class="codeblock">
+    <div class="codebar">
+      <span>shell</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>synapse uninstall</code></pre>
+  </div>
+        
+  <div class="codeblock">
+    <div class="codebar">
+      <span>text</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>`synapse uninstall --confirm` would remove:
+  · every skill Synapse installed, leaving any you wrote
+
+Your memory in ~/Library/Application Support/synapse would be left alone.
+
+Add --confirm to go ahead.</code></pre>
+  </div>
+        <p>On a fully connected machine the list is longer — the MCP entries, the managed instruction blocks, the session hook, the status line, the installed CLI, the shell startup block. The last line is the one to notice: <strong>memory is never removed as a side effect.</strong> Uninstalling the software does not delete what you have taught it.</p>
+      </li>
+
+      <li>
+        <h3 id="uninstall">Remove everything, including memory</h3>
+        <p>Taking the data folder requires asking for it by name, and the preview changes to say so:</p>
+        
+  <div class="codeblock">
+    <div class="codebar">
+      <span>shell</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>synapse uninstall --data</code></pre>
+  </div>
+        
+  <div class="codeblock">
+    <div class="codebar">
+      <span>text</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>`synapse uninstall --confirm` would remove:
+  · every skill Synapse installed, leaving any you wrote
+
+And, because --data was given, everything in ~/Library/Application Support/synapse
+including all of your memory. That cannot be undone.
+
+Add --confirm to go ahead.</code></pre>
+  </div>
+        <p>Two flags, both required, and a sentence that says it cannot be undone. If you want a copy first, <code>synapse data export</code> writes a consistent snapshot you can restore into a fresh install later — see <a href="../recovery/">Export and restore safely</a>.</p>
+        
+  <div class="codeblock">
+    <div class="codebar">
+      <span>shell</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>synapse data export ~/synapse-final-snapshot.db   # optional, but do it
+synapse uninstall --data --confirm</code></pre>
+  </div>
+        
+  <aside class="note">
+    <strong>Keychain values are not in the data folder</strong>
+    <p>Secret values live in macOS Keychain, and only their names and references are in the database. Removing the data folder removes Synapse's ability to find them; it does not delete the Keychain items themselves. Use <code>synapse secret forget</code> for those, before uninstalling.</p>
+  </aside>
+      </li>
+    </ol>
+
+    <h2 id="survives">What survives</h2>
+    <p>The principle behind all of this: <strong>everything Synapse writes outside its own folder, it can take back — and nothing else.</strong> After a full uninstall, these are untouched:</p>
+    <table>
+      <thead><tr><th>Thing</th><th>Why it survives</th></tr></thead>
+      <tbody>
+        <tr><td>Your own words in <code>CLAUDE.md</code> or <code>AGENTS.md</code></td><td>Only the managed block between markers is removed. Text outside it was never Synapse's.</td></tr>
+        <tr><td>A skill you wrote or edited</td><td>Removal requires an install record proving Synapse wrote that exact content.</td></tr>
+        <tr><td>A status line somebody else configured</td><td>JSON has no comments, so entries are recognized by the command they run. One that is not Synapse's is reported, never replaced.</td></tr>
+        <tr><td>Other MCP servers in either tool</td><td>Removal goes through the tool's own CLI, by name, for the <code>synapse</code> entry only.</td></tr>
+        <tr><td>Your memory, unless <code>--data</code></td><td>Memory is never removed as a side effect of removing software.</td></tr>
+        <tr><td>Keychain secret values</td><td>They were never in the database, so removing it cannot delete them.</td></tr>
+        <tr><td>A project's <code>.synapse.yaml</code> and <code>.synapse/roles/</code></td><td>They belong to the checkout, not to your machine.</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Next step</h2>
+    <p>That is the whole maintainer track. If something in it did not behave as described, <code>synapse doctor --json</code> plus the exact command you ran is everything a bug report needs. See <a href="../../docs/troubleshoot/">Troubleshooting</a> for the common failures and what each one means.</p>
+  
+    </main>
+    <aside class="ontoc" aria-label="On this page">
+        <span>On this page</span>
+        <ol><li><a href="#outcome">Outcome</a></li><li><a href="#doctor">One health report</a></li><li><a href="#check">Check the store</a></li><li><a href="#migrations">Migrations</a></li><li><a href="#disconnect">Disconnect one tool</a></li><li><a href="#preview">Read the uninstall preview</a></li><li><a href="#uninstall">Remove everything</a></li><li><a href="#survives">What survives</a></li></ol>
+      </aside>
+  </div>
+  
+  <footer class="footer">
+    <div>
+      <a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">Synapse</a>
+      <p>Project memory and scoped credentials, kept on your Mac.</p>
+    </div>
+    <nav aria-label="Footer">
+      <a href="../../docs/">Documentation</a>
+      <a href="../../tutorials/">Tutorials</a>
+      <a href="https://github.com/wess/synapse">Source</a>
+      <a href="https://github.com/wess/synapse/releases">Releases</a>
+    </nav>
+    <p class="footerfine">No account required. Apple silicon · macOS 13+.</p>
+  </footer>
+</body>
+</html>

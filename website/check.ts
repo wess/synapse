@@ -125,8 +125,8 @@ if (!corpus.includes('data-copy aria-live="polite"')) {
 
 const docs = htmlfiles.filter((file) => relative(output, file).startsWith("docs/"));
 const tutorials = htmlfiles.filter((file) => relative(output, file).startsWith("tutorials/"));
-if (docs.length < 11) fail(`expected at least 11 documentation pages, found ${docs.length}`);
-if (tutorials.length < 6) fail(`expected at least 6 tutorial pages, found ${tutorials.length}`);
+if (docs.length < 13) fail(`expected at least 13 documentation pages, found ${docs.length}`);
+if (tutorials.length < 10) fail(`expected at least 10 tutorial pages, found ${tutorials.length}`);
 
 const app = await Bun.file(join(output, "docs", "app", "index.html")).text();
 for (const phrase of [
@@ -142,29 +142,113 @@ for (const phrase of [
   if (!app.includes(phrase)) fail(`desktop app reference is missing: ${phrase}`);
 }
 
+// Every command family in `HELP` (src/cli/command.rs). When a command is added
+// there it has to appear here too, or the site can quietly ship without it —
+// which is how `launch`, `mux`, `relay`, and `skill` were all documented but
+// unverified for four releases.
 for (const command of [
   "synapse app",
   "synapse mcp",
+  "synapse launch",
   "synapse run",
+  "synapse mux",
   "synapse hook",
   "synapse allow",
   "synapse deny",
-  "synapse export",
   "synapse status",
   "synapse vault",
   "synapse secret",
   "synapse scope",
   "synapse data",
   "synapse memory",
+  "synapse guidance",
+  "synapse relay",
+  "synapse skill",
+  "synapse session",
+  "synapse statusline",
+  "synapse doctor",
   "synapse settings",
   "synapse install",
+  "synapse disconnect",
+  "synapse uninstall",
   "synapse path",
   "synapse version",
 ]) {
   if (!corpus.includes(command)) fail(`documentation is missing command family: ${command}`);
 }
-for (const tool of ["remember", "recall", "vaultstatus"]) {
+
+// The subcommands that do something a reader cannot guess from the family name.
+for (const command of [
+  "synapse relay team",
+  "synapse relay role",
+  "synapse relay launch",
+  "synapse relay ps",
+  "synapse relay kill",
+  "synapse relay feed",
+  "synapse skill install",
+  "synapse skill adopt",
+  "synapse skill status",
+  "synapse memory import",
+  "synapse memory undo",
+  "synapse memory wipe",
+  "synapse guidance adopt",
+  "synapse data export",
+  "synapse data restore",
+  "synapse settings mesh",
+  "synapse settings optimize",
+]) {
+  if (!corpus.includes(command)) fail(`documentation is missing subcommand: ${command}`);
+}
+
+// The three always-present tools, then the sixteen the mesh adds. A mesh tool
+// that ships without documentation is one an agent can call and a reader cannot
+// look up.
+for (const tool of [
+  "remember",
+  "recall",
+  "vaultstatus",
+  "register",
+  "send",
+  "post",
+  "broadcast",
+  "join",
+  "leave",
+  "wait",
+  "inbox",
+  "reportstatus",
+  "waitstatus",
+  "agents",
+  "channels",
+  "whoami",
+  "spawn",
+  "workers",
+  "stopworker",
+]) {
   if (!corpus.includes(tool)) fail(`documentation is missing MCP tool: ${tool}`);
+}
+
+// Every environment variable the binary reads. `grep -rho 'SYNAPSE_[A-Z_]*'
+// src` is the list this has to keep up with.
+for (const variable of [
+  "SYNAPSE_DATA",
+  "SYNAPSE_HOME",
+  "SYNAPSE_BIN",
+  "SYNAPSE_PROJECT_DIR",
+  "SYNAPSE_PAGE",
+  "SYNAPSE_DOCUMENT",
+  "SYNAPSE_SHELL_ACTIVE",
+  "SYNAPSE_SHELL_KEYS",
+  "SYNAPSE_SHELL_COMMAND",
+  "CODEX_HOME",
+]) {
+  if (!corpus.includes(variable)) fail(`documentation is missing environment variable: ${variable}`);
+}
+
+// Each tutorial level needs at least one page, so the ladder cannot lose a rung
+// without the build saying so.
+const tutorialindex = await Bun.file(join(output, "tutorials", "index.html")).text();
+for (const level of ["Newcomer", "Daily driver", "Team operator", "Maintainer"]) {
+  if (!tutorialindex.includes(level)) fail(`tutorial index is missing the ${level} level`);
 }
 
 if (failures.length) {
