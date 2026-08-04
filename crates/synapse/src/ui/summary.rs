@@ -1,8 +1,8 @@
-use crate::brain::Stats;
 use crate::ui::Notice;
 use gpui::prelude::*;
 use gpui::{App, IntoElement, div, px};
 use guise::prelude::*;
+use synapsecore::brain::Stats;
 
 pub fn render(
     stats: &Stats,

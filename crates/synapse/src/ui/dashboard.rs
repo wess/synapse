@@ -1,13 +1,8 @@
-use crate::agent::{self, GuidanceState, Kind};
-use crate::brain::{Brain, Memory, MemoryScope, Optimization, Stats};
-use crate::files;
-use crate::imports::{ImportBatch, ImportProvider, ImportSummary};
 use crate::ui::buffer::{self, Buffer, Format};
 use crate::ui::{
     Document, Notice, Page, Row, SaveDocument, agentrow, clibanner, document, header, memories,
     mesh, settings, skills, summary, vaults,
 };
-use crate::vault::{ScopeState, Secret, Vault, VaultStore};
 use gpui::prelude::*;
 use gpui::{Context, Entity, IntoElement, Window, div, px};
 use guise::editor::EditorEvent;
@@ -15,6 +10,11 @@ use guise::input::FileInputEvent;
 use guise::markdown::MarkdownEditorEvent;
 use guise::prelude::*;
 use std::path::PathBuf;
+use synapsecore::agent::{self, GuidanceState, Kind};
+use synapsecore::brain::{Brain, Memory, MemoryScope, Optimization, Stats};
+use synapsecore::files;
+use synapsecore::imports::{ImportBatch, ImportProvider, ImportSummary};
+use synapsecore::vault::{ScopeState, Secret, Vault, VaultStore};
 
 /// Preference key recording that the CLI prompt was dismissed for good.
 const CLIPROMPT: &str = "cliprompt";
@@ -56,16 +56,16 @@ pub struct Dashboard {
     appmenu: Option<Entity<MenuBar>>,
     optimization: Optimization,
     meshenabled: bool,
-    meshagents: Vec<crate::relay::AgentView>,
-    meshworkers: Vec<crate::relay::WorkerView>,
-    meshfeed: Vec<crate::relay::Message>,
+    meshagents: Vec<synapsecore::relay::AgentView>,
+    meshworkers: Vec<synapsecore::relay::WorkerView>,
+    meshfeed: Vec<synapsecore::relay::Message>,
     mesherror: Option<String>,
     skillrows: Vec<skills::Row>,
     skillunmanaged: Vec<(String, String)>,
     skillproblems: Vec<String>,
     guidance: GuidanceState,
     pendingguidance: bool,
-    clistatus: crate::cli::InstallStatus,
+    clistatus: synapsecore::cli::InstallStatus,
     showclibanner: bool,
 }
 
@@ -147,9 +147,10 @@ impl Dashboard {
         // Synapse owns the data folder and SOUL.md, so create them on every
         // launch when they are missing. Tool configuration is never touched
         // here; connecting an agent stays an explicit choice on Connections.
-        let soulerror = crate::instructions::ensure(&soul).err();
+        let soulerror = synapsecore::instructions::ensure(&soul).err();
         let guidance = agent::guidancestate(&home, &soul);
-        let clistatus = crate::cli::status().unwrap_or(crate::cli::InstallStatus::Missing);
+        let clistatus =
+            synapsecore::cli::status().unwrap_or(synapsecore::cli::InstallStatus::Missing);
         let showclibanner = promptforcli(&clistatus, clidismissed(brain.as_ref()));
         let document = std::env::var_os("SYNAPSE_DOCUMENT")
             .map(PathBuf::from)
@@ -252,11 +253,12 @@ impl Dashboard {
     }
 
     fn installcli(&mut self, cx: &mut Context<Self>) {
-        self.notice = match crate::cli::install() {
+        self.notice = match synapsecore::cli::install() {
             Ok(path) => Notice::Success(format!("CLI installed at {}.", path.display())),
             Err(error) => Notice::Error(format!("Could not install the CLI: {error}")),
         };
-        self.clistatus = crate::cli::status().unwrap_or(crate::cli::InstallStatus::Missing);
+        self.clistatus =
+            synapsecore::cli::status().unwrap_or(synapsecore::cli::InstallStatus::Missing);
         self.showclibanner = false;
         cx.notify();
     }
@@ -474,7 +476,7 @@ impl Dashboard {
         };
         let result = files::home().and_then(|home| {
             block(async {
-                let candidates = crate::imports::scan(&home, provider).await?;
+                let candidates = synapsecore::imports::scan(&home, provider).await?;
                 let preview = brain.importpreview(provider, candidates).await?;
                 brain.importmemories(preview, false).await
             })
@@ -573,8 +575,9 @@ impl Dashboard {
     fn installskills(&mut self, only: Option<String>, cx: &mut Context<Self>) {
         let home = files::home().unwrap_or_else(|_| PathBuf::from("."));
         let result = block(async move {
-            let receipts = crate::skill::Receipts::open(crate::files::database()?).await?;
-            let (library, _) = crate::skill::library::all()?;
+            let receipts =
+                synapsecore::skill::Receipts::open(synapsecore::files::database()?).await?;
+            let (library, _) = synapsecore::skill::library::all()?;
             let mut done = 0_usize;
             let mut refused = Vec::new();
             for agent in agent::agents(&home) {
@@ -582,7 +585,7 @@ impl Dashboard {
                     if only.as_ref().is_some_and(|name| name != &skill.name) {
                         continue;
                     }
-                    match crate::skill::install(&receipts, &agent, skill, false).await {
+                    match synapsecore::skill::install(&receipts, &agent, skill, false).await {
                         Ok(_) => done += 1,
                         Err(error) => refused.push(format!("{}: {error}", agent.name)),
                     }
@@ -609,12 +612,13 @@ impl Dashboard {
     fn adoptskill(&mut self, tool: String, name: String, cx: &mut Context<Self>) {
         let home = files::home().unwrap_or_else(|_| PathBuf::from("."));
         let result = block(async move {
-            let receipts = crate::skill::Receipts::open(crate::files::database()?).await?;
+            let receipts =
+                synapsecore::skill::Receipts::open(synapsecore::files::database()?).await?;
             let agent = agent::agents(&home)
                 .into_iter()
                 .find(|agent| agent.name == tool)
                 .ok_or_else(|| anyhow::anyhow!("that tool is no longer connected"))?;
-            crate::skill::adopt(&receipts, &agent, &name).await
+            synapsecore::skill::adopt(&receipts, &agent, &name).await
         });
         self.notice = match result {
             Ok(path) => Notice::Success(format!("Copied it into {}.", path.display())),
@@ -624,7 +628,7 @@ impl Dashboard {
     }
 
     fn openskills(&mut self) {
-        self.notice = match crate::skill::library::directory()
+        self.notice = match synapsecore::skill::library::directory()
             .and_then(|path| files::reveal(&path).map(|_| path))
         {
             Ok(_) => Notice::Ready,
@@ -653,7 +657,7 @@ impl Dashboard {
     fn setmesh(&mut self, enabled: bool, cx: &mut Context<Self>) {
         let database = self.database.clone();
         let result = block(async {
-            let brain = crate::brain::Brain::open(database).await?;
+            let brain = synapsecore::brain::Brain::open(database).await?;
             brain.setmesh(enabled).await
         });
         match result {
@@ -687,7 +691,7 @@ impl Dashboard {
     fn opensoul(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let result = (|| {
             let path = files::soul()?;
-            crate::instructions::ensure(&path)?;
+            synapsecore::instructions::ensure(&path)?;
             let document = Self::loaddocument("Shared guidance".to_owned(), path, cx)?;
             window.focus(&buffer::focus(&document.editor, cx));
             self.document = Some(document);
@@ -746,7 +750,7 @@ impl Dashboard {
     fn setoptimization(&mut self, optimization: Optimization, cx: &mut Context<Self>) {
         let database = self.database.clone();
         let result = block(async {
-            let brain = crate::brain::Brain::open(database).await?;
+            let brain = synapsecore::brain::Brain::open(database).await?;
             brain.setoptimization(optimization).await
         });
         match result {
@@ -867,7 +871,7 @@ impl Dashboard {
         let global = self.addglobal;
         match block(async move {
             let secret = store.createsecret(vaultid, &name, &env, global).await?;
-            if let Err(error) = crate::vault::setsecret(&secret.account, &value) {
+            if let Err(error) = synapsecore::vault::setsecret(&secret.account, &value) {
                 let _ = store.deletesecret(secret.id).await;
                 return Err(error);
             }
@@ -928,7 +932,7 @@ impl Dashboard {
                 "Enter the replacement in Secret value, then choose Replace.".to_owned(),
             );
         } else {
-            self.notice = match crate::vault::setsecret(&secret.account, &value) {
+            self.notice = match synapsecore::vault::setsecret(&secret.account, &value) {
                 Ok(()) => {
                     self.secretvalue
                         .update(cx, |input, cx| input.set_text("", cx));
@@ -956,7 +960,7 @@ impl Dashboard {
         ) else {
             return;
         };
-        let result = crate::vault::deletesecret(&secret.account)
+        let result = synapsecore::vault::deletesecret(&secret.account)
             .and_then(|_| block(store.deletesecret(id)).map(|_| ()));
         match result {
             Ok(()) => {
@@ -978,10 +982,10 @@ impl Dashboard {
             cx.notify();
             return;
         };
-        let path = folder.join(crate::vault::CONFIG);
+        let path = folder.join(synapsecore::vault::CONFIG);
         if path.exists() {
             let target = path.canonicalize().unwrap_or(path);
-            match block(crate::vault::resolve(&store, &folder)) {
+            match block(synapsecore::vault::resolve(&store, &folder)) {
                 Ok(resolved) => {
                     self.scopestate = resolved
                         .scopes
@@ -1000,11 +1004,11 @@ impl Dashboard {
         let Some(folder) = self.scopefolder.clone() else {
             return;
         };
-        let path = folder.join(crate::vault::CONFIG);
+        let path = folder.join(synapsecore::vault::CONFIG);
         let result = if path.exists() {
             Ok(())
         } else {
-            files::write(&path, crate::vault::template())
+            files::write(&path, synapsecore::vault::template())
         };
         match result.and_then(|_| Self::loaddocument("Vault scope".to_owned(), path, cx)) {
             Ok(document) => {
@@ -1025,8 +1029,8 @@ impl Dashboard {
         else {
             return;
         };
-        let path = folder.join(crate::vault::CONFIG);
-        let result = crate::vault::readscope(&path)
+        let path = folder.join(synapsecore::vault::CONFIG);
+        let result = synapsecore::vault::readscope(&path)
             .and_then(|(_, digest)| block(store.trust(&path, &digest)));
         match result {
             Ok(()) => {
@@ -1187,7 +1191,7 @@ impl Dashboard {
                 return;
             };
             let refreshscope = document.path.file_name().and_then(|name| name.to_str())
-                == Some(crate::vault::CONFIG);
+                == Some(synapsecore::vault::CONFIG);
             match files::write(&document.path, &document.current) {
                 Ok(()) => {
                     document.saved = document.current.clone();
@@ -1282,7 +1286,7 @@ impl Render for Dashboard {
         }
 
         let banner = self.showclibanner.then(|| {
-            let path = crate::cli::destination()
+            let path = synapsecore::cli::destination()
                 .map(|path| path.display().to_string())
                 .unwrap_or_else(|_| "~/.local/bin".to_owned());
             clibanner::render(
@@ -1435,7 +1439,7 @@ impl Render for Dashboard {
                         rows: self.skillrows.clone(),
                         unmanaged: self.skillunmanaged.clone(),
                         problems: self.skillproblems.clone(),
-                        folder: crate::skill::library::directory()
+                        folder: synapsecore::skill::library::directory()
                             .map(|path| path.display().to_string())
                             .unwrap_or_default(),
                         message: match &self.notice {
@@ -1465,12 +1469,13 @@ impl Render for Dashboard {
         }
 
         if self.page == Page::Settings {
-            let clistatus = crate::cli::status().unwrap_or(crate::cli::InstallStatus::Missing);
-            let clipath = crate::cli::destination()
+            let clistatus =
+                synapsecore::cli::status().unwrap_or(synapsecore::cli::InstallStatus::Missing);
+            let clipath = synapsecore::cli::destination()
                 .map(|path| path.display().to_string())
                 .unwrap_or_else(|error| error.to_string());
-            let (shellintegration, shellerror) = match crate::cli::destination()
-                .and_then(|command| crate::shellsetup::status(&command))
+            let (shellintegration, shellerror) = match synapsecore::cli::destination()
+                .and_then(|command| synapsecore::shellsetup::status(&command))
             {
                 Ok(integration) => (Some(integration), None),
                 Err(error) => (None, Some(error.to_string())),
@@ -1734,8 +1739,8 @@ fn loadrows() -> Vec<Row> {
 }
 
 fn connectionserver() -> Option<PathBuf> {
-    match crate::cli::status() {
-        Ok(crate::cli::InstallStatus::Installed(path)) => Some(path),
+    match synapsecore::cli::status() {
+        Ok(synapsecore::cli::InstallStatus::Installed(path)) => Some(path),
         _ => std::env::current_exe().ok(),
     }
 }
@@ -1779,7 +1784,7 @@ fn changedocument(
 
 fn loadstats(database: &std::path::Path) -> anyhow::Result<Stats> {
     tokio::runtime::Runtime::new()?.block_on(async {
-        let brain = crate::brain::Brain::open(database).await?;
+        let brain = synapsecore::brain::Brain::open(database).await?;
         brain.stats().await
     })
 }
@@ -1795,14 +1800,14 @@ struct SkillData {
 
 fn loadskills() -> SkillData {
     let home = files::home().unwrap_or_else(|_| PathBuf::from("."));
-    let (statuses, mut problems) = match block(crate::skill::survey(&home)) {
+    let (statuses, mut problems) = match block(synapsecore::skill::survey(&home)) {
         Ok(surveyed) => surveyed,
         Err(error) => (
             Vec::new(),
             vec![format!("the library could not be read: {error}")],
         ),
     };
-    let (library, listing) = crate::skill::library::all().unwrap_or_default();
+    let (library, listing) = synapsecore::skill::library::all().unwrap_or_default();
     problems.extend(listing);
     let known: Vec<String> = library.iter().map(|skill| skill.name.clone()).collect();
     SkillData {
@@ -1822,7 +1827,7 @@ fn loadskills() -> SkillData {
         unmanaged: agent::agents(&home)
             .into_iter()
             .flat_map(|agent| {
-                crate::skill::unknown(&agent, &known)
+                synapsecore::skill::unknown(&agent, &known)
                     .into_iter()
                     .map(move |name| (agent.name.to_owned(), name))
             })
@@ -1835,9 +1840,9 @@ fn loadskills() -> SkillData {
 #[derive(Default)]
 struct MeshData {
     enabled: bool,
-    agents: Vec<crate::relay::AgentView>,
-    workers: Vec<crate::relay::WorkerView>,
-    feed: Vec<crate::relay::Message>,
+    agents: Vec<synapsecore::relay::AgentView>,
+    workers: Vec<synapsecore::relay::WorkerView>,
+    feed: Vec<synapsecore::relay::Message>,
     error: Option<String>,
 }
 
@@ -1848,7 +1853,7 @@ fn loadmeshdata(database: &std::path::Path) -> MeshData {
     }
     let path = database.to_path_buf();
     match block(async {
-        let mesh = crate::relay::Mesh::open(path).await?;
+        let mesh = synapsecore::relay::Mesh::open(path).await?;
         Ok((
             mesh.agents().await?,
             mesh.workers().await?,
@@ -1872,14 +1877,14 @@ fn loadmeshdata(database: &std::path::Path) -> MeshData {
 
 fn loadmesh(database: &std::path::Path) -> anyhow::Result<bool> {
     block(async {
-        let brain = crate::brain::Brain::open(database).await?;
+        let brain = synapsecore::brain::Brain::open(database).await?;
         brain.mesh().await
     })
 }
 
 fn loadoptimization(database: &std::path::Path) -> anyhow::Result<Optimization> {
     block(async {
-        let brain = crate::brain::Brain::open(database).await?;
+        let brain = synapsecore::brain::Brain::open(database).await?;
         Ok(brain.settings().await?.optimization)
     })
 }
@@ -1930,7 +1935,7 @@ async fn importdata(
 ) -> anyhow::Result<(Vec<ImportSummary>, Vec<ImportBatch>)> {
     let mut summaries = Vec::new();
     for provider in [ImportProvider::Claude, ImportProvider::Codex] {
-        let summary = match crate::imports::scan(home, provider).await {
+        let summary = match synapsecore::imports::scan(home, provider).await {
             Ok(candidates) => match brain.importpreview(provider, candidates).await {
                 Ok(preview) => preview.summary(),
                 Err(error) => ImportSummary::error(provider, error),
@@ -1946,8 +1951,8 @@ async fn importdata(
 /// Offer the prompt for a first install only. A conflicting file at the
 /// destination needs a decision the banner cannot offer, so Settings keeps
 /// that case where the path and the conflict are both visible.
-fn promptforcli(status: &crate::cli::InstallStatus, dismissed: bool) -> bool {
-    matches!(status, crate::cli::InstallStatus::Missing) && !dismissed
+fn promptforcli(status: &synapsecore::cli::InstallStatus, dismissed: bool) -> bool {
+    matches!(status, synapsecore::cli::InstallStatus::Missing) && !dismissed
 }
 
 fn clidismissed(brain: Option<&Brain>) -> bool {
@@ -1968,7 +1973,7 @@ fn block<T>(future: impl std::future::Future<Output = anyhow::Result<T>>) -> any
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::cli::InstallStatus;
+    use synapsecore::cli::InstallStatus;
 
     #[test]
     fn cli_prompt_appears_only_for_a_fresh_install_the_user_has_not_dismissed() {

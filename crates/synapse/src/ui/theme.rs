@@ -82,7 +82,7 @@ fn darktheme() -> Theme {
 fn load() -> anyhow::Result<Mode> {
     let runtime = tokio::runtime::Runtime::new()?;
     runtime.block_on(async {
-        let brain = crate::brain::Brain::open(crate::files::database()?).await?;
+        let brain = synapsecore::brain::Brain::open(synapsecore::files::database()?).await?;
         Ok(match brain.preference("appearance").await?.as_deref() {
             Some("light") => Mode::Light,
             Some("dark") => Mode::Dark,
@@ -99,7 +99,7 @@ fn save(mode: Mode) -> anyhow::Result<()> {
     };
     let runtime = tokio::runtime::Runtime::new()?;
     runtime.block_on(async {
-        let brain = crate::brain::Brain::open(crate::files::database()?).await?;
+        let brain = synapsecore::brain::Brain::open(synapsecore::files::database()?).await?;
         brain.setpreference("appearance", value).await
     })
 }

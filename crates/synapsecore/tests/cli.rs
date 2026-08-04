@@ -5,7 +5,7 @@ use std::path::Path;
 use std::process::{Command, Output, Stdio};
 
 fn command(root: &Path) -> Command {
-    let mut command = Command::new(env!("CARGO_BIN_EXE_synapse"));
+    let mut command = Command::new(env!("CARGO_BIN_EXE_synapse-cli"));
     command
         .env("SYNAPSE_HOME", root.join("home"))
         .env("SYNAPSE_DATA", root.join("data"))

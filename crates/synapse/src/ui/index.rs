@@ -7,7 +7,7 @@ use gpui::{
 pub fn run() {
     // The window is the one place a crash has nowhere to be seen, so write it
     // down before the process goes.
-    crate::crashes::capture();
+    synapsecore::crashes::capture();
     gpui::Application::new().run(|cx: &mut App| {
         crate::ui::theme::initialize(cx);
         cx.bind_keys([
@@ -59,7 +59,7 @@ pub fn run() {
             if let Some(statusbar) = statusbar {
                 cx.set_global(statusbar);
             }
-            let data = crate::files::data().ok();
+            let data = synapsecore::files::data().ok();
             let task: Task<()> = cx.spawn(async move |cx| {
                 while let Ok(action) = receiver.recv().await {
                     let _ = cx.update(|cx| match action {
@@ -71,7 +71,7 @@ pub fn run() {
                         }
                         Action::Data => {
                             if let Some(path) = data.as_deref() {
-                                let _ = crate::files::reveal(path);
+                                let _ = synapsecore::files::reveal(path);
                             }
                         }
                         Action::Install => crate::ui::menu::installcli(cx),

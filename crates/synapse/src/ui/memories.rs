@@ -1,11 +1,11 @@
-use crate::brain::{Memory, MemoryScope};
-use crate::imports::{ImportBatch, ImportProvider, ImportSummary};
 use crate::ui::Notice;
 use chrono::{DateTime, Local};
 use gpui::prelude::*;
 use gpui::{AnyElement, App, ClickEvent, Entity, Window, div, px};
 use guise::markdown::MarkdownEditor;
 use guise::prelude::*;
+use synapsecore::brain::{Memory, MemoryScope};
+use synapsecore::imports::{ImportBatch, ImportProvider, ImportSummary};
 
 pub type Click = Box<dyn Fn(&ClickEvent, &mut Window, &mut App) + 'static>;
 

@@ -1,11 +1,11 @@
-use crate::agent::GuidanceState;
-use crate::brain::Optimization;
-use crate::cli::InstallStatus;
-use crate::shellsetup::{Integration, IntegrationState};
 use crate::ui::theme::Mode;
 use gpui::prelude::*;
 use gpui::{AnyElement, App, ClickEvent, Window, div, px};
 use guise::prelude::*;
+use synapsecore::agent::GuidanceState;
+use synapsecore::brain::Optimization;
+use synapsecore::cli::InstallStatus;
+use synapsecore::shellsetup::{Integration, IntegrationState};
 
 pub type Click = Box<dyn Fn(&ClickEvent, &mut Window, &mut App) + 'static>;
 

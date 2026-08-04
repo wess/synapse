@@ -1,7 +1,7 @@
-use crate::skill::{State, Status};
 use gpui::prelude::*;
 use gpui::{AnyElement, App, ClickEvent, FontWeight, Window, div, px};
 use guise::prelude::*;
+use synapsecore::skill::{State, Status};
 
 pub type Click = Box<dyn Fn(&ClickEvent, &mut Window, &mut App) + 'static>;
 

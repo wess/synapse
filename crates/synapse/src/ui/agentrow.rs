@@ -29,7 +29,7 @@ pub fn render(
     // Only Claude Code can state the connection at startup, so only its row
     // offers the control and reports what the tool's own settings currently say.
     let hooks = row.detection.hooks;
-    let notice = (connected && row.agent.kind == crate::agent::Kind::Claude).then(|| {
+    let notice = (connected && row.agent.kind == synapsecore::agent::Kind::Claude).then(|| {
         let summary = if hooks.notice {
             match (hooks.statusline, hooks.borrowed) {
                 (true, _) => "Announces Synapse at startup · status line on".to_owned(),

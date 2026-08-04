@@ -1,7 +1,7 @@
-use crate::relay::{AgentView, Message, MessageKind, WorkerView};
 use gpui::prelude::*;
 use gpui::{AnyElement, App, ClickEvent, FontWeight, Window, div, px};
 use guise::prelude::*;
+use synapsecore::relay::{AgentView, Message, MessageKind, WorkerView};
 
 pub type Click = Box<dyn Fn(&ClickEvent, &mut Window, &mut App) + 'static>;
 

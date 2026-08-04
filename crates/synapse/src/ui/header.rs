@@ -144,9 +144,9 @@ pub fn render(
 }
 
 fn clibadge() -> impl IntoElement {
-    let (label, color) = match crate::cli::status() {
-        Ok(crate::cli::InstallStatus::Installed(_)) => ("CLI ready", ColorName::Teal),
-        Ok(crate::cli::InstallStatus::Conflict(_)) => ("CLI conflict", ColorName::Orange),
+    let (label, color) = match synapsecore::cli::status() {
+        Ok(synapsecore::cli::InstallStatus::Installed(_)) => ("CLI ready", ColorName::Teal),
+        Ok(synapsecore::cli::InstallStatus::Conflict(_)) => ("CLI conflict", ColorName::Orange),
         _ => ("On device", ColorName::Teal),
     };
     Badge::new(label).color(color).variant(Variant::Light)

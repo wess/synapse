@@ -92,6 +92,54 @@ jobs:
         run: cargo fmt --check
         continue-on-error: true
 
+  # The terminal-only build, on the machine it exists for: Linux, no guise
+  # checkout, no display, nothing from the desktop half on disk. This is the job
+  # that keeps the promise — the property is invisible to every other job,
+  # because they all have guise beside them and would keep passing on the day
+  # synapsecore grew a dependency on the window.
+  #
+  # It carries the whole test suite, which the macOS job also runs: these tests
+  # moved here with the binary they spawn, and running them on Linux is the only
+  # place they are checked without a GPUI toolchain in reach.
+  cli:
+    name: synapsecore · linux, no guise
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: crates/synapsecore
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: crates/synapsecore
+
+      - name: Build
+        run: cargo build --locked
+
+      - name: Test
+        run: cargo test --locked
+
+      # The library has to stay usable without a screen, for the same reason it
+      # has to stay buildable without guise: an embedder wants memory, not a
+      # rendering stack. Nothing else checks this — every other build turns the
+      # dashboard on by default.
+      - name: Library without the dashboard
+        run: cargo check --locked --no-default-features
+
+      # The desktop crate is the release trigger; this crate is where
+      # `synapse version` reads its number from. Drift means a signed build that
+      # misreports itself, and nothing else would catch it.
+      - name: Versions agree
+        working-directory: .
+        run: |
+          app=$(sed -n 's/^version = "\([0-9][^"]*\)".*/\1/p' crates/synapse/Cargo.toml | head -1)
+          cli=$(sed -n 's/^version = "\([0-9][^"]*\)".*/\1/p' crates/synapsecore/Cargo.toml | head -1)
+          echo "synapse=$app synapsecore=$cli"
+          test "$app" = "$cli"
+
   # The sync server, built the way somebody self-hosting would build it: Linux,
   # no guise checkout, no macOS, nothing from the desktop half on disk. The
   # workspace-level jobs cannot check this — synapseserve is its own workspace

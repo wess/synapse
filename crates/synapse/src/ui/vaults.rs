@@ -1,9 +1,9 @@
 use crate::ui::Notice;
-use crate::vault::{ScopeState, Secret, Vault};
 use gpui::prelude::*;
 use gpui::{AnyElement, App, ClickEvent, Entity, Window, div, px};
 use guise::prelude::*;
 use std::path::Path;
+use synapsecore::vault::{ScopeState, Secret, Vault};
 
 pub type Click = Box<dyn Fn(&ClickEvent, &mut Window, &mut App) + 'static>;
 pub type Select = Box<dyn Fn(i64) -> Click + 'static>;

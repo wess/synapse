@@ -5,7 +5,10 @@ mod validate;
 
 pub(crate) use atomic::copy as atomiccopy;
 pub use index::{data, database, home, read, reveal, soul, write};
-pub(crate) use rollback::Snapshot;
+// Public because the desktop crate rolls back a multi-file settings edit the
+// same way every command does. The rest of this module stays crate-private:
+// nothing outside should be choosing its own atomic-write primitive.
+pub use rollback::Snapshot;
 
 /// `SYNAPSE_DATA` decides where the data directory is, and it is process-global
 /// while tests run in parallel threads. Any test that points it at a temporary

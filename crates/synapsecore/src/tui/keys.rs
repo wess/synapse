@@ -1,0 +1,163 @@
+//! Keys in, intent out.
+//!
+//! This module decides nothing and touches nothing: it turns a keypress into an
+//! [`Action`] and lets the loop do the work. Anything that writes goes through
+//! `Confirm` first, so no single key can delete a memory or wipe a store.
+
+use crate::brain::Optimization;
+use crate::tui::state::{self, Mode, Notice, PAGES, Page, Pending, State};
+use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+
+pub enum Action {
+    None,
+    Refresh,
+    /// The vault list moved; only that page's secrets need re-reading.
+    Secrets,
+    DeleteMemory(i64),
+    SetOptimization(Optimization),
+    ToggleMesh,
+}
+
+pub fn handle(state: &mut State, key: KeyEvent) -> Action {
+    match state.mode {
+        Mode::Search => search(state, key),
+        Mode::Help => {
+            state.mode = Mode::Browse;
+            Action::None
+        }
+        Mode::Confirm(pending) => confirm(state, key, pending),
+        Mode::Browse => browse(state, key),
+    }
+}
+
+fn search(state: &mut State, key: KeyEvent) -> Action {
+    match key.code {
+        // Both leave the search box; neither throws the query away, because
+        // retyping what you just typed is the most annoying possible outcome.
+        KeyCode::Esc | KeyCode::Enter => {
+            state.mode = Mode::Browse;
+            Action::Refresh
+        }
+        KeyCode::Backspace => {
+            state.query.pop();
+            Action::Refresh
+        }
+        KeyCode::Char(character) => {
+            state.query.push(character);
+            Action::Refresh
+        }
+        _ => Action::None,
+    }
+}
+
+fn confirm(state: &mut State, key: KeyEvent, pending: Pending) -> Action {
+    // Only `y` confirms. Every other key, including Enter, abandons — Enter is
+    // what a person presses to dismiss something they did not read.
+    let action = match (key.code, pending) {
+        (KeyCode::Char('y'), Pending::DeleteMemory(id)) => Action::DeleteMemory(id),
+        _ => {
+            state.notice = Notice::Ready;
+            Action::None
+        }
+    };
+    state.mode = Mode::Browse;
+    action
+}
+
+fn browse(state: &mut State, key: KeyEvent) -> Action {
+    if key.modifiers.contains(KeyModifiers::CONTROL) && matches!(key.code, KeyCode::Char('c')) {
+        state.quit = true;
+        return Action::None;
+    }
+    match key.code {
+        KeyCode::Char('q') | KeyCode::Esc => {
+            state.quit = true;
+            Action::None
+        }
+        KeyCode::Char('?') => {
+            state.mode = Mode::Help;
+            Action::None
+        }
+        KeyCode::Char('r') => Action::Refresh,
+
+        KeyCode::Tab | KeyCode::Right | KeyCode::Char('l') => turn(state, 1),
+        KeyCode::BackTab | KeyCode::Left | KeyCode::Char('h') => turn(state, -1),
+        KeyCode::Char(digit @ '1'..='6') => {
+            let index = digit as usize - '1' as usize;
+            state.page = PAGES[index];
+            page(state)
+        }
+
+        KeyCode::Down | KeyCode::Char('j') => {
+            state::move_(state, 1);
+            moved(state)
+        }
+        KeyCode::Up | KeyCode::Char('k') => {
+            state::move_(state, -1);
+            moved(state)
+        }
+        KeyCode::PageDown => {
+            state::move_(state, 10);
+            moved(state)
+        }
+        KeyCode::PageUp => {
+            state::move_(state, -10);
+            moved(state)
+        }
+        KeyCode::Home | KeyCode::Char('g') => {
+            state::setcursor(state, 0);
+            moved(state)
+        }
+        KeyCode::End | KeyCode::Char('G') => {
+            state::setcursor(state, state::rows(state).saturating_sub(1));
+            moved(state)
+        }
+
+        KeyCode::Char('/') if state.page == Page::Memories => {
+            state.mode = Mode::Search;
+            Action::None
+        }
+        KeyCode::Char('d') if state.page == Page::Memories => match state::selectedmemory(state) {
+            Some(memory) => {
+                let id = memory.id;
+                state.notice = Notice::Error(format!("delete memory #{id}? y to confirm"));
+                state.mode = Mode::Confirm(Pending::DeleteMemory(id));
+                Action::None
+            }
+            None => Action::None,
+        },
+
+        KeyCode::Char('f') if state.page == Page::Settings => {
+            Action::SetOptimization(Optimization::Full)
+        }
+        KeyCode::Char('b') if state.page == Page::Settings => {
+            Action::SetOptimization(Optimization::Balanced)
+        }
+        KeyCode::Char('n') if state.page == Page::Settings => {
+            Action::SetOptimization(Optimization::Lean)
+        }
+        KeyCode::Char('m') if state.page == Page::Settings => Action::ToggleMesh,
+
+        _ => Action::None,
+    }
+}
+
+fn turn(state: &mut State, delta: isize) -> Action {
+    let at = state::slot(state.page) as isize;
+    let count = PAGES.len() as isize;
+    state.page = PAGES[((at + delta).rem_euclid(count)) as usize];
+    page(state)
+}
+
+/// Arriving at a page. Only the vault page has to fetch anything, because its
+/// second column belongs to whichever row the cursor happens to be on.
+fn page(state: &State) -> Action {
+    match state.page {
+        Page::Vaults => Action::Secrets,
+        _ => Action::None,
+    }
+}
+
+fn moved(state: &State) -> Action {
+    page(state)
+}

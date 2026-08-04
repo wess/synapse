@@ -1,11 +1,15 @@
 [workspace]
 members = ["crates/synapse", "crates/synapsesync"]
-# synapseserve is its own workspace root, not a member here. Cargo loads every
-# member's manifest whatever you asked it to build, so as a member it could not
-# be built without ../guise on disk — a headless Linux server would have needed
-# a checkout of a GPUI theming library it never links. It keeps its own
-# lockfile, which also matches how it ships: on its own schedule.
-exclude = ["crates/synapseserve"]
+# synapsecore and synapseserve are their own workspace roots, not members here.
+# Cargo loads every member's manifest whatever you asked it to build, so as
+# members they could not be built without ../guise on disk — a terminal-only
+# machine would have needed a checkout of a GPUI theming library it never
+# links. Each keeps its own lockfile, which also matches how they ship: on
+# their own schedules.
+#
+# Being excluded is not the same as being unreachable: crates/synapse depends on
+# synapsecore by path, so building this workspace still builds it.
+exclude = ["crates/synapsecore", "crates/synapseserve"]
 resolver = "3"
 
 [workspace.package]

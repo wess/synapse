@@ -1,4 +1,4 @@
-use crate::agent::{Agent, Detection};
+use synapsecore::agent::{Agent, Detection};
 
 #[derive(Clone)]
 pub struct Row {

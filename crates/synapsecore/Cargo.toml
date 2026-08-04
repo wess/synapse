@@ -1,0 +1,84 @@
+# Its own workspace root rather than a member of the one above, for the same
+# reason as synapseserve: Cargo reads every workspace member's manifest whatever
+# you asked it to build, so as a member this crate could not be built without
+# ../guise on disk — a terminal-only machine would have needed a checkout of a
+# GPUI theming library it never links.
+#
+# Feature-gating the desktop dependency does not work and neither does
+# target-gating it. Cargo builds the resolve graph before it applies features or
+# targets, so it reads the manifest at the other end of a path dependency even
+# when nothing will link it. A package that must build without guise is a
+# package that must not name guise.
+#
+# The cost is that dependency versions are written out here instead of
+# inherited, and that a workspace-wide `cargo test` at the repository root does
+# not reach these tests. CI runs them in their own job, on Linux, with no guise
+# checked out — which is what keeps the property above from quietly regressing.
+[workspace]
+
+[package]
+name = "synapsecore"
+# Keep this in step with crates/synapse: `synapse version` reads the version of
+# the crate that holds the command, and the two ship as one product. Only the
+# desktop crate's version triggers the release workflow.
+version = "0.1.0-beta.18"
+edition = "2024"
+description = "Memory, credentials, and the command surface for Synapse, without a window"
+
+# A library with the `synapse-cli` binary over it. The desktop crate links the
+# library and adds a window; a terminal-only machine builds this crate alone.
+[[bin]]
+name = "synapse-cli"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1.0"
+chrono = { version = "0.4", default-features = false, features = ["clock"] }
+directories = "6.0"
+fs2 = "0.4"
+rmcp = { version = "2.2.0", default-features = false, features = ["macros", "server", "transport-io"] }
+rpassword = "7.5"
+schemars = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+serde-saphyr = "1.0.0-rc.1"
+sha2 = "0.10"
+sqlx = { version = "0.8", default-features = false, features = [
+    "macros",
+    "runtime-tokio",
+    "sqlite",
+] }
+tokio = { version = "1.0", features = [
+    "macros",
+    "process",
+    "rt-multi-thread",
+    "sync",
+    "time",
+] }
+toml = "0.9"
+
+# The terminal dashboard. crossterm comes through ratatui's re-export rather
+# than as a dependency of its own, so the two can never drift to versions that
+# disagree about what a key event is.
+ratatui = { version = "0.30.2", default-features = false, features = [
+    "crossterm",
+], optional = true }
+
+# On by default because the binary is the reason this crate exists. An embedder
+# that wants the library and not a screen turns it off:
+#   synapsecore = { version = "*", default-features = false }
+[features]
+default = ["tui"]
+tui = ["dep:ratatui"]
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+# Secret values live in the macOS Keychain. Off macOS the vault reports that it
+# cannot hold a value rather than inventing somewhere to put one; memory, the
+# MCP server, the mesh, skills, and scope resolution all work without it.
+[target.'cfg(target_os = "macos")'.dependencies]
+security-framework = "3.7"
+
+[dev-dependencies]
+tempfile = "3.20"

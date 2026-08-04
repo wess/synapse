@@ -31,7 +31,10 @@ for (const asset of ["site.js", "grain.jpg"]) {
   await Bun.write(join(output, asset), Bun.file(join(import.meta.dir, asset)));
 }
 
-await Bun.write(join(output, "icon.svg"), Bun.file(join(project, "assets", "icon.svg")));
+await Bun.write(
+  join(output, "icon.svg"),
+  Bun.file(join(project, "crates", "synapse", "assets", "icon.svg")),
+);
 await Bun.write(join(output, ".nojekyll"), "");
 
 const search = pages

@@ -61,7 +61,7 @@ pub fn configure(window: WindowHandle<Dashboard>, cx: &mut App) {
     });
     cx.on_action::<InstallCli>(|_, cx| installcli(cx));
     cx.on_action::<OpenData>(|_, cx| {
-        let result = crate::files::data().and_then(|path| crate::files::reveal(&path));
+        let result = synapsecore::files::data().and_then(|path| synapsecore::files::reveal(&path));
         setresult(
             result.map(|_| "Opened the Synapse data folder.".to_owned()),
             cx,
@@ -83,14 +83,15 @@ pub fn configure(window: WindowHandle<Dashboard>, cx: &mut App) {
 }
 
 pub fn installcli(cx: &mut App) {
-    let result = crate::cli::install().map(|path| format!("CLI installed at {}.", path.display()));
+    let result =
+        synapsecore::cli::install().map(|path| format!("CLI installed at {}.", path.display()));
     setresult(result, cx);
 }
 
 pub fn installshell(cx: &mut App) {
     let result = (|| {
-        let command = crate::cli::install()?;
-        let integration = crate::shellsetup::install(&command)?;
+        let command = synapsecore::cli::install()?;
+        let integration = synapsecore::shellsetup::install(&command)?;
         Ok(format!(
             "{} shell integration enabled in {}. Open a new terminal to use it.",
             integration.shell,
@@ -102,8 +103,8 @@ pub fn installshell(cx: &mut App) {
 
 pub fn removeshell(cx: &mut App) {
     let result = (|| {
-        let command = crate::cli::destination()?;
-        let integration = crate::shellsetup::remove(&command)?;
+        let command = synapsecore::cli::destination()?;
+        let integration = synapsecore::shellsetup::remove(&command)?;
         Ok(format!(
             "Shell integration removed from {}. Existing terminals keep it until they close.",
             integration.path.display()

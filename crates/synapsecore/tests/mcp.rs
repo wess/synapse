@@ -5,7 +5,7 @@ use std::process::{Command, Stdio};
 #[test]
 fn mcp_stdio_lists_and_calls_every_tool() {
     let root = tempfile::tempdir().unwrap();
-    let mut child = Command::new(env!("CARGO_BIN_EXE_synapse"))
+    let mut child = Command::new(env!("CARGO_BIN_EXE_synapse-cli"))
         .arg("mcp")
         .env("SYNAPSE_HOME", root.path().join("home"))
         .env("SYNAPSE_DATA", root.path().join("data"))
@@ -142,7 +142,7 @@ fn existing_guidance_still_announces_the_connection() {
     let data = root.path().join("data");
     std::fs::create_dir_all(&data).unwrap();
     std::fs::write(data.join("SOUL.md"), "# Mine\n\nKeep this.\n").unwrap();
-    let mut child = Command::new(env!("CARGO_BIN_EXE_synapse"))
+    let mut child = Command::new(env!("CARGO_BIN_EXE_synapse-cli"))
         .arg("mcp")
         .env("SYNAPSE_HOME", root.path().join("home"))
         .env("SYNAPSE_DATA", &data)
@@ -203,7 +203,7 @@ fn two_sessions_hand_work_to_each_other_across_the_mesh() {
     let root = tempfile::tempdir().unwrap();
     let home = root.path().join("home");
     let data = root.path().join("data");
-    let status = Command::new(env!("CARGO_BIN_EXE_synapse"))
+    let status = Command::new(env!("CARGO_BIN_EXE_synapse-cli"))
         .args(["settings", "mesh", "on"])
         .env("SYNAPSE_HOME", &home)
         .env("SYNAPSE_DATA", &data)
@@ -406,7 +406,7 @@ impl Session {
 }
 
 fn session(home: &std::path::Path, data: &std::path::Path) -> Session {
-    let mut child = Command::new(env!("CARGO_BIN_EXE_synapse"))
+    let mut child = Command::new(env!("CARGO_BIN_EXE_synapse-cli"))
         .arg("mcp")
         .env("SYNAPSE_HOME", home)
         .env("SYNAPSE_DATA", data)

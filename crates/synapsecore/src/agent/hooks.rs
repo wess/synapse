@@ -205,6 +205,11 @@ fn points(command: &str, binary: &Path, subcommand: &str) -> bool {
     command.trim() == expected || command.trim() == format!("{} {subcommand}", binary.display())
 }
 
+/// Names a Synapse binary is shipped under. The desktop bundle and the launcher
+/// it installs are both `synapse`; the terminal build is `synapse-cli`, so a
+/// machine that has only ever run the CLI still has to recognise its own work.
+const NAMES: [&str; 2] = ["synapse", "synapse-cli"];
+
 /// Whether a configured command is *some* Synapse binary running `subcommand`.
 /// A path that has moved still has to be recognised, or every setup would add
 /// another copy beside the last one.
@@ -216,7 +221,7 @@ fn stalecommand(command: &str, subcommand: &str) -> bool {
     Path::new(program.trim_matches('\''))
         .file_stem()
         .and_then(|stem| stem.to_str())
-        .is_some_and(|stem| stem == "synapse")
+        .is_some_and(|stem| NAMES.contains(&stem))
 }
 
 /// A path with a space in it has to survive being run through a shell.

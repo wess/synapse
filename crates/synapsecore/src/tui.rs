@@ -1,0 +1,320 @@
+//! The dashboard, in a terminal.
+//!
+//! The same six pages the desktop draws, reading the same store through the
+//! same functions. It exists because a machine with no display still has
+//! memory, connected tools, and a mesh worth looking at, and `synapse status`
+//! answers three lines of that.
+//!
+//! Nothing here holds a handle open. Every refresh opens the store, reads, and
+//! drops it, which costs a few milliseconds on a keypress and means the
+//! dashboard never becomes the reason `synapse data restore` reports that
+//! something is using the database.
+
+mod connections;
+mod draw;
+mod keys;
+mod load;
+mod memories;
+mod mesh;
+mod settings;
+mod skills;
+mod state;
+mod theme;
+mod vaults;
+
+use anyhow::{Context, Result};
+use keys::Action;
+use ratatui::crossterm::event::{self, Event, KeyEventKind};
+use ratatui::crossterm::terminal;
+use state::Notice;
+use std::time::Duration;
+
+/// How long a frame waits for a key before drawing again. Long enough that an
+/// idle dashboard is not a busy loop, short enough that a keypress feels
+/// immediate.
+const TICK: Duration = Duration::from_millis(250);
+
+/// Whether this process is attached to a terminal that can be drawn on.
+///
+/// Checked before anything is set up, because entering raw mode on a pipe
+/// corrupts the output of whatever is reading it, and a person who ran
+/// `synapse | less` asked for text.
+///
+/// A size of zero counts as no terminal. Some pseudo-terminals — the one
+/// `script` allocates, and a few CI runners — report success and no room, and
+/// drawing into that is a loop that clears the screen forever and shows
+/// nothing. Falling through to the text form is the useful answer.
+pub fn available() -> bool {
+    terminal::size().is_ok_and(|(columns, rows)| columns > 0 && rows > 0)
+}
+
+pub fn run() -> Result<()> {
+    let runtime = tokio::runtime::Runtime::new().context("could not start the async runtime")?;
+    let mut state = runtime.block_on(load::initial())?;
+
+    let mut terminal = ratatui::init();
+    let outcome = loop {
+        if let Err(error) = terminal.draw(|frame| draw::frame(frame, &state)) {
+            break Err(error).context("could not draw the dashboard");
+        }
+        match pump(&runtime, &mut state) {
+            Ok(()) if state.quit => break Ok(()),
+            Ok(()) => {}
+            Err(error) => break Err(error),
+        }
+    };
+    // Restore before returning either way: a terminal left in raw mode is worse
+    // than whatever went wrong.
+    ratatui::restore();
+    outcome
+}
+
+/// One pass of the event loop: wait for input, turn it into an action, run it.
+fn pump(runtime: &tokio::runtime::Runtime, state: &mut state::State) -> Result<()> {
+    if !event::poll(TICK).context("could not read the terminal")? {
+        return Ok(());
+    }
+    let Event::Key(key) = event::read().context("could not read the terminal")? else {
+        return Ok(());
+    };
+    // Windows reports press and release; acting on both double-handles a key.
+    if key.kind != KeyEventKind::Press {
+        return Ok(());
+    }
+    match keys::handle(state, key) {
+        Action::None => Ok(()),
+        Action::Refresh => {
+            runtime.block_on(load::refresh(state));
+            Ok(())
+        }
+        Action::Secrets => {
+            runtime.block_on(load::secrets(state));
+            Ok(())
+        }
+        Action::DeleteMemory(id) => {
+            runtime.block_on(async {
+                match deletememory(state, id).await {
+                    Ok(()) => state.notice = Notice::Success(format!("deleted memory #{id}")),
+                    Err(error) => state.notice = Notice::Error(error.to_string()),
+                }
+                load::memories(state).await;
+            });
+            Ok(())
+        }
+        Action::SetOptimization(optimization) => {
+            runtime.block_on(async {
+                let brain = crate::brain::Brain::open(&state.database).await;
+                match brain {
+                    Ok(brain) => match brain.setoptimization(optimization).await {
+                        Ok(()) => {
+                            state.optimization = optimization;
+                            state.notice = Notice::Success("recall budget saved".to_owned());
+                        }
+                        Err(error) => state.notice = Notice::Error(error.to_string()),
+                    },
+                    Err(error) => state.notice = Notice::Error(error.to_string()),
+                }
+            });
+            Ok(())
+        }
+        Action::ToggleMesh => {
+            runtime.block_on(async {
+                let wanted = !state.meshenabled;
+                match crate::brain::Brain::open(&state.database).await {
+                    Ok(brain) => match brain.setmesh(wanted).await {
+                        Ok(()) => {
+                            state.meshenabled = wanted;
+                            state.notice = Notice::Success(
+                                if wanted {
+                                    "the mesh is on · new sessions get the tools"
+                                } else {
+                                    "the mesh is off · running sessions keep theirs"
+                                }
+                                .to_owned(),
+                            );
+                        }
+                        Err(error) => state.notice = Notice::Error(error.to_string()),
+                    },
+                    Err(error) => state.notice = Notice::Error(error.to_string()),
+                }
+                load::refresh(state).await;
+            });
+            Ok(())
+        }
+    }
+}
+
+async fn deletememory(state: &state::State, id: i64) -> Result<()> {
+    let brain = crate::brain::Brain::open(&state.database).await?;
+    brain
+        .deletememory(id)
+        .await?
+        .map(|_| ())
+        .context("that memory was already gone")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::brain::{Memory, MemoryScope};
+    use crate::tui::state::{Mode, PAGES, Page, Pending, State};
+    use ratatui::Terminal;
+    use ratatui::backend::TestBackend;
+    use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+
+    fn sample() -> State {
+        State {
+            page: PAGES[0],
+            mode: Mode::Browse,
+            notice: Notice::Ready,
+            quit: false,
+            database: std::path::PathBuf::from("/tmp/brain.db"),
+            stats: Default::default(),
+            optimization: Default::default(),
+            meshenabled: false,
+            connections: Vec::new(),
+            cli: crate::cli::InstallStatus::Missing,
+            shell: None,
+            guidance: None,
+            memories: vec![Memory {
+                id: 1,
+                body: "the first line\nand a second".to_owned(),
+                source: "review".to_owned(),
+                scope: MemoryScope::Global,
+                project: String::new(),
+                created: 1_700_000_000,
+            }],
+            query: String::new(),
+            agents: Vec::new(),
+            workers: Vec::new(),
+            mesherror: None,
+            skills: Vec::new(),
+            unmanaged: Vec::new(),
+            vaults: Vec::new(),
+            secrets: Vec::new(),
+            scope: None,
+            cursor: [0; PAGES.len()],
+        }
+    }
+
+    fn render(state: &State, width: u16, height: u16) -> String {
+        let mut terminal = Terminal::new(TestBackend::new(width, height)).expect("test terminal");
+        terminal
+            .draw(|frame| draw::frame(frame, state))
+            .expect("draw");
+        terminal
+            .backend()
+            .buffer()
+            .content()
+            .iter()
+            .map(ratatui::buffer::Cell::symbol)
+            .collect()
+    }
+
+    /// A panic inside `draw` happens with the terminal already in raw mode, so
+    /// it does not just fail — it leaves the shell unusable. Every page is drawn
+    /// at a normal size and at one far smaller than any layout was written for.
+    #[test]
+    fn every_page_draws_at_any_size_it_is_given() {
+        for page in PAGES {
+            for (width, height) in [(80, 24), (200, 60), (20, 8), (8, 4), (1, 1)] {
+                let mut state = sample();
+                state.page = page;
+                render(&state, width, height);
+            }
+        }
+    }
+
+    #[test]
+    fn the_help_overlay_draws_over_a_terminal_too_small_to_hold_it() {
+        let mut state = sample();
+        state.mode = Mode::Help;
+        render(&state, 10, 3);
+    }
+
+    #[test]
+    fn an_empty_list_takes_cursor_keys_without_moving_or_panicking() {
+        let mut state = sample();
+        state.memories.clear();
+        state.page = Page::Memories;
+        for code in [KeyCode::Down, KeyCode::Up, KeyCode::Char('G'), KeyCode::End] {
+            keys::handle(&mut state, KeyEvent::new(code, KeyModifiers::NONE));
+        }
+        assert_eq!(state::cursor(&state), 0);
+        render(&state, 80, 24);
+    }
+
+    #[test]
+    fn only_y_confirms_a_delete_and_everything_else_abandons_it() {
+        let mut state = sample();
+        state.page = Page::Memories;
+        state.mode = Mode::Confirm(Pending::DeleteMemory(7));
+        let action = keys::handle(
+            &mut state,
+            KeyEvent::new(KeyCode::Char('y'), KeyModifiers::NONE),
+        );
+        assert!(matches!(action, Action::DeleteMemory(7)));
+
+        // Enter especially: it is what somebody presses to dismiss a prompt
+        // they have not read, and it must not be the one that deletes.
+        for code in [KeyCode::Enter, KeyCode::Char('d'), KeyCode::Esc] {
+            let mut state = sample();
+            state.mode = Mode::Confirm(Pending::DeleteMemory(7));
+            let action = keys::handle(&mut state, KeyEvent::new(code, KeyModifiers::NONE));
+            assert!(matches!(action, Action::None));
+            assert!(matches!(state.mode, Mode::Browse));
+        }
+    }
+
+    #[test]
+    fn leaving_the_search_box_keeps_what_was_typed() {
+        let mut state = sample();
+        state.page = Page::Memories;
+        keys::handle(
+            &mut state,
+            KeyEvent::new(KeyCode::Char('/'), KeyModifiers::NONE),
+        );
+        assert!(matches!(state.mode, Mode::Search));
+        for character in "hel".chars() {
+            keys::handle(
+                &mut state,
+                KeyEvent::new(KeyCode::Char(character), KeyModifiers::NONE),
+            );
+        }
+        keys::handle(
+            &mut state,
+            KeyEvent::new(KeyCode::Backspace, KeyModifiers::NONE),
+        );
+        keys::handle(&mut state, KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE));
+        assert!(matches!(state.mode, Mode::Browse));
+        assert_eq!(state.query, "he");
+    }
+
+    /// `q` is a search term as often as it is a command. While the box is open
+    /// every printable key has to be a character, or the query can never
+    /// contain one.
+    #[test]
+    fn typing_q_into_the_search_box_does_not_quit() {
+        let mut state = sample();
+        state.page = Page::Memories;
+        state.mode = Mode::Search;
+        keys::handle(
+            &mut state,
+            KeyEvent::new(KeyCode::Char('q'), KeyModifiers::NONE),
+        );
+        assert!(!state.quit);
+        assert_eq!(state.query, "q");
+    }
+
+    #[test]
+    fn pages_wrap_in_both_directions() {
+        let mut state = sample();
+        keys::handle(
+            &mut state,
+            KeyEvent::new(KeyCode::BackTab, KeyModifiers::NONE),
+        );
+        assert_eq!(state.page, PAGES[PAGES.len() - 1]);
+        keys::handle(&mut state, KeyEvent::new(KeyCode::Tab, KeyModifiers::NONE));
+        assert_eq!(state.page, PAGES[0]);
+    }
+}

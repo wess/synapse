@@ -1,25 +1,14 @@
-mod agent;
-mod brain;
-mod cli;
-mod crashes;
-mod database;
-mod files;
-mod imports;
-mod instructions;
-mod mcp;
-mod relay;
-mod shellsetup;
-mod skill;
 mod ui;
-mod vault;
+
+use synapsecore::cli::{self, Outcome};
 
 fn main() -> anyhow::Result<()> {
     match cli::run(std::env::args_os().skip(1).collect())? {
-        cli::Outcome::App => {
+        Outcome::App => {
             ui::run();
             Ok(())
         }
-        cli::Outcome::Exit(0) => Ok(()),
-        cli::Outcome::Exit(code) => std::process::exit(code),
+        Outcome::Exit(0) => Ok(()),
+        Outcome::Exit(code) => std::process::exit(code),
     }
 }
