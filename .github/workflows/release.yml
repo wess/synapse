@@ -84,6 +84,14 @@ jobs:
       - name: Test
         run: cargo test --locked
 
+      # The root workspace holds the window and the wire format. Nearly every
+      # test in the repository lives in synapsecore, which is its own workspace
+      # root and so is not reached by the command above — without this step the
+      # gate would let a broken memory engine through on a green run.
+      - name: Test synapsecore
+        working-directory: synapse/crates/synapsecore
+        run: cargo test --locked
+
   create-release:
     runs-on: ubuntu-latest
     needs: [check-version, test]
