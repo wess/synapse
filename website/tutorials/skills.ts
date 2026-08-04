@@ -5,7 +5,7 @@ export const skills: Page = {
   path: "tutorials/skills/index.html",
   title: "Keep one skill library across every tool",
   description:
-    "Write an Agent Skill once, install it into Codex and Claude Code together, and watch Synapse tell the difference between a library that moved on and a copy somebody edited by hand.",
+    "Write an Agent Skill once, install it into every connected tool together, and watch Synapse tell the difference between a library that moved on and a copy somebody edited by hand.",
   kind: "tutorial",
   toc: [
     { label: "Outcome", id: "outcome" },

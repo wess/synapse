@@ -13,7 +13,7 @@ use anyhow::{Context, Result};
 use std::ffi::OsString;
 use std::path::Path;
 
-const USAGE: &str = "usage: synapse relay launch <name> [--role <role>] [--tool claude|codex] \
+const USAGE: &str = "usage: synapse relay launch <name> [--role <role>] [--tool claude|codex|pi] \
      [--task <text>] [--channel <name>]... [--allow-tool <rule>]... [--model <model>] \
      [--directory <folder>] [--lead] [--optimize] [--strict] [--command <template>] [--print]";
 

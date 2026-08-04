@@ -31,7 +31,7 @@ pub fn disconnect(arguments: &[OsString]) -> Result<Outcome> {
     };
     anyhow::ensure!(
         !chosen.is_empty(),
-        "no connected tool matches `{}`; use claude or codex",
+        "no connected tool matches `{}`; use claude, codex, or pi",
         wanted.unwrap_or_default()
     );
 

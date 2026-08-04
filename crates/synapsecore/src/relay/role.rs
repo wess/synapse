@@ -38,7 +38,7 @@ pub const TEMPLATE: &str = "# channels = [\"frontend\"]  # joined automatically 
 struct File {
     #[serde(default)]
     channels: Vec<String>,
-    /// Which connected tool to launch: `claude` or `codex`.
+    /// Which connected tool to launch: `claude`, `codex`, or `pi`.
     tool: Option<String>,
     model: Option<String>,
     #[serde(default)]

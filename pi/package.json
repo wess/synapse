@@ -1,0 +1,29 @@
+{
+  "name": "synapse-pi",
+  "version": "0.1.0",
+  "description": "Synapse for pi: durable local memory, scoped credential metadata, and the agent mesh, as native pi tools",
+  "keywords": ["pi-package", "pi", "synapse", "memory", "mcp", "agent-mesh"],
+  "license": "MIT",
+  "author": "Wess Cope",
+  "homepage": "https://wess.io/synapse/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wess/synapse.git",
+    "directory": "pi"
+  },
+  "pi": {
+    "extensions": ["./extensions"]
+  },
+  "scripts": {
+    "check": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.0"
+  },
+  "files": ["extensions", "README.md"]
+}

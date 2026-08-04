@@ -260,7 +260,7 @@ fn chosen(arguments: &[OsString]) -> Result<Vec<Agent>> {
         .collect();
     anyhow::ensure!(
         !matched.is_empty(),
-        "unknown tool `{wanted}`; use claude or codex"
+        "unknown tool `{wanted}`; use claude, codex, or pi"
     );
     Ok(matched)
 }
@@ -314,7 +314,7 @@ mod tests {
     #[test]
     fn every_tool_is_the_default_and_an_unknown_one_is_refused() {
         let bare: Vec<OsString> = vec![OsString::from("install")];
-        assert_eq!(chosen(&bare).unwrap().len(), 2);
+        assert_eq!(chosen(&bare).unwrap().len(), 3);
 
         let unknown: Vec<OsString> = ["install", "--tool", "emacs"]
             .iter()

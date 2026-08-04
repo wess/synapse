@@ -171,7 +171,7 @@ synapse memory list synapserecovery</code></pre>
 
       <li>
         <h3 id="stop">Stop every database user</h3>
-        <p>Quit the Synapse desktop app. Close every connected Codex and Claude Code session so their <code>synapse mcp</code> child processes exit. A plain CLI command releases its lock when it finishes, so nothing needs doing about those.</p>
+        <p>Quit the Synapse desktop app. Close every connected session so its <code>synapse mcp</code> child process exits. A plain CLI command releases its lock when it finishes, so nothing needs doing about those.</p>
         <p>Reading the database takes a shared lock; restoring requires an exclusive one. If you deliberately leave a session open, the next step will refuse and tell you to close the app and connected tools.</p>
         
   <aside class="note">
@@ -236,7 +236,7 @@ synapse memory list synapserecovery</code></pre>
         <tr><td>Your <code>SOUL.md</code></td><td>A file beside the database, not a table inside it. Copy it separately if it matters — and it usually does.</td></tr>
         <tr><td>Your skill library</td><td>Directories under the data folder. Copy <code>skills/</code> separately.</td></tr>
         <tr><td>Roles and teams</td><td>TOML under the data folder, plus anything in a project's own <code>.synapse/roles/</code>, which travels with that checkout instead.</td></tr>
-        <tr><td>Tool configuration</td><td>Belongs to Codex and Claude Code. Reconnect on the new machine rather than copying their files.</td></tr>
+        <tr><td>Tool configuration</td><td>Belongs to the tools themselves. Reconnect on the new machine rather than copying their files.</td></tr>
       </tbody>
     </table>
     

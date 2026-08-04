@@ -6,8 +6,10 @@
 //! Unlike a mesh that runs over HTTP, nothing here needs a port, a token, or a
 //! generated credential: the agent reaches the mesh through the same `synapse
 //! mcp` stdio server it already uses for memory. A tool that Synapse is already
-//! connected to is launched as-is; one that is not is handed a config pointing
-//! at this binary, so a launch works before setup has ever been run.
+//! connected to is launched as-is; one that is not is handed what it needs for
+//! the life of the process — a config pointing at this binary, or for pi the
+//! extension that carries the same tools — so a launch works before setup has
+//! ever been run, and leaves the machine as it found it.
 
 use crate::agent::{Agent, Kind};
 use crate::relay::{harness, role};
@@ -25,7 +27,7 @@ pub struct Options<'a> {
     /// and the child is told about it through `SYNAPSE_PROJECT_DIR` so its
     /// memory and mesh registration are scoped to the right checkout.
     pub root: &'a Path,
-    /// `claude` or `codex`; falls back to the role's tool, then Claude Code.
+    /// `claude`, `codex`, or `pi`; falls back to the role's tool, then Claude Code.
     pub tool: Option<&'a str>,
     /// Per-launch focus, distinct from the role's durable brief.
     pub task: Option<&'a str>,
@@ -58,7 +60,9 @@ pub struct Launch {
     /// The tool the options resolved to.
     pub tool: String,
     /// A fixed session id for a resumable headless Claude Code worker, so its
-    /// context survives a crash. Absent for interactive or non-Claude launches.
+    /// context survives a crash. Absent for an interactive launch, and absent
+    /// for pi, which takes one flag for both claiming and resuming a session and
+    /// so carries it in the argv itself.
     pub session: Option<String>,
 }
 
@@ -142,8 +146,9 @@ pub fn launch(options: &Options) -> Result<Launch> {
     let kind = match name.as_str() {
         "claude" => Kind::Claude,
         "codex" => Kind::Codex,
+        "pi" => Kind::Pi,
         other => anyhow::bail!(
-            "unknown tool `{other}`; use claude or codex, or pass a template with --command"
+            "unknown tool `{other}`; use claude, codex, or pi, or pass a template with --command"
         ),
     };
     let agent = resolveagent(kind)?;
@@ -153,34 +158,60 @@ pub fn launch(options: &Options) -> Result<Launch> {
         .clone()
         .with_context(|| format!("{} is not installed or is not on PATH", agent.name))?;
 
-    // An already-connected tool loads the Synapse server from its own user
-    // configuration. Adding a second server under the same name would give the
-    // agent two copies of every tool, so a generated config is written only when
-    // the tool has no connection of its own yet.
-    let config = if detection.configured {
-        None
-    } else {
-        let path = configpath(options.name, options.root)?;
-        writeconfig(&path, options.root)?;
-        Some(path)
+    // An already-connected tool loads Synapse from its own user configuration.
+    // Adding a second copy would give the agent two of every tool, so what
+    // follows is written only for a tool that has no connection of its own yet.
+    //
+    // For pi that means *registered* rather than *configured*: its connection
+    // is a package, and a package installed from anywhere carries the same
+    // tools. Elsewhere a registration that is not configured is a stale entry
+    // pointing at a binary that may no longer exist, which is not a connection.
+    let connected = match kind {
+        Kind::Pi => detection.registered,
+        _ => detection.configured,
     };
 
     let mut launch = match kind {
-        Kind::Claude => claude(
-            &program,
-            prompt.as_deref(),
-            config.as_deref(),
-            options,
-            &allowed,
-            model.as_deref(),
-        ),
-        Kind::Codex => codex(
-            &program,
-            prompt.as_deref(),
-            config.as_deref(),
-            options,
-            model.as_deref(),
-        ),
+        Kind::Claude | Kind::Codex => {
+            let config = if connected {
+                None
+            } else {
+                let path = configpath(options.name, options.root)?;
+                writeconfig(&path, options.root)?;
+                Some(path)
+            };
+            match kind {
+                Kind::Codex => codex(
+                    &program,
+                    prompt.as_deref(),
+                    config.as_deref(),
+                    options,
+                    model.as_deref(),
+                ),
+                _ => claude(
+                    &program,
+                    prompt.as_deref(),
+                    config.as_deref(),
+                    options,
+                    &allowed,
+                    model.as_deref(),
+                ),
+            }
+        }
+        Kind::Pi => {
+            let extension = if connected {
+                None
+            } else {
+                Some(super::extension::write()?)
+            };
+            pi(
+                &program,
+                prompt.as_deref(),
+                extension.as_deref(),
+                options,
+                model.as_deref(),
+            )
+        }
     };
     launch.arguments.extend(options.extra.iter().cloned());
     launch.environment = environment;
@@ -282,6 +313,50 @@ fn codex(
         arguments,
         environment: Vec::new(),
         tool: "codex".to_owned(),
+        session: None,
+    }
+}
+
+/// pi's argv.
+///
+/// Two things it does differently. Its tools arrive in an extension rather than
+/// from an MCP client, so `--extension` is what `--mcp-config` is elsewhere.
+/// And it has no permission prompts to skip — the question it does stop to ask
+/// is whether a project's local settings are trusted, which an unattended
+/// worker has nobody to answer.
+fn pi(
+    program: &Path,
+    prompt: Option<&str>,
+    extension: Option<&Path>,
+    options: &Options,
+    model: Option<&str>,
+) -> Launch {
+    let mut arguments = Vec::new();
+    if let Some(prompt) = prompt {
+        arguments.push(prompt.to_owned());
+    }
+    if options.headless {
+        // The event stream, so a worker's log is readable without a terminal.
+        arguments.extend(["--mode".to_owned(), "json".to_owned()]);
+        // pi opens the session with this id when one exists and creates it with
+        // that id when it does not, so a respawned worker comes back to its own
+        // context without a second flag anywhere to remember it by.
+        arguments.extend(["--session-id".to_owned(), sessionid()]);
+    }
+    if options.skippermissions || options.headless {
+        arguments.push("--approve".to_owned());
+    }
+    if let Some(extension) = extension {
+        arguments.extend(["--extension".to_owned(), extension.display().to_string()]);
+    }
+    if let Some(model) = model {
+        arguments.extend(["--model".to_owned(), model.to_owned()]);
+    }
+    Launch {
+        program: program.to_path_buf(),
+        arguments,
+        environment: Vec::new(),
+        tool: "pi".to_owned(),
         session: None,
     }
 }
@@ -434,7 +509,7 @@ mod tests {
         let mut options = options(directory.path(), "gemini");
         options.tool = Some("gemini");
         let error = launch(&options).unwrap_err().to_string();
-        assert!(error.contains("claude or codex"), "got {error}");
+        assert!(error.contains("claude, codex, or pi"), "got {error}");
     }
 
     #[test]
@@ -558,6 +633,74 @@ mod tests {
                 .iter()
                 .any(|item| item == "approval_policy=\"never\"")
         );
+    }
+
+    #[test]
+    fn a_headless_pi_streams_events_and_comes_back_to_its_own_session() {
+        let launch = pi(
+            Path::new("/usr/bin/pi"),
+            Some("hi"),
+            None,
+            &Options {
+                headless: true,
+                ..options(Path::new("/tmp"), "pi")
+            },
+            None,
+        );
+        assert_eq!(launch.arguments[0], "hi");
+        let at = launch
+            .arguments
+            .iter()
+            .position(|item| item == "--mode")
+            .unwrap();
+        assert_eq!(launch.arguments[at + 1], "json");
+        let at = launch
+            .arguments
+            .iter()
+            .position(|item| item == "--session-id")
+            .unwrap();
+        assert_eq!(launch.arguments[at + 1].len(), 36);
+        // One flag does both jobs, so nothing outside this argv has to remember
+        // the id in order to bring the worker back.
+        assert!(launch.session.is_none());
+        assert!(launch.arguments.iter().any(|item| item == "--approve"));
+    }
+
+    #[test]
+    fn an_attended_pi_is_not_approved_on_its_behalf() {
+        let launch = pi(
+            Path::new("/usr/bin/pi"),
+            Some("hi"),
+            None,
+            &options(Path::new("/tmp"), "pi"),
+            None,
+        );
+        assert!(!launch.arguments.iter().any(|item| item == "--approve"));
+        assert!(!launch.arguments.iter().any(|item| item == "--mode"));
+        assert!(!launch.arguments.iter().any(|item| item == "--session-id"));
+    }
+
+    #[test]
+    fn an_unconnected_pi_is_handed_the_extension_for_this_run_only() {
+        let launch = pi(
+            Path::new("/usr/bin/pi"),
+            Some("hi"),
+            Some(Path::new("/data/relay/pi/synapse/index.ts")),
+            &options(Path::new("/tmp"), "pi"),
+            Some("sonnet"),
+        );
+        let at = launch
+            .arguments
+            .iter()
+            .position(|item| item == "--extension")
+            .unwrap();
+        assert_eq!(launch.arguments[at + 1], "/data/relay/pi/synapse/index.ts");
+        let at = launch
+            .arguments
+            .iter()
+            .position(|item| item == "--model")
+            .unwrap();
+        assert_eq!(launch.arguments[at + 1], "sonnet");
     }
 
     #[test]

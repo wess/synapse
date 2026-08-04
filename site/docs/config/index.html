@@ -118,6 +118,9 @@
         <tr><td><code>SYNAPSE_PROJECT_DIR</code></td><td>Provides the fallback project folder for MCP calls that do not carry one, and is what a launched agent is told to treat as home.</td><td>A client that launches the server outside the project working directory. Set automatically by <code>synapse launch</code> and <code>relay launch</code>.</td></tr>
         <tr><td><code>SYNAPSE_PAGE</code></td><td>Chooses which dashboard page opens first: <code>memory</code>, <code>mesh</code>, <code>skills</code>, <code>vaults</code>, or <code>settings</code>. Anything else opens Connections.</td><td>Opening the app straight to the screen you want.</td></tr>
         <tr><td><code>CODEX_HOME</code></td><td>Replaces the Codex home directory used for detection and for reading an existing Codex memory store.</td><td>A non-default Codex installation, or testing an import without touching real files.</td></tr>
+        <tr><td><code>PI_CODING_AGENT_DIR</code></td><td>pi's own variable for its agent directory, which Synapse reads for the same reason: detection, the instruction pointer, and the skills folder.</td><td>A non-default pi installation.</td></tr>
+        <tr><td><code>SYNAPSE_PI_PACKAGE</code></td><td>Replaces the package a connection to pi installs, and the source detection compares against. Defaults to <code>npm:synapse-pi</code>.</td><td>Working on the package from a checkout instead of npm.</td></tr>
+        <tr><td><code>SYNAPSE_COMMAND</code></td><td>The Synapse executable a launched pi session should talk to.</td><td>Set automatically by <code>synapse launch pi</code> so a session reaches the binary that started it.</td></tr>
         <tr><td><code>SYNAPSE_SHELL_ACTIVE</code></td><td>Identifies the shell hook currently evaluated in this shell.</td><td>Set automatically by the zsh, bash, or fish integration so status can report it.</td></tr>
         <tr><td><code>SYNAPSE_SHELL_KEYS</code></td><td>Records which managed variables the hook currently has loaded, so leaving a scope unloads exactly those and restores what was there before.</td><td>Set automatically by the shell hook. Not intended to be set by hand.</td></tr>
         <tr><td><code>SYNAPSE_SHELL_COMMAND</code></td><td>The executable the installed shell block re-invokes on each directory change.</td><td>Set automatically by the startup-file block so a moved app is still reachable.</td></tr>
@@ -141,10 +144,12 @@ SYNAPSE_BIN=&quot;$HOME/bin/synapse&quot; synapse install</code></pre>
       <tbody>
         <tr><td>Codex</td><td><code>~/.codex/config.toml</code></td><td><code>~/.codex/AGENTS.md</code></td><td><code>~/.codex/config.toml</code></td></tr>
         <tr><td>Claude Code</td><td><code>~/.claude.json</code></td><td><code>~/.claude/CLAUDE.md</code></td><td><code>~/.claude/settings.json</code></td></tr>
+        <tr><td>pi</td><td><code>~/.pi/agent/settings.json</code></td><td><code>~/.pi/agent/APPEND_SYSTEM.md</code></td><td><code>~/.pi/agent/settings.json</code></td></tr>
       </tbody>
     </table>
     <p>Connection detection parses the actual TOML or JSON entry named <code>synapse</code>. It reports connected only when the stored command resolves to the expected executable and the arguments equal <code>["mcp"]</code>. A deleted development binary therefore appears stale instead of healthy.</p>
-    <p>The two instruction files contain managed pointers to the central <code>SOUL.md</code>. A normal sync preserves other text in place. The optional consolidation action first moves that text into <code>SOUL.md</code>, then leaves both global files pointer-only so shared guidance has one editable source.</p>
+    <p>pi is the exception, because its connection is a package rather than a server command: detection reads pi's <code>packages</code> list and reports connected when the Synapse package is there. The extension in that package starts the same <code>synapse mcp</code> server and finds the executable itself, so there is no stored path to go stale.</p>
+    <p>Each instruction file contains a managed pointer to the central <code>SOUL.md</code>. A normal sync preserves other text in place. The optional consolidation action first moves that text into <code>SOUL.md</code>, then leaves the global files pointer-only so shared guidance has one editable source.</p>
     <p>Connecting Claude Code also writes two entries into <code>~/.claude/settings.json</code>: a <code>SessionStart</code> hook running <code>synapse session</code>, and a <code>statusLine</code> running <code>synapse statusline</code>. JSON has no comment syntax, so Synapse cannot mark its own entries the way it marks a block in a Markdown file. It recognizes them by the command they run instead, and carries everything else through untouched — a status line you configured yourself is reported and left alone, never replaced.</p>
     <table>
       <thead><tr><th>Entry</th><th>Command</th><th>What it produces</th></tr></thead>
@@ -153,7 +158,7 @@ SYNAPSE_BIN=&quot;$HOME/bin/synapse&quot; synapse install</code></pre>
         <tr><td><code>statusLine</code></td><td><code>synapse statusline</code></td><td>One line under the prompt for the rest of the session: model, folder, memory count, and mesh size.</td></tr>
       </tbody>
     </table>
-    <p>Both are removed by <code>synapse disconnect claude</code>. Codex exposes neither, so a Codex connection is the MCP entry and the instruction pointer only.</p>
+    <p>Both are removed by <code>synapse disconnect claude</code>. Codex exposes neither, so a Codex connection is the MCP entry and the instruction pointer only. pi has no settings entries of this kind either — its notice and status line come from the extension in its package rather than from a hook it has to be configured with.</p>
 
     <h2 id="writes">Safe writes</h2>
     <p>The built-in document views validate JSON, TOML, and YAML before saving. A write with changed content:</p>

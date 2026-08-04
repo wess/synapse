@@ -148,7 +148,7 @@ cli	/Users/example/.local/bin/synapse</code></pre>
 
       <li>
         <h3 id="connect">Connect a detected tool</h3>
-        <p>Return to the dashboard. Each supported tool appears as a row with its state. Choose <strong>Connect</strong> beside Codex or Claude Code, and the row moves from detected to connected. Connect the second tool too if you have it — the whole point is one memory behind both.</p>
+        <p>Return to the dashboard. Each supported tool appears as a row with its state. Choose <strong>Connect</strong> beside Codex, Claude Code, or pi, and the row moves from detected to connected. Connect the others too if you have them — the whole point is one memory behind all of them.</p>
         <p>Detection is not a guess. Synapse parses the actual entry named <code>synapse</code> in the tool's own configuration and reports connected only when the stored command resolves to the expected executable and its arguments are exactly <code>["mcp"]</code>. A tool whose binary was deleted or moved reads as stale, not healthy.</p>
       </li>
 
@@ -184,7 +184,7 @@ exists	true
 pointers	2/2
 consolidated	false</code></pre>
   </div>
-        <p><code>pointers 2/2</code> means both tools point at one editable <code>SOUL.md</code>. That file is yours to edit — it is where shared guidance for every connected tool lives.</p>
+        <p>A full count — <code>pointers 3/3</code> with all three tools connected — means each one points at a single editable <code>SOUL.md</code>. That file is yours to edit; it is where shared guidance for every connected tool lives.</p>
       </li>
 
       <li>

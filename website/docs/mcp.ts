@@ -22,7 +22,7 @@ export const mcp: Page = {
     <p>The process uses stdin and stdout for protocol messages. Do not wrap it in a command that writes banners or shell setup output to stdout. The server opens the same local database as the desktop app and holds a shared lifecycle lock while connected.</p>
 
     <h2 id="sessionstart">Session start</h2>
-    <p>Connecting Claude Code also installs a <code>SessionStart</code> hook that runs <code>synapse session</code>. It does two things a tool cannot do for itself: it prints a line in the terminal before the model has written anything, and it puts this project's memory into the session's context before the first turn.</p>
+    <p>Connecting Claude Code also installs a <code>SessionStart</code> hook that runs <code>synapse session</code>. It does two things a tool cannot do for itself: it prints a line in the terminal before the model has written anything, and it puts this project's memory into the session's context before the first turn. A connected pi runs the same command from its extension and shows the same two halves.</p>
     ${code("shell", `synapse session --json`)}
     ${code("json", `{
   "systemMessage": "Synapse connected · 128 memories",
@@ -44,6 +44,7 @@ export const mcp: Page = {
       </tbody>
     </table>
     ${note("Codex has no equivalent hook", "Codex does not expose a session-start hook, so a Codex session still opens by calling recall itself as the shared guidance in SOUL.md asks. Everything else — the tools, the scope rule, the response budget — is identical.")}
+    ${note("pi reaches the server through a package", "pi has no MCP client, so its connection is the synapse-pi package. The extension in it starts the same server, registers whatever tools that server advertises, runs the same session-start recall, and shows the same status line. Turn the mesh on and its sixteen tools appear in pi too, on the next start.")}
 
     <h2 id="remember">remember</h2>
     <p>Stores a durable fact, decision, preference, convention, or correction.</p>

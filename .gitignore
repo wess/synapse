@@ -176,6 +176,7 @@ node_modules/
 npm-debug.log*
 yarn-error.log
 bun.lockb
+bun.lock
 # Python (scripts / tooling)
 __pycache__/
 *.py[cod]

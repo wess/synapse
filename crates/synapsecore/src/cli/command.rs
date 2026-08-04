@@ -12,7 +12,7 @@ Usage: synapse [command]
 Commands:
   app                              Open the desktop application
   mcp                              Run the MCP stdio server
-  launch <claude|codex> [-- <flags>]
+  launch <claude|codex|pi> [-- <flags>]
                                    Start a tool wired into memory and the vault
   run -- <command> [arguments]     Run with resolved vault variables
   mux [--as <name>] [--team <team>]
@@ -57,7 +57,7 @@ Commands:
   relay channels [--json]          List channels and subscriber counts
   relay feed [--follow] [--since <id>]
                                    Print cross-agent messages
-  relay launch <name> [--role <role>] [--tool claude|codex] [--task <text>]
+  relay launch <name> [--role <role>] [--tool claude|codex|pi] [--task <text>]
                                    Open one agent wired into the mesh
   relay team open <name>           Open a whole roster, lead in this terminal
   relay role <list|show|create|edit|delete> [name] [--user]
@@ -86,7 +86,7 @@ Commands:
                                    Set the MCP recall response budget
   settings mesh <on|off>           Turn the agent mesh tools on or off
   install                          Install the synapse CLI for this user
-  disconnect [claude|codex]        Undo one tool's connection, or every tool's
+  disconnect [claude|codex|pi]     Undo one tool's connection, or every tool's
   uninstall [--data] [--confirm]   Remove everything Synapse installed
   path                             Print the local data and CLI paths
   version                          Print the version

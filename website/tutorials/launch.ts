@@ -5,7 +5,7 @@ export const launch: Page = {
   path: "tutorials/launch/index.html",
   title: "Start a tool with everything in place",
   description:
-    "Use synapse launch to open Codex or Claude Code with memory, scoped credentials, and the project root already wired, without writing anything into that tool's own configuration.",
+    "Use synapse launch to open Codex, Claude Code, or pi with memory, scoped credentials, and the project root already wired, without writing anything into that tool's own configuration.",
   kind: "tutorial",
   toc: [
     { label: "Outcome", id: "outcome" },
@@ -22,7 +22,7 @@ export const launch: Page = {
     <p>You will open a coding tool that has memory, the folder's scoped credentials, and the right project root from its first turn — and confirm that your machine is exactly as it was afterwards. <code>synapse launch</code> wires a tool for the life of one process. It is not a setup step and it writes nothing into the tool's own configuration.</p>
     <ul>
       <li>The <code>synapse</code> CLI installed and on <code>PATH</code>.</li>
-      <li>Codex or Claude Code installed. Neither needs to be connected — that is the point of this tutorial.</li>
+      <li>Codex, Claude Code, or pi installed. None of them needs to be connected — that is the point of this tutorial.</li>
       <li>A scratch project folder. Steps four and five create a disposable Keychain value.</li>
     </ul>
 

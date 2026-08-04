@@ -16,7 +16,7 @@ use anyhow::{Context, Result};
 use std::ffi::OsString;
 use std::path::PathBuf;
 
-const USAGE: &str = "usage: synapse launch <claude|codex> [--directory <folder>] [--model <model>] \
+const USAGE: &str = "usage: synapse launch <claude|codex|pi> [--directory <folder>] [--model <model>] \
      [--allow-tool <rule>]... [--strict] [--no-vault] [--as <name> [--role <role>] \
      [--task <text>] [--channel <name>]...] [--print] [-- <flags passed to the tool>]";
 

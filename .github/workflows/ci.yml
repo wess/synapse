@@ -166,6 +166,22 @@ jobs:
       - name: Test
         run: cargo test --locked
 
+  # The pi package is TypeScript that ships inside the Rust binary —
+  # relay/extension.rs embeds it so a launch can write it out for a pi that is
+  # not connected yet. Nothing in the Rust suite compiles it, so without this a
+  # type error would surface in somebody's session rather than in a build.
+  pi:
+    name: pi package · typecheck
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: pi
+    steps:
+      - uses: actions/checkout@v5
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install
+      - run: bun run check
+
   # Verify the documentation site builds and passes its own link check. pages.yml
   # runs the same two commands on push to main; this extends the check to PRs.
   site:

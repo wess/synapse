@@ -120,7 +120,7 @@
   <section class="command" id="launch">
     <div>
       <h3>launch</h3>
-      <code>synapse launch &amp;lt;claude|codex&amp;gt; [options] [-- &amp;lt;flags&amp;gt;]</code>
+      <code>synapse launch &amp;lt;claude|codex|pi&amp;gt; [options] [-- &amp;lt;flags&amp;gt;]</code>
     </div>
     <p>Start a coding tool with Synapse already in place: memory and the vault reachable over MCP, this folder's vault variables in its environment, and the project root it should treat as home. Everything after a bare <code>--</code> is passed to the tool untouched. A tool Synapse is not connected to is wired for the life of the process, so this works before setup has ever run and writes nothing into the tool's own configuration. Options: <code>--directory</code>, <code>--model</code>, <code>--allow-tool</code> (repeatable), <code>--strict</code>, <code>--no-vault</code>, <code>--skip-permissions</code>, <code>--as &lt;name&gt;</code> with <code>--role</code>, <code>--task</code>, and <code>--channel</code> to join the mesh as well, and <code>--print</code> to show the resolved command and environment names without running anything. Refuses on any scope warning, and never prints a secret value.</p>
   </section>
@@ -368,7 +368,7 @@
       <h3>relay launch</h3>
       <code>synapse relay launch &amp;lt;name&amp;gt; [options]</code>
     </div>
-    <p>Open one agent in this terminal, wired into the mesh with a role. Options: <code>--role</code>, <code>--tool claude|codex</code>, <code>--task</code>, <code>--channel</code> (repeatable), <code>--allow-tool</code> (repeatable), <code>--model</code>, <code>--directory</code>, <code>--lead</code>, <code>--optimize</code>, <code>--strict</code>, <code>--skip-permissions</code>, <code>--command &lt;template&gt;</code>, and <code>--print</code> to show the resolved command without running it.</p>
+    <p>Open one agent in this terminal, wired into the mesh with a role. Options: <code>--role</code>, <code>--tool claude|codex|pi</code>, <code>--task</code>, <code>--channel</code> (repeatable), <code>--allow-tool</code> (repeatable), <code>--model</code>, <code>--directory</code>, <code>--lead</code>, <code>--optimize</code>, <code>--strict</code>, <code>--skip-permissions</code>, <code>--command &lt;template&gt;</code>, and <code>--print</code> to show the resolved command without running it.</p>
   </section>
     
   <section class="command" id="relayteamopen">
@@ -613,9 +613,9 @@
   <section class="command" id="disconnect">
     <div>
       <h3>disconnect</h3>
-      <code>synapse disconnect [claude|codex]</code>
+      <code>synapse disconnect [claude|codex|pi]</code>
     </div>
-    <p>Undo one tool's connection, or every tool's when no name is given: the MCP registration, the managed block in its instruction file, the Claude Code session notice and status line, and any skill Synapse installed for it. A skill you wrote, or a status line somebody else configured, is left alone.</p>
+    <p>Undo one tool's connection, or every tool's when no name is given: the MCP registration or installed package, the managed block in its instruction file, the Claude Code session notice and status line, and any skill Synapse installed for it. A skill you wrote, or a status line somebody else configured, is left alone.</p>
   </section>
     
   <section class="command" id="uninstall">

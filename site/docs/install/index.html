@@ -4,10 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Install and connect — Synapse</title>
-  <meta name="description" content="Install the signed macOS beta, add the CLI, and connect Codex or Claude Code without replacing your configuration.">
+  <meta name="description" content="Install the signed macOS beta, add the CLI, and connect Codex, Claude Code, or pi without replacing your configuration.">
   <meta name="theme-color" content="#0a43c8">
   <meta property="og:title" content="Install and connect">
-  <meta property="og:description" content="Install the signed macOS beta, add the CLI, and connect Codex or Claude Code without replacing your configuration.">
+  <meta property="og:description" content="Install the signed macOS beta, add the CLI, and connect Codex, Claude Code, or pi without replacing your configuration.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://wess.io/synapse/docs/install/">
   <link rel="canonical" href="https://wess.io/synapse/docs/install/">
@@ -80,13 +80,13 @@
     <main class="article" id="content">
       <header class="articlehead">
         <h1>Install and connect</h1>
-        <span>Install the signed macOS beta, add the CLI, and connect Codex or Claude Code without replacing your configuration.</span>
+        <span>Install the signed macOS beta, add the CLI, and connect Codex, Claude Code, or pi without replacing your configuration.</span>
       </header>
       
     <h2 id="requirements">Requirements</h2>
     <ul>
       <li>Apple-silicon Mac running macOS 13 or later.</li>
-      <li>At least one supported tool on <code>PATH</code>: Codex or Claude Code.</li>
+      <li>At least one supported tool on <code>PATH</code>: Codex, Claude Code, or pi.</li>
       <li>A writable <code>~/.local/bin</code>, or a custom path supplied through <code>SYNAPSE_BIN</code>.</li>
     </ul>
 
@@ -138,26 +138,27 @@ synapse version</code></pre>
     <p>The app shows <strong>Needs repair</strong> if the managed block changes. Repair replaces only that block. Remove deletes only that block; already-running terminals retain the loaded hook until they close. Every changed existing startup file receives a <code>.synapsebackup</code> sibling and an atomic replacement.</p>
 
     <h2 id="tools">Connect tools</h2>
-    <p>On the Synapse dashboard, each detected tool shows its installation and connection state. Choose <strong>Connect</strong> for Codex or Claude Code.</p>
+    <p>On the Synapse dashboard, each detected tool shows its installation and connection state. Choose <strong>Connect</strong> for Codex, Claude Code, or pi.</p>
     <p>Setup performs two changes as one rollback-protected operation:</p>
     <ol>
-      <li>It registers the installed Synapse executable as a user-level MCP stdio server with the single argument <code>mcp</code>.</li>
+      <li>It registers the installed Synapse executable as a user-level MCP stdio server with the single argument <code>mcp</code>. pi has no MCP client, so its step is <code>pi install npm:synapse-pi</code> instead: one package that starts the same server and offers the same tools.</li>
       <li>It creates <code>SOUL.md</code> when needed and appends or refreshes a small managed pointer in the tool’s global instruction file. Existing user content remains outside that block.</li>
     </ol>
-    <p>The connected tool follows that pointer on launch, and the MCP server loads the same <code>SOUL.md</code> during initialization. The default guidance tells both tools to recall global plus current-project context, save confirmed reusable facts with project scope by default, use a Lean response first, and keep secrets out of memory.</p>
+    <p>The connected tool follows that pointer on launch, and the MCP server loads the same <code>SOUL.md</code> during initialization. The default guidance tells every connected tool to recall global plus current-project context, save confirmed reusable facts with project scope by default, use a Lean response first, and keep secrets out of memory.</p>
     <p>It also tells them to make the link visible: the first reply of a session opens with a single line such as <code>Synapse connected · 3 memories recalled</code>, or <code>Synapse unavailable</code> with a short reason when a call fails. The MCP server supplies that instruction itself, so guidance written before this behavior existed still produces the line without editing <code>SOUL.md</code>.</p>
     <table>
       <thead><tr><th>Tool</th><th>MCP store</th><th>Instruction file</th></tr></thead>
       <tbody>
         <tr><td>Codex</td><td><code>~/.codex/config.toml</code></td><td><code>~/.codex/AGENTS.md</code></td></tr>
         <tr><td>Claude Code</td><td><code>~/.claude.json</code></td><td><code>~/.claude/CLAUDE.md</code></td></tr>
+        <tr><td>pi</td><td><code>~/.pi/agent/settings.json</code></td><td><code>~/.pi/agent/APPEND_SYSTEM.md</code></td></tr>
       </tbody>
     </table>
     <p>Before changing a tool store or instruction file, Synapse creates a sibling <code>.synapsebackup</code>. If either half of setup fails, both files are restored.</p>
 
     <h2 id="guidance">Use one shared guidance file</h2>
-    <p>Open <strong>Settings → Shared guidance</strong>. <strong>Open shared guidance</strong> edits the central <code>SOUL.md</code>. <strong>Sync pointers</strong> creates it if needed and refreshes both global pointers while preserving every line outside Synapse's managed blocks.</p>
-    <p>If you want the two global files to contain only those pointers, choose <strong>Consolidate guidance</strong> and confirm. Synapse moves their unmanaged content into <code>SOUL.md</code>, deduplicates simple shared rules, writes pointer-only global files, and keeps <code>.synapsebackup</code> siblings. This operation is never performed implicitly during connection setup.</p>
+    <p>Open <strong>Settings → Shared guidance</strong>. <strong>Open shared guidance</strong> edits the central <code>SOUL.md</code>. <strong>Sync pointers</strong> creates it if needed and refreshes every global pointer while preserving every line outside Synapse's managed blocks.</p>
+    <p>If you want those global files to contain only those pointers, choose <strong>Consolidate guidance</strong> and confirm. Synapse moves their unmanaged content into <code>SOUL.md</code>, deduplicates simple shared rules, writes pointer-only global files, and keeps <code>.synapsebackup</code> siblings. This operation is never performed implicitly during connection setup.</p>
 
   <div class="codeblock">
     <div class="codebar">

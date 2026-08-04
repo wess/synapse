@@ -55,7 +55,7 @@ export const overview: Page = {
       <dt>I want my tools to work together.</dt>
       <dd>Read <a href="mesh/">Agent mesh</a>. It covers turning it on, roles, teams, background workers, and what the mesh deliberately does not do.</dd>
       <dt>I keep copying the same skill into every tool.</dt>
-      <dd>Read <a href="skills/">Skills</a>. One library, installed into Claude Code and Codex together, with drift reported rather than silently resolved.</dd>
+      <dd>Read <a href="skills/">Skills</a>. One library, installed into Claude Code, Codex, and pi together, with drift reported rather than silently resolved.</dd>
       <dt>I need automation or exact syntax.</dt>
       <dd>Use the <a href="cli/">complete CLI reference</a> and <a href="mcp/">MCP tool reference</a>.</dd>
       <dt>I am planning backups or a recovery.</dt>

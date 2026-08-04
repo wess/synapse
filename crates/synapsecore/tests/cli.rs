@@ -675,18 +675,30 @@ fn one_skill_library_installs_into_every_connected_tool() {
         before.contains("synapse-mesh\tClaude Code\tnot installed"),
         "got {before}"
     );
+    assert!(
+        before.contains("synapse-mesh\tpi\tnot installed"),
+        "got {before}"
+    );
 
     success(run(root.path(), &["skill", "install"], None));
 
-    // Each tool reads personal skills from its own folder, and both got a copy.
+    // Each tool reads personal skills from its own folder, and all of them got
+    // a copy.
     let claude = home.join(".claude/skills/synapse-mesh/SKILL.md");
     let codex = home.join(".agents/skills/synapse-mesh/SKILL.md");
+    let pi = home.join(".pi/agent/skills/synapse-mesh/SKILL.md");
     assert!(claude.is_file(), "Claude Code did not get the skill");
     assert!(codex.is_file(), "Codex did not get the skill");
+    assert!(pi.is_file(), "pi did not get the skill");
     assert_eq!(
         fs::read_to_string(&claude).unwrap(),
         fs::read_to_string(&codex).unwrap(),
-        "the whole point is that the two copies cannot drift"
+        "the whole point is that the copies cannot drift"
+    );
+    assert_eq!(
+        fs::read_to_string(&claude).unwrap(),
+        fs::read_to_string(&pi).unwrap(),
+        "the whole point is that the copies cannot drift"
     );
 
     let after = success(run(root.path(), &["skill", "status"], None));
@@ -993,6 +1005,45 @@ fn launch_hands_the_tool_its_own_flags_and_keeps_synapse_out_of_them() {
     assert!(
         !printed.contains("register"),
         "an unnamed launch is the person's own session: {printed}"
+    );
+}
+
+#[test]
+fn launching_pi_writes_the_extension_that_carries_the_tools() {
+    let root = tempfile::tempdir().unwrap();
+    let project = root.path().join("project");
+    fs::create_dir_all(&project).unwrap();
+    let tools = root.path().join("tools");
+    faketool(&tools, "pi");
+
+    let mut command = command(root.path());
+    command
+        .current_dir(&project)
+        .env("PATH", format!("{}:{}", tools.display(), env!("PATH")))
+        .args(["launch", "pi", "--print"])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+    let printed = success(command.spawn().unwrap().wait_with_output().unwrap());
+
+    // pi has no MCP client, so the extension is what `--mcp-config` is for the
+    // other two: everything it needs for this run, and nothing written into its
+    // own configuration.
+    assert!(printed.contains("--extension"), "got {printed}");
+    let entry = root.path().join("data/relay/pi/synapse/index.ts");
+    assert!(entry.is_file(), "the extension was not written out");
+    assert!(
+        fs::read_to_string(entry).unwrap().contains("export default"),
+        "the entry point has to be loadable by pi"
+    );
+    assert!(
+        fs::read_to_string(root.path().join("data/relay/pi/synapse/client.ts"))
+            .unwrap()
+            .contains("tools/list"),
+        "the client the extension imports has to be written out beside it"
+    );
+    assert!(
+        !root.path().join("home/.pi").exists(),
+        "starting a tool must not touch that tool's own configuration"
     );
 }
 

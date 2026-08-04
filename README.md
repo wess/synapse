@@ -13,8 +13,8 @@ Apple silicon · macOS 13 or later · Developer ID signed and notarized
 - **Keeps the thread.** Save decisions, corrections, conventions, and preferences once. Pick them up in a later session or another connected tool.
 - **Says so at startup.** Claude Code shows `Synapse connected · 128 memories` beside its welcome message, so you can see the link before the first reply.
 - **Brings history with you.** Preview and import existing Claude and Codex memory into project-scoped Synapse records without changing the originals.
-- **Shares one playbook.** Keep global working guidance in one editable `SOUL.md`, with both tools pointed at it.
-- **Writes a skill once.** Keep your Agent Skills in one library and install them into Claude Code and Codex together, instead of copying folders by hand and watching the copies drift apart.
+- **Shares one playbook.** Keep global working guidance in one editable `SOUL.md`, with every connected tool pointed at it.
+- **Writes a skill once.** Keep your Agent Skills in one library and install them into Claude Code, Codex, and pi together, instead of copying folders by hand and watching the copies drift apart.
 - **Lets agents work together.** Turn on the mesh and your connected tools can message each other, split up a job, and wait for free between tasks. Off by default.
 - **Scopes credentials.** Keep secret values in macOS Keychain and choose which approved folders may receive which environment variables.
 - **Leaves you in control.** Search, edit, export, restore, or delete what Synapse stores. Nothing is hidden behind an account or remote service.
@@ -36,7 +36,7 @@ Or enable shell integration in Settings to load approved project environments wh
 
 ## One skill library
 
-Claude Code and Codex both read the [Agent Skills](https://agentskills.io) format, from different folders. Synapse keeps one copy and installs it into each:
+Claude Code, Codex, and [pi](https://pi.dev) all read the [Agent Skills](https://agentskills.io) format, each from its own folder. Synapse keeps one copy and installs it into each:
 
 ```sh
 synapse skill list                # what is in your library
@@ -60,6 +60,17 @@ synapse relay feed --follow      # watch them talk
 ```
 
 Each agent launches with a role — a durable brief describing what it owns. The built-in roles cover the usual shape of a team, and `synapse relay role create <name>` writes your own into the project so it travels with the checkout.
+
+## Using pi
+
+[pi](https://pi.dev) has no MCP client, so it reaches Synapse through a package instead:
+
+```sh
+synapse connect pi               # or, from pi's side: pi install npm:synapse-pi
+synapse launch pi                # one session with memory, the vault, and the mesh
+```
+
+Everything a connection means elsewhere arrives with that package: the tools, this project's memory before the first turn, a status line, `/synapse`, `/recall`, `/remember`, and `/mesh`. The source is in [`pi/`](pi/).
 
 ## Learn more
 

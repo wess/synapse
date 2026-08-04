@@ -76,7 +76,7 @@ Each file should have one clear job.
       <article class="take">
         <span>Connect</span>
         <h3>Bring your tools together.</h3>
-        <p>Connect both tools to one local memory and one shared guidance file. Your existing setup stays yours.</p>
+        <p>Connect every tool you use to one local memory and one shared guidance file. Your existing setup stays yours.</p>
       </article>
       <article class="take">
         <span>Import</span>

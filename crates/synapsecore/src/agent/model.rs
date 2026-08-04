@@ -4,6 +4,10 @@ use std::path::PathBuf;
 pub enum Kind {
     Codex,
     Claude,
+    /// pi, which reaches Synapse through a package rather than an MCP client of
+    /// its own. Everything a connection means elsewhere — the tools, the
+    /// startup notice, the status line — arrives with that package.
+    Pi,
 }
 
 #[derive(Debug, Clone)]

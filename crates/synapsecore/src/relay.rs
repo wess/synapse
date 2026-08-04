@@ -1,4 +1,5 @@
 mod bus;
+mod extension;
 mod harness;
 mod launch;
 mod layer;

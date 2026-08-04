@@ -43,10 +43,7 @@ impl Removed {
 /// skill Synapse installed for it.
 pub async fn disconnect(agent: &Agent, server: &Path) -> Removed {
     let mut removed = Removed::default();
-    removed.step(
-        &format!("{} MCP registration", agent.name),
-        unregister(agent),
-    );
+    removed.step(&connection(agent), unregister(agent));
     removed.step(
         &format!("{} guidance pointer", agent.name),
         crate::agent::guidance::removepointer(&agent.instructions),
@@ -59,6 +56,15 @@ pub async fn disconnect(agent: &Agent, server: &Path) -> Removed {
     }
     removed.absorb(skills(agent).await);
     removed
+}
+
+/// What the connection is called for this tool, so the report says what was
+/// actually taken out rather than what it is called elsewhere.
+fn connection(agent: &Agent) -> String {
+    match agent.kind {
+        Kind::Pi => format!("the {} package", agent.name),
+        _ => format!("{} MCP registration", agent.name),
+    }
 }
 
 /// Ask the tool's own CLI to forget the server, the same way setup asked it to
@@ -76,6 +82,7 @@ fn unregister(agent: &Agent) -> Result<bool> {
     match agent.kind {
         Kind::Codex => command.args(["mcp", "remove", "synapse"]),
         Kind::Claude => command.args(["mcp", "remove", "--scope", "user", "synapse"]),
+        Kind::Pi => command.arg("remove").arg(super::catalog::pipackage()),
     };
     let output = command
         .output()

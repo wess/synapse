@@ -18,7 +18,7 @@ export const skills: Page = {
   ],
   body: `
     <h2 id="why">Why a library</h2>
-    <p>Claude Code and Codex both read the <a href="https://agentskills.io">Agent Skills</a> open format, and both read it from their own folder. A skill you want in both gets copied twice, and the two copies start drifting the first time you improve one of them.</p>
+    <p>Claude Code, Codex, and pi all read the <a href="https://agentskills.io">Agent Skills</a> open format, and each reads it from its own folder. A skill you want in all of them gets copied by hand as many times, and the copies start drifting the first time you improve one of them.</p>
     <p>Synapse keeps one copy. You edit it in one place, install it into every connected tool, and the app tells you which copies have fallen behind.</p>
 
     <h2 id="locations">Where skills go</h2>
@@ -28,6 +28,7 @@ export const skills: Page = {
         <tr><td>The Synapse library</td><td><code>&lt;data&gt;/skills/&lt;name&gt;/SKILL.md</code></td></tr>
         <tr><td>Claude Code</td><td><code>~/.claude/skills/&lt;name&gt;/SKILL.md</code></td></tr>
         <tr><td>Codex</td><td><code>~/.agents/skills/&lt;name&gt;/SKILL.md</code></td></tr>
+        <tr><td>pi</td><td><code>~/.pi/agent/skills/&lt;name&gt;/SKILL.md</code></td></tr>
       </tbody>
     </table>
     ${note("Codex reads personal skills from the shared <code>~/.agents/skills</code> folder rather than from its own home. <code>~/.codex/skills</code> holds the set Codex ships with, and Synapse does not write there.")}

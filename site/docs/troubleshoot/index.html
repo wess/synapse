@@ -140,7 +140,7 @@ synapse doctor --json</code></pre>
     <h3>The tools do not appear after connection</h3>
     <p>Restart the developer tool so it relaunches user-level MCP servers. Confirm the stored command exists and runs <code>synapse mcp</code> without printing shell startup text to stdout.</p>
     <h3>The tools follow different global guidance</h3>
-    <p>Run <code>synapse guidance show</code>. If fewer than two pointers are ready, use <code>synapse guidance sync</code> or <strong>Settings → Shared guidance → Sync pointers</strong>, then restart both tools. Consolidation is optional and requires separate confirmation.</p>
+    <p>Run <code>synapse guidance show</code>. If a pointer is missing, use <code>synapse guidance sync</code> or <strong>Settings → Shared guidance → Sync pointers</strong>, then restart the tools. Consolidation is optional and requires separate confirmation.</p>
     <h3>Setup failed</h3>
     <p>Read the app error for the external tool command that failed. Setup restores both the integration store and instruction file on failure, leaving <code>.synapsebackup</code> recovery copies beside changed existing files.</p>
 

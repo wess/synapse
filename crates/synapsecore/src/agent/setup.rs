@@ -49,15 +49,23 @@ fn runsetup(agent: &Agent, detection: &Detection, server: &Path, soul: &Path) ->
         let mut command = Command::new(executable);
         match agent.kind {
             Kind::Codex => {
-                command.args(["mcp", "add", "synapse", "--"]);
+                command.args(["mcp", "add", "synapse", "--"]).arg(server).arg("mcp");
             }
             Kind::Claude => {
-                command.args(["mcp", "add", "--scope", "user", "synapse", "--"]);
+                command
+                    .args(["mcp", "add", "--scope", "user", "synapse", "--"])
+                    .arg(server)
+                    .arg("mcp");
+            }
+            // pi has no MCP client to register a server with. Its package
+            // manager is the equivalent step, and the package it installs is
+            // what brings the tools, the notice, and the status line — so this
+            // is still the tool's own CLI writing the tool's own settings.
+            Kind::Pi => {
+                command.arg("install").arg(super::catalog::pipackage());
             }
         }
         let output = command
-            .arg(server)
-            .arg("mcp")
             .output()
             .with_context(|| format!("could not run the {} setup command", agent.name))?;
         anyhow::ensure!(
@@ -259,6 +267,44 @@ mod tests {
         let settings = fs::read_to_string(&agent.settings).unwrap();
         assert!(settings.contains("SessionStart"), "got {settings}");
         assert!(settings.contains("/synapse session"), "got {settings}");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn connecting_pi_installs_the_package_and_points_it_at_shared_guidance() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let directory = tempfile::tempdir().unwrap();
+        let settings = directory.path().join("settings.json");
+        let instructions = directory.path().join("APPEND_SYSTEM.md");
+        let executable = directory.path().join("fake");
+        let log = directory.path().join("commands");
+        fs::write(&executable, format!("#!/bin/sh\nprintf '%s\\n' \"$*\" >> '{}'\nexit 0\n", log.display())).unwrap();
+        fs::set_permissions(&executable, fs::Permissions::from_mode(0o700)).unwrap();
+        let mut agent = testagent(settings, instructions.clone());
+        agent.kind = Kind::Pi;
+        let detection = Detection {
+            executable: Some(executable),
+            version: None,
+            registered: false,
+            configured: false,
+            hooks: crate::agent::HookState::default(),
+        };
+        let soul = directory.path().join("SOUL.md");
+
+        setup(&agent, &detection, Path::new("/synapse"), &soul).unwrap();
+
+        // pi's own package manager, not an edit to its settings, and no MCP
+        // server to register: the package is what carries the tools.
+        assert_eq!(
+            fs::read_to_string(log).unwrap(),
+            "install npm:synapse-pi\n"
+        );
+        // And the same managed pointer every other connected tool gets, in the
+        // file pi appends to every system prompt.
+        let appended = fs::read_to_string(instructions).unwrap();
+        assert!(appended.contains("<!-- synapse:begin -->"), "got {appended}");
+        assert!(appended.contains(soul.to_str().unwrap()), "got {appended}");
     }
 
     fn testagent(integration: PathBuf, instructions: PathBuf) -> Agent {
