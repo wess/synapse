@@ -34,40 +34,30 @@ fn runsetup(agent: &Agent, detection: &Detection, server: &Path, soul: &Path) ->
         .context("the tool is not installed or is not on PATH")?;
 
     if !detection.configured {
-        if agent.kind == Kind::Claude && detection.registered {
+        // A registration pointing at a binary that has moved has to come out
+        // before the replacement goes in, or the tool's own CLI is asked to
+        // write a name it already has.
+        if agent.connect.replace && detection.registered {
             let output = crate::agent::command(executable)
-                .args(["mcp", "remove", "--scope", "user", "synapse"])
+                .args(argv(&agent.connect.remove, agent, server))
                 .output()
-                .context("could not remove the stale Claude Code connection")?;
+                .with_context(|| format!("could not remove the stale {} connection", agent.name))?;
             anyhow::ensure!(
                 output.status.success(),
-                "could not replace the stale Claude Code connection: {}",
+                "could not replace the stale {} connection: {}",
+                agent.name,
                 String::from_utf8_lossy(&output.stderr).trim()
             );
         }
-        let mut command = crate::agent::command(executable);
-        match agent.kind {
-            Kind::Codex => {
-                command
-                    .args(["mcp", "add", "synapse", "--"])
-                    .arg(server)
-                    .arg("mcp");
-            }
-            Kind::Claude => {
-                command
-                    .args(["mcp", "add", "--scope", "user", "synapse", "--"])
-                    .arg(server)
-                    .arg("mcp");
-            }
-            // pi has no MCP client to register a server with. Its package
-            // manager is the equivalent step, and the package it installs is
-            // what brings the tools, the notice, and the status line — so this
-            // is still the tool's own CLI writing the tool's own settings.
-            Kind::Pi => {
-                command.arg("install").arg(super::catalog::pipackage());
-            }
-        }
-        let output = command
+        anyhow::ensure!(
+            !agent.connect.add.is_empty(),
+            "the `{}` tool does not say how to connect it; give its descriptor a `connect.add`",
+            agent.slug
+        );
+        // The tool's own CLI, writing the tool's own settings. Synapse never
+        // edits a connection into somebody else's config file directly.
+        let output = crate::agent::command(executable)
+            .args(argv(&agent.connect.add, agent, server))
             .output()
             .with_context(|| format!("could not run the {} setup command", agent.name))?;
         anyhow::ensure!(
@@ -91,6 +81,22 @@ fn runsetup(agent: &Agent, detection: &Detection, server: &Path, soul: &Path) ->
 
 pub fn writeinstructions(path: &Path, soul: &Path) -> Result<()> {
     crate::agent::guidance::writepointer(path, soul, false)
+}
+
+/// Fill a descriptor's argv template. `{server}` is this binary and `{package}`
+/// is what a package-style connection installs; a token holding neither is
+/// passed through as written.
+pub(super) fn argv(template: &[String], agent: &crate::agent::Agent, server: &Path) -> Vec<String> {
+    let server = server.display().to_string();
+    let package = agent.package();
+    template
+        .iter()
+        .map(|token| {
+            token
+                .replace("{server}", &server)
+                .replace("{package}", &package)
+        })
+        .collect()
 }
 
 #[cfg(test)]
@@ -241,8 +247,7 @@ mod tests {
         )
         .unwrap();
         fs::set_permissions(&executable, fs::Permissions::from_mode(0o700)).unwrap();
-        let mut agent = testagent(integration, instructions);
-        agent.kind = Kind::Claude;
+        let mut agent = described("claude", integration, instructions);
         agent.settings = directory.path().join("settings.json");
         let detection = Detection {
             executable: Some(executable),
@@ -290,8 +295,7 @@ mod tests {
         )
         .unwrap();
         fs::set_permissions(&executable, fs::Permissions::from_mode(0o700)).unwrap();
-        let mut agent = testagent(settings, instructions.clone());
-        agent.kind = Kind::Pi;
+        let agent = described("pi", settings, instructions.clone());
         let detection = Detection {
             executable: Some(executable),
             version: None,
@@ -364,15 +368,20 @@ mod tests {
         assert!(path.contains("/opt/homebrew/bin"), "got {path}");
     }
 
+    /// A real descriptor with its paths pointed at a tempdir, so these tests
+    /// exercise the connect argv each tool actually declares.
     fn testagent(integration: PathBuf, instructions: PathBuf) -> Agent {
-        Agent {
-            kind: Kind::Codex,
-            name: "Test",
-            command: "fake",
-            instructions,
-            settings: integration.clone(),
-            skills: PathBuf::new(),
-            integration,
-        }
+        described("codex", integration, instructions)
+    }
+
+    fn described(slug: &str, integration: PathBuf, instructions: PathBuf) -> Agent {
+        let mut agent = crate::agent::tool::resolve(Path::new("/users/test"), None, slug)
+            .unwrap()
+            .unwrap();
+        agent.instructions = instructions;
+        agent.settings = integration.clone();
+        agent.integration = integration;
+        agent.skills = PathBuf::new();
+        agent
     }
 }

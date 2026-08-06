@@ -1,0 +1,37 @@
+name = "Codex"
+command = "codex"
+
+[home]
+env = "CODEX_HOME"
+default = ".codex"
+
+[paths]
+instructions = "{home}/AGENTS.md"
+settings = "{home}/config.toml"
+integration = "{home}/config.toml"
+# Codex reads personal skills from the shared Agent Skills folder rather than
+# its own home. `.codex/skills` holds the set it ships.
+skills = ".agents/skills"
+
+[connect]
+add = ["mcp", "add", "synapse", "--", "{server}", "mcp"]
+remove = ["mcp", "remove", "synapse"]
+
+[detect]
+format = "toml"
+at = ["mcp_servers", "synapse"]
+args = ["mcp"]
+
+[launch]
+prompt = ["{prompt}"]
+headless = ["exec", "{prompt}"]
+skippermissions = ["-c", "approval_policy=\"never\""]
+# Codex reads no MCP config file, so an unconnected Codex is pointed at this
+# binary through its own settings syntax instead.
+config = [
+    "-c",
+    "mcp_servers.synapse.command=\"{server}\"",
+    "-c",
+    "mcp_servers.synapse.args=[\"mcp\"]",
+]
+model = ["-c", "model=\"{model}\""]

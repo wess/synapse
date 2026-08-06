@@ -65,7 +65,7 @@ pub async fn state(receipts: &Receipts, agent: &Agent, skill: &Skill) -> Result<
     if !path.join(ENTRY).exists() {
         return Ok(State::Missing);
     }
-    let Some(receipt) = receipts.receipt(&skill.name, agent.name).await? else {
+    let Some(receipt) = receipts.receipt(&skill.name, &agent.name).await? else {
         return Ok(State::Foreign);
     };
     let installed = model::contents(&path).and_then(|files| model::digest(&path, &files));
@@ -107,7 +107,7 @@ pub async fn install(
     let files = model::contents(&path)?;
     let written = model::digest(&path, &files)?;
     receipts
-        .record(&skill.name, agent.name, &path, &written, &skill.digest)
+        .record(&skill.name, &agent.name, &path, &written, &skill.digest)
         .await?;
     Ok(State::Installed)
 }
@@ -118,10 +118,10 @@ pub async fn install(
 pub async fn remove(receipts: &Receipts, agent: &Agent, skill: &str, force: bool) -> Result<bool> {
     let path = target(agent, skill);
     if !path.exists() {
-        receipts.forget(skill, agent.name).await?;
+        receipts.forget(skill, &agent.name).await?;
         return Ok(false);
     }
-    let receipt = receipts.receipt(skill, agent.name).await?;
+    let receipt = receipts.receipt(skill, &agent.name).await?;
     if !force {
         let receipt = receipt
             .as_ref()
@@ -136,7 +136,7 @@ pub async fn remove(receipts: &Receipts, agent: &Agent, skill: &str, force: bool
     }
     std::fs::remove_dir_all(&path)
         .with_context(|| format!("could not remove {}", path.display()))?;
-    receipts.forget(skill, agent.name).await?;
+    receipts.forget(skill, &agent.name).await?;
     Ok(true)
 }
 
@@ -154,7 +154,6 @@ pub fn skillish(path: &Path) -> bool {
 )]
 mod tests {
     use super::*;
-    use crate::agent::Kind;
 
     struct Fixture {
         _directory: tempfile::TempDir,
@@ -169,15 +168,13 @@ mod tests {
         let receipts = Receipts::open(directory.path().join("brain.db"))
             .await
             .unwrap();
-        let agent = Agent {
-            kind: Kind::Claude,
-            name: "Claude Code",
-            command: "claude",
-            instructions: PathBuf::new(),
-            settings: PathBuf::new(),
-            integration: PathBuf::new(),
-            skills: directory.path().join("tool").join("skills"),
-        };
+        let mut agent = crate::agent::tool::resolve(Path::new("/users/test"), None, "claude")
+            .unwrap()
+            .unwrap();
+        agent.instructions = PathBuf::new();
+        agent.settings = PathBuf::new();
+        agent.integration = PathBuf::new();
+        agent.skills = directory.path().join("tool").join("skills");
         Fixture {
             _directory: directory,
             _guard: guard,

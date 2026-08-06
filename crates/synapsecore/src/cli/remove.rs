@@ -25,7 +25,7 @@ pub fn disconnect(arguments: &[OsString]) -> Result<Outcome> {
     let chosen: Vec<_> = match &wanted {
         Some(name) => agents
             .into_iter()
-            .filter(|agent| agent.name.to_lowercase().contains(name) || agent.command == name)
+            .filter(|agent| agent.name.to_lowercase().contains(name) || agent.command == *name)
             .collect(),
         None => agents,
     };

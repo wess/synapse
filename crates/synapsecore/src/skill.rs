@@ -79,7 +79,7 @@ pub async fn adopt(
 
     let adopted = library::read(name)?;
     receipts
-        .record(name, agent.name, &source, &skill.digest, &adopted.digest)
+        .record(name, &agent.name, &source, &skill.digest, &adopted.digest)
         .await?;
     Ok(destination)
 }

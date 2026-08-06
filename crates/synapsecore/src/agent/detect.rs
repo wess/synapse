@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 pub fn detect(agent: &Agent, server: Option<&Path>) -> Detection {
-    let Some(executable) = executable(agent.command) else {
+    let Some(executable) = executable(&agent.command) else {
         return Detection::missing();
     };
     let version = command(&executable)

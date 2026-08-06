@@ -6,6 +6,7 @@ mod hooks;
 mod model;
 mod setup;
 mod teardown;
+pub mod tool;
 
 pub use catalog::agents;
 pub use detect::{command, detect, searchpath};

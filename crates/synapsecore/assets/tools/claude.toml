@@ -1,0 +1,36 @@
+name = "Claude Code"
+command = "claude"
+
+[home]
+default = ".claude"
+
+[paths]
+instructions = "{home}/CLAUDE.md"
+settings = "{home}/settings.json"
+# Claude Code keeps its MCP registry beside its home rather than inside it.
+integration = ".claude.json"
+skills = "{home}/skills"
+
+[connect]
+add = ["mcp", "add", "--scope", "user", "synapse", "--", "{server}", "mcp"]
+remove = ["mcp", "remove", "--scope", "user", "synapse"]
+# A registration pointing at a binary that has moved is replaced rather than
+# added alongside, so `mcp add` is never asked to write a name already there.
+replace = true
+
+[detect]
+format = "json"
+at = ["mcpServers", "synapse"]
+args = ["mcp"]
+
+[launch]
+prompt = ["{prompt}"]
+headless = ["-p", "{prompt}", "--output-format", "stream-json", "--verbose"]
+skippermissions = ["--dangerously-skip-permissions"]
+config = ["--mcp-config", "{config}"]
+# `--mcp-config` is additive: without this the agent keeps its project and user
+# MCP servers alongside Synapse.
+strict = ["--strict-mcp-config"]
+# Variadic, so one argv token per rule keeps a rule with spaces intact.
+allowedtools = ["--allowedTools", "{tools...}"]
+model = ["--model", "{model}"]

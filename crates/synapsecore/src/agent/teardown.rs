@@ -42,7 +42,7 @@ impl Removed {
 /// skill Synapse installed for it.
 pub async fn disconnect(agent: &Agent, server: &Path) -> Removed {
     let mut removed = Removed::default();
-    removed.step(&connection(agent), unregister(agent));
+    removed.step(&connection(agent), unregister(agent, server));
     removed.step(
         &format!("{} guidance pointer", agent.name),
         crate::agent::guidance::removepointer(&agent.instructions),
@@ -60,30 +60,30 @@ pub async fn disconnect(agent: &Agent, server: &Path) -> Removed {
 /// What the connection is called for this tool, so the report says what was
 /// actually taken out rather than what it is called elsewhere.
 fn connection(agent: &Agent) -> String {
-    match agent.kind {
-        Kind::Pi => format!("the {} package", agent.name),
-        _ => format!("{} MCP registration", agent.name),
+    match agent.detect.style {
+        crate::agent::tool::Style::Package => format!("the {} package", agent.name),
+        crate::agent::tool::Style::Server => format!("{} MCP registration", agent.name),
     }
 }
 
 /// Ask the tool's own CLI to forget the server, the same way setup asked it to
 /// remember one. Nothing here edits the tool's config file directly.
-fn unregister(agent: &Agent) -> Result<bool> {
+fn unregister(agent: &Agent, server: &Path) -> Result<bool> {
     let detection = crate::agent::detect(agent, None);
     if !detection.registered {
         return Ok(false);
     }
+    anyhow::ensure!(
+        !agent.connect.remove.is_empty(),
+        "the `{}` tool does not say how to disconnect it; give its descriptor a `connect.remove`",
+        agent.slug
+    );
     let executable = detection
         .executable
         .as_deref()
         .context("the tool is not installed or is not on PATH")?;
-    let mut command = crate::agent::command(executable);
-    match agent.kind {
-        Kind::Codex => command.args(["mcp", "remove", "synapse"]),
-        Kind::Claude => command.args(["mcp", "remove", "--scope", "user", "synapse"]),
-        Kind::Pi => command.arg("remove").arg(super::catalog::pipackage()),
-    };
-    let output = command
+    let output = crate::agent::command(executable)
+        .args(super::setup::argv(&agent.connect.remove, agent, server))
         .output()
         .with_context(|| format!("could not run the {} removal command", agent.name))?;
     anyhow::ensure!(
@@ -109,7 +109,7 @@ async fn skills(agent: &Agent) -> Removed {
     let mut removed = Removed::default();
     let listed = async {
         let receipts = crate::skill::Receipts::open(crate::files::database()?).await?;
-        let installed = receipts.installed(agent.name).await?;
+        let installed = receipts.installed(&agent.name).await?;
         Ok::<_, anyhow::Error>((receipts, installed))
     }
     .await;

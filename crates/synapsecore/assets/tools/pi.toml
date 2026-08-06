@@ -1,0 +1,49 @@
+name = "pi"
+command = "pi"
+
+[home]
+env = "PI_CODING_AGENT_DIR"
+default = ".pi/agent"
+
+[paths]
+# pi has no global instruction file of the kind the other two read. What it has
+# is a system prompt it appends to every session, which is the same job.
+instructions = "{home}/APPEND_SYSTEM.md"
+settings = "{home}/settings.json"
+# One file for both, because pi records an installed package in the settings it
+# reads everything else from.
+integration = "{home}/settings.json"
+skills = "{home}/skills"
+
+[connect]
+add = ["install", "{package}"]
+remove = ["remove", "{package}"]
+
+# pi has no MCP client, so its connection is a package rather than a server
+# entry. There is no command to compare against this binary: the package finds
+# it at runtime, which is what lets one install serve every Synapse on the
+# machine. So *registered* is an entry naming the package however it was
+# installed, and *configured* is one naming the source a connection installs now.
+[detect]
+style = "package"
+format = "json"
+at = ["packages"]
+package = "synapse-pi"
+source = "npm:synapse-pi"
+# So tests and a contributor's checkout do not have to reach npm.
+env = "SYNAPSE_PI_PACKAGE"
+
+# Two things pi does differently. Its tools arrive in an extension rather than
+# from an MCP client, so `--extension` is what `--mcp-config` is elsewhere. And
+# it has no permission prompts to skip -- the question it does stop to ask is
+# whether a project's local settings are trusted, which an unattended worker has
+# nobody to answer.
+[launch]
+prompt = ["{prompt}"]
+# The event stream, so a worker's log is readable without a terminal. pi opens
+# the session with `--session-id` when one exists and creates it with that id
+# when it does not, so a respawned worker comes back to its own context.
+headless = ["{prompt}", "--mode", "json", "--session-id", "{session}"]
+skippermissions = ["--approve"]
+config = ["--extension", "{config}"]
+model = ["--model", "{model}"]

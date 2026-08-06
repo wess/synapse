@@ -2,7 +2,7 @@ mod bus;
 mod extension;
 mod harness;
 mod launch;
-mod layer;
+pub(crate) mod layer;
 mod model;
 mod process;
 pub mod role;

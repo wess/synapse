@@ -149,15 +149,7 @@ pub fn launch(options: &Options) -> Result<Launch> {
         return Ok(launch);
     }
 
-    let kind = match name.as_str() {
-        "claude" => Kind::Claude,
-        "codex" => Kind::Codex,
-        "pi" => Kind::Pi,
-        other => anyhow::bail!(
-            "unknown tool `{other}`; use claude, codex, or pi, or pass a template with --command"
-        ),
-    };
-    let agent = resolveagent(kind)?;
+    let agent = resolveagent(&name)?;
     let detection = crate::agent::detect(&agent, Some(&binary()?));
     let program = detection
         .executable
@@ -168,203 +160,122 @@ pub fn launch(options: &Options) -> Result<Launch> {
     // Adding a second copy would give the agent two of every tool, so what
     // follows is written only for a tool that has no connection of its own yet.
     //
-    // For pi that means *registered* rather than *configured*: its connection
-    // is a package, and a package installed from anywhere carries the same
-    // tools. Elsewhere a registration that is not configured is a stale entry
-    // pointing at a binary that may no longer exist, which is not a connection.
-    let connected = match kind {
-        Kind::Pi => detection.registered,
-        _ => detection.configured,
+    // For a package-style connection that means *registered* rather than
+    // *configured*: a package installed from anywhere carries the same tools.
+    // Elsewhere a registration that is not configured is a stale entry pointing
+    // at a binary that may no longer exist, which is not a connection.
+    let connected = match agent.detect.style {
+        crate::agent::tool::Style::Package => detection.registered,
+        crate::agent::tool::Style::Server => detection.configured,
     };
 
-    let mut launch = match kind {
-        Kind::Claude | Kind::Codex => {
-            let config = if connected {
-                None
-            } else {
-                let path = configpath(options.name, options.root)?;
-                writeconfig(&path, options.root)?;
-                Some(path)
-            };
-            match kind {
-                Kind::Codex => codex(
-                    &program,
-                    prompt.as_deref(),
-                    config.as_deref(),
-                    options,
-                    model.as_deref(),
-                ),
-                _ => claude(
-                    &program,
-                    prompt.as_deref(),
-                    config.as_deref(),
-                    options,
-                    &allowed,
-                    model.as_deref(),
-                ),
-            }
-        }
-        Kind::Pi => {
-            let extension = if connected {
-                None
-            } else {
-                Some(super::extension::write()?)
-            };
-            pi(
-                &program,
-                prompt.as_deref(),
-                extension.as_deref(),
-                options,
-                model.as_deref(),
-            )
-        }
+    // What the tool is handed so it can reach Synapse for the life of this
+    // process: a generated MCP config pointing at this binary, or for pi the
+    // extension that carries the same tools. A tool whose descriptor declares no
+    // config slot is never handed either, and nothing is written for it.
+    let payload = if connected || agent.launch.config.is_empty() {
+        None
+    } else if agent.kind == Kind::Pi {
+        Some(super::extension::write()?)
+    } else {
+        let path = configpath(options.name, options.root)?;
+        writeconfig(&path, options.root)?;
+        Some(path)
     };
+
+    let mut launch = fromslots(
+        &agent,
+        &program,
+        prompt.as_deref(),
+        payload.as_deref(),
+        options,
+        &allowed,
+        model.as_deref(),
+    )?;
     launch.arguments.extend(options.extra.iter().cloned());
     launch.environment = environment;
-    launch.session = (options.headless && kind == Kind::Claude).then(sessionid);
+    // Claude Code takes a session id for claiming and a separate flag for
+    // resuming, so a resumable worker's id is carried on the launch rather than
+    // in the argv. A tool that takes one flag for both puts `{session}` in its
+    // own headless slot instead.
+    launch.session = (options.headless && agent.kind == Kind::Claude).then(sessionid);
     Ok(launch)
 }
 
-fn claude(
+/// Fill the descriptor's argv slots.
+///
+/// Every slot is optional: one a tool does not declare is a flag it does not
+/// have, and is simply never passed. That is what lets a tool nobody has heard
+/// of launch through the same path as the three that ship.
+fn fromslots(
+    agent: &Agent,
     program: &Path,
     prompt: Option<&str>,
-    config: Option<&Path>,
+    payload: Option<&Path>,
     options: &Options,
     allowed: &[String],
     model: Option<&str>,
-) -> Launch {
+) -> Result<Launch> {
+    let slots = &agent.launch;
+    let server = binary()?.display().to_string();
+    let payload = payload.map(|path| path.display().to_string());
+    let session = sessionid();
+    let fill = |template: &[String]| -> Vec<String> {
+        template
+            .iter()
+            .filter(|token| prompt.is_some() || *token != "{prompt}")
+            .flat_map(|token| {
+                // The variadic slot: one argv token per rule, so a rule with
+                // spaces such as `Bash(git commit:*)` stays one argument.
+                if token == "{tools...}" {
+                    return allowed.to_vec();
+                }
+                vec![
+                    token
+                        .replace("{prompt}", prompt.unwrap_or_default())
+                        .replace("{config}", payload.as_deref().unwrap_or_default())
+                        .replace("{server}", &server)
+                        .replace("{model}", model.unwrap_or_default())
+                        .replace("{name}", options.name.unwrap_or_default())
+                        .replace("{session}", &session),
+                ]
+            })
+            .collect()
+    };
+
     let mut arguments = Vec::new();
-    match prompt {
-        // A headless run needs something to do, so its harness is the argument
-        // that starts it.
-        Some(prompt) if options.headless => arguments.extend([
-            "-p".to_owned(),
-            prompt.to_owned(),
-            "--output-format".to_owned(),
-            "stream-json".to_owned(),
-            "--verbose".to_owned(),
-        ]),
-        Some(prompt) => arguments.push(prompt.to_owned()),
-        // No harness: the tool opens on an empty prompt, exactly as it would
-        // if the person had typed its name.
-        None => {}
+    // A headless run needs something to do, so its harness is the argument that
+    // starts it. No harness at all and the tool opens on an empty prompt,
+    // exactly as it would if the person had typed its name.
+    if options.headless && !slots.headless.is_empty() {
+        arguments.extend(fill(&slots.headless));
+    } else if prompt.is_some() {
+        arguments.extend(fill(&slots.prompt));
     }
     // A headless worker has no terminal to prompt in, and an unattended session
     // has nobody to answer.
     if options.skippermissions || options.headless {
-        arguments.push("--dangerously-skip-permissions".to_owned());
+        arguments.extend(fill(&slots.skippermissions));
     }
-    if let Some(config) = config {
-        arguments.push("--mcp-config".to_owned());
-        arguments.push(config.display().to_string());
+    if payload.is_some() {
+        arguments.extend(fill(&slots.config));
     }
-    // `--mcp-config` is additive: without this the agent keeps its project and
-    // user MCP servers alongside Synapse, which is what you want unless you
-    // explicitly asked for a hermetic worker.
     if options.strict {
-        arguments.push("--strict-mcp-config".to_owned());
+        arguments.extend(fill(&slots.strict));
     }
-    // `--allowedTools` is variadic; one argv token per rule keeps a rule with
-    // spaces such as `Bash(git commit:*)` intact.
     if !allowed.is_empty() {
-        arguments.push("--allowedTools".to_owned());
-        arguments.extend(allowed.iter().cloned());
+        arguments.extend(fill(&slots.allowedtools));
     }
-    if let Some(model) = model {
-        arguments.extend(["--model".to_owned(), model.to_owned()]);
+    if model.is_some() {
+        arguments.extend(fill(&slots.model));
     }
-    Launch {
+    Ok(Launch {
         program: program.to_path_buf(),
         arguments,
         environment: Vec::new(),
-        tool: "claude".to_owned(),
+        tool: agent.slug.clone(),
         session: None,
-    }
-}
-
-fn codex(
-    program: &Path,
-    prompt: Option<&str>,
-    config: Option<&Path>,
-    options: &Options,
-    model: Option<&str>,
-) -> Launch {
-    let mut arguments = Vec::new();
-    if options.headless {
-        arguments.push("exec".to_owned());
-    }
-    if let Some(prompt) = prompt {
-        arguments.push(prompt.to_owned());
-    }
-    if options.skippermissions || options.headless {
-        arguments.extend(["-c".to_owned(), "approval_policy=\"never\"".to_owned()]);
-    }
-    // Codex reads no MCP config file, so an unconnected Codex is pointed at this
-    // binary through its own settings syntax instead.
-    if config.is_some()
-        && let Ok(binary) = binary()
-    {
-        arguments.extend([
-            "-c".to_owned(),
-            format!("mcp_servers.synapse.command=\"{}\"", binary.display()),
-            "-c".to_owned(),
-            "mcp_servers.synapse.args=[\"mcp\"]".to_owned(),
-        ]);
-    }
-    if let Some(model) = model {
-        arguments.extend(["-c".to_owned(), format!("model=\"{model}\"")]);
-    }
-    Launch {
-        program: program.to_path_buf(),
-        arguments,
-        environment: Vec::new(),
-        tool: "codex".to_owned(),
-        session: None,
-    }
-}
-
-/// pi's argv.
-///
-/// Two things it does differently. Its tools arrive in an extension rather than
-/// from an MCP client, so `--extension` is what `--mcp-config` is elsewhere.
-/// And it has no permission prompts to skip — the question it does stop to ask
-/// is whether a project's local settings are trusted, which an unattended
-/// worker has nobody to answer.
-fn pi(
-    program: &Path,
-    prompt: Option<&str>,
-    extension: Option<&Path>,
-    options: &Options,
-    model: Option<&str>,
-) -> Launch {
-    let mut arguments = Vec::new();
-    if let Some(prompt) = prompt {
-        arguments.push(prompt.to_owned());
-    }
-    if options.headless {
-        // The event stream, so a worker's log is readable without a terminal.
-        arguments.extend(["--mode".to_owned(), "json".to_owned()]);
-        // pi opens the session with this id when one exists and creates it with
-        // that id when it does not, so a respawned worker comes back to its own
-        // context without a second flag anywhere to remember it by.
-        arguments.extend(["--session-id".to_owned(), sessionid()]);
-    }
-    if options.skippermissions || options.headless {
-        arguments.push("--approve".to_owned());
-    }
-    if let Some(extension) = extension {
-        arguments.extend(["--extension".to_owned(), extension.display().to_string()]);
-    }
-    if let Some(model) = model {
-        arguments.extend(["--model".to_owned(), model.to_owned()]);
-    }
-    Launch {
-        program: program.to_path_buf(),
-        arguments,
-        environment: Vec::new(),
-        tool: "pi".to_owned(),
-        session: None,
-    }
+    })
 }
 
 /// Split a template into argv, substituting per token so `{prompt}` stays one
@@ -387,12 +298,23 @@ fn fromtemplate(template: &str, prompt: &str, config: &Path, name: &str) -> Laun
     }
 }
 
-fn resolveagent(kind: Kind) -> Result<Agent> {
+/// The tool a `--tool` value or a role's `tool` names. Matched on the descriptor
+/// slug first and then the binary, so `hermes` finds a tool nobody shipped.
+fn resolveagent(name: &str) -> Result<Agent> {
     let home = crate::files::home()?;
-    crate::agent::agents(&home)
-        .into_iter()
-        .find(|agent| agent.kind == kind)
-        .context("that tool is not in the Synapse registry")
+    let agents = crate::agent::agents(&home);
+    agents
+        .iter()
+        .find(|agent| agent.slug == name)
+        .or_else(|| agents.iter().find(|agent| agent.command == name))
+        .cloned()
+        .with_context(|| {
+            let known: Vec<_> = agents.iter().map(|agent| agent.slug.as_str()).collect();
+            format!(
+                "unknown tool `{name}`; this machine has {}. Describe another with `synapse tool create`",
+                known.join(", ")
+            )
+        })
 }
 
 fn binary() -> Result<PathBuf> {
@@ -496,6 +418,33 @@ mod tests {
         }
     }
 
+    /// Build a tool's argv the way a launch does, through its descriptor. Every
+    /// argv assertion below goes through this, so a descriptor that stops
+    /// producing the flags a tool actually takes fails here.
+    fn argv(
+        slug: &str,
+        prompt: Option<&str>,
+        payload: Option<&Path>,
+        options: &Options,
+        allowed: &[String],
+        model: Option<&str>,
+    ) -> Launch {
+        let home = Path::new("/users/test");
+        let agent = crate::agent::tool::resolve(home, None, slug)
+            .unwrap()
+            .unwrap();
+        fromslots(
+            &agent,
+            Path::new("/usr/bin").join(slug).as_path(),
+            prompt,
+            payload,
+            options,
+            allowed,
+            model,
+        )
+        .unwrap()
+    }
+
     #[test]
     fn a_template_keeps_the_prompt_as_one_argument() {
         let launch = fromtemplate(
@@ -515,13 +464,16 @@ mod tests {
         let mut options = options(directory.path(), "gemini");
         options.tool = Some("gemini");
         let error = launch(&options).unwrap_err().to_string();
-        assert!(error.contains("claude, codex, or pi"), "got {error}");
+        assert!(error.contains("claude, codex, pi"), "got {error}");
+        // A tool nobody shipped is a descriptor away, and the error says so
+        // rather than reading like a closed list.
+        assert!(error.contains("synapse tool create"), "got {error}");
     }
 
     #[test]
     fn a_headless_claude_can_never_stop_to_ask() {
-        let launch = claude(
-            Path::new("/usr/bin/claude"),
+        let launch = argv(
+            "claude",
             Some("hi"),
             None,
             &Options {
@@ -541,8 +493,8 @@ mod tests {
 
     #[test]
     fn an_attended_session_keeps_its_permission_prompts() {
-        let launch = claude(
-            Path::new("/usr/bin/claude"),
+        let launch = argv(
+            "claude",
             Some("hi"),
             None,
             &options(Path::new("/tmp"), "claude"),
@@ -561,8 +513,8 @@ mod tests {
     #[test]
     fn tool_rules_stay_one_argument_each() {
         let allowed = ["Read".to_owned(), "Bash(git commit:*)".to_owned()];
-        let launch = claude(
-            Path::new("/usr/bin/claude"),
+        let launch = argv(
+            "claude",
             Some("hi"),
             None,
             &options(Path::new("/tmp"), "claude"),
@@ -581,8 +533,8 @@ mod tests {
 
     #[test]
     fn a_connected_tool_is_not_handed_a_second_server_of_its_own() {
-        let launch = claude(
-            Path::new("/usr/bin/claude"),
+        let launch = argv(
+            "claude",
             Some("hi"),
             None,
             &options(Path::new("/tmp"), "claude"),
@@ -597,8 +549,8 @@ mod tests {
 
     #[test]
     fn an_unconnected_tool_is_pointed_at_this_binary() {
-        let launch = claude(
-            Path::new("/usr/bin/claude"),
+        let launch = argv(
+            "claude",
             Some("hi"),
             Some(Path::new("/tmp/backend.mcp.json")),
             &options(Path::new("/tmp"), "claude"),
@@ -622,14 +574,15 @@ mod tests {
 
     #[test]
     fn a_headless_codex_never_approves_its_own_actions() {
-        let launch = codex(
-            Path::new("/usr/bin/codex"),
+        let launch = argv(
+            "codex",
             Some("hi"),
             None,
             &Options {
                 headless: true,
                 ..options(Path::new("/tmp"), "codex")
             },
+            &[],
             None,
         );
         assert_eq!(launch.arguments[0], "exec");
@@ -643,14 +596,15 @@ mod tests {
 
     #[test]
     fn a_headless_pi_streams_events_and_comes_back_to_its_own_session() {
-        let launch = pi(
-            Path::new("/usr/bin/pi"),
+        let launch = argv(
+            "pi",
             Some("hi"),
             None,
             &Options {
                 headless: true,
                 ..options(Path::new("/tmp"), "pi")
             },
+            &[],
             None,
         );
         assert_eq!(launch.arguments[0], "hi");
@@ -674,11 +628,12 @@ mod tests {
 
     #[test]
     fn an_attended_pi_is_not_approved_on_its_behalf() {
-        let launch = pi(
-            Path::new("/usr/bin/pi"),
+        let launch = argv(
+            "pi",
             Some("hi"),
             None,
             &options(Path::new("/tmp"), "pi"),
+            &[],
             None,
         );
         assert!(!launch.arguments.iter().any(|item| item == "--approve"));
@@ -688,11 +643,12 @@ mod tests {
 
     #[test]
     fn an_unconnected_pi_is_handed_the_extension_for_this_run_only() {
-        let launch = pi(
-            Path::new("/usr/bin/pi"),
+        let launch = argv(
+            "pi",
             Some("hi"),
             Some(Path::new("/data/relay/pi/synapse/index.ts")),
             &options(Path::new("/tmp"), "pi"),
+            &[],
             Some("sonnet"),
         );
         let at = launch
