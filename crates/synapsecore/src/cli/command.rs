@@ -12,8 +12,7 @@ Usage: synapse [command]
 Commands:
   app                              Open the desktop application
   mcp                              Run the MCP stdio server
-  launch <claude|codex|pi> [-- <flags>]
-                                   Start a tool wired into memory and the vault
+  launch <tool> [-- <flags>]       Start a tool wired into memory and the vault
   run -- <command> [arguments]     Run with resolved vault variables
   mux [--as <name>] [--team <team>]
                                    Drive a team of agents from this terminal
@@ -57,7 +56,7 @@ Commands:
   relay channels [--json]          List channels and subscriber counts
   relay feed [--follow] [--since <id>]
                                    Print cross-agent messages
-  relay launch <name> [--role <role>] [--tool claude|codex|pi] [--task <text>]
+  relay launch <name> [--role <role>] [--tool <tool>] [--task <text>]
                                    Open one agent wired into the mesh
   relay team open <name>           Open a whole roster, lead in this terminal
   relay role <list|show|create|edit|delete> [name] [--user]
@@ -78,6 +77,11 @@ Commands:
   skill status [name] [--json]     Show where each skill is installed
   skill adopt <name> [--tool <tool>]
                                    Copy a tool's own skill into the library
+  tool list [--json]               List the tools Synapse can connect to
+  tool show <name>                 Print one tool's descriptor
+  tool create <name>               Describe a tool Synapse does not ship
+  tool edit <name>                 Edit a tool descriptor in $EDITOR
+  tool delete <name>               Remove a descriptor you added
   session [--json]                 Report this session's Synapse connection
   statusline                       Print one status line for a connected tool
   doctor [--json]                  Report everything a bug report needs
@@ -86,7 +90,8 @@ Commands:
                                    Set the MCP recall response budget
   settings mesh <on|off>           Turn the agent mesh tools on or off
   install                          Install the synapse CLI for this user
-  disconnect [claude|codex|pi]     Undo one tool's connection, or every tool's
+  connect [tool]                   Wire a tool into memory, or every one found
+  disconnect [tool]                Undo one tool's connection, or every tool's
   uninstall [--data] [--confirm]   Remove everything Synapse installed
   path                             Print the local data and CLI paths
   version                          Print the version
@@ -127,11 +132,13 @@ pub fn run(arguments: Vec<OsString>) -> Result<Outcome> {
         "mux" => super::mux::run(rest),
         "relay" => super::relay::run(rest),
         "skill" => super::skills::run(rest),
+        "tool" => super::layers::tool(rest),
         "session" => super::session::session(rest),
         "statusline" => super::session::statusline(rest),
         "doctor" => super::doctor::doctor(rest),
         "settings" => settings(rest),
         "install" => install(),
+        "connect" => super::connect::connect(rest),
         "disconnect" => super::remove::disconnect(rest),
         "uninstall" => super::remove::uninstall(rest),
         "path" => paths(),

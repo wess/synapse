@@ -250,17 +250,20 @@ fn chosen(arguments: &[OsString]) -> Result<Vec<Agent>> {
         return Ok(agents);
     };
     let wanted = wanted.to_lowercase();
+    let known: Vec<String> = agents.iter().map(|agent| agent.slug.clone()).collect();
     let matched: Vec<Agent> = agents
         .into_iter()
         .filter(|agent| {
-            agent.command.eq_ignore_ascii_case(&wanted)
+            agent.slug.eq_ignore_ascii_case(&wanted)
+                || agent.command.eq_ignore_ascii_case(&wanted)
                 || agent.name.to_lowercase() == wanted
                 || agent.name.to_lowercase().replace(' ', "") == wanted.replace(' ', "")
         })
         .collect();
     anyhow::ensure!(
         !matched.is_empty(),
-        "unknown tool `{wanted}`; use claude, codex, or pi"
+        "unknown tool `{wanted}`; this machine has {}",
+        known.join(", ")
     );
     Ok(matched)
 }

@@ -1146,3 +1146,122 @@ fn the_mux_refuses_a_name_a_live_agent_is_already_answering_to() {
         "one person reopening their own mux is fine: {again}"
     );
 }
+
+/// A tool Synapse has never heard of, described by the person who uses it and
+/// then carried the whole way: detected, connected through its own CLI,
+/// pointed at the shared guidance, given the skill library, launched, and taken
+/// back out again. Nothing in the binary knows the word `hermes`.
+#[test]
+#[cfg(unix)]
+fn a_tool_nobody_shipped_connects_the_same_way_the_built_ins_do() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let root = tempfile::tempdir().unwrap();
+    let home = root.path().join("home");
+    let bin = root.path().join("toolbin");
+    fs::create_dir_all(&bin).unwrap();
+    fs::create_dir_all(home.join(".hermes")).unwrap();
+
+    // A stand-in for the tool's own CLI: it records what it was asked to do and
+    // writes its own settings, exactly as `claude mcp add` would.
+    let settings = home.join(".hermes/settings.json");
+    let log = root.path().join("hermes.log");
+    let executable = bin.join("hermes");
+    fs::write(
+        &executable,
+        format!(
+            "#!/bin/sh\nprintf '%s\\n' \"$*\" >> '{}'\n\
+             if [ \"$1\" = mcp ] && [ \"$2\" = add ]; then\n\
+               printf '{{\"servers\":{{\"synapse\":{{\"command\":\"%s\",\"args\":[\"mcp\"]}}}}}}' \"$5\" > '{}'\n\
+             fi\n\
+             if [ \"$1\" = mcp ] && [ \"$2\" = remove ]; then printf '{{}}' > '{}'; fi\nexit 0\n",
+            log.display(),
+            settings.display(),
+            settings.display()
+        ),
+    )
+    .unwrap();
+    fs::set_permissions(&executable, fs::Permissions::from_mode(0o700)).unwrap();
+
+    // The descriptor, in the layer a person owns.
+    let tools = root.path().join("data/tools");
+    fs::create_dir_all(&tools).unwrap();
+    fs::write(
+        tools.join("hermes.toml"),
+        "name = \"Hermes\"\ncommand = \"hermes\"\n\
+         [home]\ndefault = \".hermes\"\n\
+         [paths]\ninstructions = \"{home}/AGENTS.md\"\nsettings = \"{home}/settings.json\"\n\
+         integration = \"{home}/settings.json\"\nskills = \"{home}/skills\"\n\
+         [connect]\nadd = [\"mcp\", \"add\", \"synapse\", \"--\", \"{server}\", \"mcp\"]\n\
+         remove = [\"mcp\", \"remove\", \"synapse\"]\n\
+         [detect]\nformat = \"json\"\nat = [\"servers\", \"synapse\"]\nargs = [\"mcp\"]\n\
+         [launch]\nprompt = [\"{prompt}\"]\nconfig = [\"--mcp-config\", \"{config}\"]\n",
+    )
+    .unwrap();
+
+    let path = format!(
+        "{}:{}",
+        bin.display(),
+        std::env::var("PATH").unwrap_or_default()
+    );
+    let hermes = |arguments: &[&str]| -> Output {
+        let mut command = command(root.path());
+        command
+            .args(arguments)
+            .env("PATH", &path)
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
+        command.spawn().unwrap().wait_with_output().unwrap()
+    };
+
+    // It is listed beside the three that ship, and labelled as the user's.
+    let listed = success(hermes(&["tool", "list"]));
+    assert!(listed.contains("hermes\tuser"), "got {listed}");
+    assert!(listed.contains("codex\tbuilt-in"), "got {listed}");
+
+    success(hermes(&["connect", "hermes"]));
+
+    // Synapse asked the tool's own CLI to register the server. It never wrote
+    // that entry into the settings file itself.
+    let asked = fs::read_to_string(&log).unwrap();
+    assert!(
+        asked.contains("mcp add synapse --"),
+        "the tool's own CLI should have registered the server: {asked}"
+    );
+    assert!(
+        fs::read_to_string(&settings).unwrap().contains("synapse"),
+        "the tool's settings should now name the server"
+    );
+    // And the same managed guidance pointer every built-in gets.
+    let guidance = fs::read_to_string(home.join(".hermes/AGENTS.md")).unwrap();
+    assert!(
+        guidance.contains("<!-- synapse:begin -->"),
+        "got {guidance}"
+    );
+
+    // The skill library reaches it by name.
+    success(hermes(&["skill", "install", "--tool", "hermes"]));
+    assert!(
+        home.join(".hermes/skills/synapse-mesh/SKILL.md").is_file(),
+        "the skill library should install into a described tool too"
+    );
+
+    // And it launches, through the argv slots its own descriptor declares.
+    let preview = success(hermes(&["launch", "hermes", "--print"]));
+    assert!(preview.contains("hermes"), "got {preview}");
+    assert!(preview.contains("--mcp-config"), "got {preview}");
+
+    // Everything Synapse wrote, it can take back.
+    let removed = success(hermes(&["disconnect", "hermes"]));
+    assert!(removed.contains("Hermes MCP registration"), "got {removed}");
+    assert!(removed.contains("Hermes guidance pointer"), "got {removed}");
+    assert!(
+        !home.join(".hermes/skills/synapse-mesh").exists(),
+        "the skill it installed should have come back out"
+    );
+    let guidance = fs::read_to_string(home.join(".hermes/AGENTS.md")).unwrap();
+    assert!(
+        !guidance.contains("<!-- synapse:begin -->"),
+        "the managed block should be gone: {guidance}"
+    );
+}

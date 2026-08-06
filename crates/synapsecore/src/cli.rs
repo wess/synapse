@@ -1,14 +1,15 @@
 mod command;
+mod connect;
 mod doctor;
 mod editor;
 mod guidance;
 mod install;
 mod launch;
+mod layers;
 mod memory;
 mod mux;
 mod relay;
 mod remove;
-mod roles;
 mod session;
 mod shell;
 mod skills;

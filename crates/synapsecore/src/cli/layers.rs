@@ -1,7 +1,11 @@
-//! Managing role and team files the way `git config` manages settings: list what
-//! resolves, show one, and round-trip a file through `$EDITOR`. Editing a
-//! built-in copies it down into a layer you own first, so the shipped templates
-//! stay intact.
+//! Managing the layered TOML files a person edits — roles, teams, and tool
+//! descriptors — the way `git config` manages settings: list what resolves, show
+//! one, and round-trip a file through `$EDITOR`. Editing a built-in copies it
+//! down into a layer you own first, so the shipped templates stay intact.
+//!
+//! All three differ only in which functions read and write them, so they share
+//! one implementation: a draft that does not parse never replaces a working
+//! file, whichever kind it is.
 
 use crate::cli::Outcome;
 use crate::cli::editor::editor;
@@ -14,6 +18,7 @@ use std::path::{Path, PathBuf};
 const ROLEUSAGE: &str = "usage: synapse relay role <list|show|create|edit|delete> [name] [--user]";
 const TEAMUSAGE: &str =
     "usage: synapse relay team <list|show|create|edit|delete|open> [name] [--user]";
+const TOOLUSAGE: &str = "usage: synapse tool <list|show|create|edit|delete> [name] [--user]";
 
 pub fn role(arguments: &[OsString]) -> Result<Outcome> {
     let kind = Kind {
@@ -41,7 +46,22 @@ pub fn team(arguments: &[OsString]) -> Result<Outcome> {
     run(&kind, arguments)
 }
 
-/// The two file kinds differ only in which functions read and write them.
+/// Describing a tool Synapse does not ship: what it is called, where it keeps
+/// its files, and what to run to connect it.
+pub fn tool(arguments: &[OsString]) -> Result<Outcome> {
+    let kind = Kind {
+        label: "tool",
+        usage: TOOLUSAGE,
+        template: crate::agent::tool::TEMPLATE,
+        names: |root| crate::agent::tool::names(Some(root)),
+        text: |root, name| crate::agent::tool::text(Some(root), name),
+        save: crate::agent::tool::save,
+        delete: crate::agent::tool::delete,
+    };
+    run(&kind, arguments)
+}
+
+/// The three file kinds differ only in which functions read and write them.
 struct Kind {
     label: &'static str,
     usage: &'static str,

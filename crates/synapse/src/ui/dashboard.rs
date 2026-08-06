@@ -10,7 +10,7 @@ use guise::input::FileInputEvent;
 use guise::markdown::MarkdownEditorEvent;
 use guise::prelude::*;
 use std::path::PathBuf;
-use synapsecore::agent::{self, GuidanceState, Kind};
+use synapsecore::agent::{self, GuidanceState};
 use synapsecore::brain::{Brain, Memory, MemoryScope, Optimization, Stats};
 use synapsecore::files;
 use synapsecore::imports::{ImportBatch, ImportProvider, ImportSummary};
@@ -1044,8 +1044,8 @@ impl Dashboard {
         }
     }
 
-    fn setup(&mut self, kind: Kind, cx: &mut Context<Self>) {
-        let Some(row) = self.rows.iter().find(|row| row.agent.kind == kind).cloned() else {
+    fn setup(&mut self, slug: &str, cx: &mut Context<Self>) {
+        let Some(row) = self.rows.iter().find(|row| row.agent.slug == slug).cloned() else {
             return;
         };
         let result = connectionserver()
@@ -1065,8 +1065,8 @@ impl Dashboard {
     /// Add or remove the startup notice for an already-connected tool, so
     /// gaining it never means disconnecting and connecting again. The tool's
     /// settings file is captured first and restored if the write fails.
-    fn togglenotice(&mut self, kind: Kind, cx: &mut Context<Self>) {
-        let Some(row) = self.rows.iter().find(|row| row.agent.kind == kind).cloned() else {
+    fn togglenotice(&mut self, slug: &str, cx: &mut Context<Self>) {
+        let Some(row) = self.rows.iter().find(|row| row.agent.slug == slug).cloned() else {
             return;
         };
         let installed = row.detection.hooks.notice;
@@ -1106,23 +1106,23 @@ impl Dashboard {
         cx.notify();
     }
 
-    fn openinstructions(&mut self, kind: Kind, window: &mut Window, cx: &mut Context<Self>) {
-        self.opendocument(kind, instructionspath, "instructions", window, cx);
+    fn openinstructions(&mut self, slug: &str, window: &mut Window, cx: &mut Context<Self>) {
+        self.opendocument(slug, instructionspath, "instructions", window, cx);
     }
 
-    fn opensettings(&mut self, kind: Kind, window: &mut Window, cx: &mut Context<Self>) {
-        self.opendocument(kind, settingspath, "configuration", window, cx);
+    fn opensettings(&mut self, slug: &str, window: &mut Window, cx: &mut Context<Self>) {
+        self.opendocument(slug, settingspath, "configuration", window, cx);
     }
 
     fn opendocument(
         &mut self,
-        kind: Kind,
+        slug: &str,
         select: fn(&agent::Agent) -> PathBuf,
         label: &str,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        let Some(row) = self.rows.iter().find(|row| row.agent.kind == kind) else {
+        let Some(row) = self.rows.iter().find(|row| row.agent.slug == slug) else {
             self.notice = Notice::Error("That connection is no longer available.".to_owned());
             cx.notify();
             return;
@@ -1661,27 +1661,27 @@ impl Render for Dashboard {
                                     .overflow_hidden()
                                     .children(rows.into_iter().enumerate().flat_map(
                                         |(index, row)| {
-                                            let kind = row.agent.kind;
+                                            let slug = row.agent.slug.clone();
                                             let setup =
                                                 Box::new(cx.listener(move |this, _, _, cx| {
-                                                    this.setup(kind, cx);
+                                                    this.setup(&slug, cx);
                                                 }));
-                                            let kind = row.agent.kind;
+                                            let slug = row.agent.slug.clone();
                                             let instructions = Box::new(cx.listener(
                                                 move |this, _, window, cx| {
-                                                    this.openinstructions(kind, window, cx);
+                                                    this.openinstructions(&slug, window, cx);
                                                 },
                                             ));
-                                            let kind = row.agent.kind;
+                                            let slug = row.agent.slug.clone();
                                             let settings = Box::new(cx.listener(
                                                 move |this, _, window, cx| {
-                                                    this.opensettings(kind, window, cx);
+                                                    this.opensettings(&slug, window, cx);
                                                 },
                                             ));
-                                            let kind = row.agent.kind;
+                                            let slug = row.agent.slug.clone();
                                             let notice =
                                                 Box::new(cx.listener(move |this, _, _, cx| {
-                                                    this.togglenotice(kind, cx);
+                                                    this.togglenotice(&slug, cx);
                                                 }));
                                             let mut items = Vec::new();
                                             if index > 0 {

@@ -22,17 +22,23 @@ pub fn disconnect(arguments: &[OsString]) -> Result<Outcome> {
     let home = crate::files::home()?;
     let server = crate::cli::destination()?;
     let agents = crate::agent::agents(&home);
+    let known: Vec<String> = agents.iter().map(|agent| agent.slug.clone()).collect();
     let chosen: Vec<_> = match &wanted {
         Some(name) => agents
             .into_iter()
-            .filter(|agent| agent.name.to_lowercase().contains(name) || agent.command == *name)
+            .filter(|agent| {
+                agent.slug == *name
+                    || agent.command == *name
+                    || agent.name.to_lowercase().contains(name)
+            })
             .collect(),
         None => agents,
     };
     anyhow::ensure!(
         !chosen.is_empty(),
-        "no connected tool matches `{}`; use claude, codex, or pi",
-        wanted.unwrap_or_default()
+        "no connected tool matches `{}`; this machine has {}",
+        wanted.unwrap_or_default(),
+        known.join(", ")
     );
 
     let runtime = tokio::runtime::Runtime::new()?;

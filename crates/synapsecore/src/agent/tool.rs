@@ -21,7 +21,6 @@ use crate::agent::{Agent, Kind};
 use crate::relay::layer::{self, Source};
 use anyhow::{Context, Result};
 use serde::Deserialize;
-use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 const KIND: &str = "tools";
@@ -205,9 +204,10 @@ pub fn tools(home: &Path, root: Option<&Path>) -> Vec<Agent> {
 }
 
 /// Every descriptor name with the layer it resolves from, including ones that do
-/// not parse — a broken file is reported, never silently dropped.
-pub fn names(root: Option<&Path>) -> BTreeMap<String, Source> {
-    layer::scan(KIND, BUILTINS, root)
+/// not parse — a broken file is listed so it can be found and fixed, rather than
+/// silently vanishing from the dashboard.
+pub fn names(root: Option<&Path>) -> Vec<(String, Source)> {
+    layer::scan(KIND, BUILTINS, root).into_iter().collect()
 }
 
 /// Resolve one descriptor by name. `Ok(None)` is "no such tool"; `Err` is a file
@@ -231,7 +231,10 @@ pub fn save(slug: &str, user: bool, root: &Path, text: &str) -> Result<PathBuf> 
     layer::save(KIND, slug, user, root, text)
 }
 
-pub fn remove(slug: &str, user: bool, root: &Path) -> Result<PathBuf> {
+/// Remove a descriptor from a layer the user owns. A built-in has no file, so
+/// deleting one is reported rather than silently accepted — the way back to the
+/// shipped version is deleting the copy that overrides it.
+pub fn delete(slug: &str, user: bool, root: &Path) -> Result<PathBuf> {
     layer::remove(KIND, slug, user, root)
 }
 

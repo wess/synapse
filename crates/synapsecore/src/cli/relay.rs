@@ -14,8 +14,8 @@ pub fn run(arguments: &[OsString]) -> Result<Outcome> {
         "team" if arguments.get(1).is_some_and(|value| value == "open") => {
             return super::launch::open(&arguments[2..]);
         }
-        "role" => return super::roles::role(&arguments[1..]),
-        "team" => return super::roles::team(&arguments[1..]),
+        "role" => return super::layers::role(&arguments[1..]),
+        "team" => return super::layers::team(&arguments[1..]),
         _ => {}
     }
 
