@@ -12,6 +12,7 @@ pub fn render(
     oninstructions: Click,
     onsettings: Click,
     onnotice: Click,
+    ondescriptor: Click,
 ) -> AnyElement {
     let installed = row.detection.executable.is_some();
     let connected = row.detection.configured;
@@ -123,6 +124,14 @@ pub fn render(
                         .size(Size::Xs)
                         .left_section(Icon::new(IconName::FileText).size(Size::Xs))
                         .on_click(move |event, window, cx| oninstructions(event, window, cx)),
+                )
+                .child(
+                    Button::new(("descriptor", index), "Descriptor")
+                        .variant(Variant::Subtle)
+                        .color(ColorName::Violet)
+                        .size(Size::Xs)
+                        .left_section(Icon::new(IconName::PlugZap).size(Size::Xs))
+                        .on_click(move |event, window, cx| ondescriptor(event, window, cx)),
                 )
                 .child(
                     Button::new(("settings", index), "Edit config")

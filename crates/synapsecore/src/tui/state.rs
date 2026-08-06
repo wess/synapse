@@ -65,19 +65,25 @@ impl Notice {
 
 /// What the user is typing into, if anything. A page that owns no input is
 /// always in `Browse`, and every key is a command rather than a character.
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub enum Mode {
     Browse,
     Search,
+    /// Typing the name of a tool to describe. It becomes the descriptor's file
+    /// name, so it is taken here and validated before an editor opens.
+    Naming,
     Help,
     /// A destructive action, waiting to be confirmed or abandoned. Nothing
     /// irreversible happens on a single keypress.
     Confirm(Pending),
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub enum Pending {
     DeleteMemory(i64),
+    /// Taking a tool back out. Recoverable, unlike a memory, but it edits
+    /// somebody else's configuration and so is still asked about first.
+    Disconnect(String),
 }
 
 pub struct Connection {
@@ -103,6 +109,8 @@ pub struct State {
 
     pub memories: Vec<Memory>,
     pub query: String,
+    /// What is being typed outside the memory search: the name of a new tool.
+    pub input: String,
 
     pub agents: Vec<AgentView>,
     pub workers: Vec<WorkerView>,
@@ -127,7 +135,8 @@ pub fn slot(page: Page) -> usize {
 /// have none, and the cursor keys are simply inert there.
 pub fn rows(state: &State) -> usize {
     match state.page {
-        Page::Connections => state.connections.len(),
+        // One past the tools, for the row that adds another.
+        Page::Connections => state.connections.len() + 1,
         Page::Memories => state.memories.len(),
         Page::Mesh => state.agents.len() + state.workers.len(),
         Page::Skills => state.skills.len(),
@@ -167,4 +176,13 @@ pub fn selectedmemory(state: &State) -> Option<&Memory> {
         return None;
     }
     state.memories.get(cursor(state))
+}
+
+/// The tool the cursor is on. `None` on the last row, which is the one that
+/// adds a tool rather than naming one.
+pub fn selectedtool(state: &State) -> Option<&Connection> {
+    if state.page != Page::Connections {
+        return None;
+    }
+    state.connections.get(cursor(state))
 }

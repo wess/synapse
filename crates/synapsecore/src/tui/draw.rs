@@ -101,6 +101,7 @@ fn notice(frame: &mut Frame, area: Rect, state: &State) {
 fn keys(frame: &mut Frame, area: Rect, state: &State) {
     let hints: &[(&str, &str)] = match state.mode {
         Mode::Search => &[("type", "filter"), ("enter", "apply"), ("esc", "done")],
+        Mode::Naming => &[("type", "name"), ("enter", "describe"), ("esc", "cancel")],
         Mode::Confirm(_) => &[("y", "confirm"), ("any", "cancel")],
         Mode::Help => &[("any", "close")],
         Mode::Browse => match state.page {
@@ -110,6 +111,15 @@ fn keys(frame: &mut Frame, area: Rect, state: &State) {
                 ("/", "search"),
                 ("d", "delete"),
                 ("r", "refresh"),
+                ("?", "help"),
+                ("q", "quit"),
+            ],
+            Page::Connections => &[
+                ("↹", "page"),
+                ("jk", "move"),
+                ("c", "connect"),
+                ("e", "describe"),
+                ("d", "disconnect"),
                 ("?", "help"),
                 ("q", "quit"),
             ],

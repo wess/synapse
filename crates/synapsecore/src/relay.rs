@@ -14,7 +14,7 @@ pub use bus::{
     PARKSECONDS, PROGRESSSECONDS, ack, awaitmessages, awaitstatus, deliver, reportstatus,
 };
 pub use launch::{Launch, Options, launch};
-pub use layer::Source;
+pub use layer::{Source, valid as validlayername};
 pub use model::{AgentView, ChannelView, Message, MessageKind, Registration, WorkerView};
 pub use store::Mesh;
 pub use worker::{Spec, Supervisor, reapstrays};

@@ -57,7 +57,7 @@ pub fn run() -> Result<()> {
         if let Err(error) = terminal.draw(|frame| draw::frame(frame, &state)) {
             break Err(error).context("could not draw the dashboard");
         }
-        match pump(&runtime, &mut state) {
+        match pump(&runtime, &mut state, &mut terminal) {
             Ok(()) if state.quit => break Ok(()),
             Ok(()) => {}
             Err(error) => break Err(error),
@@ -70,7 +70,11 @@ pub fn run() -> Result<()> {
 }
 
 /// One pass of the event loop: wait for input, turn it into an action, run it.
-fn pump(runtime: &tokio::runtime::Runtime, state: &mut state::State) -> Result<()> {
+fn pump(
+    runtime: &tokio::runtime::Runtime,
+    state: &mut state::State,
+    terminal: &mut ratatui::DefaultTerminal,
+) -> Result<()> {
     if !event::poll(TICK).context("could not read the terminal")? {
         return Ok(());
     }
@@ -141,7 +145,72 @@ fn pump(runtime: &tokio::runtime::Runtime, state: &mut state::State) -> Result<(
             });
             Ok(())
         }
+        Action::Connect(slug) => {
+            state.notice = match connect(&slug) {
+                Ok(name) => Notice::Success(format!("{name} is connected to Synapse")),
+                Err(error) => Notice::Error(format!("{error:#}")),
+            };
+            runtime.block_on(load::refresh(state));
+            Ok(())
+        }
+        Action::Disconnect(slug) => {
+            state.notice = match runtime.block_on(disconnect(&slug)) {
+                Ok(message) => Notice::Success(message),
+                Err(error) => Notice::Error(format!("{error:#}")),
+            };
+            runtime.block_on(load::refresh(state));
+            Ok(())
+        }
+        // The editor owns the terminal for as long as it runs, so the dashboard
+        // gives it back and takes it again afterwards. Restoring first is not
+        // optional: an editor started inside raw mode draws over the dashboard
+        // and leaves the shell unusable when it exits.
+        Action::Describe(slug) => {
+            ratatui::restore();
+            let outcome = crate::cli::describetool(&slug);
+            *terminal = ratatui::init();
+            terminal.clear().ok();
+            state.notice = match outcome {
+                Ok(path) => Notice::Success(format!("saved {}", path.display())),
+                Err(error) => Notice::Error(format!("{error:#}")),
+            };
+            runtime.block_on(load::refresh(state));
+            Ok(())
+        }
     }
+}
+
+/// Wire one tool in, by the slug the dashboard row carries.
+fn connect(slug: &str) -> Result<String> {
+    let home = crate::files::home()?;
+    let server = crate::cli::destination()?;
+    let soul = crate::files::soul()?;
+    let agent = crate::agent::agents(&home)
+        .into_iter()
+        .find(|agent| agent.slug == slug)
+        .with_context(|| format!("no tool named `{slug}`"))?;
+    let detection = crate::agent::detect(&agent, Some(&server));
+    crate::agent::setup(&agent, &detection, &server, &soul)?;
+    Ok(agent.name)
+}
+
+async fn disconnect(slug: &str) -> Result<String> {
+    let home = crate::files::home()?;
+    let server = crate::cli::destination()?;
+    let agent = crate::agent::agents(&home)
+        .into_iter()
+        .find(|agent| agent.slug == slug)
+        .with_context(|| format!("no tool named `{slug}`"))?;
+    let removed = crate::agent::disconnect(&agent, &server).await;
+    anyhow::ensure!(
+        removed.problems.is_empty(),
+        "{}",
+        removed.problems.join("; ")
+    );
+    Ok(match removed.done.len() {
+        0 => format!("{} had nothing to disconnect", agent.name),
+        count => format!("disconnected {} · {count} thing(s) removed", agent.name),
+    })
 }
 
 async fn deletememory(state: &state::State, id: i64) -> Result<()> {
@@ -185,6 +254,7 @@ mod tests {
                 created: 1_700_000_000,
             }],
             query: String::new(),
+            input: String::new(),
             agents: Vec::new(),
             workers: Vec::new(),
             mesherror: None,
@@ -217,12 +287,96 @@ mod tests {
     #[test]
     fn every_page_draws_at_any_size_it_is_given() {
         for page in PAGES {
-            for (width, height) in [(80, 24), (200, 60), (20, 8), (8, 4), (1, 1)] {
-                let mut state = sample();
-                state.page = page;
-                render(&state, width, height);
+            for mode in [Mode::Browse, Mode::Naming] {
+                for (width, height) in [(80, 24), (200, 60), (20, 8), (8, 4), (1, 1)] {
+                    let mut state = sample();
+                    state.page = page;
+                    state.mode = mode.clone();
+                    render(&state, width, height);
+                }
             }
         }
+    }
+
+    /// The row past the end of the tool list is what makes the set of tools
+    /// open-ended, so the cursor has to be able to reach it even when the
+    /// machine has no tools at all.
+    #[test]
+    fn the_tool_list_always_has_a_row_for_adding_another() {
+        let mut state = sample();
+        state.page = Page::Connections;
+        assert_eq!(state::rows(&state), 1);
+
+        // On that row there is no tool to connect, so it asks for a name.
+        let action = keys::handle(
+            &mut state,
+            KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE),
+        );
+        assert!(matches!(action, Action::None));
+        assert!(state.mode == Mode::Naming);
+        render(&state, 80, 24);
+    }
+
+    #[test]
+    fn a_name_that_cannot_be_a_file_is_refused_before_an_editor_opens() {
+        let mut state = sample();
+        state.page = Page::Connections;
+        state.mode = Mode::Naming;
+        for character in "My Tool".chars() {
+            keys::handle(
+                &mut state,
+                KeyEvent::new(KeyCode::Char(character), KeyModifiers::NONE),
+            );
+        }
+        let action = keys::handle(
+            &mut state,
+            KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE),
+        );
+        assert!(matches!(action, Action::None), "a space is not a file name");
+        assert!(state.mode == Mode::Naming, "still asking");
+
+        let mut state = sample();
+        state.page = Page::Connections;
+        state.mode = Mode::Naming;
+        for character in "hermes".chars() {
+            keys::handle(
+                &mut state,
+                KeyEvent::new(KeyCode::Char(character), KeyModifiers::NONE),
+            );
+        }
+        let action = keys::handle(
+            &mut state,
+            KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE),
+        );
+        assert!(matches!(action, Action::Describe(name) if name == "hermes"));
+        assert!(state.mode == Mode::Browse);
+    }
+
+    /// Disconnecting edits somebody else's configuration, so it asks first —
+    /// and Enter, which is what a person presses to dismiss a prompt they did
+    /// not read, is not the key that answers.
+    #[test]
+    fn disconnecting_a_tool_is_confirmed_first() {
+        let mut state = sample();
+        state.page = Page::Connections;
+        state.connections.push(crate::tui::state::Connection {
+            agent: crate::agent::tool::resolve(std::path::Path::new("/users/test"), None, "codex")
+                .unwrap()
+                .unwrap(),
+            detection: crate::agent::Detection::missing(),
+        });
+        keys::handle(
+            &mut state,
+            KeyEvent::new(KeyCode::Char('d'), KeyModifiers::NONE),
+        );
+        assert!(matches!(state.mode, Mode::Confirm(Pending::Disconnect(_))));
+
+        let action = keys::handle(
+            &mut state,
+            KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE),
+        );
+        assert!(matches!(action, Action::None));
+        assert!(state.mode == Mode::Browse);
     }
 
     #[test]

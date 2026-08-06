@@ -39,6 +39,7 @@ pub async fn initial() -> Result<State> {
         guidance: None,
         memories: Vec::new(),
         query: String::new(),
+        input: String::new(),
         agents: Vec::new(),
         workers: Vec::new(),
         mesherror: None,

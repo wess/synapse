@@ -16,11 +16,19 @@ pub enum Action {
     DeleteMemory(i64),
     SetOptimization(Optimization),
     ToggleMesh,
+    /// Wire the tool under the cursor into memory and the vault.
+    Connect(String),
+    /// Undo that.
+    Disconnect(String),
+    /// Open a tool's descriptor in `$EDITOR`, seeded from the existing one or
+    /// from the template when there is none yet.
+    Describe(String),
 }
 
 pub fn handle(state: &mut State, key: KeyEvent) -> Action {
-    match state.mode {
+    match state.mode.clone() {
         Mode::Search => search(state, key),
+        Mode::Naming => naming(state, key),
         Mode::Help => {
             state.mode = Mode::Browse;
             Action::None
@@ -50,11 +58,49 @@ fn search(state: &mut State, key: KeyEvent) -> Action {
     }
 }
 
+/// Typing the name of a tool to describe. It becomes a file name, so it is
+/// checked here rather than after an editor has been opened on a draft that can
+/// never be saved.
+fn naming(state: &mut State, key: KeyEvent) -> Action {
+    match key.code {
+        KeyCode::Esc => {
+            state.mode = Mode::Browse;
+            state.input.clear();
+            state.notice = Notice::Ready;
+            Action::None
+        }
+        KeyCode::Enter => {
+            let name = state.input.trim().to_owned();
+            match crate::relay::validlayername(&name) {
+                Ok(()) => {
+                    state.mode = Mode::Browse;
+                    state.input.clear();
+                    Action::Describe(name)
+                }
+                Err(error) => {
+                    state.notice = Notice::Error(error.to_string());
+                    Action::None
+                }
+            }
+        }
+        KeyCode::Backspace => {
+            state.input.pop();
+            Action::None
+        }
+        KeyCode::Char(character) => {
+            state.input.push(character);
+            Action::None
+        }
+        _ => Action::None,
+    }
+}
+
 fn confirm(state: &mut State, key: KeyEvent, pending: Pending) -> Action {
     // Only `y` confirms. Every other key, including Enter, abandons — Enter is
     // what a person presses to dismiss something they did not read.
     let action = match (key.code, pending) {
         (KeyCode::Char('y'), Pending::DeleteMemory(id)) => Action::DeleteMemory(id),
+        (KeyCode::Char('y'), Pending::Disconnect(slug)) => Action::Disconnect(slug),
         _ => {
             state.notice = Notice::Ready;
             Action::None
@@ -122,6 +168,36 @@ fn browse(state: &mut State, key: KeyEvent) -> Action {
                 let id = memory.id;
                 state.notice = Notice::Error(format!("delete memory #{id}? y to confirm"));
                 state.mode = Mode::Confirm(Pending::DeleteMemory(id));
+                Action::None
+            }
+            None => Action::None,
+        },
+
+        // The row past the end of the tool list asks for a name and then opens
+        // a descriptor; every other row connects the tool it names.
+        KeyCode::Enter | KeyCode::Char('c') if state.page == Page::Connections => {
+            match state::selectedtool(state) {
+                Some(row) => Action::Connect(row.agent.slug.clone()),
+                None => {
+                    state.mode = Mode::Naming;
+                    state.input.clear();
+                    Action::None
+                }
+            }
+        }
+        KeyCode::Char('e') if state.page == Page::Connections => match state::selectedtool(state) {
+            Some(row) => Action::Describe(row.agent.slug.clone()),
+            None => {
+                state.mode = Mode::Naming;
+                state.input.clear();
+                Action::None
+            }
+        },
+        KeyCode::Char('d') if state.page == Page::Connections => match state::selectedtool(state) {
+            Some(row) => {
+                let slug = row.agent.slug.clone();
+                state.notice = Notice::Error(format!("disconnect {slug}? y to confirm"));
+                state.mode = Mode::Confirm(Pending::Disconnect(slug));
                 Action::None
             }
             None => Action::None,

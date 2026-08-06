@@ -16,6 +16,7 @@ mod skills;
 mod wrap;
 
 pub use install::{InstallStatus, destination, install, status};
+pub(crate) use layers::describetool;
 
 pub enum Outcome {
     App,

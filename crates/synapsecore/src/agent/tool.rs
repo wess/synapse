@@ -238,6 +238,26 @@ pub fn delete(slug: &str, user: bool, root: &Path) -> Result<PathBuf> {
     layer::remove(KIND, slug, user, root)
 }
 
+/// The descriptor file a person owns for `slug`, created from the layer it
+/// currently resolves from — or from the template when there is none yet.
+///
+/// This is what a dashboard opens when somebody wants to describe a tool: it
+/// returns a path that exists and parses, so the editor on the other side has a
+/// real file rather than a promise of one. Editing a built-in copies it down
+/// first, which is the same rule the CLI follows.
+pub fn draft(slug: &str) -> Result<PathBuf> {
+    layer::valid(slug)?;
+    let root = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+    let path = layer::file(&layer::userdirectory(KIND)?, slug);
+    if path.is_file() {
+        return Ok(path);
+    }
+    let seed = layer::read(KIND, BUILTINS, Some(&root), slug)
+        .map(|(text, _)| text)
+        .unwrap_or_else(|| TEMPLATE.to_owned());
+    save(slug, true, &root, &seed)
+}
+
 /// Whether a slug names one of the three Synapse ships, which have behaviour
 /// beyond their descriptor and so cannot be reduced to one.
 pub fn kind(slug: &str) -> Kind {

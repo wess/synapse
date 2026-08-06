@@ -43,6 +43,9 @@ pub struct Dashboard {
     vaults: Vec<Vault>,
     selectedvault: Option<i64>,
     secrets: Vec<Secret>,
+    /// The name of a tool somebody is describing. It becomes the descriptor's
+    /// file name, so it is taken here rather than guessed from the file.
+    toolname: Entity<TextInput>,
     vaultname: Entity<TextInput>,
     secretname: Entity<TextInput>,
     secretenv: Entity<TextInput>,
@@ -156,6 +159,11 @@ impl Dashboard {
             .map(PathBuf::from)
             .and_then(|path| Self::loaddocument("Synapse".to_owned(), path, cx).ok());
         let appmenu = crate::ui::menu::bar(cx);
+        let toolname = cx.new(|cx| {
+            TextInput::new(cx)
+                .label("Add a connection")
+                .placeholder("hermes")
+        });
         let vaultname = cx.new(|cx| TextInput::new(cx).label("New vault").placeholder("work"));
         let secretname = cx.new(|cx| TextInput::new(cx).label("Name").placeholder("database"));
         let secretenv = cx.new(|cx| {
@@ -225,6 +233,7 @@ impl Dashboard {
             vaults,
             selectedvault,
             secrets,
+            toolname,
             vaultname,
             secretname,
             secretenv,
@@ -1110,6 +1119,50 @@ impl Dashboard {
         self.opendocument(slug, instructionspath, "instructions", window, cx);
     }
 
+    /// Open a tool's descriptor for editing. Editing one of the three Synapse
+    /// ships copies it into a layer the user owns first, so the shipped file
+    /// stays as it was and can always be returned to by deleting the copy.
+    fn opendescriptor(&mut self, slug: &str, window: &mut Window, cx: &mut Context<Self>) {
+        let name = self
+            .rows
+            .iter()
+            .find(|row| row.agent.slug == slug)
+            .map_or_else(|| slug.to_owned(), |row| row.agent.name.clone());
+        match agent::tool::draft(slug).and_then(|path| Self::loaddocument(name, path, cx)) {
+            Ok(document) => {
+                let focus = buffer::focus(&document.editor, cx);
+                self.document = Some(document);
+                window.focus(&focus);
+                cx.notify();
+            }
+            Err(error) => {
+                self.notice = Notice::Error(format!("Could not open that descriptor: {error:#}"));
+                cx.notify();
+            }
+        }
+    }
+
+    /// Start describing a tool Synapse does not ship. The name becomes the
+    /// descriptor's file name, so it is checked before anything is written —
+    /// and the new file opens in the editor already filled with a template that
+    /// explains each section.
+    fn describetool(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let slug = self.toolname.read(cx).text().trim().to_lowercase();
+        if let Err(error) = synapsecore::relay::validlayername(&slug) {
+            self.notice = Notice::Error(format!("{error}"));
+            cx.notify();
+            return;
+        }
+        if self.rows.iter().any(|row| row.agent.slug == slug) {
+            self.notice = Notice::Error(format!("`{slug}` is already a tool on this machine."));
+            cx.notify();
+            return;
+        }
+        self.toolname.update(cx, |input, cx| input.set_text("", cx));
+        self.opendescriptor(&slug, window, cx);
+        self.rows = loadrows();
+    }
+
     fn opensettings(&mut self, slug: &str, window: &mut Window, cx: &mut Context<Self>) {
         self.opendocument(slug, settingspath, "configuration", window, cx);
     }
@@ -1683,6 +1736,12 @@ impl Render for Dashboard {
                                                 Box::new(cx.listener(move |this, _, _, cx| {
                                                     this.togglenotice(&slug, cx);
                                                 }));
+                                            let slug = row.agent.slug.clone();
+                                            let descriptor = Box::new(cx.listener(
+                                                move |this, _, window, cx| {
+                                                    this.opendescriptor(&slug, window, cx);
+                                                },
+                                            ));
                                             let mut items = Vec::new();
                                             if index > 0 {
                                                 items.push(
@@ -1700,10 +1759,46 @@ impl Render for Dashboard {
                                                 instructions,
                                                 settings,
                                                 notice,
+                                                descriptor,
                                             ));
                                             items
                                         },
-                                    )),
+                                    ))
+                                    // Past the end of the list. There will be
+                                    // more coding tools than Synapse ships
+                                    // descriptors for, and this is where a
+                                    // person says so.
+                                    .child(div().h(px(1.0)).mx(px(22.0)).bg(border))
+                                    .child(
+                                        div()
+                                            .flex()
+                                            .items_end()
+                                            .justify_between()
+                                            .gap(px(16.0))
+                                            .px(px(22.0))
+                                            .py(px(16.0))
+                                            .child(
+                                                div()
+                                                    .flex_1()
+                                                    .max_w(px(320.0))
+                                                    .child(self.toolname.clone()),
+                                            )
+                                            .child(
+                                                Button::new("describetool", "Describe a tool")
+                                                    .variant(Variant::Light)
+                                                    .color(ColorName::Violet)
+                                                    .size(Size::Xs)
+                                                    .left_section(
+                                                        Icon::new(IconName::FileText)
+                                                            .size(Size::Xs),
+                                                    )
+                                                    .on_click(cx.listener(
+                                                        |this, _, window, cx| {
+                                                            this.describetool(window, cx);
+                                                        },
+                                                    )),
+                                            ),
+                                    ),
                             ),
                     ),
             )

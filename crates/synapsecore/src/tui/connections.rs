@@ -6,7 +6,7 @@
 
 use crate::cli::InstallStatus;
 use crate::shellsetup::IntegrationState;
-use crate::tui::state::State;
+use crate::tui::state::{Mode, State};
 use crate::tui::{draw, theme};
 use ratatui::Frame;
 use ratatui::layout::{Constraint, Layout, Rect};
@@ -14,9 +14,38 @@ use ratatui::text::{Line, Span};
 use ratatui::widgets::Paragraph;
 
 pub fn draw(frame: &mut Frame, area: Rect, state: &State) {
+    if state.mode == Mode::Naming {
+        let areas = Layout::vertical([
+            Constraint::Length(3),
+            Constraint::Min(3),
+            Constraint::Length(7),
+        ])
+        .split(area);
+        naming(frame, areas[0], state);
+        tools(frame, areas[1], state);
+        machine(frame, areas[2], state);
+        return;
+    }
     let areas = Layout::vertical([Constraint::Min(3), Constraint::Length(7)]).split(area);
     tools(frame, areas[0], state);
     machine(frame, areas[1], state);
+}
+
+/// The name of the tool being described, which becomes its file name.
+fn naming(frame: &mut Frame, area: Rect, state: &State) {
+    let spans = vec![
+        Span::styled(" ", theme::text()),
+        Span::styled(state.input.clone(), theme::text()),
+        // A block rather than a real cursor: the terminal's cursor is parked
+        // off-screen while the dashboard owns the display.
+        Span::styled("▌", theme::accent()),
+    ];
+    frame.render_widget(
+        Paragraph::new(Line::from(spans)).block(draw::panel(
+            "Name for the new tool · lowercase, digits, dashes",
+        )),
+        area,
+    );
 }
 
 fn tools(frame: &mut Frame, area: Rect, state: &State) {
@@ -59,6 +88,15 @@ fn tools(frame: &mut Frame, area: Rect, state: &State) {
             index == cursor,
         ));
     }
+    // The row past the end. There will be more coding tools than Synapse ships
+    // descriptors for, and this is where a person says so.
+    lines.push(draw::row(
+        vec![
+            Span::styled("   ", theme::dim()),
+            Span::styled("+ Add a connection…", theme::dim()),
+        ],
+        cursor == state.connections.len(),
+    ));
     frame.render_widget(
         Paragraph::new(lines).block(draw::panel("Connected tools")),
         area,

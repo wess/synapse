@@ -49,7 +49,27 @@ pub fn team(arguments: &[OsString]) -> Result<Outcome> {
 /// Describing a tool Synapse does not ship: what it is called, where it keeps
 /// its files, and what to run to connect it.
 pub fn tool(arguments: &[OsString]) -> Result<Outcome> {
-    let kind = Kind {
+    run(&toolkind(), arguments)
+}
+
+/// Round-trip one tool descriptor through `$EDITOR`, seeded from the existing
+/// one or from the template when there is none yet.
+///
+/// The dashboards call this rather than growing a form of their own: a
+/// descriptor has four sections and a person editing one wants their own editor,
+/// not a field at a time. It saves into the user layer, which is the one that
+/// travels with the person rather than the checkout.
+pub(crate) fn describetool(slug: &str) -> Result<PathBuf> {
+    let kind = toolkind();
+    let root = std::env::current_dir()?;
+    let seed = (kind.text)(&root, slug)
+        .map(|(body, _)| body)
+        .unwrap_or_else(|_| kind.template.to_owned());
+    edit(&kind, slug, true, &root, seed)
+}
+
+fn toolkind() -> Kind {
+    Kind {
         label: "tool",
         usage: TOOLUSAGE,
         template: crate::agent::tool::TEMPLATE,
@@ -57,8 +77,7 @@ pub fn tool(arguments: &[OsString]) -> Result<Outcome> {
         text: |root, name| crate::agent::tool::text(Some(root), name),
         save: crate::agent::tool::save,
         delete: crate::agent::tool::delete,
-    };
-    run(&kind, arguments)
+    }
 }
 
 /// The three file kinds differ only in which functions read and write them.
