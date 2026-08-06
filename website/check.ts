@@ -169,7 +169,9 @@ for (const command of [
   "synapse doctor",
   "synapse settings",
   "synapse install",
+  "synapse connect",
   "synapse disconnect",
+  "synapse tool",
   "synapse uninstall",
   "synapse path",
   "synapse version",
@@ -179,6 +181,7 @@ for (const command of [
 
 // The subcommands that do something a reader cannot guess from the family name.
 for (const command of [
+  "synapse tool create",
   "synapse relay team",
   "synapse relay role",
   "synapse relay launch",

@@ -21,7 +21,7 @@ name = "synapsecore"
 # Keep this in step with crates/synapse: `synapse version` reads the version of
 # the crate that holds the command, and the two ship as one product. Only the
 # desktop crate's version triggers the release workflow.
-version = "0.1.0-beta.19"
+version = "0.1.0-beta.20"
 edition = "2024"
 description = "Memory, credentials, and the command surface for Synapse, without a window"
 

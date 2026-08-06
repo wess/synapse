@@ -31,7 +31,7 @@
       <a href="../../docs/" aria-current="page">Docs</a>
       <a href="../../tutorials/">Tutorials</a>
       <a href="https://github.com/wess/synapse">GitHub <span aria-hidden="true">↗</span></a>
-      <a class="navdownload" href="https://github.com/wess/synapse/releases/download/v0.1.0-beta.19/synapse.zip">Download</a>
+      <a class="navdownload" href="https://github.com/wess/synapse/releases/download/v0.1.0-beta.20/synapse.zip">Download</a>
     </nav>
   </header>
   
@@ -584,6 +584,59 @@
     <p>Move unmanaged global guidance into SOUL.md, replace both global files with managed pointers, and retain backups.</p>
   </section>
 
+    <h2 id="tools">Tools Synapse does not ship</h2>
+    <p>
+      Codex, Claude Code, and pi are ordinary descriptors, not special cases. A
+      descriptor is a TOML file saying where a tool keeps its files, what to run
+      against its own CLI to connect it, how to read that back, and which flags
+      it takes when Synapse starts it. Yours resolve from
+      <code>.synapse/tools/</code> in a repository first, then your data
+      directory, then the ones Synapse ships — so a project can carry the tool
+      its team works in, and you can correct a built-in without waiting for a
+      release. A described tool gets everything a built-in gets: connection,
+      shared guidance, the skill library, and the mesh.
+    </p>
+    
+  <section class="command" id="toollist">
+    <div>
+      <h3>tool list</h3>
+      <code>synapse tool list [--json]</code>
+    </div>
+    <p>Every tool this machine can connect to, with the layer each one resolves from.</p>
+  </section>
+    
+  <section class="command" id="toolshow">
+    <div>
+      <h3>tool show</h3>
+      <code>synapse tool show &amp;lt;name&amp;gt;</code>
+    </div>
+    <p>Print one descriptor and where it came from.</p>
+  </section>
+    
+  <section class="command" id="toolcreate">
+    <div>
+      <h3>tool create</h3>
+      <code>synapse tool create &amp;lt;name&amp;gt;</code>
+    </div>
+    <p>Describe a tool Synapse does not ship. Opens a commented template in your editor and refuses to save a file that would not load. The name becomes the descriptor's file name and what you pass to <code>--tool</code>.</p>
+  </section>
+    
+  <section class="command" id="tooledit">
+    <div>
+      <h3>tool edit</h3>
+      <code>synapse tool edit &amp;lt;name&amp;gt;</code>
+    </div>
+    <p>Edit a descriptor. Editing one Synapse ships copies it into a layer you own first, so the shipped file stays as it was.</p>
+  </section>
+    
+  <section class="command" id="tooldelete">
+    <div>
+      <h3>tool delete</h3>
+      <code>synapse tool delete &amp;lt;name&amp;gt;</code>
+    </div>
+    <p>Remove a descriptor you added. Deleting a copy that overrides a built-in returns you to the shipped one.</p>
+  </section>
+
     <h2 id="install">Installation and paths</h2>
     
   <section class="command" id="install">
@@ -610,10 +663,18 @@
     <p>Report everything a bug report needs: version, store state and size, connected tools and what each is set up with, skill and mesh state, shell and CLI integration, resolved paths, and recent crashes. Every check reports rather than fails, so a broken store is described instead of stopping the report. Nothing is sent anywhere.</p>
   </section>
     
+  <section class="command" id="connect">
+    <div>
+      <h3>connect</h3>
+      <code>synapse connect [tool]</code>
+    </div>
+    <p>Wire a tool into memory and the vault: register the Synapse MCP server through that tool's own CLI, and point its global instruction file at SOUL.md. With no name it connects every tool this machine has. Synapse never edits a tool's configuration itself — it asks the tool to.</p>
+  </section>
+    
   <section class="command" id="disconnect">
     <div>
       <h3>disconnect</h3>
-      <code>synapse disconnect [claude|codex|pi]</code>
+      <code>synapse disconnect [tool]</code>
     </div>
     <p>Undo one tool's connection, or every tool's when no name is given: the MCP registration or installed package, the managed block in its instruction file, the Claude Code session notice and status line, and any skill Synapse installed for it. A skill you wrote, or a status line somebody else configured, is left alone.</p>
   </section>

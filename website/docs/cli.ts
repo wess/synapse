@@ -98,11 +98,30 @@ ${command("guidance show", "synapse guidance show [--json]", "Print the SOUL.md 
 ${command("guidance sync", "synapse guidance sync", "Create SOUL.md when needed and refresh managed pointers in both global instruction files without removing unmanaged text.")}
 ${command("guidance adopt", "synapse guidance adopt --confirm", "Move unmanaged global guidance into SOUL.md, replace both global files with managed pointers, and retain backups.")}
 
+    <h2 id="tools">Tools Synapse does not ship</h2>
+    <p>
+      Codex, Claude Code, and pi are ordinary descriptors, not special cases. A
+      descriptor is a TOML file saying where a tool keeps its files, what to run
+      against its own CLI to connect it, how to read that back, and which flags
+      it takes when Synapse starts it. Yours resolve from
+      <code>.synapse/tools/</code> in a repository first, then your data
+      directory, then the ones Synapse ships \u2014 so a project can carry the tool
+      its team works in, and you can correct a built-in without waiting for a
+      release. A described tool gets everything a built-in gets: connection,
+      shared guidance, the skill library, and the mesh.
+    </p>
+    ${command("tool list", "synapse tool list [--json]", "Every tool this machine can connect to, with the layer each one resolves from.")}
+    ${command("tool show", "synapse tool show &lt;name&gt;", "Print one descriptor and where it came from.")}
+    ${command("tool create", "synapse tool create &lt;name&gt;", "Describe a tool Synapse does not ship. Opens a commented template in your editor and refuses to save a file that would not load. The name becomes the descriptor's file name and what you pass to <code>--tool</code>.")}
+    ${command("tool edit", "synapse tool edit &lt;name&gt;", "Edit a descriptor. Editing one Synapse ships copies it into a layer you own first, so the shipped file stays as it was.")}
+    ${command("tool delete", "synapse tool delete &lt;name&gt;", "Remove a descriptor you added. Deleting a copy that overrides a built-in returns you to the shipped one.")}
+
     <h2 id="install">Installation and paths</h2>
     ${command("install", "synapse install", "Install the current executable for this user. A packaged app creates a launcher into the signed bundle; a development binary is copied atomically. Unrelated destination files are never overwritten.")}
     ${command("path", "synapse path", "Print the resolved data directory, SOUL.md, and CLI destination.")}
     ${command("doctor", "synapse doctor [--json]", "Report everything a bug report needs: version, store state and size, connected tools and what each is set up with, skill and mesh state, shell and CLI integration, resolved paths, and recent crashes. Every check reports rather than fails, so a broken store is described instead of stopping the report. Nothing is sent anywhere.")}
-    ${command("disconnect", "synapse disconnect [claude|codex|pi]", "Undo one tool's connection, or every tool's when no name is given: the MCP registration or installed package, the managed block in its instruction file, the Claude Code session notice and status line, and any skill Synapse installed for it. A skill you wrote, or a status line somebody else configured, is left alone.")}
+    ${command("connect", "synapse connect [tool]", "Wire a tool into memory and the vault: register the Synapse MCP server through that tool's own CLI, and point its global instruction file at SOUL.md. With no name it connects every tool this machine has. Synapse never edits a tool's configuration itself \u2014 it asks the tool to.")}
+    ${command("disconnect", "synapse disconnect [tool]", "Undo one tool's connection, or every tool's when no name is given: the MCP registration or installed package, the managed block in its instruction file, the Claude Code session notice and status line, and any skill Synapse installed for it. A skill you wrote, or a status line somebody else configured, is left alone.")}
     ${command("uninstall", "synapse uninstall [--data] [--confirm]", "Remove everything Synapse installed: every tool connection, the shell hook, and the command line tool. Without <code>--confirm</code> it prints what it would remove and stops. Your memory is left alone unless you also pass <code>--data</code>, which cannot be undone.")}
     ${command("version", "synapse version", "Print the application version. <code>--version</code> and <code>-V</code> are aliases.")}
     ${command("help", "synapse help", "Print the command summary. <code>--help</code> and <code>-h</code> are aliases at the top level.")}
