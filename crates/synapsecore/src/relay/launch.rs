@@ -124,10 +124,16 @@ pub fn launch(options: &Options) -> Result<Launch> {
         )
     });
 
-    let environment = vec![(
+    let mut environment = vec![(
         "SYNAPSE_PROJECT_DIR".to_owned(),
         options.root.display().to_string(),
     )];
+    // The tool we resolved may be a version manager's shim, and a shim execs its
+    // manager by name. The desktop app inherits the Finder's four-entry PATH, so
+    // without this the child starts and immediately cannot find `asdf`.
+    if let Some(path) = crate::agent::searchpath().and_then(|path| path.into_string().ok()) {
+        environment.push(("PATH".to_owned(), path));
+    }
 
     if let Some(template) = options.command {
         let config = configpath(options.name, options.root)?;

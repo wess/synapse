@@ -1032,7 +1032,9 @@ fn launching_pi_writes_the_extension_that_carries_the_tools() {
     let entry = root.path().join("data/relay/pi/synapse/index.ts");
     assert!(entry.is_file(), "the extension was not written out");
     assert!(
-        fs::read_to_string(entry).unwrap().contains("export default"),
+        fs::read_to_string(entry)
+            .unwrap()
+            .contains("export default"),
         "the entry point has to be loadable by pi"
     );
     assert!(

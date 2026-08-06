@@ -14,7 +14,6 @@
 use crate::agent::{Agent, Kind};
 use anyhow::{Context, Result};
 use std::path::Path;
-use std::process::Command;
 
 /// What came out, and what did not.
 #[derive(Debug, Default)]
@@ -78,7 +77,7 @@ fn unregister(agent: &Agent) -> Result<bool> {
         .executable
         .as_deref()
         .context("the tool is not installed or is not on PATH")?;
-    let mut command = Command::new(executable);
+    let mut command = crate::agent::command(executable);
     match agent.kind {
         Kind::Codex => command.args(["mcp", "remove", "synapse"]),
         Kind::Claude => command.args(["mcp", "remove", "--scope", "user", "synapse"]),

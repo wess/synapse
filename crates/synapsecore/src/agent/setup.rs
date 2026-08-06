@@ -2,7 +2,6 @@ use crate::agent::{Agent, Detection, Kind};
 use crate::files;
 use anyhow::{Context, Result};
 use std::path::Path;
-use std::process::Command;
 
 pub fn setup(agent: &Agent, detection: &Detection, server: &Path, soul: &Path) -> Result<()> {
     let integration = files::Snapshot::capture(&agent.integration)?;
@@ -36,7 +35,7 @@ fn runsetup(agent: &Agent, detection: &Detection, server: &Path, soul: &Path) ->
 
     if !detection.configured {
         if agent.kind == Kind::Claude && detection.registered {
-            let output = Command::new(executable)
+            let output = crate::agent::command(executable)
                 .args(["mcp", "remove", "--scope", "user", "synapse"])
                 .output()
                 .context("could not remove the stale Claude Code connection")?;
@@ -46,10 +45,13 @@ fn runsetup(agent: &Agent, detection: &Detection, server: &Path, soul: &Path) ->
                 String::from_utf8_lossy(&output.stderr).trim()
             );
         }
-        let mut command = Command::new(executable);
+        let mut command = crate::agent::command(executable);
         match agent.kind {
             Kind::Codex => {
-                command.args(["mcp", "add", "synapse", "--"]).arg(server).arg("mcp");
+                command
+                    .args(["mcp", "add", "synapse", "--"])
+                    .arg(server)
+                    .arg("mcp");
             }
             Kind::Claude => {
                 command
@@ -279,7 +281,14 @@ mod tests {
         let instructions = directory.path().join("APPEND_SYSTEM.md");
         let executable = directory.path().join("fake");
         let log = directory.path().join("commands");
-        fs::write(&executable, format!("#!/bin/sh\nprintf '%s\\n' \"$*\" >> '{}'\nexit 0\n", log.display())).unwrap();
+        fs::write(
+            &executable,
+            format!(
+                "#!/bin/sh\nprintf '%s\\n' \"$*\" >> '{}'\nexit 0\n",
+                log.display()
+            ),
+        )
+        .unwrap();
         fs::set_permissions(&executable, fs::Permissions::from_mode(0o700)).unwrap();
         let mut agent = testagent(settings, instructions.clone());
         agent.kind = Kind::Pi;
@@ -296,15 +305,63 @@ mod tests {
 
         // pi's own package manager, not an edit to its settings, and no MCP
         // server to register: the package is what carries the tools.
-        assert_eq!(
-            fs::read_to_string(log).unwrap(),
-            "install npm:synapse-pi\n"
-        );
+        assert_eq!(fs::read_to_string(log).unwrap(), "install npm:synapse-pi\n");
         // And the same managed pointer every other connected tool gets, in the
         // file pi appends to every system prompt.
         let appended = fs::read_to_string(instructions).unwrap();
-        assert!(appended.contains("<!-- synapse:begin -->"), "got {appended}");
+        assert!(
+            appended.contains("<!-- synapse:begin -->"),
+            "got {appended}"
+        );
         assert!(appended.contains(soul.to_str().unwrap()), "got {appended}");
+    }
+
+    /// The desktop app is started by the Finder with a four-entry PATH, so what
+    /// detection finds is usually a version manager's shim — and a shim execs
+    /// its manager by name. Setup has to hand the child somewhere to find it, or
+    /// connecting fails with `exec: asdf: not found` on a machine where the tool
+    /// works perfectly from a terminal.
+    #[cfg(unix)]
+    #[test]
+    fn the_tool_is_run_with_a_path_wide_enough_for_a_version_manager_shim() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let directory = tempfile::tempdir().unwrap();
+        let executable = directory.path().join("fake");
+        let log = directory.path().join("path");
+        fs::write(
+            &executable,
+            format!(
+                "#!/bin/sh\nprintf '%s' \"$PATH\" > '{}'\nexit 0\n",
+                log.display()
+            ),
+        )
+        .unwrap();
+        fs::set_permissions(&executable, fs::Permissions::from_mode(0o700)).unwrap();
+        let agent = testagent(
+            directory.path().join("config.toml"),
+            directory.path().join("agents.md"),
+        );
+        let detection = Detection {
+            executable: Some(executable),
+            version: None,
+            registered: false,
+            configured: false,
+            hooks: crate::agent::HookState::default(),
+        };
+
+        setup(
+            &agent,
+            &detection,
+            Path::new("/synapse"),
+            &directory.path().join("SOUL.md"),
+        )
+        .unwrap();
+
+        let path = fs::read_to_string(log).unwrap();
+        assert!(path.contains(".asdf/shims"), "got {path}");
+        assert!(path.contains(".asdf/bin"), "got {path}");
+        assert!(path.contains("/opt/homebrew/bin"), "got {path}");
     }
 
     fn testagent(integration: PathBuf, instructions: PathBuf) -> Agent {
