@@ -17,6 +17,7 @@ pub mod mcp;
 pub mod relay;
 pub mod shellsetup;
 pub mod skill;
+pub mod sync;
 /// The terminal dashboard. Behind a default-on feature so an embedder that
 /// wants the library and not a screen does not link a rendering stack.
 #[cfg(feature = "tui")]

@@ -70,6 +70,53 @@ impl Brain {
         Ok(id)
     }
 
+    /// Stores a memory exactly as another machine recorded it.
+    ///
+    /// `rememberscoped` is for a memory being made here: it stamps the time and
+    /// derives a project identity from a path on this disk. Neither is right
+    /// for one arriving from the log, which already carries the identity the
+    /// machine that made it derived and the moment it was made. Keeping those
+    /// is what makes a memory the same memory on both machines rather than a
+    /// copy dated whenever it happened to arrive.
+    pub async fn storeforeign(
+        &self,
+        body: &str,
+        source: &str,
+        scope: MemoryScope,
+        project: &str,
+        created: i64,
+    ) -> Result<i64> {
+        let body = body.trim();
+        anyhow::ensure!(!body.is_empty(), "memory content cannot be empty");
+        let mut transaction = self.pool.begin().await?;
+        let result = sqlx::query("INSERT INTO memory(body, source, created) VALUES (?, ?, ?)")
+            .bind(body)
+            .bind(source)
+            .bind(created)
+            .execute(&mut *transaction)
+            .await?;
+        let id = result.last_insert_rowid();
+        // `native` is 0: this memory was not made on this machine, which is
+        // the same distinction an import already draws.
+        sqlx::query(
+            "INSERT INTO memorymeta(memoryid, scope, project, native, created) \
+             VALUES (?, ?, ?, 0, ?)",
+        )
+        .bind(id)
+        .bind(scope.value())
+        .bind(project)
+        .bind(created)
+        .execute(&mut *transaction)
+        .await?;
+        transaction.commit().await?;
+        Ok(id)
+    }
+
+    /// The pool, for the sync module's own bookkeeping table.
+    pub fn pool(&self) -> &SqlitePool {
+        &self.pool
+    }
+
     pub async fn recallscoped(
         &self,
         query: &str,

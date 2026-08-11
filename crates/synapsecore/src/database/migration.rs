@@ -3,7 +3,7 @@ use anyhow::{Context, Result};
 use sqlx::SqlitePool;
 use std::path::Path;
 
-pub const LATEST: i64 = 7;
+pub const LATEST: i64 = 8;
 
 struct Migration {
     version: i64,
@@ -144,6 +144,34 @@ const MIGRATIONS: &[Migration] = &[
             // and the only place that was legible before was its own log — which
             // meant reading another tool's stream format to find out.
             "ALTER TABLE meshagent ADD COLUMN note TEXT NOT NULL DEFAULT ''",
+        ],
+    },
+    Migration {
+        version: 8,
+        statements: &[
+            // What sync knows about a memory, beside the memory.
+            //
+            // Its own table rather than columns on `memory`, which is an FTS5
+            // virtual table and a poor place for anything that is not searched,
+            // and rather than `memorymeta`, which describes what a memory *is*
+            // where this describes what has been done with it.
+            //
+            // `opid` is stored rather than recomputed. It is derived from the
+            // record's content, so it could be worked out again on demand — but
+            // applying a remote deletion would then mean recomputing an identity
+            // for every memory in the store to find the one being removed, and
+            // any later change to how identities are derived would quietly stop
+            // deletions matching anything at all.
+            //
+            // `pushed` exists so a sync sends what is new instead of the whole
+            // store. Re-sending everything would be correct — the server rejects
+            // an identity it already holds — and would move the entire library
+            // on every run.
+            "CREATE TABLE memorysync(\
+             memoryid INTEGER PRIMARY KEY REFERENCES memorymeta(memoryid) ON DELETE CASCADE, \
+             opid TEXT NOT NULL UNIQUE, \
+             pushed INTEGER NOT NULL DEFAULT 0 CHECK(pushed IN (0, 1)))",
+            "CREATE INDEX memorysync_unpushed ON memorysync(pushed) WHERE pushed = 0",
         ],
     },
 ];

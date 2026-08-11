@@ -32,7 +32,15 @@ name = "synapse-cli"
 path = "src/main.rs"
 
 [dependencies]
+synapsesync = { path = "../synapsesync" }
 anyhow = "1.0"
+# The only HTTP client here, and it exists for sync alone. rustls rather than
+# the platform's TLS so a Linux box needs no system OpenSSL, and no default
+# features so this does not quietly bring a second async runtime with it.
+reqwest = { version = "0.12", default-features = false, features = [
+    "json",
+    "rustls-tls",
+] }
 chrono = { version = "0.4", default-features = false, features = ["clock"] }
 directories = "6.0"
 fs2 = "0.4"
