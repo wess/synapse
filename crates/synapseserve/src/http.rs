@@ -35,7 +35,7 @@ async fn push(
     headers: HeaderMap,
     Json(request): Json<PushRequest>,
 ) -> Result<Json<PushResponse>, Failure> {
-    authorize(&state, &headers)?;
+    let tenant = authorize(&state, &headers).await?;
     protocol(request.protocol)?;
     if request.ops.len() > MAXOPS {
         return Err(Failure::new(
@@ -49,7 +49,7 @@ async fn push(
 
     let (accepted, head) = state
         .store
-        .push(&request.ops)
+        .push(tenant, &request.ops)
         .await
         .map_err(Failure::from)?;
     Ok(Json(PushResponse { accepted, head }))
@@ -60,7 +60,7 @@ async fn pull(
     headers: HeaderMap,
     Json(request): Json<PullRequest>,
 ) -> Result<Json<PullResponse>, Failure> {
-    authorize(&state, &headers)?;
+    let tenant = authorize(&state, &headers).await?;
     protocol(request.protocol)?;
     if request.since < 0 {
         return Err(Failure::new(
@@ -71,23 +71,37 @@ async fn pull(
 
     let (ops, head, more) = state
         .store
-        .pull(request.since, request.limit)
+        .pull(tenant, request.since, request.limit)
         .await
         .map_err(Failure::from)?;
     Ok(Json(PullResponse { ops, head, more }))
 }
 
-fn authorize(state: &State, headers: &HeaderMap) -> Result<(), Failure> {
+/// Which log this request may touch.
+///
+/// The token no longer grants access to "the log" — it names one. Every read
+/// and write below is scoped to what this returns, so a token that is not in
+/// the tenant table reaches nothing rather than reaching everything.
+async fn authorize(state: &State, headers: &HeaderMap) -> Result<i64, Failure> {
     let presented = headers
         .get("authorization")
         .and_then(|value| value.to_str().ok());
-    let matched = auth::bearer(presented).is_some_and(|token| state.token.matches(token));
-    matched.then_some(()).ok_or_else(|| {
-        Failure::new(
-            StatusCode::UNAUTHORIZED,
-            "this request carried no usable access token",
-        )
-    })
+    let token = auth::bearer(presented).ok_or_else(unauthorized)?;
+    state
+        .store
+        .tenantfor(token)
+        .await
+        .map_err(Failure::from)?
+        .ok_or_else(unauthorized)
+}
+
+fn unauthorized() -> Failure {
+    // Deliberately the same answer for a missing token and an unknown one: the
+    // difference would say whether a guess had named a real tenant.
+    Failure::new(
+        StatusCode::UNAUTHORIZED,
+        "this request carried no usable access token",
+    )
 }
 
 fn protocol(presented: u32) -> Result<(), Failure> {

@@ -32,7 +32,13 @@ async fn main() -> Result<()> {
     let address = std::env::var("SYNAPSESERVE_ADDR").unwrap_or_else(|_| DEFAULTADDR.to_string());
 
     let store = Store::open(&path).await?;
-    let head = store.head().await?;
+    // The configured token becomes a tenant rather than a bypass, so this
+    // process has exactly one way to decide who a request belongs to. Existing
+    // deployments keep the log they already have: the rows written before
+    // tenants existed were assigned to the first tenant by the migration, and
+    // this call finds that tenant rather than making a second one.
+    let tenant = store.addtenant("configured", token.secret()).await?;
+    let head = store.head(tenant).await?;
     let listener = TcpListener::bind(&address)
         .await
         .with_context(|| format!("could not bind {address}"))?;

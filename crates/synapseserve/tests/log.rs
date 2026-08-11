@@ -21,6 +21,9 @@ const TOKEN: &str = "0123456789abcdef0123456789abcdef";
 async fn server() -> (Router, TempDir) {
     let directory = tempfile::tempdir().unwrap();
     let store = Store::open(&directory.path().join("log.db")).await.unwrap();
+    // A token names a log rather than unlocking one, so the server has to be
+    // told which log this token is for — the same call `main` makes on startup.
+    store.addtenant("test", TOKEN).await.unwrap();
     let state = State {
         store: Arc::new(store),
         token: Arc::new(Token::new(TOKEN).unwrap()),
@@ -312,6 +315,7 @@ async fn the_server_answers_over_a_real_socket() {
 
     let directory = tempfile::tempdir().unwrap();
     let store = Store::open(&directory.path().join("log.db")).await.unwrap();
+    store.addtenant("test", TOKEN).await.unwrap();
     let state = State {
         store: Arc::new(store),
         token: Arc::new(Token::new(TOKEN).unwrap()),
@@ -338,4 +342,122 @@ async fn the_server_answers_over_a_real_socket() {
     let value: Value = serde_json::from_str(payload.trim()).unwrap();
     assert_eq!(value["head"], 0);
     assert!(value["ops"].as_array().unwrap().is_empty());
+}
+
+// ---- tenants ---------------------------------------------------------------
+//
+// One file, more than one log. The token stopped being a key to "the log" and
+// became the name of one, so these are about what a token cannot reach.
+
+const OTHER: &str = "fedcba9876543210fedcba9876543210";
+
+async fn shared() -> (Router, TempDir) {
+    let directory = tempfile::tempdir().unwrap();
+    let store = Store::open(&directory.path().join("log.db")).await.unwrap();
+    store.addtenant("first", TOKEN).await.unwrap();
+    store.addtenant("second", OTHER).await.unwrap();
+    let state = State {
+        store: Arc::new(store),
+        token: Arc::new(Token::new(TOKEN).unwrap()),
+    };
+    (router(state), directory)
+}
+
+#[tokio::test]
+async fn one_tenant_never_sees_another_tenants_operations() {
+    let (router, _dir) = shared().await;
+    let (status, _) = call(
+        &router,
+        "/push",
+        Some(TOKEN),
+        push(&[sealed(&memory("mine"))]),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+
+    let (status, body) = call(&router, "/pull", Some(OTHER), pull(0, 10)).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body["ops"].as_array().unwrap().len(), 0);
+
+    let (_, body) = call(&router, "/pull", Some(TOKEN), pull(0, 10)).await;
+    assert_eq!(body["ops"].as_array().unwrap().len(), 1);
+}
+
+#[tokio::test]
+async fn the_same_memory_from_two_people_is_not_one_row() {
+    // The bug tenancy would have introduced without a per-tenant constraint.
+    // An identity is derived from a memory's content, so two people who record
+    // the same sentence in the same scope mint the same opid — and while opid
+    // was UNIQUE across the table, `INSERT OR IGNORE` would have thrown the
+    // second person's copy away and reported it accepted.
+    let (router, _dir) = shared().await;
+    let same = sealed(&memory("a thought both of them had"));
+
+    let (_, first) = call(
+        &router,
+        "/push",
+        Some(TOKEN),
+        push(std::slice::from_ref(&same)),
+    )
+    .await;
+    let (_, second) = call(&router, "/push", Some(OTHER), push(&[same])).await;
+    assert_eq!(first["accepted"], 1);
+    assert_eq!(
+        second["accepted"], 1,
+        "the second tenant's copy was dropped"
+    );
+
+    for token in [TOKEN, OTHER] {
+        let (_, body) = call(&router, "/pull", Some(token), pull(0, 10)).await;
+        assert_eq!(body["ops"].as_array().unwrap().len(), 1);
+    }
+}
+
+#[tokio::test]
+async fn a_head_is_this_tenants_own_and_not_the_files() {
+    // `seq` is one sequence shared by every log in the file. A client told the
+    // global head would think it was behind by however many operations other
+    // tenants had written, ask for them, and be handed nothing — forever.
+    let (router, _dir) = shared().await;
+    for i in 0..3 {
+        call(
+            &router,
+            "/push",
+            Some(OTHER),
+            push(&[sealed(&memory(&format!("filler {i}")))]),
+        )
+        .await;
+    }
+    let (_, body) = call(
+        &router,
+        "/push",
+        Some(TOKEN),
+        push(&[sealed(&memory("mine"))]),
+    )
+    .await;
+    let head = body["head"].as_i64().unwrap();
+
+    let (_, body) = call(&router, "/pull", Some(TOKEN), pull(head, 10)).await;
+    assert_eq!(body["ops"].as_array().unwrap().len(), 0);
+    assert_eq!(
+        body["head"].as_i64().unwrap(),
+        head,
+        "the cursor never settles"
+    );
+}
+
+#[tokio::test]
+async fn a_token_that_names_no_tenant_reaches_nothing() {
+    let (router, _dir) = shared().await;
+    let stranger = "00000000000000000000000000000000";
+    let (status, _) = call(&router, "/pull", Some(stranger), pull(0, 10)).await;
+    assert_eq!(status, StatusCode::UNAUTHORIZED);
+    let (status, _) = call(
+        &router,
+        "/push",
+        Some(stranger),
+        push(&[sealed(&memory("x"))]),
+    )
+    .await;
+    assert_eq!(status, StatusCode::UNAUTHORIZED);
 }

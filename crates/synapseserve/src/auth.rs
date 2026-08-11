@@ -29,6 +29,15 @@ impl Token {
         Ok(Self(value))
     }
 
+    /// The value, for hashing into the tenant table.
+    ///
+    /// Deliberately not `Display`: this is for the one caller that has to
+    /// derive a digest from it, and keeping it a named method means a token
+    /// cannot reach a log line by accident.
+    pub fn secret(&self) -> &str {
+        &self.0
+    }
+
     /// Compare in constant time, through a digest so the comparison does not
     /// take a different amount of time for a token of a different length.
     pub fn matches(&self, presented: &str) -> bool {
