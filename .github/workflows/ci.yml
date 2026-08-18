@@ -16,7 +16,7 @@ env:
   # Keep in sync with release.yml. guise-ui is a path dependency on a sibling
   # checkout, so every job that builds Rust must resolve ../guise/crates/guise
   # at the same ref the release build uses.
-  GUISE_REF: v0.12.0
+  GUISE_REF: v1.0.0
 
 jobs:
   # macOS because the Keychain, shell-hook, and bundle tests are macOS-only —
