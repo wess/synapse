@@ -6,18 +6,21 @@ use std::ffi::OsString;
 use std::io::{IsTerminal, Read};
 use std::path::PathBuf;
 
-const USAGE: &str = "usage: synapse memory <list|show|add|edit|import|imports|undo|delete|wipe>";
+const USAGE: &str = "usage: synapse memory <list|grep|show|add|edit|supersede|restore|import|imports|undo|delete|wipe>";
 
 pub fn run(arguments: &[OsString]) -> Result<Outcome> {
     let action = textarg(arguments, 0, USAGE)?;
     let runtime = tokio::runtime::Runtime::new()?;
     let brain = runtime.block_on(Brain::open(crate::files::database()?))?;
-    let json = has(arguments, "--json");
+    let json = has(before(arguments), "--json");
     match action.as_str() {
         "list" => list(&runtime, &brain, arguments, json)?,
+        "grep" => grep(&runtime, &brain, arguments, json)?,
         "show" => show(&runtime, &brain, arguments, json)?,
         "add" => add(&runtime, &brain, arguments)?,
         "edit" => edit(&runtime, &brain, arguments)?,
+        "supersede" => supersede(&runtime, &brain, arguments)?,
+        "restore" => restore(&runtime, &brain, arguments)?,
         "import" => import(&runtime, &brain, arguments, json)?,
         "imports" => imports(&runtime, &brain, json)?,
         "undo" => undo(&runtime, &brain, arguments)?,
@@ -34,37 +37,171 @@ fn list(
     arguments: &[OsString],
     json: bool,
 ) -> Result<()> {
-    let query = arguments
-        .iter()
-        .skip(1)
-        .filter(|value| *value != "--json")
-        .map(|value| value.to_string_lossy())
-        .collect::<Vec<_>>()
-        .join(" ");
+    let query = words(arguments, &["--json", "--explain"]);
+    if has(arguments, "--explain") {
+        return explain(runtime, brain, &query, json);
+    }
     let memories = runtime.block_on(brain.search(&query, 100))?;
     if json {
         println!("{}", serde_json::to_string_pretty(&memories)?);
         return Ok(());
     }
     for memory in memories {
-        let scope = if memory.scope == MemoryScope::Global {
-            "global".to_owned()
-        } else {
-            format!("project:{}", memory.project)
-        };
-        println!(
-            "{}\t{}\t{}\t{}",
-            memory.id,
-            scope,
-            if memory.source.is_empty() {
-                "-"
-            } else {
-                &memory.source
-            },
-            bodypreview(&memory.body)
-        );
+        println!("{}", row(&memory));
     }
     Ok(())
+}
+
+fn grep(
+    runtime: &tokio::runtime::Runtime,
+    brain: &Brain,
+    arguments: &[OsString],
+    json: bool,
+) -> Result<()> {
+    let pattern = words(arguments, &["--json"]);
+    anyhow::ensure!(
+        !pattern.trim().is_empty(),
+        "usage: synapse memory grep <text> [--json]"
+    );
+    let memories = runtime.block_on(brain.grep(&pattern, 100))?;
+    if json {
+        println!("{}", serde_json::to_string_pretty(&memories)?);
+        return Ok(());
+    }
+    for memory in memories {
+        println!("{}", row(&memory));
+    }
+    Ok(())
+}
+
+/// What the search actually did, for the case where the answer is wrong and
+/// nothing on screen says why.
+fn explain(
+    runtime: &tokio::runtime::Runtime,
+    brain: &Brain,
+    query: &str,
+    json: bool,
+) -> Result<()> {
+    let explanation = runtime.block_on(brain.explain(query, 100))?;
+    if json {
+        println!("{}", serde_json::to_string_pretty(&explanation)?);
+        return Ok(());
+    }
+    println!("Query:      {}", explanation.query);
+    println!("Mode:       {}", explanation.mode());
+    match &explanation.expression {
+        Some(expression) => println!("Expression: {expression}"),
+        None => println!(
+            "Expression: none — no term left to search for, so the newest memories answered instead"
+        ),
+    }
+    if !explanation.kept.is_empty() {
+        println!("Searched:   {}", explanation.kept.join(", "));
+    }
+    if !explanation.dropped.is_empty() {
+        println!(
+            "Dropped:    {} (matches nearly every memory)",
+            explanation.dropped.join(", ")
+        );
+    }
+    println!("Matches:    {}", explanation.matches.len());
+    println!();
+    for hit in &explanation.matches {
+        let score = hit
+            .rank
+            .map(|rank| format!("{rank:.4}"))
+            .unwrap_or_else(|| "-".to_owned());
+        println!("{score}\t{}", row(&hit.memory));
+    }
+    Ok(())
+}
+
+fn supersede(
+    runtime: &tokio::runtime::Runtime,
+    brain: &Brain,
+    arguments: &[OsString],
+) -> Result<()> {
+    const USAGE: &str = "usage: synapse memory supersede <old> <new>";
+    let old = memoryid(arguments, 1, USAGE)?;
+    let new = memoryid(arguments, 2, USAGE)?;
+    anyhow::ensure!(
+        runtime.block_on(brain.supersede(old, new))?,
+        "memory #{old} not found"
+    );
+    println!("Memory #{old} superseded by #{new}; recall now returns #{new} instead");
+    println!("Undo with: synapse memory restore {old}");
+    Ok(())
+}
+
+fn restore(runtime: &tokio::runtime::Runtime, brain: &Brain, arguments: &[OsString]) -> Result<()> {
+    let id = memoryid(arguments, 1, "usage: synapse memory restore <id>")?;
+    anyhow::ensure!(
+        runtime.block_on(brain.unsupersede(id))?,
+        "memory #{id} is not superseded"
+    );
+    println!("Restored memory #{id}");
+    Ok(())
+}
+
+/// One memory as a line: id, scope, source, and enough body to recognise it.
+fn row(memory: &crate::brain::Memory) -> String {
+    let scope = if memory.scope == MemoryScope::Global {
+        "global".to_owned()
+    } else {
+        format!("project:{}", memory.project)
+    };
+    let body = if memory.superseded == 0 {
+        bodypreview(&memory.body)
+    } else {
+        format!(
+            "(superseded by #{}) {}",
+            memory.superseded,
+            bodypreview(&memory.body)
+        )
+    };
+    format!(
+        "{}\t{}\t{}\t{}",
+        memory.id,
+        scope,
+        if memory.source.is_empty() {
+            "-"
+        } else {
+            &memory.source
+        },
+        body
+    )
+}
+
+/// The positional words of a subcommand, with the named flags taken out.
+///
+/// A bare `--` ends the flags: everything after it is the text being searched
+/// for, which is what lets `memory grep -- --no-verify` mean the flag rather
+/// than a flag.
+fn words(arguments: &[OsString], flags: &[&str]) -> String {
+    let rest = arguments.get(1..).unwrap_or_default();
+    if let Some(at) = rest.iter().position(|value| value == "--") {
+        return join(rest[at + 1..].iter());
+    }
+    join(
+        rest.iter()
+            .filter(|value| !flags.iter().any(|flag| value == flag)),
+    )
+}
+
+fn join<'a>(values: impl Iterator<Item = &'a OsString>) -> String {
+    values
+        .map(|value| value.to_string_lossy())
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+/// Arguments up to a bare `--`. A flag written after the separator is part of
+/// the text being searched for, not a flag.
+fn before(arguments: &[OsString]) -> &[OsString] {
+    match arguments.iter().position(|value| value == "--") {
+        Some(at) => &arguments[..at],
+        None => arguments,
+    }
 }
 
 fn show(
@@ -87,6 +224,12 @@ fn show(
         }
         println!("Source: {}", memory.source);
         println!("Created: {}", memory.created);
+        if memory.superseded != 0 {
+            println!(
+                "Superseded by: #{} (not recalled; restore with `synapse memory restore {}`)",
+                memory.superseded, memory.id
+            );
+        }
         println!();
         println!("{}", memory.body);
     }

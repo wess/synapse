@@ -12,6 +12,8 @@ Apple silicon · macOS 13 or later · Developer ID signed and notarized
 
 - **Keeps the thread.** Save decisions, corrections, conventions, and preferences once. Pick them up in a later session or another connected tool.
 - **Says so at startup.** Claude Code shows `Synapse connected · 128 memories` beside its welcome message, so you can see the link before the first reply.
+- **Asks before it forgets.** When a long session is about to be compacted, Synapse asks it to write down anything it worked out that is not stored yet — the one moment where not having written something down costs you immediately.
+- **Corrects without arguing.** When a convention changes, the new memory supersedes the old one instead of contradicting it. Recall returns the current version; the old text stays readable and comes back if you were wrong.
 - **Brings history with you.** Preview and import existing Claude and Codex memory into project-scoped Synapse records without changing the originals.
 - **Shares one playbook.** Keep global working guidance in one editable `SOUL.md`, with every connected tool pointed at it.
 - **Writes a skill once.** Keep your Agent Skills in one library and install them into Claude Code, Codex, and pi together, instead of copying folders by hand and watching the copies drift apart.

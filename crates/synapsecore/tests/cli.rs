@@ -198,6 +198,162 @@ fn cli_roundtrips_memory_vault_scope_and_data() {
     );
 }
 
+/// A correction used to be a second memory contradicting the first, with
+/// nothing on the machine to say which one was current.
+#[test]
+fn superseding_hides_a_memory_from_recall_without_losing_it() {
+    let root = tempfile::tempdir().unwrap();
+    let root = root.path();
+
+    let old = stored(run(
+        root,
+        &["memory", "add", "deploys", "--global"],
+        Some("Deploys run from the main branch"),
+    ));
+    let new = stored(run(
+        root,
+        &["memory", "add", "deploys", "--global"],
+        Some("Deploys run from the release branch"),
+    ));
+
+    let done = success(run(root, &["memory", "supersede", &old, &new], None));
+    assert!(
+        done.contains(&format!("superseded by #{new}")),
+        "got {done}"
+    );
+    assert!(
+        done.contains("memory restore"),
+        "it has to say how to undo it"
+    );
+
+    // Recall no longer returns it, and the session hook counts what recall can
+    // see rather than what the table holds.
+    let session: Value =
+        serde_json::from_str(&success(run(root, &["session", "--json"], None))).unwrap();
+    assert_eq!(session["memories"], 1);
+    let bodies: Vec<String> = session["recalled"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|memory| memory["body"].as_str().unwrap().to_owned())
+        .collect();
+    assert_eq!(bodies, vec!["Deploys run from the release branch"]);
+
+    // Still there, still readable, still says what replaced it.
+    let shown = success(run(root, &["memory", "show", &old], None));
+    assert!(shown.contains("Deploys run from the main branch"));
+    assert!(
+        shown.contains(&format!("Superseded by: #{new}")),
+        "got {shown}"
+    );
+    let listed = success(run(root, &["memory", "list"], None));
+    assert!(
+        listed.contains(&format!("(superseded by #{new})")),
+        "browsing has to show it or it cannot be restored: {listed}"
+    );
+
+    success(run(root, &["memory", "restore", &old], None));
+    let restored: Value =
+        serde_json::from_str(&success(run(root, &["session", "--json"], None))).unwrap();
+    assert_eq!(restored["memories"], 2);
+}
+
+/// The ranked search drops function words and cannot be asked for an exact
+/// string, and it never says which words it actually used.
+#[test]
+fn grep_finds_an_exact_string_and_explain_says_what_the_search_did() {
+    let root = tempfile::tempdir().unwrap();
+    let root = root.path();
+
+    success(run(
+        root,
+        &["memory", "add", "release", "--global"],
+        Some("Pass --no-verify only on the release commit"),
+    ));
+
+    let literal = success(run(root, &["memory", "grep", "--no-verify"], None));
+    assert!(literal.contains("--no-verify"), "got {literal}");
+    assert_eq!(
+        success(run(root, &["memory", "grep", "--", "--no-verify"], None)),
+        literal,
+        "a bare separator makes a flag-shaped pattern the pattern"
+    );
+    assert!(
+        success(run(root, &["memory", "grep", "nothing-like-this"], None))
+            .trim()
+            .is_empty()
+    );
+
+    let explained = success(run(
+        root,
+        &[
+            "memory",
+            "list",
+            "where",
+            "are",
+            "the",
+            "credentials",
+            "--explain",
+        ],
+        None,
+    ));
+    assert!(
+        explained.contains("Searched:   credentials"),
+        "got {explained}"
+    );
+    assert!(
+        explained.contains("Dropped:    where, are, the"),
+        "the dropped words are the answer to why nothing came back: {explained}"
+    );
+
+    let json: Value = serde_json::from_str(&success(run(
+        root,
+        &["memory", "list", "the", "and", "of", "--explain", "--json"],
+        None,
+    )))
+    .unwrap();
+    assert_eq!(json["expression"], Value::Null);
+    assert_eq!(json["kept"], Value::Array(Vec::new()));
+}
+
+/// Compaction is where a session loses what it learned. The hook is the only
+/// thing that asks for it back before it goes.
+#[test]
+fn the_compaction_hook_asks_for_what_the_session_learned() {
+    let root = tempfile::tempdir().unwrap();
+    let root = root.path();
+    success(run(
+        root,
+        &["memory", "add", "conventions", "--global"],
+        Some("Identifiers are lowercase with no underscores"),
+    ));
+
+    let payload: Value = serde_json::from_str(&success(run(root, &["compact"], None))).unwrap();
+
+    assert_eq!(payload["hookSpecificOutput"]["hookEventName"], "PreCompact");
+    let context = payload["hookSpecificOutput"]["additionalContext"]
+        .as_str()
+        .unwrap();
+    assert!(context.contains("about to be compacted"), "got {context}");
+    assert!(context.contains("`remember`"));
+    assert!(
+        context.contains("`supersedes`"),
+        "a correction made this session is the case this exists for"
+    );
+    assert!(
+        !context.contains("Identifiers are lowercase"),
+        "recalling into a window that is being reclaimed is the opposite of the point"
+    );
+}
+
+fn stored(output: Output) -> String {
+    success(output)
+        .trim()
+        .strip_prefix("Stored memory #")
+        .expect("expected a stored memory id")
+        .to_owned()
+}
+
 #[test]
 fn cli_imports_claude_memory_safely_and_undoes_the_batch() {
     let root = tempfile::tempdir().unwrap();

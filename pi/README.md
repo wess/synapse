@@ -51,6 +51,12 @@ through a turn:
 | `/remember <fact>` | Store one durable fact |
 | `/mesh` | Who is on the mesh right now |
 
+**A nudge before compaction.** When pi is about to compact the session, the
+extension asks it to carry out an explicit list of anything durable it settled
+that Synapse does not already hold, and to `remember` each one. Compaction is
+the one moment where not having written something down costs immediately. The
+compaction itself is never cancelled or rewritten.
+
 **A status line**, the same one Synapse shows in every other connected tool, and
 the guidance that explains the tools — skipped when `synapse connect pi` has
 already put it in `~/.pi/agent/APPEND_SYSTEM.md`.

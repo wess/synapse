@@ -162,6 +162,14 @@ pub async fn identify(brain: &Brain) -> Result<usize> {
 }
 
 /// Sends everything this machine has not sent.
+///
+/// Supersession does not travel. A record carries a memory's content and
+/// nothing about what replaced it, so a memory superseded here arrives on
+/// another machine live, and both versions are recalled there. Carrying it
+/// would mean a third op kind beside put and delete — a protocol change, and
+/// `synapsesync` pins its digests precisely so one is never made by accident.
+/// Until then it is a local decision: correct the memory on each machine, or
+/// let the newer one win on rank.
 pub async fn push(brain: &Brain, config: &Config) -> Result<usize> {
     identify(brain).await?;
 

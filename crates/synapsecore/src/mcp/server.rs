@@ -44,26 +44,35 @@ impl Server {
         }
     }
 
-    #[tool(description = "Store a durable fact, decision, preference, convention, or correction.")]
+    #[tool(
+        description = "Store a durable fact, decision, preference, convention, or correction. When it corrects something an earlier recall returned, pass that memory's id in `supersedes` so the outdated version stops being recalled; nothing is deleted."
+    )]
     async fn remember(
         &self,
         Parameters(request): Parameters<RememberRequest>,
     ) -> Result<Json<RememberResponse>, String> {
         let project = projectpath(request.project.as_deref());
         self.brain
-            .rememberscoped(
+            .rememberreplacing(
                 &request.content,
                 request.source.as_deref(),
                 request.scope.unwrap_or(MemoryScope::Project),
                 project.as_deref(),
+                request.supersedes.as_deref().unwrap_or_default(),
             )
             .await
-            .map(|id| Json(RememberResponse { id, stored: true }))
+            .map(|(id, superseded)| {
+                Json(RememberResponse {
+                    id,
+                    stored: true,
+                    superseded,
+                })
+            })
             .map_err(|error| error.to_string())
     }
 
     #[tool(
-        description = "Recall durable context with a focused query and the smallest practical limit. Use the lean budget first to minimize token use; a per-call budget can only reduce the user-configured response size."
+        description = "Recall durable context with a focused query and the smallest practical limit. Use the lean budget first to minimize token use; a per-call budget can only reduce the user-configured response size. A result marked `abridged` is that memory's opening line only, because the budget could not carry the rest — read the whole of it by recalling again with a narrower query or a larger budget."
     )]
     async fn recall(
         &self,

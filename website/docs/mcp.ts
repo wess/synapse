@@ -9,6 +9,7 @@ export const mcp: Page = {
   toc: [
     { label: "Server", id: "server" },
     { label: "Session start", id: "sessionstart" },
+    { label: "Before compaction", id: "compaction" },
     { label: "remember", id: "remember" },
     { label: "recall", id: "recall" },
     { label: "vaultstatus", id: "vaultstatus" },
@@ -46,13 +47,26 @@ export const mcp: Page = {
     ${note("Codex has no equivalent hook", "Codex does not expose a session-start hook, so a Codex session still opens by calling recall itself as the shared guidance in SOUL.md asks. Everything else — the tools, the scope rule, the response budget — is identical.")}
     ${note("pi reaches the server through a package", "pi has no MCP client, so its connection is the synapse-pi package. The extension in it starts the same server, registers whatever tools that server advertises, runs the same session-start recall, and shows the same status line. Turn the mesh on and its sixteen tools appear in pi too, on the next start.")}
 
+    <h2 id="compaction">Before compaction</h2>
+    <p>The other end of the same session. When a long session is about to be compacted, everything it worked out that nobody wrote down is about to stop existing \u2014 and it is the only moment where not having written something down costs immediately. Connecting Claude Code installs a <code>PreCompact</code> hook that runs <code>synapse compact</code>; a connected pi runs the same command from <code>session_before_compact</code>.</p>
+    ${code("shell", `synapse compact`)}
+    ${code("json", `{
+  "hookSpecificOutput": {
+    "hookEventName": "PreCompact",
+    "additionalContext": "Synapse holds this project's durable memory, and this session is about to be compacted\u2026"
+  }
+}`)}
+    <p>It asks for an explicit list of what the session settled and is not already stored, and for a <code>remember</code> call for each one. It deliberately recalls <em>nothing</em>: the context window is being reclaimed, and spending it re-injecting memory the session already had is the opposite of what a compaction is for.</p>
+    <p>The compaction itself is never blocked, cancelled, or rewritten. A memory tool that traded a session's whole context for a reminder would be a worse bargain than forgetting.</p>
+
     <h2 id="remember">remember</h2>
     <p>Stores a durable fact, decision, preference, convention, or correction.</p>
     ${code("json", `{
   "content": "Use small focused modules.",
   "source": "synapse",
   "scope": "project",
-  "project": "/Users/example/project"
+  "project": "/Users/example/project",
+  "supersedes": [18]
 }`)}
     <table>
       <thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Meaning</th></tr></thead>
@@ -61,12 +75,15 @@ export const mcp: Page = {
         <tr><td><code>source</code></td><td>string or null</td><td>No</td><td>An origin such as a project path, repository name, or topic.</td></tr>
         <tr><td><code>scope</code></td><td><code>project</code> or <code>global</code></td><td>No</td><td>Defaults to project. Use global only for context that should appear everywhere.</td></tr>
         <tr><td><code>project</code></td><td>string or null</td><td>For project scope</td><td>Absolute working-project path. Synapse normalizes nested paths to the project root.</td></tr>
+        <tr><td><code>supersedes</code></td><td>array of integers or null</td><td>No</td><td>Ids of memories this one replaces \u2014 usually ids that came back from an earlier <code>recall</code>. Each stops being recalled. Nothing is deleted. An id that no longer resolves is skipped rather than failing the write.</td></tr>
       </tbody>
     </table>
     ${code("json", `{
   "id": 24,
-  "stored": true
+  "stored": true,
+  "superseded": [18]
 }`)}
+    <p>The store and the replacement happen in one transaction. Without <code>supersedes</code>, a correction is a second memory contradicting the first, both come back from the next recall, and the ranking decides which one an agent acts on \u2014 including the version its own author had already retracted.</p>
 
     <h2 id="recall">recall</h2>
     <p>Returns durable context relevant to a query. An empty query returns recent memory.</p>
@@ -98,6 +115,7 @@ export const mcp: Page = {
     }
   ]
 }`)}
+    <p>Two fields appear only when they are true of the result. <code>abridged</code> marks a memory returned as its opening sentence alone, because the response budget could not carry the rest \u2014 recall it again with a narrower query or a larger budget before acting on the part you cannot see. <code>superseded</code> never appears here at all, because a replaced memory is not recalled.</p>
 
     <h2 id="vaultstatus">vaultstatus</h2>
     <p>Lists active environment-variable names and scope trust state for a folder. It never returns secret values and cannot inject them into the connected tool.</p>

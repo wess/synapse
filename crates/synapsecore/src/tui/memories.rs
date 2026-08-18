@@ -67,11 +67,19 @@ fn list(frame: &mut Frame, area: Rect, state: &State) {
             MemoryScope::Project => "project",
         };
         let body = memory.body.lines().next().unwrap_or_default();
+        // A superseded memory is still listed — it has to be findable to be
+        // restored — but it is dimmed, because recall no longer returns it and
+        // a row that reads like every other one says the opposite.
+        let style = if memory.superseded == 0 {
+            theme::text()
+        } else {
+            theme::dim()
+        };
         lines.push(draw::row(
             vec![
                 Span::styled(format!(" {:>5} ", memory.id), theme::dim()),
                 Span::styled(format!("{scope:<8}"), theme::accent()),
-                Span::styled(body.to_owned(), theme::text()),
+                Span::styled(body.to_owned(), style),
             ],
             index == cursor,
         ));
@@ -111,8 +119,17 @@ fn detail(frame: &mut Frame, area: Rect, state: &State) {
             Span::styled("stored  ", theme::dim()),
             Span::styled(stamp(memory.created), theme::text()),
         ]),
-        Line::raw(""),
     ];
+    if memory.superseded != 0 {
+        lines.push(Line::from(vec![
+            Span::styled("replaced", theme::dim()),
+            Span::styled(
+                format!(" by #{} · not recalled", memory.superseded),
+                theme::accent(),
+            ),
+        ]));
+    }
+    lines.push(Line::raw(""));
     lines.extend(
         memory
             .body

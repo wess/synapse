@@ -12,6 +12,27 @@ pub struct Memory {
     pub scope: MemoryScope,
     pub project: String,
     pub created: i64,
+    /// The memory that replaced this one, or 0 while it still stands. A
+    /// superseded memory is not returned by recall and is not deleted either,
+    /// because a correction that turns out to be the wrong call has to be
+    /// reversible.
+    #[serde(default, skip_serializing_if = "iszero")]
+    #[sqlx(default)]
+    pub superseded: i64,
+    /// Whether `body` is this memory's opening line rather than the whole of
+    /// it. Set only by recall, and only when the response budget could not
+    /// carry the rest — never stored.
+    #[serde(default, skip_serializing_if = "isfalse")]
+    #[sqlx(default)]
+    pub abridged: bool,
+}
+
+fn iszero(value: &i64) -> bool {
+    *value == 0
+}
+
+fn isfalse(value: &bool) -> bool {
+    !*value
 }
 
 #[derive(
@@ -151,12 +172,19 @@ pub struct RememberRequest {
     pub scope: Option<MemoryScope>,
     /// Absolute project root used for project-scoped memory.
     pub project: Option<String>,
+    /// Ids of memories this one replaces. Pass the id of a recalled memory whenever the content
+    /// being stored corrects or supersedes it, so the outdated one stops coming back. Nothing is
+    /// deleted: a superseded memory stays readable and can be restored.
+    pub supersedes: Option<Vec<i64>>,
 }
 
 #[derive(Debug, Serialize, JsonSchema)]
 pub struct RememberResponse {
     pub id: i64,
     pub stored: bool,
+    /// Which of the requested `supersedes` ids were actually replaced.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub superseded: Vec<i64>,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -175,6 +203,47 @@ pub struct RecallRequest {
 pub struct RecallResponse {
     pub optimization: Optimization,
     pub memories: Vec<Memory>,
+}
+
+/// Why a search answered the way it did.
+///
+/// Recall is otherwise opaque: it hands back memories and never says which
+/// words it actually searched for, so a query that quietly lost its only real
+/// term looks the same as a store that holds nothing. This is the whole of that
+/// reasoning, and it is the fastest answer to "why did my memory not come
+/// back".
+#[derive(Debug, Serialize)]
+pub struct Explanation {
+    pub query: String,
+    /// The full-text expression the query became, or nothing when no term
+    /// survived and the newest memories answered instead.
+    pub expression: Option<String>,
+    /// The terms that were searched for.
+    pub kept: Vec<String>,
+    /// The terms dropped for matching nearly everything.
+    pub dropped: Vec<String>,
+    pub matches: Vec<Ranked>,
+}
+
+impl Explanation {
+    /// `search` when the expression ran, `recent` when there was nothing to
+    /// search for and age answered instead.
+    pub fn mode(&self) -> &'static str {
+        if self.expression.is_some() {
+            "search"
+        } else {
+            "recent"
+        }
+    }
+}
+
+#[derive(Debug, Serialize)]
+pub struct Ranked {
+    #[serde(flatten)]
+    pub memory: Memory,
+    /// SQLite's own score, lower being a better match. Absent on the recent
+    /// list, which is ordered by age and not scored at all.
+    pub rank: Option<f64>,
 }
 
 #[cfg(test)]

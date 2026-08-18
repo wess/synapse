@@ -142,6 +142,32 @@
     <p>pi has no MCP client, so its connection is the synapse-pi package. The extension in it starts the same server, registers whatever tools that server advertises, runs the same session-start recall, and shows the same status line. Turn the mesh on and its sixteen tools appear in pi too, on the next start.</p>
   </aside>
 
+    <h2 id="compaction">Before compaction</h2>
+    <p>The other end of the same session. When a long session is about to be compacted, everything it worked out that nobody wrote down is about to stop existing — and it is the only moment where not having written something down costs immediately. Connecting Claude Code installs a <code>PreCompact</code> hook that runs <code>synapse compact</code>; a connected pi runs the same command from <code>session_before_compact</code>.</p>
+    
+  <div class="codeblock">
+    <div class="codebar">
+      <span>shell</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>synapse compact</code></pre>
+  </div>
+    
+  <div class="codeblock">
+    <div class="codebar">
+      <span>json</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>{
+  &quot;hookSpecificOutput&quot;: {
+    &quot;hookEventName&quot;: &quot;PreCompact&quot;,
+    &quot;additionalContext&quot;: &quot;Synapse holds this project&#039;s durable memory, and this session is about to be compacted…&quot;
+  }
+}</code></pre>
+  </div>
+    <p>It asks for an explicit list of what the session settled and is not already stored, and for a <code>remember</code> call for each one. It deliberately recalls <em>nothing</em>: the context window is being reclaimed, and spending it re-injecting memory the session already had is the opposite of what a compaction is for.</p>
+    <p>The compaction itself is never blocked, cancelled, or rewritten. A memory tool that traded a session's whole context for a reminder would be a worse bargain than forgetting.</p>
+
     <h2 id="remember">remember</h2>
     <p>Stores a durable fact, decision, preference, convention, or correction.</p>
     
@@ -154,7 +180,8 @@
   &quot;content&quot;: &quot;Use small focused modules.&quot;,
   &quot;source&quot;: &quot;synapse&quot;,
   &quot;scope&quot;: &quot;project&quot;,
-  &quot;project&quot;: &quot;/Users/example/project&quot;
+  &quot;project&quot;: &quot;/Users/example/project&quot;,
+  &quot;supersedes&quot;: [18]
 }</code></pre>
   </div>
     <table>
@@ -164,6 +191,7 @@
         <tr><td><code>source</code></td><td>string or null</td><td>No</td><td>An origin such as a project path, repository name, or topic.</td></tr>
         <tr><td><code>scope</code></td><td><code>project</code> or <code>global</code></td><td>No</td><td>Defaults to project. Use global only for context that should appear everywhere.</td></tr>
         <tr><td><code>project</code></td><td>string or null</td><td>For project scope</td><td>Absolute working-project path. Synapse normalizes nested paths to the project root.</td></tr>
+        <tr><td><code>supersedes</code></td><td>array of integers or null</td><td>No</td><td>Ids of memories this one replaces — usually ids that came back from an earlier <code>recall</code>. Each stops being recalled. Nothing is deleted. An id that no longer resolves is skipped rather than failing the write.</td></tr>
       </tbody>
     </table>
     
@@ -174,9 +202,11 @@
     </div>
     <pre><code>{
   &quot;id&quot;: 24,
-  &quot;stored&quot;: true
+  &quot;stored&quot;: true,
+  &quot;superseded&quot;: [18]
 }</code></pre>
   </div>
+    <p>The store and the replacement happen in one transaction. Without <code>supersedes</code>, a correction is a second memory contradicting the first, both come back from the next recall, and the ranking decides which one an agent acts on — including the version its own author had already retracted.</p>
 
     <h2 id="recall">recall</h2>
     <p>Returns durable context relevant to a query. An empty query returns recent memory.</p>
@@ -222,6 +252,7 @@
   ]
 }</code></pre>
   </div>
+    <p>Two fields appear only when they are true of the result. <code>abridged</code> marks a memory returned as its opening sentence alone, because the response budget could not carry the rest — recall it again with a narrower query or a larger budget before acting on the part you cannot see. <code>superseded</code> never appears here at all, because a replaced memory is not recalled.</p>
 
     <h2 id="vaultstatus">vaultstatus</h2>
     <p>Lists active environment-variable names and scope trust state for a folder. It never returns secret values and cannot inject them into the connected tool.</p>
@@ -284,7 +315,7 @@
     </main>
     <aside class="ontoc" aria-label="On this page">
         <span>On this page</span>
-        <ol><li><a href="#server">Server</a></li><li><a href="#sessionstart">Session start</a></li><li><a href="#remember">remember</a></li><li><a href="#recall">recall</a></li><li><a href="#vaultstatus">vaultstatus</a></li><li><a href="#mesh">Mesh tools</a></li><li><a href="#behavior">Operational behavior</a></li></ol>
+        <ol><li><a href="#server">Server</a></li><li><a href="#sessionstart">Session start</a></li><li><a href="#compaction">Before compaction</a></li><li><a href="#remember">remember</a></li><li><a href="#recall">recall</a></li><li><a href="#vaultstatus">vaultstatus</a></li><li><a href="#mesh">Mesh tools</a></li><li><a href="#behavior">Operational behavior</a></li></ol>
       </aside>
   </div>
   

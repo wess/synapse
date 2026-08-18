@@ -8,6 +8,11 @@
 //
 // The status line is the same one Claude Code shows, printed by the same
 // command, refreshed when the agent settles rather than on a timer.
+//
+// Compaction is the other end of the same session, and the same command answers
+// it: `synapse compact`. It is the one moment where what a session learned is
+// about to stop existing, so it is the one place Synapse asks for memory rather
+// than handing it over.
 
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { run } from "./command.ts";
@@ -29,6 +34,37 @@ export function notice(pi: ExtensionAPI, command: string, root: string): void {
   pi.on("agent_settled", async (_event, ctx) => {
     await refresh(ctx, command, root);
   });
+
+  pi.on("session_before_compact", async () => {
+    const asked = await reminder(command, root);
+    if (asked.length > 0) {
+      pi.sendMessage({ customType: STATUS, content: asked, display: false });
+    }
+    // Nothing returned: pi's own compaction runs untouched. This hook adds a
+    // sentence to what is being compacted and nothing else — a memory tool that
+    // cancelled or rewrote somebody's compaction would be trading a whole
+    // session's context for a reminder.
+  });
+}
+
+/**
+ * What `synapse compact` asks the session to carry out of the compaction, or an
+ * empty string when there is nothing to say — a store that cannot be read is
+ * not worth interrupting a compaction to complain about.
+ */
+async function reminder(command: string, root: string): Promise<string> {
+  const ran = await run(command, ["compact"], { cwd: root, input: cwd(root) });
+  if (!ran.ok) {
+    return "";
+  }
+  try {
+    const payload = JSON.parse(ran.out) as {
+      hookSpecificOutput?: { additionalContext?: string };
+    };
+    return payload.hookSpecificOutput?.additionalContext ?? "";
+  } catch {
+    return "";
+  }
 }
 
 interface Opening {

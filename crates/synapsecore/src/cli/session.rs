@@ -13,6 +13,11 @@
 //! and hands the result over as context. Guidance still asks for `recall`,
 //! because a focused query mid-task is the case this cannot cover.
 //!
+//! `compact` answers the PreCompact hook, at the other end of the same
+//! session. It is the only place Synapse asks for memory rather than handing it
+//! over, because compaction is the only moment where not having written
+//! something down costs immediately.
+//!
 //! `statusline` answers Claude Code's `statusLine` command and prints the one
 //! line under the prompt for the rest of the session.
 
@@ -70,6 +75,58 @@ pub fn statusline(_arguments: &[OsString]) -> Result<Outcome> {
     let report = collect(folder(&input).as_deref(), Recall::No);
     println!("{}", line(&input, &report));
     Ok(Outcome::Exit(0))
+}
+
+/// Answers a tool's pre-compaction hook.
+///
+/// Compaction is the one moment in a session where what has been learned is
+/// about to stop existing. Everything else Synapse does at a session boundary
+/// is about getting memory *in*; this is the only point where the cost of not
+/// writing something down is paid immediately, and nothing was asking for it.
+///
+/// It deliberately recalls nothing. The window is being reclaimed, and spending
+/// it re-injecting memory the session already had is the opposite of what the
+/// compaction is for.
+pub fn compact(_arguments: &[OsString]) -> Result<Outcome> {
+    let report = collect(folder(&stdin()).as_deref(), Recall::No);
+    let payload = serde_json::json!({
+        "hookSpecificOutput": {
+            "hookEventName": "PreCompact",
+            "additionalContext": reminder(&report),
+        }
+    });
+    println!("{}", serde_json::to_string(&payload)?);
+    Ok(Outcome::Exit(0))
+}
+
+/// What a session is told just before its context is compacted.
+///
+/// Written to read correctly to two different readers, because where a tool
+/// puts this is not something a tool promises: the model summarising the
+/// session, which cannot call anything, and the session resuming afterwards,
+/// which can. So it asks for a list first and the calls second, and both halves
+/// are worth doing on their own.
+fn reminder(report: &Report) -> String {
+    if report.problem.is_some() {
+        // Saying nothing is right here. The user is mid-task and did not ask
+        // for this hook; an error about a memory store they may not even be
+        // using is not worth the interruption.
+        return String::new();
+    }
+    let mut text = "Synapse holds this project's durable memory, and this session is about to be \
+         compacted: anything it learned that is not already in Synapse is about to be lost. Carry \
+         through the compaction an explicit list of every durable fact, decision, convention, \
+         preference, or correction this session settled that Synapse does not already hold, and \
+         call `remember` for each one at the first opportunity. Passing task status, file \
+         contents, and anything recalled unchanged are not durable memory: leave them out of both."
+        .to_owned();
+    if report.memories > 0 {
+        text.push_str(
+            " When one of them corrects a memory that was recalled this session, pass that \
+             memory's id as `supersedes` so the outdated version stops coming back.",
+        );
+    }
+    text
 }
 
 /// Whether a report reads the memories themselves or only counts them. The
@@ -150,11 +207,22 @@ fn context(report: &Report) -> String {
 /// One memory as a list item. Bodies run to several lines often enough that
 /// indenting the rest matters — an unindented second line reads as a separate
 /// memory, and the model has no other way to tell where one ends.
+///
+/// An abridged memory is its opening line only, and it has to say so. Prose
+/// carries no `abridged` field the way the MCP response does, and an opening
+/// sentence presented as the whole memory is a fact with its conditions
+/// silently removed.
 fn bullet(memory: &Memory) -> String {
     let mut lines = memory.body.trim().lines();
     let mut item = format!("- {}\n", lines.next().unwrap_or_default());
     for line in lines {
         item.push_str(&format!("  {line}\n"));
+    }
+    if memory.abridged {
+        item.push_str(&format!(
+            "  (opening line only — recall #{} for the rest)\n",
+            memory.id
+        ));
     }
     if !memory.source.trim().is_empty() {
         item.push_str(&format!("  ({})\n", memory.source.trim()));
@@ -346,7 +414,36 @@ mod tests {
             scope: crate::brain::MemoryScope::Project,
             project: "/work/api".to_owned(),
             created: 0,
+            superseded: 0,
+            abridged: false,
         }
+    }
+
+    /// The user is mid-task and did not ask for this hook. An error about a
+    /// memory store they may not even be using is not worth interrupting a
+    /// compaction for.
+    #[test]
+    fn a_compaction_says_nothing_when_synapse_cannot_be_read() {
+        assert!(
+            reminder(&Report {
+                problem: Some("database is locked".to_owned()),
+                ..report()
+            })
+            .is_empty()
+        );
+    }
+
+    /// Nothing has been recalled yet in an empty store, so there is nothing to
+    /// correct and no id to pass.
+    #[test]
+    fn an_empty_store_is_not_told_how_to_supersede() {
+        let empty = reminder(&Report {
+            memories: 0,
+            ..report()
+        });
+        assert!(empty.contains("`remember`"));
+        assert!(!empty.contains("`supersedes`"));
+        assert!(reminder(&report()).contains("`supersedes`"));
     }
 
     #[test]
@@ -456,6 +553,22 @@ mod tests {
     fn a_memory_without_a_source_does_not_grow_an_empty_bracket() {
         let item = bullet(&memory("stands alone", "  "));
         assert_eq!(item, "- stands alone\n");
+    }
+
+    /// The MCP response carries an `abridged` field; prose does not, so the
+    /// block has to say it in words. An opening sentence presented as the whole
+    /// memory is a rule with its conditions silently removed.
+    #[test]
+    fn an_abridged_memory_says_it_is_only_its_opening_line() {
+        let item = bullet(&Memory {
+            abridged: true,
+            ..memory("Deploys run from the release branch.", "")
+        });
+        assert!(item.contains("opening line only"), "got {item}");
+        assert!(
+            item.contains("recall #1"),
+            "it has to say how to read the rest"
+        );
     }
 
     #[test]

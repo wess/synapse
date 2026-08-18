@@ -71,8 +71,10 @@ synapse doctor --json`)}
     <h2 id="database">Memory and database</h2>
     <h3>Recall returns too little content</h3>
     <p>Run <code>synapse settings show</code>. Switch to Balanced or Full if Lean is too small. Search with concrete words present in the stored body and inspect the exact entry through <code>synapse memory show &lt;id&gt;</code>.</p>
+    <h3>A memory that is definitely stored does not come back</h3>
+    <p>Make the search show its working with <code>synapse memory list "your query" --explain</code>. It prints the words it searched for and the words it dropped for matching nearly every memory, which separates a query that lost its only real term from a store that holds nothing. If what you are looking for is an exact string — a flag, an identifier, a path — use <code>synapse memory grep</code> instead, which matches characters and never drops a word. Also check the entry has not been superseded: <code>synapse memory list</code> marks a replaced memory, <code>synapse memory show &lt;id&gt;</code> names what replaced it, and <code>synapse memory restore &lt;id&gt;</code> puts it back in recall.</p>
     <h3>A stored memory is wrong</h3>
-    <p>Edit or delete the original. Do not add another contradictory entry. Export a snapshot before a large cleanup.</p>
+    <p>If the wording was bad, edit the original. If it was true and stopped being true, add the new version and run <code>synapse memory supersede &lt;old&gt; &lt;new&gt;</code> — recall returns the new one and the old text stays readable. If it should never have been stored, delete it. What to avoid is adding a contradictory entry and leaving both live, because recall returns both. Export a snapshot before a large cleanup.</p>
     <h3>An import shows flagged entries</h3>
     <p>Open the provider folder with <strong>Review source</strong> and inspect the named files. The app never imports flagged content. If a CLI import is genuinely safe, rerun it with both <code>--include-flagged</code> and <code>--confirm</code>; otherwise move only the durable non-sensitive fact into Synapse manually.</p>
     <h3>One project's memory appears missing</h3>

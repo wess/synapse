@@ -92,6 +92,41 @@ fn mcp_stdio_lists_and_calls_every_tool() {
         }),
         4,
     );
+    // A correction arriving through the tool the model actually calls: the old
+    // memory stops being recalled without anyone deleting it.
+    let corrected = call(
+        &mut stdin,
+        &mut stdout,
+        json!({
+            "jsonrpc": "2.0",
+            "id": 6,
+            "method": "tools/call",
+            "params": {
+                "name": "remember",
+                "arguments": {
+                    "content": "mcp durable marker, corrected",
+                    "scope": "project",
+                    "project": root.path(),
+                    "supersedes": [remembered["result"]["structuredContent"]["id"]]
+                }
+            }
+        }),
+        6,
+    );
+    let after = call(
+        &mut stdin,
+        &mut stdout,
+        json!({
+            "jsonrpc": "2.0",
+            "id": 7,
+            "method": "tools/call",
+            "params": {
+                "name": "recall",
+                "arguments": {"query": "durable marker", "limit": 4, "project": root.path()}
+            }
+        }),
+        7,
+    );
     let vault = call(
         &mut stdin,
         &mut stdout,
@@ -133,6 +168,15 @@ fn mcp_stdio_lists_and_calls_every_tool() {
         recalled["result"]["structuredContent"]["memories"][0]["scope"],
         "project"
     );
+    assert_eq!(
+        corrected["result"]["structuredContent"]["superseded"],
+        json!([remembered["result"]["structuredContent"]["id"]])
+    );
+    let remaining = after["result"]["structuredContent"]["memories"]
+        .as_array()
+        .unwrap();
+    assert_eq!(remaining.len(), 1, "got {after}");
+    assert_eq!(remaining[0]["body"], "mcp durable marker, corrected");
     assert!(vault.to_string().contains("Values stay in Keychain"));
 }
 

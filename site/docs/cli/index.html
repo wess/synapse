@@ -259,9 +259,17 @@
   <section class="command" id="memorylist">
     <div>
       <h3>memory list</h3>
-      <code>synapse memory list [query] [--json]</code>
+      <code>synapse memory list [query] [--json] [--explain]</code>
     </div>
-    <p>Search the body with the joined query words or list recent memory when empty. Returns up to 100 entries. Text mode prints ID, scope, source, and a compact preview.</p>
+    <p>Search the body with the joined query words or list recent memory when empty. Returns up to 100 entries. Text mode prints ID, scope, source, and a compact preview, and marks any memory that has been superseded. With <code>--explain</code>, print what the search actually did first: the full-text expression the query became, the words it searched for, the words it dropped for matching nearly everything, and the score behind each hit.</p>
+  </section>
+    
+  <section class="command" id="memorygrep">
+    <div>
+      <h3>memory grep</h3>
+      <code>synapse memory grep &amp;lt;text&amp;gt; [--json]</code>
+    </div>
+    <p>Find memories containing an exact string, most recent first. Nothing is tokenized, ranked, or dropped — the characters given have to appear, in that order — which is what makes it the right tool for an identifier, a flag, a path, or a word the ranked search treats as noise. Matching is case-insensitive for ASCII, and a pattern after a bare <code>--</code> is taken literally, so <code>memory grep -- --no-verify</code> searches for the flag.</p>
   </section>
     
   <section class="command" id="memoryshow">
@@ -286,6 +294,22 @@
       <code>synapse memory edit &lt;id&gt; [source]</code>
     </div>
     <p>Read the replacement body from stdin and replace one existing memory. The optional source replaces the source label.</p>
+  </section>
+    
+  <section class="command" id="memorysupersede">
+    <div>
+      <h3>memory supersede</h3>
+      <code>synapse memory supersede &amp;lt;old&amp;gt; &amp;lt;new&amp;gt;</code>
+    </div>
+    <p>Stop recalling one memory in favour of another. The old one is not deleted: it keeps its id, stays listed and readable, says what replaced it, and comes back with <code>memory restore</code>. Use this instead of leaving a correction to argue with what it corrects.</p>
+  </section>
+    
+  <section class="command" id="memoryrestore">
+    <div>
+      <h3>memory restore</h3>
+      <code>synapse memory restore &amp;lt;id&amp;gt;</code>
+    </div>
+    <p>Put a superseded memory back in circulation. Deleting the memory that replaced it does the same thing on its own.</p>
   </section>
 
   <section class="command" id="memoryimport">
@@ -425,6 +449,14 @@
       <code>synapse session [--json]</code>
     </div>
     <p>Report this session's Synapse connection as Claude Code session-hook output. Synapse installs this for you when you connect Claude Code; run it by hand to see exactly what a session will be told. Reads the calling tool's JSON on stdin.</p>
+  </section>
+    
+  <section class="command" id="compact">
+    <div>
+      <h3>compact</h3>
+      <code>synapse compact</code>
+    </div>
+    <p>Answer a tool's pre-compaction hook. Asks the session to write down anything durable it settled before its context is compressed away, and recalls nothing — the window is being reclaimed. Synapse installs this for you when you connect Claude Code. Never blocks or rewrites the compaction. Reads the calling tool's JSON on stdin.</p>
   </section>
     
   <section class="command" id="statusline">
@@ -676,7 +708,7 @@
       <h3>disconnect</h3>
       <code>synapse disconnect [tool]</code>
     </div>
-    <p>Undo one tool's connection, or every tool's when no name is given: the MCP registration or installed package, the managed block in its instruction file, the Claude Code session notice and status line, and any skill Synapse installed for it. A skill you wrote, or a status line somebody else configured, is left alone.</p>
+    <p>Undo one tool's connection, or every tool's when no name is given: the MCP registration or installed package, the managed block in its instruction file, the Claude Code hooks and status line, and any skill Synapse installed for it. A skill you wrote, or a status line somebody else configured, is left alone.</p>
   </section>
     
   <section class="command" id="uninstall">

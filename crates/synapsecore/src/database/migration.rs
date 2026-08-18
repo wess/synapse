@@ -3,7 +3,7 @@ use anyhow::{Context, Result};
 use sqlx::SqlitePool;
 use std::path::Path;
 
-pub const LATEST: i64 = 8;
+pub const LATEST: i64 = 9;
 
 struct Migration {
     version: i64,
@@ -174,6 +174,28 @@ const MIGRATIONS: &[Migration] = &[
             "CREATE INDEX memorysync_unpushed ON memorysync(pushed) WHERE pushed = 0",
         ],
     },
+    Migration {
+        version: 9,
+        statements: &[
+            // Which memory replaced this one, or 0 while it still stands.
+            //
+            // A correction used to be a second memory contradicting the first,
+            // with nothing to say which one was current — recall returned both
+            // and the ranking decided, so an agent could act on the version its
+            // author had already retracted. Pointing at the replacement rather
+            // than setting a flag means `memory show` can name it, and it costs
+            // no second column.
+            //
+            // Superseded is not deleted. The memory stays readable, keeps its
+            // id, and comes back with `memory restore` — the whole point of
+            // hiding rather than removing is that a wrong correction is
+            // reversible.
+            "ALTER TABLE memorymeta ADD COLUMN superseded INTEGER NOT NULL DEFAULT 0",
+            // Partial, because the rows worth finding this way are the live
+            // ones and almost every row is live.
+            "CREATE INDEX memorymetalive ON memorymeta(scope, project) WHERE superseded = 0",
+        ],
+    },
 ];
 
 pub async fn run(pool: &SqlitePool, path: &Path, existed: bool) -> Result<()> {
@@ -207,4 +229,72 @@ pub async fn run(pool: &SqlitePool, path: &Path, existed: bool) -> Result<()> {
         .commit()
         .await
         .context("could not commit database migrations")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+    use std::str::FromStr;
+
+    /// Every shipped migration has to survive being applied to a store that
+    /// stopped at the version before it. Creating a fresh database only proves
+    /// the statements parse; this proves they run against data somebody has.
+    ///
+    /// It is written against `LATEST - 1` rather than a fixed number, so it
+    /// keeps testing the newest migration without being edited.
+    #[tokio::test]
+    async fn a_store_from_the_previous_release_migrates_with_its_memories_intact() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("brain.db");
+        let pool = SqlitePoolOptions::new()
+            .connect_with(
+                SqliteConnectOptions::from_str("sqlite://test")
+                    .unwrap()
+                    .filename(&path)
+                    .create_if_missing(true),
+            )
+            .await
+            .unwrap();
+        let previous = LATEST - 1;
+        for migration in MIGRATIONS.iter().filter(|item| item.version <= previous) {
+            for statement in migration.statements {
+                sqlx::query(statement).execute(&pool).await.unwrap();
+            }
+        }
+        sqlx::query(&format!("PRAGMA user_version = {previous}"))
+            .execute(&pool)
+            .await
+            .unwrap();
+        sqlx::query("INSERT INTO memory(body, source, created) VALUES ('older', 'test', 1)")
+            .execute(&pool)
+            .await
+            .unwrap();
+        sqlx::query(
+            "INSERT INTO memorymeta(memoryid, scope, project, native, created) \
+             VALUES (1, 'global', '', 1, 1)",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        run(&pool, &path, false).await.unwrap();
+
+        assert_eq!(version(&pool).await.unwrap(), LATEST);
+        assert_eq!(
+            sqlx::query_scalar::<_, String>("SELECT body FROM memory WHERE rowid = 1")
+                .fetch_one(&pool)
+                .await
+                .unwrap(),
+            "older"
+        );
+        assert_eq!(
+            sqlx::query_scalar::<_, i64>("SELECT superseded FROM memorymeta WHERE memoryid = 1")
+                .fetch_one(&pool)
+                .await
+                .unwrap(),
+            0,
+            "a memory written before the column existed still stands"
+        );
+    }
 }

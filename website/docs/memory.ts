@@ -12,6 +12,7 @@ export const memory: Page = {
     { label: "Import existing memory", id: "import" },
     { label: "Search and recall", id: "recall" },
     { label: "Inspect and correct", id: "control" },
+    { label: "Correcting a memory", id: "supersede" },
     { label: "Response budgets", id: "budgets" },
     { label: "Destructive actions", id: "destructive" },
   ],
@@ -61,6 +62,18 @@ synapse memory list --json
 synapse memory show 24
 synapse memory show 24 --json`)}
     <p>The CLI lists up to 100 matching memories across the local store for management. Each record contains an integer ID, exact body, source, global or project scope, project root, and Unix timestamp. JSON output is suitable for local automation.</p>
+    <p>Ranked search drops words that appear in nearly every memory \u2014 <em>the</em>, <em>are</em>, <em>where</em> \u2014 because a memory that matches only on one of those is a confident wrong answer, and an agent acts on it. Words that carry meaning in a preference, including <em>not</em>, <em>never</em>, and <em>use</em>, are kept. Two commands exist for when that is the wrong behaviour or the wrong result:</p>
+    ${code("shell", `synapse memory grep -- --no-verify
+synapse memory list where are the credentials --explain`)}
+    <p><code>memory grep</code> matches the characters you give it and nothing else, which is what you want for an identifier, a flag, a path, or a word the ranked search treats as noise. <code>--explain</code> answers the other question \u2014 why a memory you know is stored did not come back:</p>
+    ${code("text", `Query:      where are the credentials
+Mode:       search
+Expression: "credentials"
+Searched:   credentials
+Dropped:    where, are, the (matches nearly every memory)
+Matches:    1
+
+-0.4596	31	global	vault	Credentials live in Keychain, never in the repository.`)}
 
     <h2 id="control">Inspect and correct</h2>
     <p>The desktop <strong>Memories</strong> screen searches the same store and lets you inspect, edit, or delete individual entries. CLI edits replace the body and optionally the source:</p>
@@ -68,14 +81,34 @@ synapse memory show 24 --json`)}
   | synapse memory edit 24 tooling
 
 synapse memory show 24`)}
-    <p>Editing changes the stored original. Recall optimization does not. If a convention has become wrong, edit or delete it instead of adding a conflicting correction and hoping the tools choose the newer entry.</p>
+    <p>Editing changes the stored original. Recall optimization does not.</p>
+
+    <h2 id="supersede">Correcting a memory</h2>
+    <p>A convention changes. Something you stored last month is now wrong. Adding the new version on its own leaves two memories contradicting each other, both are recalled, and the ranking decides which one a tool acts on \u2014 possibly the one you had already retracted.</p>
+    <p>Say which replaced which:</p>
+    ${code("shell", `printf '%s\n' 'Deploys run from the release branch, after the tag is signed.' \\
+  | synapse memory add deploys --global
+
+synapse memory supersede 12 47`)}
+    <p>A connected tool does it in one call, passing the id that came back from its own <code>recall</code>:</p>
+    ${code("json", `{
+  "content": "Deploys run from the release branch, after the tag is signed.",
+  "scope": "global",
+  "supersedes": [12]
+}`)}
+    <p>Nothing is deleted. Memory 12 keeps its id, stays in <code>memory list</code> and the dashboards marked as replaced, still says what replaced it, and comes back at any time:</p>
+    ${code("shell", `synapse memory show 12
+synapse memory restore 12`)}
+    <p>What changes is only what recall can see. A superseded memory stops being returned to tools and stops counting toward the number a session reports \u2014 the count a tool announces is the count it can actually draw on. Deleting the replacement restores what it replaced on its own, so a correction can never leave the older version hidden behind an id that no longer exists.</p>
+    <p>Choose between the three: <strong>edit</strong> when the memory was badly worded and there is nothing to keep, <strong>supersede</strong> when the old version was true and stopped being true, and <strong>delete</strong> when it should never have been stored.</p>
+    ${note("Supersession stays on this machine", "Sync carries a memory's content, not what replaced it. A memory superseded here arrives on another machine live. Until the wire format grows an operation for it, correct it on each machine you sync to.")}
 
     <h2 id="budgets">Response budgets</h2>
     <table>
       <thead><tr><th>Mode</th><th>Result limit</th><th>Character budget</th><th>Transformation</th></tr></thead>
       <tbody>
         <tr><td>Full</td><td>25</td><td>Unlimited</td><td>Returns stored formatting without compaction.</td></tr>
-        <tr><td>Balanced</td><td>8</td><td>6,000</td><td>Compacts prose whitespace, preserves fenced and indented code, removes exact duplicate bodies, and truncates at a character boundary.</td></tr>
+        <tr><td>Balanced</td><td>8</td><td>6,000</td><td>Compacts prose whitespace, preserves fenced and indented code, removes exact duplicate bodies, and replaces any memory too large for the remaining budget with its opening sentence.</td></tr>
         <tr><td>Lean</td><td>4</td><td>2,800</td><td>Uses the same non-destructive compaction with a smaller response.</td></tr>
       </tbody>
     </table>
@@ -83,7 +116,8 @@ synapse memory show 24`)}
     ${code("shell", `synapse settings show
 synapse settings optimize lean
 synapse settings optimize balanced`)}
-    ${note("Originals remain intact", "Balanced and Lean transform only the MCP response. The database and memory-management views keep the complete stored body.")}
+    <p>A memory that will not fit in what is left of the budget is returned as its opening sentence, marked <code>abridged</code>, rather than cut off wherever the character count landed. Half a memory reads exactly like a whole one \u2014 <em>never deploy from main unless</em> is a rule with its condition amputated \u2014 and one long memory at the top of the results no longer costs you every result under it. A tool that receives an abridged memory is told to recall it again, more narrowly, before acting on the part it cannot see.</p>
+    ${note("Originals remain intact", "Balanced and Lean transform only the MCP response. The database and memory-management views keep the complete stored body, abridged results included.")}
 
     <h2 id="destructive">Destructive actions</h2>
     <p>Deleting one memory, undoing an import, and wiping every memory require explicit confirmation. The desktop app presents a separate confirmation. A wipe removes memory and import history but leaves guidance, vault labels, Keychain values, scope approvals, and settings intact.</p>

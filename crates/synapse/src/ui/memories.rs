@@ -448,7 +448,7 @@ fn memorylist(
         .gap(px(5.0));
     for memory in memories {
         let click = select(memory.id);
-        let source = format!(
+        let mut source = format!(
             "{} · {}",
             if memory.scope == MemoryScope::Global {
                 "global".to_owned()
@@ -463,6 +463,12 @@ fn memorylist(
             },
             sourcepreview(&memory.source)
         );
+        // A superseded memory is still listed — it has to be findable to be
+        // restored — but a row that reads like every other one says the
+        // opposite of what recall now does with it.
+        if memory.superseded != 0 {
+            source.push_str(&format!(" · replaced by #{}", memory.superseded));
+        }
         list = list.child(
             div()
                 .border_b_1()

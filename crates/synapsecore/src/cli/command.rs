@@ -35,11 +35,15 @@ Commands:
   data check [--json]              Verify database integrity and version
   data export <file>               Export a consistent database backup
   data restore <file>              Restore a backup while Synapse is closed
-  memory list [query] [--json]     Search or list recent memories
+  memory list [query] [--json] [--explain]
+                                   Search or list recent memories
+  memory grep <text> [--json]      Find memories containing an exact string
   memory show <id> [--json]        Inspect one memory
   memory add [source] [--global|--project <folder>]
                                    Store content read from stdin
   memory edit <id> [source]        Replace content read from stdin
+  memory supersede <old> <new>     Stop recalling one memory in favour of another
+  memory restore <id>              Recall a superseded memory again
   memory import <claude|codex|markdown> [path]
                                    Preview an existing memory store
   memory import <source> [path] --confirm
@@ -84,6 +88,7 @@ Commands:
   tool delete <name>               Remove a descriptor you added
   session [--json]                 Report this session's Synapse connection
   statusline                       Print one status line for a connected tool
+  compact                          Answer a tool's pre-compaction hook
   doctor [--json]                  Report everything a bug report needs
   settings show                    Show recall, mesh, and shell settings
   settings optimize <full|balanced|lean>
@@ -135,6 +140,7 @@ pub fn run(arguments: Vec<OsString>) -> Result<Outcome> {
         "tool" => super::layers::tool(rest),
         "session" => super::session::session(rest),
         "statusline" => super::session::statusline(rest),
+        "compact" => super::session::compact(rest),
         "doctor" => super::doctor::doctor(rest),
         "settings" => settings(rest),
         "install" => install(),

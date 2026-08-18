@@ -252,6 +252,8 @@ mod tests {
                 scope: MemoryScope::Global,
                 project: String::new(),
                 created: 1_700_000_000,
+                superseded: 0,
+                abridged: false,
             }],
             query: String::new(),
             input: String::new(),

@@ -78,6 +78,17 @@ Tutorial commands use Bun.`)}
         <p><strong>An empty query is a real question.</strong> It means "what should I know here", and it returns the most recent memory in scope. This is exactly what a session opening asks, and it is what the Claude Code session hook uses.</p>
         ${code("shell", `synapse memory list`)}
         <p><strong>Words that carry a preference are kept.</strong> <code>not</code>, <code>never</code>, and <code>use</code> look like function words but change the meaning of a convention completely, so they stay in the query. "Never use npm" and "use npm" must not search identically.</p>
+        <p><strong>You can ask what it did.</strong> When a memory you know is stored does not come back, the fastest answer is to make the search show its working:</p>
+        ${code("shell", `synapse memory list "what are the credentials" --explain`)}
+        ${code("text", `Query:      what are the credentials
+Mode:       search
+Expression: "credentials"
+Searched:   credentials
+Dropped:    what, are, the (matches nearly every memory)
+Matches:    0`)}
+        <p>That distinguishes the two things that look identical from the outside: a query that lost its only real word, and a store that genuinely holds nothing.</p>
+        <p><strong>And you can skip the ranking entirely.</strong> When you want an exact string — a flag, an identifier, a path — the ranked search is the wrong tool, because the thing you are looking for may be a word it drops:</p>
+        ${code("shell", `synapse memory grep -- --no-verify`)}
         ${note("Scope is applied in the query, not after it", "Every search returns everything global plus everything for the current project, and nothing from any other project. That is enforced where the rows are selected rather than filtered afterwards, so there is no path where another project's memory is read and then discarded.")}
       </li>
 
@@ -89,6 +100,15 @@ Tutorial commands use Bun.`)}
 synapse memory show 2`)}
         ${code("text", `Updated memory #2`)}
         <p>The ID is stable, so anything referring to this memory still refers to the right thing, and future recall returns only the corrected text. Two entries that contradict each other are the single most common way a memory store gets worse as it grows: recall returns both and the model has to guess which is current.</p>
+        <p>Editing is right when the old wording had nothing worth keeping. When the old version was <em>true and then stopped being true</em>, supersede it instead — the new memory becomes the one recall returns, and the old one stays readable as the record of what used to be the case:</p>
+        ${code("shell", `printf '%s\\n' 'Tutorial commands use Bun. Node is used only for the release script.' \\
+  | synapse memory add synapsetutorial
+synapse memory supersede 2 6`)}
+        ${code("text", `Memory #2 superseded by #6; recall now returns #6 instead
+Undo with: synapse memory restore 2`)}
+        <p>Check both. Memory 2 is still there, marked, and out of recall; memory 6 is what a tool now sees. If you decide you were wrong, <code>synapse memory restore 2</code> puts it straight back.</p>
+        ${code("shell", `synapse memory show 2
+synapse memory list`)}
       </li>
 
       <li>

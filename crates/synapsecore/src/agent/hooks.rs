@@ -1,10 +1,14 @@
-//! The Claude Code settings Synapse manages: a SessionStart hook and, when
-//! nothing else claims it, the status line.
+//! The Claude Code settings Synapse manages: two hooks and, when nothing else
+//! claims it, the status line.
 //!
-//! The hook is the only way to state the connection *before* the model has
-//! written anything, so it lands beside the welcome box rather than partway
-//! through the first reply. It runs `synapse session`, whose `systemMessage`
-//! Claude Code displays to the user.
+//! The SessionStart hook is the only way to state the connection *before* the
+//! model has written anything, so it lands beside the welcome box rather than
+//! partway through the first reply. It runs `synapse session`, whose
+//! `systemMessage` Claude Code displays to the user.
+//!
+//! The PreCompact hook is the other end of the same session. Compaction is the
+//! one moment where what a session learned is about to stop existing, and the
+//! only one where the cost of not having written it down is paid immediately.
 //!
 //! Settings files carry no comments, so there is no managed block to hide
 //! behind. Synapse's own entries are recognised by the command they run, and
@@ -24,10 +28,35 @@ const MATCHER: &str = "startup|resume|clear";
 /// to hang the session on a slow disk.
 const TIMEOUT: u64 = 10;
 
+/// One hook event Synapse owns, and the subcommand it answers with.
+struct Managed {
+    event: &'static str,
+    /// Absent means every trigger for that event, which is what the compaction
+    /// reminder wants — a manual `/compact` loses exactly as much as an
+    /// automatic one.
+    matcher: Option<&'static str>,
+    subcommand: &'static str,
+}
+
+const MANAGED: [Managed; 2] = [
+    Managed {
+        event: "SessionStart",
+        matcher: Some(MATCHER),
+        subcommand: "session",
+    },
+    Managed {
+        event: "PreCompact",
+        matcher: None,
+        subcommand: "compact",
+    },
+];
+
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, serde::Serialize)]
 pub struct State {
     /// The SessionStart hook is present and points at this binary.
     pub notice: bool,
+    /// The PreCompact hook is present and points at this binary.
+    pub compact: bool,
     /// The status line is present and points at this binary.
     pub statusline: bool,
     /// Something other than Synapse owns the status line, so Synapse left it
@@ -41,9 +70,8 @@ pub fn state(settings: &Path, binary: &Path) -> State {
     };
     let existing = value.get("statusLine").and_then(command);
     State {
-        notice: sessionhooks(&value)
-            .iter()
-            .any(|group| ours(group, binary, "session")),
+        notice: installed(&value, binary, "SessionStart", "session"),
+        compact: installed(&value, binary, "PreCompact", "compact"),
         statusline: existing
             .as_deref()
             .is_some_and(|command| points(command, binary, "statusline")),
@@ -53,25 +81,42 @@ pub fn state(settings: &Path, binary: &Path) -> State {
     }
 }
 
-/// Install or refresh both settings, returning what the file ended up with.
+fn installed(value: &Value, binary: &Path, event: &str, subcommand: &str) -> bool {
+    groups(value, event)
+        .iter()
+        .any(|group| ours(group, binary, subcommand))
+}
+
+/// Install or refresh every setting, returning what the file ended up with.
 pub fn apply(settings: &Path, binary: &Path) -> Result<State> {
     let mut value = read(settings)?;
 
-    // Drop any SessionStart group Synapse wrote before, including one that
-    // points at a binary that has since moved, then add the current one. Groups
-    // belonging to anything else are carried through untouched.
-    let mut groups: Vec<Value> = sessionhooks(&value)
-        .into_iter()
-        .filter(|group| !ours(group, binary, "session") && !stale(group, "session"))
+    // Drop any group Synapse wrote before, including one that points at a
+    // binary that has since moved, then add the current one. Groups belonging
+    // to anything else are carried through untouched.
+    let rewritten: Vec<(&str, Vec<Value>)> = MANAGED
+        .iter()
+        .map(|managed| {
+            let mut kept: Vec<Value> = groups(&value, managed.event)
+                .into_iter()
+                .filter(|group| {
+                    !ours(group, binary, managed.subcommand) && !stale(group, managed.subcommand)
+                })
+                .collect();
+            let mut entry = json!({
+                "hooks": [{
+                    "type": "command",
+                    "command": format!("{} {}", quoted(binary), managed.subcommand),
+                    "timeout": TIMEOUT,
+                }],
+            });
+            if let Some(matcher) = managed.matcher {
+                entry["matcher"] = json!(matcher);
+            }
+            kept.push(entry);
+            (managed.event, kept)
+        })
         .collect();
-    groups.push(json!({
-        "matcher": MATCHER,
-        "hooks": [{
-            "type": "command",
-            "command": format!("{} session", quoted(binary)),
-            "timeout": TIMEOUT,
-        }],
-    }));
     let object = value
         .as_object_mut()
         .context("the settings file is not a JSON object")?;
@@ -80,7 +125,9 @@ pub fn apply(settings: &Path, binary: &Path) -> Result<State> {
         .or_insert_with(|| json!({}))
         .as_object_mut()
         .context("the `hooks` setting is not a JSON object")?;
-    hooks.insert("SessionStart".to_owned(), Value::Array(groups));
+    for (event, groups) in rewritten {
+        hooks.insert(event.to_owned(), Value::Array(groups));
+    }
 
     // A status line somebody else configured stays theirs.
     let existing = object.get("statusLine").and_then(command);
@@ -102,24 +149,34 @@ pub fn apply(settings: &Path, binary: &Path) -> Result<State> {
     Ok(state(settings, binary))
 }
 
-/// Take both settings back out, leaving anything Synapse did not write.
+/// Take every setting back out, leaving anything Synapse did not write.
 pub fn remove(settings: &Path, binary: &Path) -> Result<()> {
     if !settings.exists() {
         return Ok(());
     }
     let mut value = read(settings)?;
-    let groups: Vec<Value> = sessionhooks(&value)
-        .into_iter()
-        .filter(|group| !ours(group, binary, "session") && !stale(group, "session"))
+    let rewritten: Vec<(&str, Vec<Value>)> = MANAGED
+        .iter()
+        .map(|managed| {
+            let kept: Vec<Value> = groups(&value, managed.event)
+                .into_iter()
+                .filter(|group| {
+                    !ours(group, binary, managed.subcommand) && !stale(group, managed.subcommand)
+                })
+                .collect();
+            (managed.event, kept)
+        })
         .collect();
     let object = value
         .as_object_mut()
         .context("the settings file is not a JSON object")?;
     if let Some(hooks) = object.get_mut("hooks").and_then(Value::as_object_mut) {
-        if groups.is_empty() {
-            hooks.remove("SessionStart");
-        } else {
-            hooks.insert("SessionStart".to_owned(), Value::Array(groups));
+        for (event, groups) in rewritten {
+            if groups.is_empty() {
+                hooks.remove(event);
+            } else {
+                hooks.insert(event.to_owned(), Value::Array(groups));
+            }
         }
         if hooks.is_empty() {
             object.remove("hooks");
@@ -161,9 +218,9 @@ fn write(settings: &Path, value: &Value) -> Result<()> {
     )
 }
 
-fn sessionhooks(value: &Value) -> Vec<Value> {
+fn groups(value: &Value, event: &str) -> Vec<Value> {
     value
-        .pointer("/hooks/SessionStart")
+        .pointer(&format!("/hooks/{event}"))
         .and_then(Value::as_array)
         .cloned()
         .unwrap_or_default()
@@ -255,6 +312,7 @@ mod tests {
             state,
             State {
                 notice: true,
+                compact: true,
                 statusline: true,
                 borrowed: false
             }
@@ -266,6 +324,30 @@ mod tests {
                 .as_str()
                 .unwrap()
                 .ends_with("synapse session")
+        );
+    }
+
+    /// Compaction is where a session loses what it learned, so the reminder to
+    /// write it down has to fire for every trigger — a manual `/compact` costs
+    /// exactly as much as an automatic one.
+    #[test]
+    fn the_compaction_reminder_is_installed_for_every_trigger() {
+        let (_directory, settings, binary) = setup();
+
+        apply(&settings, &binary).unwrap();
+
+        let value = read(&settings).unwrap();
+        let groups = value["hooks"]["PreCompact"].as_array().unwrap();
+        assert_eq!(groups.len(), 1);
+        assert!(
+            groups[0].get("matcher").is_none(),
+            "a matcher would narrow it to one trigger"
+        );
+        assert!(
+            groups[0]["hooks"][0]["command"]
+                .as_str()
+                .unwrap()
+                .ends_with("synapse compact")
         );
     }
 
@@ -306,6 +388,7 @@ mod tests {
 
         let value = read(&settings).unwrap();
         assert_eq!(value["hooks"]["SessionStart"].as_array().unwrap().len(), 1);
+        assert_eq!(value["hooks"]["PreCompact"].as_array().unwrap().len(), 1);
     }
 
     #[test]
@@ -388,6 +471,10 @@ mod tests {
         let groups = value["hooks"]["SessionStart"].as_array().unwrap();
         assert_eq!(groups.len(), 1);
         assert_eq!(groups[0]["hooks"][0]["command"], "mine.sh");
+        assert!(
+            value["hooks"].get("PreCompact").is_none(),
+            "the compaction hook was Synapse's, so it goes"
+        );
     }
 
     #[test]

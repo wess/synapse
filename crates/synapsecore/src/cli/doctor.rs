@@ -54,6 +54,7 @@ pub struct Tool {
     pub connected: bool,
     pub guidance: bool,
     pub notice: bool,
+    pub compact: bool,
     pub statusline: String,
 }
 
@@ -121,6 +122,7 @@ fn print(report: &Report) {
         if tool.installed {
             println!("    guidance     {}", yesno(tool.guidance));
             println!("    notice       {}", yesno(tool.notice));
+            println!("    compaction   {}", yesno(tool.compact));
             println!("    status line  {}", tool.statusline);
         }
     }
@@ -277,6 +279,7 @@ fn tools(home: &Path) -> Vec<Tool> {
                 connected: detection.configured,
                 guidance: crate::agent::pointermatches(&agent.instructions, &soul),
                 notice: detection.hooks.notice,
+                compact: detection.hooks.compact,
                 statusline: if detection.hooks.statusline {
                     "Synapse".to_owned()
                 } else if detection.hooks.borrowed {

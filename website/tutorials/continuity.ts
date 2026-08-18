@@ -78,7 +78,7 @@ export const continuity: Page = {
   | synapse memory edit 4 synapsetutorial`)}
         ${code("text", `Updated memory #4`)}
         <p>Start one more new session and ask again. The answer should now reflect the corrected text — which proves that editing changed the durable source rather than layering a correction on top of a wrong record.</p>
-        ${note("Correcting beats appending", "Two memories that disagree are worse than one that is slightly wrong, because recall returns both and the model has to guess which is current. When a convention changes, edit the record. Add a new one only when it is genuinely a new fact.")}
+        ${note("Correcting beats appending", "Two memories that disagree are worse than one that is slightly wrong, because recall returns both and the model has to guess which is current. When the wording was bad, edit the record. When the old version was true and stopped being true, add the new one with synapse memory supersede so the old text stays readable but out of recall. Add a plain second memory only when it is genuinely a new fact.")}
       </li>
 
       <li>

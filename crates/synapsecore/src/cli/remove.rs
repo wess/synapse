@@ -135,8 +135,8 @@ fn preview(alsodata: bool) -> Result<Outcome> {
         if crate::agent::pointermatches(&agent.instructions, &soul) {
             println!("  · the Synapse block in {}", agent.instructions.display());
         }
-        if detection.hooks.notice || detection.hooks.statusline {
-            println!("  · the Synapse session notice and status line from Claude Code");
+        if detection.hooks.notice || detection.hooks.compact || detection.hooks.statusline {
+            println!("  · the Synapse hooks and status line from Claude Code");
         }
     }
     if let Ok(integration) = crate::shellsetup::status(&server)
