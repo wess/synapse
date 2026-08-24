@@ -45,6 +45,14 @@ pub struct Mesh {
 }
 
 impl Mesh {
+    /// How many workers one session may run at once, as the machine has it.
+    /// Lives here rather than being passed in so that every path that starts a
+    /// worker — the `spawn` tool, `mux --team`, `relay team open` — is bounded
+    /// by the same number without any of them having to remember to be.
+    pub async fn maxworkers(&self) -> Result<usize> {
+        crate::brain::settings::maxworkers(&self.pool).await
+    }
+
     pub async fn open(path: impl AsRef<Path>) -> Result<Self> {
         Self::from(crate::database::open(path.as_ref()).await?)
     }

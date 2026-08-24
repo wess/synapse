@@ -503,6 +503,14 @@ impl Brain {
         crate::brain::settings::writemesh(&self.pool, enabled).await
     }
 
+    pub async fn maxworkers(&self) -> Result<usize> {
+        crate::brain::settings::maxworkers(&self.pool).await
+    }
+
+    pub async fn setmaxworkers(&self, workers: usize) -> Result<()> {
+        crate::brain::settings::writemaxworkers(&self.pool, workers).await
+    }
+
     pub async fn learn(&self) -> Result<bool> {
         crate::brain::settings::learn(&self.pool).await
     }

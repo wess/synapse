@@ -17,7 +17,7 @@ pub use launch::{Launch, Options, launch};
 pub use layer::{Source, valid as validlayername};
 pub use model::{AgentView, ChannelView, Message, MessageKind, Registration, WorkerView};
 pub use store::Mesh;
-pub use worker::{Spec, Supervisor, reapstrays};
+pub use worker::{DEFAULTWORKERS, Spec, Supervisor, WORKERCEILING, reapstrays};
 
 /// Where the mesh keeps the files a launched agent needs: the MCP config handed
 /// to a tool that is not connected yet, and one log per background worker. Under

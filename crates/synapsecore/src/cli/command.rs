@@ -101,6 +101,7 @@ Commands:
                                    Set the MCP recall response budget
   settings mesh <on|off>           Turn the agent mesh tools on or off
   settings learn <on|off>          Let agents write and correct skills
+  settings workers <count>         Most background workers one session may run
   install                          Install the synapse CLI for this user
   connect [tool]                   Wire a tool into memory, or every one found
   disconnect [tool]                Undo one tool's connection, or every tool's
@@ -491,6 +492,7 @@ fn settings(arguments: &[OsString]) -> Result<Outcome> {
                     "off"
                 }
             );
+            println!("max workers\t{}", runtime.block_on(brain.maxworkers())?);
             println!("shell modes\tcommand-scoped, ambient directory");
             println!("zsh hook\teval \"$(synapse hook zsh)\"");
         }
@@ -524,6 +526,17 @@ fn settings(arguments: &[OsString]) -> Result<Outcome> {
                     "Self-improvement off. Skills already in the library stay where they are."
                 ),
             }
+        }
+        "workers" => {
+            let value = textarg(arguments, 1, "usage: synapse settings workers <count>")?;
+            let workers: usize = value
+                .parse()
+                .with_context(|| format!("`{value}` is not a number of workers"))?;
+            runtime.block_on(brain.setmaxworkers(workers))?;
+            println!(
+                "One session may now run {workers} background worker(s) at once. \
+                 A running supervisor picks this up on its next spawn."
+            );
         }
         "optimize" => {
             let value = textarg(

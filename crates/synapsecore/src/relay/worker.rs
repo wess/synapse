@@ -18,9 +18,17 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 use tokio::sync::Mutex;
 
-/// Concurrently running workers one session may own. Bounds a supervisor that
-/// would otherwise start agents without end.
-const MAXWORKERS: usize = 8;
+/// Concurrently running workers one session may own, unless the machine says
+/// otherwise. Bounds a supervisor that would otherwise start agents without end.
+pub const DEFAULTWORKERS: usize = 8;
+
+/// The most the `maxworkers` setting can ever buy.
+///
+/// A limit that is only a setting is not a limit: an agent that can reach the
+/// settings, or a person who mistypes a zero, would be the whole safety story.
+/// Each worker is a real session on a real account, so this is deliberately a
+/// number somebody would have to mean rather than one nobody would notice.
+pub const WORKERCEILING: usize = 32;
 
 /// Consecutive *rapid* restarts tolerated before a worker is declared broken.
 /// A run that lasted clears the count, so a long-lived worker is never retired
@@ -78,6 +86,9 @@ impl Supervisor {
         std::fs::create_dir_all(&directory)
             .with_context(|| format!("could not create {}", directory.display()))?;
         let log = directory.join(format!("{}.log", spec.name));
+        // Read per launch rather than held, so raising the limit takes effect on
+        // the next spawn instead of the next restart of whatever is supervising.
+        let limit = mesh.maxworkers().await.unwrap_or(DEFAULTWORKERS);
 
         // Checking the cap and reserving the name happen under one lock hold:
         // two concurrent spawns of the same name must not both pass, leaving the
@@ -90,8 +101,8 @@ impl Supervisor {
                 spec.name
             );
             anyhow::ensure!(
-                workers.len() < MAXWORKERS,
-                "the worker limit of {MAXWORKERS} is reached; stop one before starting another"
+                workers.len() < limit,
+                "the worker limit of {limit} is reached; stop one before starting another"
             );
             let stop = Arc::new(AtomicBool::new(false));
             workers.insert(spec.name.clone(), stop.clone());
@@ -394,7 +405,7 @@ mod tests {
         let supervisor = Supervisor::new();
         {
             let mut workers = supervisor.workers.lock().await;
-            for index in 0..MAXWORKERS {
+            for index in 0..DEFAULTWORKERS {
                 workers.insert(format!("w{index}"), Arc::new(AtomicBool::new(false)));
             }
         }

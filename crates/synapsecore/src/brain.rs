@@ -2,7 +2,7 @@ mod ingest;
 mod model;
 mod optimize;
 mod scope;
-mod settings;
+pub(crate) mod settings;
 mod store;
 
 pub use model::{
