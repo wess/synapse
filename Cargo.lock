@@ -3822,6 +3822,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0676bb32a98c1a483ce53e500a81ad9c3d5b3f7c920c28c24e9cb0980d0b5bc8"
 
 [[package]]
+name = "nora-hud"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e02c7d4671441324d69862bd2cbcba1a89ac4499d46944a30f5742243771e2a5"
+dependencies = [
+ "gpui",
+]
+
+[[package]]
 name = "ntapi"
 version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6180,6 +6189,7 @@ dependencies = [
  "cocoa 0.26.0",
  "gpui",
  "guise-ui",
+ "nora-hud",
  "synapsecore",
  "tokio",
  "tray-icon",

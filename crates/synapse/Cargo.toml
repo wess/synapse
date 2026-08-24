@@ -14,6 +14,14 @@ description = "Local memory and scoped credentials for developer tools"
 anyhow.workspace = true
 chrono = { version = "0.4", default-features = false, features = ["clock"] }
 gpui = "0.2.2"
+# The reactor on the console. A drawing dependency, which is the only kind this
+# crate may carry: stateless components over the same gpui, driven by whatever
+# the host measured. Synapse hands it mesh activity where nora hands it audio.
+#
+# Optional, and the console is whole without it: the reactor says what the fact
+# strip beside it already says, in a form some people want and some do not.
+# Turning it off drops the dependency rather than hiding the element.
+nora-hud = { version = "0.1", optional = true }
 guise-ui.workspace = true
 synapsecore = { path = "../synapsecore" }
 tokio = { version = "1.0", features = ["rt-multi-thread"] }
@@ -32,3 +40,8 @@ short_description = "Local memory and scoped credentials for developer tools"
 long_description = "A quiet local memory service and Keychain-backed credential bridge for developer tools."
 osx_minimum_system_version = "13.0"
 osx_info_plist_exts = ["assets/info.plist"]
+
+[features]
+default = ["reactor"]
+# The console's reactor. Off means no `nora-hud` in the build at all.
+reactor = ["dep:nora-hud"]
