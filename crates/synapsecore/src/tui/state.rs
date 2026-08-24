@@ -24,11 +24,16 @@ pub enum Page {
     Settings,
 }
 
+/// The order they appear in, which is also what the number keys reach.
+///
+/// Grouped rather than historical: the sidebar draws a heading whenever the
+/// group changes, so a page filed out of order would print its group twice. It
+/// matches the desktop's column for the same reason the pages themselves do.
 pub const PAGES: [Page; 6] = [
     Page::Connections,
     Page::Memories,
-    Page::Mesh,
     Page::Skills,
+    Page::Mesh,
     Page::Vaults,
     Page::Settings,
 ];
@@ -41,6 +46,16 @@ pub fn title(page: Page) -> &'static str {
         Page::Skills => "Skills",
         Page::Vaults => "Vaults",
         Page::Settings => "Settings",
+    }
+}
+
+/// Which group of the sidebar a page belongs to. Matches the desktop's, so a
+/// person moving between the two finds the same things under the same heading.
+pub fn section(page: Page) -> &'static str {
+    match page {
+        Page::Connections | Page::Memories | Page::Skills => "Workspace",
+        Page::Mesh => "Agents",
+        Page::Vaults | Page::Settings => "System",
     }
 }
 

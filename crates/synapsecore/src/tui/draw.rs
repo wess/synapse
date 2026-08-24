@@ -1,9 +1,13 @@
 //! The frame around the pages.
 //!
-//! Header, tabs, body, notice, keys — the desktop's shape, which is one console
-//! rather than a wall of cards. The body is whatever the current page draws;
-//! everything else on screen is drawn here and stays put, so moving between
-//! pages never moves the furniture.
+//! A column of destinations down the left and the page beside it — the
+//! desktop's shape, which is one console rather than a wall of cards. The body
+//! is whatever the current page draws; everything else on screen is drawn here
+//! and stays put, so moving between pages never moves the furniture.
+//!
+//! The sidebar collapses below [`ROOMFOR`] columns. A terminal that narrow has
+//! no room to spend a fifth of its width on navigation, and the numbered keys
+//! still reach every page — so what goes is the list, not the way there.
 
 use crate::tui::state::{self, Mode, Notice, PAGES, Page, State};
 use crate::tui::{connections, memories, mesh, settings, skills, theme, vaults};
@@ -12,25 +16,71 @@ use ratatui::layout::{Constraint, Layout, Rect};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Clear, Paragraph, Wrap};
 
+/// How wide the sidebar is, and the narrowest terminal that gets one.
+const SIDEBAR: u16 = 20;
+const ROOMFOR: u16 = 64;
+
 pub fn frame(frame: &mut Frame, state: &State) {
-    let areas = Layout::vertical([
+    let full = frame.area();
+    let rows = Layout::vertical([
         Constraint::Length(1), // title
-        Constraint::Length(1), // tabs
-        Constraint::Min(3),    // page
+        Constraint::Min(3),    // sidebar + page
         Constraint::Length(1), // notice
         Constraint::Length(1), // keys
     ])
-    .split(frame.area());
+    .split(full);
 
-    title(frame, areas[0], state);
-    tabs(frame, areas[1], state);
-    body(frame, areas[2], state);
-    notice(frame, areas[3], state);
-    keys(frame, areas[4], state);
+    title(frame, rows[0], state);
+    let middle = match full.width >= ROOMFOR {
+        true => {
+            let columns = Layout::horizontal([Constraint::Length(SIDEBAR), Constraint::Min(10)])
+                .split(rows[1]);
+            sidebar(frame, columns[0], state);
+            columns[1]
+        }
+        false => rows[1],
+    };
+    body(frame, middle, state);
+    notice(frame, rows[2], state);
+    keys(frame, rows[3], state);
 
     if state.mode == Mode::Help {
-        help(frame, frame.area());
+        help(frame, full);
     }
+}
+
+/// The destinations, grouped the way the desktop groups them: what Synapse is
+/// wired into, what is running, and what it is holding for you.
+fn sidebar(frame: &mut Frame, area: Rect, state: &State) {
+    let mut lines = Vec::new();
+    let mut group = "";
+    for (index, page) in PAGES.iter().enumerate() {
+        let section = state::section(*page);
+        if section != group {
+            if !lines.is_empty() {
+                lines.push(Line::raw(""));
+            }
+            lines.push(Line::from(Span::styled(
+                format!(" {}", section.to_uppercase()),
+                theme::dim(),
+            )));
+            group = section;
+        }
+        let here = *page == state.page;
+        lines.push(Line::from(vec![
+            Span::styled(if here { " ▸ " } else { "   " }, theme::accent()),
+            Span::styled(
+                format!("{} ", state::title(*page)),
+                if here {
+                    theme::selected()
+                } else {
+                    theme::text()
+                },
+            ),
+            Span::styled(format!("{}", index + 1), theme::dim()),
+        ]));
+    }
+    frame.render_widget(Paragraph::new(lines), area);
 }
 
 fn title(frame: &mut Frame, area: Rect, state: &State) {
@@ -54,19 +104,6 @@ fn kilobytes(bytes: u64) -> String {
         1024..=1_048_575 => format!("{:.0} KB", bytes as f64 / 1024.0),
         _ => format!("{:.1} MB", bytes as f64 / 1_048_576.0),
     }
-}
-
-fn tabs(frame: &mut Frame, area: Rect, state: &State) {
-    let mut spans = vec![Span::raw(" ")];
-    for (index, page) in PAGES.iter().enumerate() {
-        let label = format!(" {} {} ", index + 1, state::title(*page));
-        spans.push(if *page == state.page {
-            Span::styled(label, theme::selected())
-        } else {
-            Span::styled(label, theme::dim())
-        });
-    }
-    frame.render_widget(Paragraph::new(Line::from(spans)), area);
 }
 
 fn body(frame: &mut Frame, area: Rect, state: &State) {

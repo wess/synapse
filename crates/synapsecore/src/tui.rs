@@ -535,6 +535,25 @@ mod tests {
         assert_eq!(state.query, "q");
     }
 
+    /// The sidebar prints a heading when the group changes, so every page of a
+    /// group has to be listed together — a stray one prints its heading twice
+    /// and reads as two groups of the same name.
+    #[test]
+    fn pages_are_listed_grouped_so_no_heading_repeats() {
+        let mut seen: Vec<&'static str> = Vec::new();
+        for page in PAGES {
+            let section = crate::tui::state::section(page);
+            if seen.last() != Some(&section) {
+                assert!(
+                    !seen.contains(&section),
+                    "`{section}` is split across the list: {seen:?} then {section}"
+                );
+                seen.push(section);
+            }
+        }
+        assert!(seen.len() > 1, "the grouping does nothing with one group");
+    }
+
     #[test]
     fn pages_wrap_in_both_directions() {
         let mut state = sample();
