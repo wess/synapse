@@ -102,6 +102,7 @@ Commands:
   settings mesh <on|off>           Turn the agent mesh tools on or off
   settings learn <on|off>          Let agents write and correct skills
   settings workers <count>         Most background workers one session may run
+  settings reactor <on|off>        Draw the console's reactor in the app
   install                          Install the synapse CLI for this user
   connect [tool]                   Wire a tool into memory, or every one found
   disconnect [tool]                Undo one tool's connection, or every tool's
@@ -493,6 +494,14 @@ fn settings(arguments: &[OsString]) -> Result<Outcome> {
                 }
             );
             println!("max workers\t{}", runtime.block_on(brain.maxworkers())?);
+            println!(
+                "reactor\t{}",
+                if runtime.block_on(brain.reactor())? {
+                    "on"
+                } else {
+                    "off"
+                }
+            );
             println!("shell modes\tcommand-scoped, ambient directory");
             println!("zsh hook\teval \"$(synapse hook zsh)\"");
         }
@@ -525,6 +534,22 @@ fn settings(arguments: &[OsString]) -> Result<Outcome> {
                 false => println!(
                     "Self-improvement off. Skills already in the library stay where they are."
                 ),
+            }
+        }
+        "reactor" => {
+            let enabled =
+                match textarg(arguments, 1, "usage: synapse settings reactor <on|off>")?.as_str() {
+                    "on" => true,
+                    "off" => false,
+                    value => anyhow::bail!("expected `on` or `off`, got `{value}`"),
+                };
+            runtime.block_on(brain.setreactor(enabled))?;
+            match enabled {
+                true => println!(
+                    "The console draws its reactor. A build without the `reactor` feature has \
+                     none to draw; everything it shows, the numbers beside it show too."
+                ),
+                false => println!("The console's reactor is off."),
             }
         }
         "workers" => {

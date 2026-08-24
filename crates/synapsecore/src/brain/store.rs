@@ -503,6 +503,14 @@ impl Brain {
         crate::brain::settings::writemesh(&self.pool, enabled).await
     }
 
+    pub async fn reactor(&self) -> Result<bool> {
+        crate::brain::settings::reactor(&self.pool).await
+    }
+
+    pub async fn setreactor(&self, enabled: bool) -> Result<()> {
+        crate::brain::settings::writereactor(&self.pool, enabled).await
+    }
+
     pub async fn maxworkers(&self) -> Result<usize> {
         crate::brain::settings::maxworkers(&self.pool).await
     }

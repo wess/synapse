@@ -63,6 +63,17 @@ pub async fn writemaxworkers(pool: &SqlitePool, workers: usize) -> Result<()> {
     writevalue(pool, "maxworkers", &workers.to_string()).await
 }
 
+/// Whether the console draws its reactor. On unless somebody turned it off:
+/// the fact strip beside it says the same things, so this is a preference about
+/// what a window looks like rather than about what it can do.
+pub async fn reactor(pool: &SqlitePool) -> Result<bool> {
+    Ok(value(pool, "reactor").await?.as_deref() != Some("off"))
+}
+
+pub async fn writereactor(pool: &SqlitePool, enabled: bool) -> Result<()> {
+    writevalue(pool, "reactor", if enabled { "on" } else { "off" }).await
+}
+
 pub async fn value(pool: &SqlitePool, key: &str) -> Result<Option<String>> {
     sqlx::query_scalar::<_, String>("SELECT value FROM setting WHERE key = ?")
         .bind(key)
@@ -127,5 +138,21 @@ mod tests {
         let (pool, _directory) = pool().await;
         writevalue(&pool, "maxworkers", "lots").await.unwrap();
         assert_eq!(maxworkers(&pool).await.unwrap(), DEFAULTWORKERS);
+    }
+
+    #[tokio::test]
+    async fn the_reactor_is_on_until_it_is_turned_off() {
+        let (pool, _directory) = pool().await;
+        assert!(reactor(&pool).await.unwrap());
+
+        writereactor(&pool, false).await.unwrap();
+        assert!(!reactor(&pool).await.unwrap());
+        writereactor(&pool, true).await.unwrap();
+        assert!(reactor(&pool).await.unwrap());
+
+        // Only the exact word turns it off. A setting written by hand, or by an
+        // older build, should not silently mean "off".
+        writevalue(&pool, "reactor", "maybe").await.unwrap();
+        assert!(reactor(&pool).await.unwrap());
     }
 }
