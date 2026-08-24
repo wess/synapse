@@ -2218,7 +2218,7 @@ dependencies = [
 
 [[package]]
 name = "synapsecore"
-version = "0.1.0-beta.21"
+version = "0.1.0-beta.22"
 dependencies = [
  "anyhow",
  "chrono",
