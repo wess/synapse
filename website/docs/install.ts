@@ -5,7 +5,7 @@ import { releaseurl } from "../deploy";
 export const install: Page = {
   path: "docs/install/index.html",
   title: "Install and connect",
-  description: "Install the signed macOS beta, add the CLI, and connect Codex, Claude Code, or pi without replacing your configuration.",
+  description: "Install the signed macOS build, add the CLI, and connect Codex, Claude Code, or pi without replacing your configuration.",
   kind: "docs",
   toc: [
     { label: "Requirements", id: "requirements" },
@@ -27,7 +27,7 @@ export const install: Page = {
 
     <h2 id="app">Install the app</h2>
     <ol>
-      <li>Download <code>synapse.zip</code> from the <a href="${releaseurl}">current beta release</a>.</li>
+      <li>Download <code>synapse.zip</code> from the <a href="${releaseurl}">latest release</a>.</li>
       <li>Extract the archive and move <strong>synapse.app</strong> into <strong>Applications</strong>. Do not install the CLI while the app is still inside Downloads or a mounted disk image.</li>
       <li>Open Synapse. The app is Developer ID signed and notarized by Apple, so it opens under default Gatekeeper settings with no security override.</li>
     </ol>

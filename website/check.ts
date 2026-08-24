@@ -79,7 +79,7 @@ const home = await Bun.file(join(output, "index.html")).text();
 if (!home.startsWith("<!--\nTHESIS:")) fail("landing page is missing its direction contract");
 for (const phrase of [
   "Your tools forget. Synapse remembers.",
-  "Download macOS beta",
+  "Download for macOS",
   "Remember decisions",
   "Scope credentials",
   "Stay in control",
@@ -111,7 +111,7 @@ if (!corpus.includes(repositoryurl)) {
   fail("generated pages are missing the repository URL");
 }
 if (!corpus.includes(`/releases/download/${releasetag}/synapse.zip`)) {
-  fail("generated pages are missing the current beta download");
+  fail("generated pages are missing the current release download");
 }
 if (!corpus.includes('data-searchstatus role="status" aria-live="polite"')) {
   fail("documentation search is missing an announced status");

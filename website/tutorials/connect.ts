@@ -5,7 +5,7 @@ export const connect: Page = {
   path: "tutorials/connect/index.html",
   title: "Install and connect your first tools",
   description:
-    "Go from the signed beta archive to a working local MCP connection, and verify the same memory from the desktop app, the terminal, and the coding tool itself.",
+    "Go from the signed release archive to a working local MCP connection, and verify the same memory from the desktop app, the terminal, and the coding tool itself.",
   kind: "tutorial",
   toc: [
     { label: "Outcome", id: "outcome" },

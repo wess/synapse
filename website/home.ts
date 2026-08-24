@@ -4,7 +4,7 @@ import { downloadurl } from "./deploy";
 const contract = `<!--
 THESIS: A confirmed decision survives a cinematic match cut between work sessions; this refuses the generic neon node graph and the centered SaaS hero.
 OWN-WORLD: Committed cobalt film stock, cool leader white, dark ink transcripts, carmine cue marks, ruled continuity logs, condensed display titles, and measured timecode captions.
-STORY: See a lost decision become durable context, understand the two product jobs, trust the local boundary, then download the macOS beta or enter the guide.
+STORY: See a lost decision become durable context, understand the two product jobs, trust the local boundary, then download it or enter the guide.
 FIRST VIEWPORT: Copy occupies the left third; two offset work transcripts fill the right; an off-white memory strip crosses both at center scale; download sits directly below the offer.
 FORM: Continuity-room match cut staged as a four-scene sequence; seed ec0103e2.
 FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md
@@ -24,7 +24,7 @@ const body = `
         <h1>Your tools forget. Synapse remembers.</h1>
         <p>Keep project decisions and credentials on your Mac, ready for the tools and terminal sessions that need them.</p>
         <div class="heroactions">
-          <a class="button" href="${downloadurl}">Download macOS beta <span aria-hidden="true">↓</span></a>
+          <a class="button" href="${downloadurl}">Download for macOS <span aria-hidden="true">↓</span></a>
           <a class="button secondary" href="docs/">See how it works</a>
         </div>
         <span class="heronote">Apple silicon · macOS 13+ · Developer ID signed prerelease</span>
@@ -147,7 +147,7 @@ Settings → Shell integration → Enable</pre>
       <h2>Keep the thread.</h2>
       <p>Download Synapse, connect your tools, and let confirmed context survive the next handoff.</p>
       <div class="heroactions">
-        <a class="button" href="${downloadurl}">Download macOS beta</a>
+        <a class="button" href="${downloadurl}">Download for macOS</a>
         <a class="button secondary" href="tutorials/connect/">Follow the setup guide</a>
       </div>
     </div>
