@@ -204,6 +204,7 @@ for (const command of [
   "synapse settings mesh",
   "synapse settings optimize",
   "synapse settings learn",
+  "synapse settings workers",
   "synapse skill proposed",
   "synapse skill approve",
   "synapse skill reject",

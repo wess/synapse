@@ -243,6 +243,15 @@ and the index too</code></pre>
     <p>undefined</p>
   </aside>
 
+    <h2 id="console">The console</h2>
+    <p>The app has a <strong>Console</strong> page: a transcript of everything said on the mesh, what it is currently doing, the roster, and a box to type in. It is <code>synapse mux</code> with a window instead of a terminal — opening it puts you on the roster under your login name, and closing the app takes you off it again.</p>
+    <p>It uses the same addressing: <code>@name</code> reaches one agent, <code>#channel</code> a channel, <code>!</code> everyone, and a bare line goes to whichever agent you picked in the roster. Nothing is interposed — you are a row like any other, and every worker stays directly addressable rather than reachable only through a lead.</p>
+    
+  <aside class="note">
+    <strong>Same seat, two surfaces</strong>
+    <p>The grammar, the name you join under, and the flag that marks you a person are all one piece of code shared with <code>synapse mux</code>. A person who is <code>wess</code> in the terminal is <code>wess</code> in the window, and an agent looking for somebody to ask finds one row rather than two.</p>
+  </aside>
+
     <h2 id="watching">Watching the mesh</h2>
     <p>The <strong>Mesh</strong> page in the app shows who has joined, what each one last reported, which workers are running, and the recent traffic between them. The same is available from the terminal:</p>
     
@@ -292,7 +301,7 @@ frontend  frontend    online   working  rewriting the auth middleware           
     </main>
     <aside class="ontoc" aria-label="On this page">
         <span>On this page</span>
-        <ol><li><a href="#what">What the mesh is</a></li><li><a href="#enable">Turn it on</a></li><li><a href="#join">How agents join</a></li><li><a href="#roles">Roles</a></li><li><a href="#teams">Teams</a></li><li><a href="#workers">Background workers</a></li><li><a href="#mux">Driving a team yourself</a></li><li><a href="#watching">Watching the mesh</a></li><li><a href="#limits">Limits</a></li></ol>
+        <ol><li><a href="#what">What the mesh is</a></li><li><a href="#enable">Turn it on</a></li><li><a href="#join">How agents join</a></li><li><a href="#roles">Roles</a></li><li><a href="#teams">Teams</a></li><li><a href="#workers">Background workers</a></li><li><a href="#mux">Driving a team yourself</a></li><li><a href="#console">The console</a></li><li><a href="#watching">Watching the mesh</a></li><li><a href="#limits">Limits</a></li></ol>
       </aside>
   </div>
   

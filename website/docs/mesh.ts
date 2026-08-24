@@ -15,6 +15,7 @@ export const mesh: Page = {
     { label: "Teams", id: "teams" },
     { label: "Background workers", id: "workers" },
     { label: "Driving a team yourself", id: "mux" },
+    { label: "The console", id: "console" },
     { label: "Watching the mesh", id: "watching" },
     { label: "Limits", id: "limits" },
   ],
@@ -106,6 +107,11 @@ and the index too`)}
     <p>The more useful direction is the other one. A headless worker runs with its permission prompts bypassed, so when it reaches a decision it should not make alone, it has had nobody to ask — and has had to guess. With a person on the roster it can send you the question, report itself blocked, and wait for the answer.</p>
     ${note("Agents can tell a person from an agent. A roster entry for a human is marked as one, and connected tools are told to ask them questions and never delegate work to them.")}
     ${note("Messages reach an agent at its next check, not as an interrupt. One parked between tasks answers in about a second; one in the middle of a long build sees you when it comes back. The roster shows which is which.")}
+
+    <h2 id="console">The console</h2>
+    <p>The app has a <strong>Console</strong> page: a transcript of everything said on the mesh, what it is currently doing, the roster, and a box to type in. It is <code>synapse mux</code> with a window instead of a terminal — opening it puts you on the roster under your login name, and closing the app takes you off it again.</p>
+    <p>It uses the same addressing: <code>@name</code> reaches one agent, <code>#channel</code> a channel, <code>!</code> everyone, and a bare line goes to whichever agent you picked in the roster. Nothing is interposed — you are a row like any other, and every worker stays directly addressable rather than reachable only through a lead.</p>
+    ${note("Same seat, two surfaces", "The grammar, the name you join under, and the flag that marks you a person are all one piece of code shared with <code>synapse mux</code>. A person who is <code>wess</code> in the terminal is <code>wess</code> in the window, and an agent looking for somebody to ask finds one row rather than two.")}
 
     <h2 id="watching">Watching the mesh</h2>
     <p>The <strong>Mesh</strong> page in the app shows who has joined, what each one last reported, which workers are running, and the recent traffic between them. The same is available from the terminal:</p>
