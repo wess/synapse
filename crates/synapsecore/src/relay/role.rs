@@ -20,6 +20,7 @@ const BUILTINS: &[(&str, &str)] = &[
     ("reviewer", include_str!("../../assets/roles/reviewer.toml")),
     ("devops", include_str!("../../assets/roles/devops.toml")),
     ("qa", include_str!("../../assets/roles/qa.toml")),
+    ("overseer", include_str!("../../assets/roles/overseer.toml")),
 ];
 
 /// The template a new role starts from, so an empty file is never saved.

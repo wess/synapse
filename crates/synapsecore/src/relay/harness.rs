@@ -16,6 +16,20 @@
 /// per-launch focus. `optimize` trades the spelled-out protocol for a terse one
 /// so a launch that carries no task costs noticeably fewer tokens; it changes
 /// wording only, never which instructions survive.
+/// `a` or `an` for a role name. Roles are open — anybody can write one — so the
+/// article cannot be baked into the sentence, and "a overseer" is the kind of
+/// wrong that makes a prompt read as machine-written to the model reading it.
+fn article(role: &str) -> &'static str {
+    match role
+        .chars()
+        .next()
+        .is_some_and(|first| matches!(first.to_ascii_lowercase(), 'a' | 'e' | 'i' | 'o' | 'u'))
+    {
+        true => "an",
+        false => "a",
+    }
+}
+
 pub fn prompt(
     name: &str,
     role: &str,
@@ -102,9 +116,10 @@ pub fn prompt(
         format!("You are \"{name}\" ({role}) on the Synapse mesh (the Synapse MCP tools).\n")
     } else {
         format!(
-            "You are \"{name}\", a {role} on the Synapse mesh. You coordinate with the other \
+            "You are \"{name}\", {} {role} on the Synapse mesh. You coordinate with the other \
              agents through the Synapse MCP tools, and you share one durable memory with them \
-             through `recall` and `remember`.\n"
+             through `recall` and `remember`.\n",
+            article(role)
         )
     };
     format!("{intro}{protocol}{brief}{task}")
@@ -177,5 +192,14 @@ mod tests {
         let rendered = prompt("w", "worker", "   ", &[], Some("  "), false, false);
         assert!(!rendered.contains("Your role:"));
         assert!(!rendered.contains("standing focus"));
+    }
+
+    #[test]
+    fn a_role_starting_with_a_vowel_gets_the_right_article() {
+        let overseer = prompt("lead", "overseer", "", &[], None, false, false);
+        assert!(overseer.contains("an overseer"), "got {overseer}");
+        let worker = prompt("hand", "worker", "", &[], None, false, false);
+        assert!(worker.contains("a worker"), "got {worker}");
+        assert_eq!(article(""), "a");
     }
 }

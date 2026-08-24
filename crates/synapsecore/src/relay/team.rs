@@ -13,6 +13,7 @@ const KIND: &str = "teams";
 const BUILTINS: &[(&str, &str)] = &[
     ("web", include_str!("../../assets/teams/web.toml")),
     ("pair", include_str!("../../assets/teams/pair.toml")),
+    ("overseer", include_str!("../../assets/teams/overseer.toml")),
 ];
 
 pub const TEMPLATE: &str = "# The first member is the lead: it stays interactive so you can steer it.\n\
@@ -99,6 +100,25 @@ mod tests {
         }
         let web = parse("web", BUILTINS[0].1, Source::Builtin).unwrap();
         assert_eq!(web.members[0].role.as_deref(), Some("supervisor"));
+    }
+
+    /// The point of this one is that it is alone. A roster picked before the
+    /// job is understood is the thing it exists not to make you do, so a second
+    /// member added here would quietly turn it into `web`.
+    #[test]
+    fn the_overseer_team_is_one_agent_that_grows_its_own() {
+        let team = resolve(None, "overseer").unwrap().unwrap();
+        assert_eq!(team.members.len(), 1, "got {:?}", team.members);
+        assert_eq!(team.members[0].role.as_deref(), Some("overseer"));
+        // Unset, so it launches with whatever `relay::launch` defaults to and a
+        // copy in the user's own layer can name any connected tool instead.
+        assert!(team.members[0].tool.is_none());
+
+        let role = crate::relay::role::resolve(None, "overseer")
+            .unwrap()
+            .expect("the overseer role ships with the team that uses it");
+        assert!(role.description.contains("spawn"));
+        assert!(role.description.contains("human"));
     }
 
     #[test]

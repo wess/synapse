@@ -47,7 +47,7 @@ export const mesh: Page = {
     <p>A parked <code>wait</code> returns an empty list after a few idle minutes and the agent simply calls it again, so an idle teammate costs one tool call every few minutes rather than a loop that spins.</p>
 
     <h2 id="roles">Roles</h2>
-    <p>A role is the durable identity an agent launches with: a brief describing what it owns and how it coordinates, plus optional defaults. It is separate from a task, which is the one-off assignment. Synapse ships with <code>supervisor</code>, <code>worker</code>, <code>frontend</code>, <code>backend</code>, <code>reviewer</code>, <code>devops</code>, and <code>qa</code>.</p>
+    <p>A role is the durable identity an agent launches with: a brief describing what it owns and how it coordinates, plus optional defaults. It is separate from a task, which is the one-off assignment. Synapse ships with <code>supervisor</code>, <code>overseer</code>, <code>worker</code>, <code>frontend</code>, <code>backend</code>, <code>reviewer</code>, <code>devops</code>, and <code>qa</code>.</p>
     ${code("shell", `synapse relay role list
 synapse relay role show frontend
 synapse relay role create reviewer          # writes into this project
@@ -95,6 +95,14 @@ synapse relay kill backend`)}
 /focus backend
 and the index too`)}
     <p>A bare line goes to whoever is focused, so a back-and-forth with one agent reads like a conversation. <code>/help</code> lists the rest: <code>/agents</code>, <code>/workers</code>, <code>/log &lt;name&gt;</code> for what a worker has been doing, <code>/kill</code>, and <code>/quit</code>. Leaving takes the workers it started with it.</p>
+
+    <h3>Or hand it to one agent</h3>
+    <p>Picking a roster before you understand the job is its own small chore, and most jobs do not need four agents. The <code>overseer</code> team is one agent and nothing else:</p>
+    ${code("shell", `synapse mux --team overseer
+
+@overseer get the release notes written and the changelog updated`)}
+    <p>You are still on the roster as yourself, so nothing is interposed — you can address any worker it starts without going through it. What changes is that you describe an outcome rather than handing out the pieces, and it grows a team with <code>spawn</code> only when the work turns out to want one. Its brief is explicit that starting a worker is not free and that eight is the ceiling.</p>
+    <p>It launches with Claude Code unless you say otherwise. <code>synapse relay team create overseer --user</code> copies the file into your own layer, where a <code>tool</code> line names any connected tool instead.</p>
     <p>The more useful direction is the other one. A headless worker runs with its permission prompts bypassed, so when it reaches a decision it should not make alone, it has had nobody to ask — and has had to guess. With a person on the roster it can send you the question, report itself blocked, and wait for the answer.</p>
     ${note("Agents can tell a person from an agent. A roster entry for a human is marked as one, and connected tools are told to ask them questions and never delegate work to them.")}
     ${note("Messages reach an agent at its next check, not as an interrupt. One parked between tasks answers in about a second; one in the middle of a long build sees you when it comes back. The roster shows which is which.")}

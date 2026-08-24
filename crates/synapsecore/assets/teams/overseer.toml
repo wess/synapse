@@ -1,0 +1,14 @@
+name = "overseer"
+
+# One agent, which is the point. `synapse mux --team overseer` puts you on the
+# mesh as yourself and starts this one headless beside you, so you describe an
+# outcome instead of picking a roster before you know what the job needs. It
+# grows its own team with `spawn` when the work turns out to want one.
+#
+# `tool` is unset, so it launches with Claude Code. Name any connected tool here
+# to change that — copy this file with `synapse relay team create overseer` and
+# it resolves from your own layer instead of this one.
+[[member]]
+name = "overseer"
+role = "overseer"
+# tool = "codex"
