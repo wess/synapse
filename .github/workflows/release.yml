@@ -16,7 +16,7 @@ permissions:
 env:
   # guise-ui is a path dependency on a sibling checkout, so the build resolves
   # ../guise/crates/guise. Bump this whenever Cargo.toml wants a newer guise.
-  GUISE_REF: v1.0.0
+  GUISE_REF: v1.4.0
 
 jobs:
   check-version:
