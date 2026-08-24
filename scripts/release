@@ -13,10 +13,43 @@ trap 'rm -rf "$stage"' EXIT INT TERM
 # workspace target directory, which is why $bundle is rooted above.
 cd "$root/crates/synapse"
 rustc -vV | grep -q '^host: aarch64-apple-darwin$'
-cargo bundle --release --format osx
+
+# Extra cargo features for this build. Empty is the shipped release: default
+# features, no microphone, and no entitlements — see below.
+features=${SYNAPSE_FEATURES:-}
+if [ -n "$features" ]; then
+  cargo bundle --release --format osx --features "$features"
+else
+  cargo bundle --release --format osx
+fi
+
 ditto --norsrc --noextattr --noqtn --noacl "$bundle" "$stage/synapse.app"
-/usr/libexec/PlistBuddy -c 'Set :LSRequiresCarbon false' "$stage/synapse.app/Contents/Info.plist"
-codesign --force --deep --options runtime --timestamp --sign "$identity" "$stage/synapse.app"
+plist="$stage/synapse.app/Contents/Info.plist"
+/usr/libexec/PlistBuddy -c 'Set :LSRequiresCarbon false' "$plist"
+
+# A voice build is the only one that gets a microphone, and it has to say why
+# twice: once for the device and once for the recogniser. macOS shows these
+# exact sentences in the permission prompt, and a build that carried them
+# without the feature would be asking for something it cannot use.
+entitlements=
+case ",$features," in
+  *,voice,*)
+    entitlements="$root/crates/synapse/assets/voice.entitlements"
+    /usr/libexec/PlistBuddy -c \
+      'Add :NSMicrophoneUsageDescription string "Synapse listens only while you hold the microphone button in the console, and only to turn what you said into text you can read before sending."' \
+      "$plist"
+    /usr/libexec/PlistBuddy -c \
+      'Add :NSSpeechRecognitionUsageDescription string "Speech is transcribed on this Mac. Synapse refuses to transcribe at all rather than send your voice to Apple."' \
+      "$plist"
+    ;;
+esac
+
+if [ -n "$entitlements" ]; then
+  codesign --force --deep --options runtime --timestamp \
+    --entitlements "$entitlements" --sign "$identity" "$stage/synapse.app"
+else
+  codesign --force --deep --options runtime --timestamp --sign "$identity" "$stage/synapse.app"
+fi
 codesign --verify --deep --strict --verbose=2 "$stage/synapse.app"
 ditto -c -k --norsrc --noextattr --noqtn --noacl --keepParent "$stage/synapse.app" "$stage/synapse.zip"
 

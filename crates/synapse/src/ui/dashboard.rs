@@ -71,6 +71,11 @@ pub struct Dashboard {
     consoleinput: Entity<TextInput>,
     /// Most workers one session may run, read with the rest of the mesh.
     consolelimit: usize,
+    /// Whether the console draws its reactor, as the settings have it.
+    reactorwanted: bool,
+    /// Dictation into the composer, when the build has a microphone.
+    #[cfg(all(feature = "voice", target_os = "macos"))]
+    dictation: crate::voice::Dictation,
     /// Monotonic seconds since the console opened. The one value the reactor
     /// draws from that is not measured off the mesh — it turns the sweep.
     consoleclock: Option<std::time::Instant>,
@@ -232,6 +237,7 @@ impl Dashboard {
         }
         let learnenabled = loadlearn(&database).unwrap_or(false);
         let consolelimit = loadworkers(&database).unwrap_or(synapsecore::relay::DEFAULTWORKERS);
+        let reactorwanted = loadreactor(&database).unwrap_or(true);
         Self {
             rows: loadrows(),
             stats,
@@ -281,6 +287,9 @@ impl Dashboard {
             consolefocus: None,
             consoleinput,
             consolelimit,
+            reactorwanted,
+            #[cfg(all(feature = "voice", target_os = "macos"))]
+            dictation: crate::voice::Dictation::default(),
             consoleclock: None,
             consoletick: None,
             mesherror: meshdata.error,
@@ -783,10 +792,20 @@ impl Dashboard {
                     let alive = this
                         .update(cx, |this, cx| {
                             if this.page != Page::Console {
+                                // The microphone belongs to this page. Walking
+                                // away from it closes the device rather than
+                                // leaving it open with nothing on screen to say
+                                // so.
+                                this.stopdictation();
                                 this.consoletick = None;
                                 this.consoleclock = None;
                                 return false;
                             }
+                            // A finished transcript is checked every frame:
+                            // it arrives when the recogniser is done, not on
+                            // the reload's schedule, and waiting a whole second
+                            // to paste what you just said feels like a fault.
+                            this.collectdictation(cx);
                             match frame.is_multiple_of(RELOAD) {
                                 true => this.refreshconsole(cx),
                                 // Nothing was read, but the clock moved, so the
@@ -919,6 +938,98 @@ impl Dashboard {
         )
     }
 
+    /// What the microphone button should say, which is the only place the
+    /// voice feature reaches the page.
+    #[cfg(all(feature = "voice", target_os = "macos"))]
+    fn micstate(&self) -> console::Mic {
+        use crate::voice::Access;
+
+        if !crate::voice::available() {
+            return console::Mic::Refused(
+                "This Mac cannot transcribe without sending audio to Apple, so Synapse will not."
+                    .to_owned(),
+            );
+        }
+        if self.dictation.transcribing() {
+            return console::Mic::Transcribing;
+        }
+        if self.dictation.listening() {
+            return console::Mic::Listening;
+        }
+        match crate::voice::access() {
+            Access::Allowed => console::Mic::Ready,
+            Access::Unknown => console::Mic::Ask,
+            Access::Refused => console::Mic::Refused(
+                "Synapse is not allowed to use the microphone. Turn it on in System Settings › Privacy & Security."
+                    .to_owned(),
+            ),
+        }
+    }
+
+    #[cfg(not(all(feature = "voice", target_os = "macos")))]
+    fn micstate(&self) -> console::Mic {
+        console::Mic::Absent
+    }
+
+    /// Start dictating, or stop and transcribe. One button, because at any
+    /// moment there is only one of these worth doing.
+    #[cfg(all(feature = "voice", target_os = "macos"))]
+    fn dictate(&mut self, cx: &mut Context<Self>) {
+        use crate::voice::Access;
+
+        if crate::voice::access() == Access::Unknown {
+            crate::voice::ask();
+            cx.notify();
+            return;
+        }
+        let outcome = match self.dictation.listening() {
+            true => self.dictation.stop(),
+            false => self.dictation.start(),
+        };
+        if let Err(error) = outcome {
+            self.notice = Notice::Error(format!("{error:#}"));
+        }
+        cx.notify();
+    }
+
+    #[cfg(not(all(feature = "voice", target_os = "macos")))]
+    fn dictate(&mut self, _cx: &mut Context<Self>) {}
+
+    /// Put a finished transcript into the composer, appended rather than
+    /// replacing: dictation is another way to type, so it should behave like
+    /// typing into whatever is already there.
+    #[cfg(all(feature = "voice", target_os = "macos"))]
+    fn collectdictation(&mut self, cx: &mut Context<Self>) {
+        let Some(outcome) = self.dictation.poll() else {
+            return;
+        };
+        match outcome {
+            Ok(text) => {
+                let existing = self.consoleinput.read(cx).text();
+                let joined = match existing.trim().is_empty() {
+                    true => text,
+                    false => format!("{} {text}", existing.trim_end()),
+                };
+                self.consoleinput
+                    .update(cx, |input, cx| input.set_text(&joined, cx));
+                self.notice = Notice::Ready;
+            }
+            Err(error) => self.notice = Notice::Error(format!("{error:#}")),
+        }
+        cx.notify();
+    }
+
+    #[cfg(not(all(feature = "voice", target_os = "macos")))]
+    fn collectdictation(&mut self, _cx: &mut Context<Self>) {}
+
+    #[cfg(all(feature = "voice", target_os = "macos"))]
+    fn stopdictation(&mut self) {
+        self.dictation.cancel();
+    }
+
+    #[cfg(not(all(feature = "voice", target_os = "macos")))]
+    fn stopdictation(&mut self) {}
+
     /// Aim a bare line at one agent. Nothing depends on it — `@name` always
     /// works — so this only ever saves typing.
     fn focusagent(&mut self, name: String, cx: &mut Context<Self>) {
@@ -996,6 +1107,59 @@ impl Dashboard {
         self.meshworkers = loaded.workers;
         self.meshfeed = loaded.feed;
         self.mesherror = loaded.error;
+        cx.notify();
+    }
+
+    /// What the settings page says about speech. The console's `Mic` is about
+    /// what the button can do next; this is about what the build and the
+    /// machine allow at all, which is a different question with its own answers.
+    #[cfg(all(feature = "voice", target_os = "macos"))]
+    fn voicestate(&self) -> settings::Voice {
+        use crate::voice::Access;
+
+        if !crate::voice::available() {
+            return settings::Voice::Unsupported;
+        }
+        match crate::voice::access() {
+            Access::Allowed => settings::Voice::Allowed,
+            Access::Unknown => settings::Voice::Ask,
+            Access::Refused => settings::Voice::Refused,
+        }
+    }
+
+    #[cfg(not(all(feature = "voice", target_os = "macos")))]
+    fn voicestate(&self) -> settings::Voice {
+        settings::Voice::Absent
+    }
+
+    #[cfg(all(feature = "voice", target_os = "macos"))]
+    fn askvoice(&mut self, cx: &mut Context<Self>) {
+        crate::voice::ask();
+        self.notice = Notice::Success(
+            "macOS will ask. The answer shows here once you have given it.".to_owned(),
+        );
+        cx.notify();
+    }
+
+    #[cfg(not(all(feature = "voice", target_os = "macos")))]
+    fn askvoice(&mut self, _cx: &mut Context<Self>) {}
+
+    fn setreactor(&mut self, enabled: bool, cx: &mut Context<Self>) {
+        let database = self.database.clone();
+        let result = block(async {
+            let brain = synapsecore::brain::Brain::open(database).await?;
+            brain.setreactor(enabled).await
+        });
+        self.notice = match result {
+            Ok(()) => {
+                self.reactorwanted = enabled;
+                Notice::Success(match enabled {
+                    true => "The console draws its reactor.".to_owned(),
+                    false => "The console's reactor is off.".to_owned(),
+                })
+            }
+            Err(error) => Notice::Error(format!("Could not change the reactor: {error}")),
+        };
         cx.notify();
     }
 
@@ -1890,7 +2054,12 @@ impl Dashboard {
                         limit: self.consolelimit,
                         life,
                         pulse,
+                        // A build with no reactor has none to draw whatever the
+                        // setting says, so the two are `and`ed rather than the
+                        // setting winning over a missing dependency.
+                        reactor: self.reactorwanted && cfg!(feature = "reactor"),
                         composer: self.consoleinput.clone(),
+                        mic: self.micstate(),
                         message: match &self.notice {
                             Notice::Ready => None,
                             Notice::Success(message) => Some((message.clone(), false)),
@@ -1900,6 +2069,7 @@ impl Dashboard {
                     console::Actions {
                         send: Box::new(cx.listener(|this, _, _, cx| this.sendconsole(cx))),
                         refresh: Box::new(cx.listener(|this, _, _, cx| this.refreshconsole(cx))),
+                        dictate: Box::new(cx.listener(|this, _, _, cx| this.dictate(cx))),
                         focus: Box::new(aim),
                     },
                     cx,
@@ -2014,6 +2184,9 @@ impl Dashboard {
                         mesh: self.meshenabled,
                         learn: self.learnenabled,
                         workers: self.consolelimit,
+                        reactor: self.reactorwanted,
+                        reactorbuilt: cfg!(feature = "reactor"),
+                        voice: self.voicestate(),
                         thememode: crate::ui::theme::mode(cx),
                         clistatus,
                         clipath,
@@ -2034,6 +2207,13 @@ impl Dashboard {
                     settings::Actions {
                         meshon: Box::new(cx.listener(|this, _, _, cx| this.setmesh(true, cx))),
                         meshoff: Box::new(cx.listener(|this, _, _, cx| this.setmesh(false, cx))),
+                        reactoron: Box::new(
+                            cx.listener(|this, _, _, cx| this.setreactor(true, cx)),
+                        ),
+                        reactoroff: Box::new(
+                            cx.listener(|this, _, _, cx| this.setreactor(false, cx)),
+                        ),
+                        askvoice: Box::new(cx.listener(|this, _, _, cx| this.askvoice(cx))),
                         setworkers: {
                             let host = cx.entity().downgrade();
                             Box::new(move |count: usize| {
@@ -2493,6 +2673,13 @@ fn loadmesh(database: &std::path::Path) -> anyhow::Result<bool> {
     block(async {
         let brain = synapsecore::brain::Brain::open(database).await?;
         brain.mesh().await
+    })
+}
+
+fn loadreactor(database: &std::path::Path) -> anyhow::Result<bool> {
+    block(async {
+        let brain = synapsecore::brain::Brain::open(database).await?;
+        brain.reactor().await
     })
 }
 

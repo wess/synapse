@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!--
+    The one entitlement a voice build needs, and the only reason this file
+    exists. A hardened-runtime app cannot open an input device without it.
+
+    It is applied *only* when the build enabled the `voice` feature. A default
+    build of Synapse is signed with no entitlements at all, which is the right
+    posture for a program holding a Keychain reference to every secret its user
+    owns: the shipped binary is one that cannot listen, and no plist can change
+    that after the fact.
+  -->
+  <key>com.apple.security.device.audio-input</key>
+  <true/>
+</dict>
+</plist>

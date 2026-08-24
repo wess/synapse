@@ -27,6 +27,32 @@ pub const RINGLIFE: f32 = hud::PULSE_LIFE;
 #[cfg(not(feature = "reactor"))]
 pub const RINGLIFE: f32 = 1.1;
 
+/// Whether the composer can be spoken to, and what it is doing about it.
+///
+/// The console's own enum, like `Life`, so a build without the voice feature
+/// needs no `cfg` anywhere near the page — it simply reports `Absent` and the
+/// button is not drawn.
+#[derive(Clone, Debug, PartialEq, Eq, Default)]
+// As with `settings::Voice`: which variants exist depends on the build, and the
+// page draws from the enum rather than from a `cfg` of its own.
+#[allow(
+    dead_code,
+    reason = "the reachable set differs per build configuration"
+)]
+pub enum Mic {
+    /// This build has no microphone in it at all.
+    #[default]
+    Absent,
+    /// Available, and nobody has been asked yet.
+    Ask,
+    Ready,
+    Listening,
+    Transcribing,
+    /// Present and unusable. Carries the reason, because "no" and "not until
+    /// you allow it in System Settings" are different problems.
+    Refused(String),
+}
+
 /// What the mesh is doing, in the states the console can draw.
 ///
 /// The console's own enum rather than the reactor's, so the page and the
@@ -68,6 +94,20 @@ pub struct Pulse {
 
 pub type Click = Box<dyn Fn(&ClickEvent, &mut Window, &mut App) + 'static>;
 
+/// The colours every panel here needs, carried together.
+///
+/// They were four positional arguments threaded through six functions, which is
+/// four chances per call to swap two of the same type and get a page that draws
+/// with the wrong emphasis and compiles perfectly.
+#[derive(Clone, Copy)]
+struct Palette {
+    border: gpui::Hsla,
+    surface: gpui::Hsla,
+    accent: gpui::Hsla,
+    danger: gpui::Hsla,
+    success: gpui::Hsla,
+}
+
 pub struct View {
     /// The name you are on the roster under, or why you are not on it.
     pub identity: Result<String, String>,
@@ -83,24 +123,37 @@ pub struct View {
     /// than a broken window.
     pub pulse: Pulse,
     pub life: Life,
+    /// Whether to draw the reactor at all. False removes it rather than
+    /// dimming it: an element nobody asked for should take no room.
+    pub reactor: bool,
     pub composer: Entity<TextInput>,
+    pub mic: Mic,
     pub message: Option<(String, bool)>,
 }
 
 pub struct Actions {
     pub send: Click,
     pub refresh: Click,
+    /// Start dictating, stop and transcribe, or ask for the microphone —
+    /// whichever the current state means.
+    pub dictate: Click,
     /// Address a bare line at one agent, by name.
     pub focus: Box<dyn Fn(String) -> Click>,
 }
 
 pub fn render(view: View, actions: Actions, cx: &App) -> AnyElement {
     let theme = guise::theme(cx);
-    let border = theme.border().hsla();
-    let surface = theme.surface().hsla();
+    let palette = Palette {
+        border: theme.border().hsla(),
+        surface: theme.surface().hsla(),
+        accent: theme.primary().hsla(),
+        danger: theme.danger().hsla(),
+        success: theme.success().hsla(),
+    };
     let Actions {
         send,
         refresh,
+        dictate,
         focus,
     } = actions;
 
@@ -117,7 +170,7 @@ pub fn render(view: View, actions: Actions, cx: &App) -> AnyElement {
                 .min_h(px(0.0))
                 .gap(px(12.0))
                 .p(px(14.0))
-                .child(transcript(view.feed, &view.identity, border, surface))
+                .child(transcript(view.feed, &view.identity, palette))
                 .child(stage(
                     &view.agents,
                     &view.workers,
@@ -125,30 +178,27 @@ pub fn render(view: View, actions: Actions, cx: &App) -> AnyElement {
                     view.focus.as_deref(),
                     view.life,
                     &view.pulse,
-                    border,
-                    surface,
-                    theme.primary().hsla(),
+                    view.reactor,
+                    palette,
                 ))
                 .child(roster(
                     view.agents,
                     view.workers,
                     view.focus.as_deref(),
                     &focus,
-                    border,
-                    surface,
+                    palette,
                 )),
         )
         .child(composer(
             view.composer,
             view.focus,
             view.identity,
+            view.mic,
             view.message,
             send,
             refresh,
-            border,
-            surface,
-            theme.danger().hsla(),
-            theme.success().hsla(),
+            dictate,
+            palette,
         ))
         .into_any_element()
 }
@@ -159,8 +209,7 @@ pub fn render(view: View, actions: Actions, cx: &App) -> AnyElement {
 fn transcript(
     feed: Vec<Message>,
     identity: &Result<String, String>,
-    border: gpui::Hsla,
-    surface: gpui::Hsla,
+    palette: Palette,
 ) -> AnyElement {
     let me = identity.as_deref().ok().map(str::to_owned);
     let empty = feed.is_empty();
@@ -172,8 +221,8 @@ fn transcript(
         .flex_col()
         .rounded(px(14.0))
         .border_1()
-        .border_color(border)
-        .bg(surface)
+        .border_color(palette.border)
+        .bg(palette.surface)
         .overflow_y_scroll()
         .child(
             div()
@@ -241,9 +290,8 @@ fn stage(
     focus: Option<&str>,
     life: Life,
     pulse: &Pulse,
-    border: gpui::Hsla,
-    surface: gpui::Hsla,
-    accent: gpui::Hsla,
+    wanted: bool,
+    palette: Palette,
 ) -> AnyElement {
     let people = agents.iter().filter(|agent| agent.human).count();
     let online = agents.iter().filter(|agent| agent.online).count();
@@ -260,12 +308,16 @@ fn stage(
         .gap(px(12.0))
         .rounded(px(14.0))
         .border_1()
-        .border_color(border)
-        .bg(surface)
+        .border_color(palette.border)
+        .bg(palette.surface)
         .p(px(18.0))
         .overflow_y_scroll()
         .child(Text::new("MESH").size(Size::Xs).dimmed())
-        .children(reactor(life, pulse, accent))
+        .children(
+            wanted
+                .then(|| reactor(life, pulse, palette.accent))
+                .flatten(),
+        )
         .child(
             div()
                 .flex()
@@ -350,8 +402,7 @@ fn roster(
     workers: Vec<WorkerView>,
     focus: Option<&str>,
     aim: &dyn Fn(String) -> Click,
-    border: gpui::Hsla,
-    surface: gpui::Hsla,
+    palette: Palette,
 ) -> AnyElement {
     let empty = agents.is_empty();
     div()
@@ -362,8 +413,8 @@ fn roster(
         .flex_col()
         .rounded(px(14.0))
         .border_1()
-        .border_color(border)
-        .bg(surface)
+        .border_color(palette.border)
+        .bg(palette.surface)
         .overflow_y_scroll()
         .child(
             div()
@@ -445,17 +496,46 @@ fn roster(
 }
 
 #[allow(clippy::too_many_arguments, reason = "one row of chrome, built once")]
+/// The microphone button, when there is a microphone.
+///
+/// `None` for a build without the feature: no button, no explanation, no hint
+/// that something is missing — a person who did not ask for dictation has
+/// nothing here to wonder about.
+fn microphone(mic: Mic, dictate: Click) -> Option<AnyElement> {
+    let (label, colour, variant, enabled) = match &mic {
+        Mic::Absent => return None,
+        Mic::Ask => ("Use microphone", ColorName::Violet, Variant::Subtle, true),
+        Mic::Ready => ("Speak", ColorName::Violet, Variant::Subtle, true),
+        // Stop is the only thing you can usefully do while it is listening, so
+        // the button says that rather than staying "Speak" and toggling behind
+        // your back.
+        Mic::Listening => ("Stop", ColorName::Red, Variant::Light, true),
+        Mic::Transcribing => ("Listening…", ColorName::Gray, Variant::Subtle, false),
+        Mic::Refused(_) => ("Microphone off", ColorName::Gray, Variant::Subtle, false),
+    };
+    Some(
+        Button::new("consoledictate", label)
+            .variant(variant)
+            .color(colour)
+            .size(Size::Sm)
+            .disabled(!enabled)
+            .left_section(Icon::new(IconName::Mic).size(Size::Xs))
+            .on_click(move |event, window, cx| dictate(event, window, cx))
+            .into_any_element(),
+    )
+}
+
+#[allow(clippy::too_many_arguments, reason = "one row of chrome, built once")]
 fn composer(
     input: Entity<TextInput>,
     focus: Option<String>,
     identity: Result<String, String>,
+    mic: Mic,
     message: Option<(String, bool)>,
     send: Click,
     refresh: Click,
-    border: gpui::Hsla,
-    surface: gpui::Hsla,
-    danger: gpui::Hsla,
-    success: gpui::Hsla,
+    dictate: Click,
+    palette: Palette,
 ) -> AnyElement {
     // Nothing is typed at a mesh you are not on, and the reason is worth more
     // than a disabled box with no explanation beside it.
@@ -463,8 +543,8 @@ fn composer(
     div()
         .flex_none()
         .border_t_1()
-        .border_color(border)
-        .bg(surface)
+        .border_color(palette.border)
+        .bg(palette.surface)
         .px(px(14.0))
         .py(px(12.0))
         .flex()
@@ -473,19 +553,31 @@ fn composer(
         .when_some(message, |element, (text, error)| {
             element.child(
                 div()
-                    .text_color(if error { danger } else { success })
+                    .text_color(if error {
+                        palette.danger
+                    } else {
+                        palette.success
+                    })
                     .child(Text::new(text).size(Size::Xs)),
             )
         })
         .when_some(blocked.clone(), |element, reason| {
             element.child(Text::new(reason).size(Size::Xs).dimmed())
         })
+        .when_some(
+            match &mic {
+                Mic::Refused(reason) => Some(reason.clone()),
+                _ => None,
+            },
+            |element, reason| element.child(Text::new(reason).size(Size::Xs).dimmed()),
+        )
         .child(
             div()
                 .flex()
                 .items_end()
                 .gap(px(10.0))
                 .child(div().flex_1().min_w(px(0.0)).child(input))
+                .children(microphone(mic, dictate))
                 .child(
                     Button::new("consolerefresh", "Refresh")
                         .variant(Variant::Subtle)

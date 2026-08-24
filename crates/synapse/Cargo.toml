@@ -22,6 +22,10 @@ gpui = "0.2.2"
 # strip beside it already says, in a form some people want and some do not.
 # Turning it off drops the dependency rather than hiding the element.
 nora-hud = { version = "0.1", optional = true }
+# Dictation into the console. Capture is `nora-voice`'s default features only —
+# no ONNX Runtime, no models, no vendor — and the transcription is macOS's own
+# on-device recogniser, so this adds a microphone and nothing that bills.
+nora-voice = { version = "0.1", optional = true }
 guise-ui.workspace = true
 synapsecore = { path = "../synapsecore" }
 tokio = { version = "1.0", features = ["rt-multi-thread"] }
@@ -29,6 +33,19 @@ tokio = { version = "1.0", features = ["rt-multi-thread"] }
 [target.'cfg(target_os = "macos")'.dependencies]
 async-channel = "2.5"
 cocoa = "0.26"
+objc2 = { version = "0.6", optional = true }
+block2 = { version = "0.6", optional = true }
+objc2-foundation = { version = "0.3", optional = true }
+objc2-speech = { version = "0.3", optional = true, default-features = false, features = [
+    "SFSpeechRecognizer",
+    "SFSpeechRecognitionRequest",
+    "SFSpeechRecognitionResult",
+    "SFSpeechRecognitionTask",
+    "SFTranscription",
+    "alloc",
+    "block2",
+    "std",
+] }
 tray-icon = { version = "0.24.2", default-features = false }
 
 [package.metadata.bundle]
@@ -45,3 +62,16 @@ osx_info_plist_exts = ["assets/info.plist"]
 default = ["reactor"]
 # The console's reactor. Off means no `nora-hud` in the build at all.
 reactor = ["dep:nora-hud"]
+
+# Dictation into the console composer. Off by default and deliberately so: it
+# is the only thing here that wants a microphone, and Synapse is the app on the
+# machine holding a Keychain reference to every secret its user owns. A build
+# without this feature has no `Speech.framework`, no capture, and no reason to
+# carry the entitlement that would let it listen.
+voice = [
+    "dep:nora-voice",
+    "dep:block2",
+    "dep:objc2",
+    "dep:objc2-foundation",
+    "dep:objc2-speech",
+]

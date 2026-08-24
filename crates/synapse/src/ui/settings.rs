@@ -15,6 +15,11 @@ pub struct View {
     pub learn: bool,
     /// Most background workers one session may run at once.
     pub workers: usize,
+    /// Whether the console draws its reactor, and whether this build could.
+    pub reactor: bool,
+    pub reactorbuilt: bool,
+    /// What the microphone can do here, said in the user's terms.
+    pub voice: Voice,
     pub thememode: Mode,
     pub clistatus: InstallStatus,
     pub clipath: String,
@@ -32,6 +37,10 @@ pub struct Actions {
     pub learnoff: Click,
     /// Set the worker limit, by count.
     pub setworkers: Box<dyn Fn(usize) -> Click>,
+    pub reactoron: Click,
+    pub reactoroff: Click,
+    /// Ask for the microphone, when nobody has been asked.
+    pub askvoice: Click,
     pub full: Click,
     pub balanced: Click,
     pub lean: Click,
@@ -56,6 +65,9 @@ pub fn render(view: View, actions: Actions, cx: &App) -> AnyElement {
         learnon,
         learnoff,
         setworkers,
+        reactoron,
+        reactoroff,
+        askvoice,
         full,
         balanced,
         lean,
@@ -201,6 +213,16 @@ pub fn render(view: View, actions: Actions, cx: &App) -> AnyElement {
                 .child(meshpanel(view.mesh, meshon, meshoff, border, surface))
                 .child(learnpanel(view.learn, learnon, learnoff, border, surface))
                 .child(workerpanel(view.workers, &setworkers, border, surface))
+                .child(reactorpanel(
+                    view.reactor,
+                    view.reactorbuilt,
+                    reactoron,
+                    reactoroff,
+                    border,
+                    surface,
+                    theme.dimmed().hsla(),
+                ))
+                .child(voicepanel(view.voice, askvoice, border, surface))
                 .child(guidancepanel(
                     view.guidance,
                     view.pendingguidance,
@@ -566,6 +588,195 @@ fn workerpanel(
             .size(Size::Xs)
             .dimmed(),
         )
+        .into_any_element()
+}
+
+/// What a build can do about speech, and what the person has to do next.
+///
+/// Four states and four different next steps, which is the whole reason this is
+/// a panel rather than a switch. "Off" and "you have not been asked yet" and
+/// "you said no" and "this build cannot" all look the same from a toggle.
+#[derive(Clone, Debug, PartialEq, Eq)]
+// Which variants are reachable depends on the build: `Absent` only without the
+// feature, the rest only with it. Neither configuration constructs all five, and
+// the panel has to be able to explain any of them.
+#[allow(
+    dead_code,
+    reason = "the reachable set differs per build configuration"
+)]
+pub enum Voice {
+    /// Built without the feature.
+    Absent,
+    /// Built with it, and this Mac cannot transcribe on-device.
+    Unsupported,
+    Ask,
+    Allowed,
+    Refused,
+}
+
+fn voicepanel(voice: Voice, ask: Click, border: gpui::Hsla, surface: gpui::Hsla) -> AnyElement {
+    let (badge, colour, body) = match voice {
+        Voice::Absent => (
+            "Not in this build",
+            ColorName::Gray,
+            "Dictation is off by default and is the only thing here that wants a microphone. A build without it has no Speech framework in it and is signed with no microphone entitlement, which is the right shape for a program holding a Keychain reference to every secret you own. Rebuild with `--features voice` to have it.",
+        ),
+        Voice::Unsupported => (
+            "Unavailable",
+            ColorName::Gray,
+            "This Mac cannot transcribe without sending audio to Apple. Synapse will not transcribe at all rather than do that, so dictation stays off here.",
+        ),
+        Voice::Ask => (
+            "Needs permission",
+            ColorName::Orange,
+            "macOS has not asked you yet. Nothing is recorded until you allow it, and the microphone opens only while you are dictating.",
+        ),
+        Voice::Allowed => (
+            "Ready",
+            ColorName::Teal,
+            "The microphone button is on the console. Speech is transcribed on this Mac — no vendor, no key, and nothing billed per minute.",
+        ),
+        Voice::Refused => (
+            "Refused",
+            ColorName::Red,
+            "Synapse is not allowed to use the microphone. System Settings › Privacy & Security › Microphone is where that is changed; nothing here can change it for you.",
+        ),
+    };
+    div()
+        .rounded(px(14.0))
+        .border_1()
+        .border_color(border)
+        .bg(surface)
+        .p(px(18.0))
+        .flex()
+        .flex_col()
+        .gap(px(13.0))
+        .child(
+            div()
+                .flex()
+                .items_start()
+                .justify_between()
+                .gap(px(24.0))
+                .child(
+                    div()
+                        .flex_1()
+                        .min_w(px(0.0))
+                        .flex()
+                        .flex_col()
+                        .gap(px(4.0))
+                        .child(
+                            div()
+                                .flex()
+                                .items_center()
+                                .gap(px(8.0))
+                                .child(Icon::new(IconName::Mic).size(Size::Sm))
+                                .child(Text::new("Dictation").size(Size::Sm).bold()),
+                        )
+                        .child(Text::new(body).size(Size::Xs).dimmed()),
+                )
+                .child(Badge::new(badge).color(colour)),
+        )
+        .when(voice == Voice::Ask, |element| {
+            element.child(
+                div().flex().child(
+                    Button::new("askvoice", "Ask for the microphone")
+                        .variant(Variant::Light)
+                        .color(ColorName::Violet)
+                        .size(Size::Sm)
+                        .on_click(move |event, window, cx| ask(event, window, cx)),
+                ),
+            )
+        })
+        .into_any_element()
+}
+
+/// The reactor switch. Nothing is lost by turning it off, which the panel says
+/// rather than leaving somebody to wonder what they gave up.
+fn reactorpanel(
+    on: bool,
+    built: bool,
+    enable: Click,
+    disable: Click,
+    border: gpui::Hsla,
+    surface: gpui::Hsla,
+    dimmed: gpui::Hsla,
+) -> AnyElement {
+    div()
+        .rounded(px(14.0))
+        .border_1()
+        .border_color(border)
+        .bg(surface)
+        .p(px(18.0))
+        .flex()
+        .flex_col()
+        .gap(px(13.0))
+        .child(
+            div()
+                .flex()
+                .items_start()
+                .justify_between()
+                .gap(px(24.0))
+                .child(
+                    div()
+                        .flex_1()
+                        .min_w(px(0.0))
+                        .flex()
+                        .flex_col()
+                        .gap(px(4.0))
+                        .child(
+                            div()
+                                .flex()
+                                .items_center()
+                                .gap(px(8.0))
+                                .child(Icon::new(IconName::Activity).size(Size::Sm))
+                                .child(Text::new("Console reactor").size(Size::Sm).bold())
+                                .child(Badge::new("Beta").size(Size::Sm).color(ColorName::Orange))
+                                .child(
+                                    // The badge says it is new; the hint says
+                                    // what that costs you, which is the half a
+                                    // label on its own never manages.
+                                    div()
+                                        .id("reactorbeta")
+                                        .flex()
+                                        .items_center()
+                                        .text_color(dimmed)
+                                        .child(Icon::new(IconName::CircleHelp).size(Size::Xs))
+                                        .tooltip(guise::tooltip(
+                                            "New, and drawn every frame while the console is open. If it costs you battery or draws wrong, turn it off — the numbers beside it say the same things.",
+                                        )),
+                                ),
+                        )
+                        .child(
+                            Text::new(match built {
+                                true => "The dial in the middle of the console, driven by the mesh: a ring for each message, a band for each agent. Turning it off removes it, and the numbers beside it say the same things.",
+                                false => "This build has no reactor in it. Everything it would show, the numbers on the console show too. Rebuild with the `reactor` feature to have the dial.",
+                            })
+                            .size(Size::Xs)
+                            .dimmed(),
+                        ),
+                )
+                .child(
+                    Badge::new(match (built, on) {
+                        (false, _) => "Not in this build",
+                        (true, true) => "On",
+                        (true, false) => "Off",
+                    })
+                    .color(match (built, on) {
+                        (false, _) => ColorName::Gray,
+                        (true, true) => ColorName::Teal,
+                        (true, false) => ColorName::Gray,
+                    }),
+                ),
+        )
+        .when(built, |element| {
+            element.child(
+                div()
+                    .flex()
+                    .gap(px(10.0))
+                    .child(option("Off", "Just the numbers", !on, disable))
+                    .child(option("On", "Draw the dial", on, enable)),
+            )
+        })
         .into_any_element()
 }
 
