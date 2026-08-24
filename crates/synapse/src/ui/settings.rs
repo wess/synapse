@@ -13,6 +13,8 @@ pub struct View {
     pub optimization: Optimization,
     pub mesh: bool,
     pub learn: bool,
+    /// Most background workers one session may run at once.
+    pub workers: usize,
     pub thememode: Mode,
     pub clistatus: InstallStatus,
     pub clipath: String,
@@ -28,6 +30,8 @@ pub struct Actions {
     pub meshoff: Click,
     pub learnon: Click,
     pub learnoff: Click,
+    /// Set the worker limit, by count.
+    pub setworkers: Box<dyn Fn(usize) -> Click>,
     pub full: Click,
     pub balanced: Click,
     pub lean: Click,
@@ -51,6 +55,7 @@ pub fn render(view: View, actions: Actions, cx: &App) -> AnyElement {
         meshoff,
         learnon,
         learnoff,
+        setworkers,
         full,
         balanced,
         lean,
@@ -195,6 +200,7 @@ pub fn render(view: View, actions: Actions, cx: &App) -> AnyElement {
                 )
                 .child(meshpanel(view.mesh, meshon, meshoff, border, surface))
                 .child(learnpanel(view.learn, learnon, learnoff, border, surface))
+                .child(workerpanel(view.workers, &setworkers, border, surface))
                 .child(guidancepanel(
                     view.guidance,
                     view.pendingguidance,
@@ -480,6 +486,82 @@ fn learnpanel(
         .child(
             Text::new(
                 "A skill an agent writes goes into the library and into no tool. It waits on the Skills page until you approve it, so nothing changes how your sessions behave without you having read it first.",
+            )
+            .size(Size::Xs)
+            .dimmed(),
+        )
+        .into_any_element()
+}
+
+/// The fan-out bound. Every worker is a real session on the same account, so
+/// the panel says what the number costs rather than presenting it as capacity.
+fn workerpanel(
+    workers: usize,
+    set: &dyn Fn(usize) -> Click,
+    border: gpui::Hsla,
+    surface: gpui::Hsla,
+) -> AnyElement {
+    div()
+        .rounded(px(14.0))
+        .border_1()
+        .border_color(border)
+        .bg(surface)
+        .p(px(18.0))
+        .flex()
+        .flex_col()
+        .gap(px(13.0))
+        .child(
+            div()
+                .flex()
+                .items_start()
+                .justify_between()
+                .gap(px(24.0))
+                .child(
+                    div()
+                        .flex()
+                        .flex_col()
+                        .gap(px(4.0))
+                        .child(
+                            div()
+                                .flex()
+                                .items_center()
+                                .gap(px(8.0))
+                                .child(Icon::new(IconName::Users).size(Size::Sm))
+                                .child(Text::new("Background workers").size(Size::Sm).bold()),
+                        )
+                        .child(
+                            Text::new(
+                                "The most agents one supervisor may run at once. Each is a separate session on the account you already pay for, so this is a spending limit as much as a performance one.",
+                            )
+                            .size(Size::Xs)
+                            .dimmed(),
+                        ),
+                )
+                .child(Badge::new(workers.to_string()).color(ColorName::Teal)),
+        )
+        .child(
+            div()
+                .flex()
+                .gap(px(10.0))
+                .children([2_usize, 4, 8, 16].into_iter().map(|count| {
+                    let action = set(count);
+                    option(
+                        Box::leak(count.to_string().into_boxed_str()),
+                        match count {
+                            2 => "One thing at a time, with a reviewer",
+                            4 => "A small team",
+                            8 => "The default",
+                            _ => "As many as most machines will carry",
+                        },
+                        workers == count,
+                        action,
+                    )
+                    .into_any_element()
+                })),
+        )
+        .child(
+            Text::new(
+                "`synapse settings workers <count>` takes any number up to the built-in ceiling. A supervisor already running picks a change up on its next spawn.",
             )
             .size(Size::Xs)
             .dimmed(),

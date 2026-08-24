@@ -1,4 +1,5 @@
 mod bus;
+pub mod console;
 mod extension;
 mod harness;
 mod launch;

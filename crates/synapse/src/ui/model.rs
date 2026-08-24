@@ -11,6 +11,7 @@ pub enum Page {
     Connections,
     Memories,
     Mesh,
+    Console,
     Skills,
     Vaults,
     Settings,

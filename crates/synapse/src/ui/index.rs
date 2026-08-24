@@ -15,7 +15,7 @@ pub fn run() {
             KeyBinding::new("ctrl-s", SaveDocument, None),
         ]);
 
-        let bounds = Bounds::centered(None, size(px(1020.0), px(600.0)), cx);
+        let bounds = Bounds::centered(None, size(px(1240.0), px(680.0)), cx);
         let window = cx
             .open_window(
                 WindowOptions {
@@ -35,7 +35,9 @@ pub fn run() {
                         cx.hide();
                         false
                     });
-                    cx.new(Dashboard::new)
+                    let dashboard = cx.new(Dashboard::new);
+                    dashboard.update(cx, |dashboard, cx| dashboard.opened(cx));
+                    dashboard
                 },
             )
             .expect("open Synapse window");

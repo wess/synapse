@@ -1,7 +1,7 @@
 use crate::ui::buffer::{self, Buffer, Format};
 use crate::ui::{
-    Document, Notice, Page, Row, SaveDocument, agentrow, clibanner, document, header, memories,
-    mesh, settings, skills, summary, vaults,
+    Document, Notice, Page, Row, SaveDocument, agentrow, clibanner, console, document, memories,
+    mesh, settings, sidebar, skills, summary, vaults,
 };
 use gpui::prelude::*;
 use gpui::{Context, Entity, IntoElement, Window, div, px};
@@ -63,6 +63,18 @@ pub struct Dashboard {
     meshagents: Vec<synapsecore::relay::AgentView>,
     meshworkers: Vec<synapsecore::relay::WorkerView>,
     meshfeed: Vec<synapsecore::relay::Message>,
+    /// The name this window is on the roster under, or why it is not on it.
+    /// `Err` is a state the console has to be able to draw: a mesh that is off,
+    /// or a name an agent already answers to.
+    consoleidentity: Result<String, String>,
+    consolefocus: Option<String>,
+    consoleinput: Entity<TextInput>,
+    /// Most workers one session may run, read with the rest of the mesh.
+    consolelimit: usize,
+    /// The poll. A conversation nobody refreshed is a conversation that looks
+    /// finished, so this is the one page that reloads on its own — and it only
+    /// exists while that page is open.
+    consoletick: Option<gpui::Task<()>>,
     mesherror: Option<String>,
     skillrows: Vec<skills::Row>,
     skillunmanaged: Vec<(String, String)>,
@@ -166,6 +178,11 @@ impl Dashboard {
                 .placeholder("hermes")
         });
         let vaultname = cx.new(|cx| TextInput::new(cx).label("New vault").placeholder("work"));
+        let consoleinput = cx.new(|cx| {
+            TextInput::new(cx)
+                .label("Say something to the mesh")
+                .placeholder("@overseer get the release notes written")
+        });
         let secretname = cx.new(|cx| TextInput::new(cx).label("Name").placeholder("database"));
         let secretenv = cx.new(|cx| {
             TextInput::new(cx)
@@ -211,6 +228,7 @@ impl Dashboard {
             notice = Notice::Error(format!("Could not create SOUL.md: {error}"));
         }
         let learnenabled = loadlearn(&database).unwrap_or(false);
+        let consolelimit = loadworkers(&database).unwrap_or(synapsecore::relay::DEFAULTWORKERS);
         Self {
             rows: loadrows(),
             stats,
@@ -253,6 +271,14 @@ impl Dashboard {
             meshagents: meshdata.agents,
             meshworkers: meshdata.workers,
             meshfeed: meshdata.feed,
+            consoleidentity: Err(
+                "The agent mesh is off. Turn it on in Settings to reach agents from here."
+                    .to_owned(),
+            ),
+            consolefocus: None,
+            consoleinput,
+            consolelimit,
+            consoletick: None,
             mesherror: meshdata.error,
             skillrows: skilldata.rows,
             skillunmanaged: skilldata.unmanaged,
@@ -298,11 +324,12 @@ impl Dashboard {
 
     /// The handlers behind the navigation buttons, built once so the two places
     /// that draw the header cannot drift apart.
-    fn navigation(&self, cx: &mut Context<Self>) -> header::Navigation {
-        header::Navigation {
+    fn navigation(&self, cx: &mut Context<Self>) -> sidebar::Navigation {
+        sidebar::Navigation {
             connections: Box::new(cx.listener(|this, _, _, cx| this.showconnections(cx))),
             memories: Box::new(cx.listener(|this, _, _, cx| this.showmemories(cx))),
             mesh: Box::new(cx.listener(|this, _, _, cx| this.showmesh(cx))),
+            console: Box::new(cx.listener(|this, _, _, cx| this.showconsole(cx))),
             skills: Box::new(cx.listener(|this, _, _, cx| this.showskills(cx))),
             vaults: Box::new(cx.listener(|this, _, _, cx| this.showvaults(cx))),
             settings: Box::new(cx.listener(|this, _, _, cx| this.showsettings(cx))),
@@ -702,6 +729,158 @@ impl Dashboard {
         };
     }
 
+    /// What clicking to the initial page would have done.
+    ///
+    /// `new` cannot do it: joining the mesh and starting the poll both want a
+    /// handle to an entity that does not exist until it has returned. Without
+    /// this, `SYNAPSE_PAGE=console` drew a console that had never joined —
+    /// every column correct and empty, and nothing saying why.
+    pub fn opened(&mut self, cx: &mut Context<Self>) {
+        if self.page == Page::Console {
+            self.showconsole(cx);
+        }
+    }
+
+    /// Open the console, which means joining the mesh as yourself.
+    ///
+    /// Arriving here rather than at startup is deliberate. A roster row is a
+    /// promise that somebody is reachable, and an app sitting in the dock with
+    /// nobody in front of it is not — so the row appears when the page does.
+    fn showconsole(&mut self, cx: &mut Context<Self>) {
+        self.page = Page::Console;
+        self.consoleidentity = self.joinmesh();
+        self.refreshconsole(cx);
+        // One poll while the page is open, and none while it is not. `touch`
+        // rides along with it, so the row goes quietly offline on its own if
+        // the window is closed without leaving the page.
+        if self.consoletick.is_none() {
+            self.consoletick = Some(cx.spawn(async move |this, cx| {
+                loop {
+                    cx.background_executor()
+                        .timer(std::time::Duration::from_millis(1200))
+                        .await;
+                    let alive = this
+                        .update(cx, |this, cx| {
+                            if this.page != Page::Console {
+                                this.consoletick = None;
+                                return false;
+                            }
+                            this.refreshconsole(cx);
+                            true
+                        })
+                        .unwrap_or(false);
+                    if !alive {
+                        break;
+                    }
+                }
+            }));
+        }
+    }
+
+    /// Register this window as a person on the roster.
+    ///
+    /// `relay::console::arrive` is the only thing anywhere that sets `human`,
+    /// and both a terminal `mux` and this call it — an agent is told to ask a
+    /// human row questions and never delegate to one, so two ways of creating
+    /// that row is two ways of getting it wrong.
+    fn joinmesh(&self) -> Result<String, String> {
+        if !self.meshenabled {
+            return Err(
+                "The agent mesh is off. Turn it on in Settings to reach agents from here."
+                    .to_owned(),
+            );
+        }
+        let name = synapsecore::relay::console::whoami();
+        let database = self.database.clone();
+        let root = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+        let joined = block(async {
+            let mesh = synapsecore::relay::Mesh::open(&database).await?;
+            synapsecore::relay::console::arrive(&mesh, &name, &root, "Synapse").await
+        });
+        match joined {
+            Ok(()) => Ok(name),
+            Err(error) => Err(format!("Could not join the mesh: {error:#}")),
+        }
+    }
+
+    /// Reload what the console shows, and keep this window's roster row alive.
+    fn refreshconsole(&mut self, cx: &mut Context<Self>) {
+        self.refreshmesh(cx);
+        let database = self.database.clone();
+        let me = self.consoleidentity.clone().ok();
+        self.consolelimit = block(async {
+            let mesh = synapsecore::relay::Mesh::glance(&database).await?;
+            if let Some(name) = me {
+                let _ = mesh.touch(&name).await;
+            }
+            mesh.maxworkers().await
+        })
+        .unwrap_or(synapsecore::relay::DEFAULTWORKERS);
+        cx.notify();
+    }
+
+    /// Aim a bare line at one agent. Nothing depends on it — `@name` always
+    /// works — so this only ever saves typing.
+    fn focusagent(&mut self, name: String, cx: &mut Context<Self>) {
+        self.consolefocus = match self.consolefocus.as_deref() == Some(name.as_str()) {
+            true => None,
+            false => Some(name),
+        };
+        cx.notify();
+    }
+
+    /// Send what is in the composer, under the same grammar `synapse mux` uses.
+    fn sendconsole(&mut self, cx: &mut Context<Self>) {
+        use synapsecore::relay::console::Line;
+
+        let Ok(me) = self.consoleidentity.clone() else {
+            return;
+        };
+        let typed = self.consoleinput.read(cx).text();
+        let (kind, target, body) = match synapsecore::relay::console::read(
+            &typed,
+            self.consolefocus.as_deref(),
+        ) {
+            Line::Blank => return,
+            Line::Empty => {
+                self.notice = Notice::Error("Nothing to send.".to_owned());
+                cx.notify();
+                return;
+            }
+            Line::Undirected => {
+                self.notice = Notice::Error(synapsecore::relay::console::UNDIRECTED.to_owned());
+                cx.notify();
+                return;
+            }
+            // The console has no slash commands: everything they do in a
+            // terminal is a button or a page here. Sending one as a message
+            // would be worse than saying so.
+            Line::Command(_) => {
+                self.notice = Notice::Error(
+                        "The console has no slash commands — use the roster, or `synapse mux` in a terminal.".to_owned(),
+                    );
+                cx.notify();
+                return;
+            }
+            Line::Message { kind, target, body } => (kind, target, body),
+        };
+
+        let database = self.database.clone();
+        let sent = block(async {
+            let mesh = synapsecore::relay::Mesh::open(&database).await?;
+            synapsecore::relay::deliver(&mesh, &me, kind, target.as_deref(), &body).await
+        });
+        self.notice = match sent {
+            Ok(_) => {
+                self.consoleinput
+                    .update(cx, |input, cx| input.set_text("", cx));
+                Notice::Ready
+            }
+            Err(error) => Notice::Error(format!("Could not send: {error:#}")),
+        };
+        self.refreshconsole(cx);
+    }
+
     fn showmesh(&mut self, cx: &mut Context<Self>) {
         self.page = Page::Mesh;
         self.refreshmesh(cx);
@@ -717,6 +896,24 @@ impl Dashboard {
         self.meshworkers = loaded.workers;
         self.meshfeed = loaded.feed;
         self.mesherror = loaded.error;
+        cx.notify();
+    }
+
+    fn setworkers(&mut self, count: usize, cx: &mut Context<Self>) {
+        let database = self.database.clone();
+        let result = block(async {
+            let brain = synapsecore::brain::Brain::open(database).await?;
+            brain.setmaxworkers(count).await
+        });
+        self.notice = match result {
+            Ok(()) => {
+                self.consolelimit = count;
+                Notice::Success(format!(
+                    "One session may now run {count} background worker(s) at once."
+                ))
+            }
+            Err(error) => Notice::Error(format!("Could not change the worker limit: {error}")),
+        };
         cx.notify();
     }
 
@@ -1390,7 +1587,35 @@ impl Dashboard {
 }
 
 impl Render for Dashboard {
+    /// The window: the column of destinations, and whatever the open one drew.
+    ///
+    /// The wrapping happens here, once, rather than in each of the seven
+    /// branches below — every one of them returns early, and a frame assembled
+    /// seven times is a frame that is subtly different in one of them.
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        // The document editor takes the whole window: it is a mode, not a page,
+        // and a sidebar beside unsaved edits invites leaving them.
+        let framed = self.document.is_none();
+        let body = self.body(cx);
+        let navigation = self.navigation(cx);
+        let page = self.page;
+        let appmenu = self.appmenu.clone();
+        let theme = guise::theme(cx);
+        div()
+            .size_full()
+            .flex()
+            .flex_row()
+            .bg(theme.body().hsla())
+            .text_color(theme.text().hsla())
+            .when(framed, |element| {
+                element.child(sidebar::render(page, appmenu, navigation, cx))
+            })
+            .child(body)
+    }
+}
+
+impl Dashboard {
+    fn body(&mut self, cx: &mut Context<Self>) -> gpui::AnyElement {
         let theme = guise::theme(cx);
         let border = theme.border().hsla();
         let surface = theme.surface().hsla();
@@ -1407,7 +1632,7 @@ impl Render for Dashboard {
                 .bg(theme.body().hsla())
                 .text_color(theme.text().hsla())
                 .on_action(cx.listener(|this, _: &SaveDocument, _window, cx| this.savedocument(cx)))
-                .child(header::render(
+                .child(sidebar::render(
                     self.page,
                     self.appmenu.clone(),
                     self.navigation(cx),
@@ -1432,18 +1657,16 @@ impl Render for Dashboard {
             )
         });
 
+        // The window is a row now: the column of destinations, then everything
+        // that belongs to whichever one is open. Every page below still builds
+        // its own body and status bar, so they go inside the second half rather
+        // than beside the first.
         let shell = div()
-            .size_full()
+            .flex_1()
+            .min_h(px(0.0))
+            .min_w(px(0.0))
             .flex()
             .flex_col()
-            .bg(theme.body().hsla())
-            .text_color(theme.text().hsla())
-            .child(header::render(
-                self.page,
-                self.appmenu.clone(),
-                self.navigation(cx),
-                cx,
-            ))
             .children(banner);
 
         if self.page == Page::Memories {
@@ -1546,6 +1769,53 @@ impl Render for Dashboard {
                 .into_any_element();
         }
 
+        if self.page == Page::Console {
+            let aimhost = cx.entity().downgrade();
+            let aim = move |name: String| -> console::Click {
+                let host = aimhost.clone();
+                Box::new(move |_, _, cx| {
+                    host.update(cx, |this, cx| this.focusagent(name.clone(), cx))
+                        .ok();
+                })
+            };
+            return shell
+                .child(console::render(
+                    console::View {
+                        identity: self.consoleidentity.clone(),
+                        focus: self.consolefocus.clone(),
+                        feed: self.meshfeed.clone(),
+                        agents: self.meshagents.clone(),
+                        workers: self.meshworkers.clone(),
+                        limit: self.consolelimit,
+                        composer: self.consoleinput.clone(),
+                        message: match &self.notice {
+                            Notice::Ready => None,
+                            Notice::Success(message) => Some((message.clone(), false)),
+                            Notice::Error(message) => Some((message.clone(), true)),
+                        },
+                    },
+                    console::Actions {
+                        send: Box::new(cx.listener(|this, _, _, cx| this.sendconsole(cx))),
+                        refresh: Box::new(cx.listener(|this, _, _, cx| this.refreshconsole(cx))),
+                        focus: Box::new(aim),
+                    },
+                    cx,
+                ))
+                .child(
+                    StatusBar::new()
+                        .height(36.0)
+                        .left(
+                            Text::new(match &self.consoleidentity {
+                                Ok(name) => format!("On the mesh as {name}"),
+                                Err(_) => "Not on the mesh".to_owned(),
+                            })
+                            .size(Size::Xs),
+                        )
+                        .right(Text::new("@name · #channel · ! for everyone").size(Size::Xs)),
+                )
+                .into_any_element();
+        }
+
         if self.page == Page::Skills {
             let host = cx.entity().downgrade();
             let install = move |name: String| -> skills::Click {
@@ -1640,6 +1910,7 @@ impl Render for Dashboard {
                         optimization: self.optimization,
                         mesh: self.meshenabled,
                         learn: self.learnenabled,
+                        workers: self.consolelimit,
                         thememode: crate::ui::theme::mode(cx),
                         clistatus,
                         clipath,
@@ -1660,6 +1931,15 @@ impl Render for Dashboard {
                     settings::Actions {
                         meshon: Box::new(cx.listener(|this, _, _, cx| this.setmesh(true, cx))),
                         meshoff: Box::new(cx.listener(|this, _, _, cx| this.setmesh(false, cx))),
+                        setworkers: {
+                            let host = cx.entity().downgrade();
+                            Box::new(move |count: usize| {
+                                let host = host.clone();
+                                Box::new(move |_, _, cx| {
+                                    host.update(cx, |this, cx| this.setworkers(count, cx)).ok();
+                                })
+                            })
+                        },
                         learnon: Box::new(cx.listener(|this, _, _, cx| this.setlearn(true, cx))),
                         learnoff: Box::new(cx.listener(|this, _, _, cx| this.setlearn(false, cx))),
                         full: Box::new(cx.listener(|this, _, _, cx| {
@@ -1948,6 +2228,7 @@ fn initialpage() -> Page {
     match std::env::var("SYNAPSE_PAGE").as_deref() {
         Ok("memory") => Page::Memories,
         Ok("mesh") => Page::Mesh,
+        Ok("console") => Page::Console,
         Ok("skills") => Page::Skills,
         Ok("vaults") => Page::Vaults,
         Ok("settings") => Page::Settings,
@@ -2109,6 +2390,13 @@ fn loadmesh(database: &std::path::Path) -> anyhow::Result<bool> {
     block(async {
         let brain = synapsecore::brain::Brain::open(database).await?;
         brain.mesh().await
+    })
+}
+
+fn loadworkers(database: &std::path::Path) -> anyhow::Result<usize> {
+    block(async {
+        let brain = synapsecore::brain::Brain::open(database).await?;
+        brain.maxworkers().await
     })
 }
 

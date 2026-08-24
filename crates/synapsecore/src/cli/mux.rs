@@ -46,7 +46,7 @@ pub fn run(arguments: &[OsString]) -> Result<Outcome> {
     let root = directory(arguments)?;
     let name = match value(arguments, "--as") {
         Some(name) => relay::store::validname(&name)?,
-        None => whoami()?,
+        None => relay::console::whoami(),
     };
     let channels = values(arguments, "--channel");
     let team = value(arguments, "--team");
@@ -66,28 +66,11 @@ async fn session(
     let supervisor = Supervisor::new();
 
     // A name already answering on the mesh is somebody else's inbox. Draining
-    // it from here would take their work and leave them parked forever.
-    if let Some(existing) = mesh
-        .agents()
-        .await?
-        .into_iter()
-        .find(|agent| agent.name == name)
-    {
-        anyhow::ensure!(
-            !existing.online || existing.human,
-            "`{name}` is already on the mesh as an agent; pick another with --as"
-        );
-    }
-
-    mesh.register(&relay::Registration {
-        name: name.to_owned(),
-        role: "human".to_owned(),
-        project: root.display().to_string(),
-        tool: "synapse mux".to_owned(),
-        human: true,
-        ..relay::Registration::default()
-    })
-    .await?;
+    // it from here would take their work and leave them parked forever — which
+    // `arrive` refuses, along with being the only place `human` is set.
+    relay::console::arrive(&mesh, name, root, "synapse mux")
+        .await
+        .with_context(|| format!("could not join the mesh as `{name}`"))?;
     for channel in channels {
         mesh.subscribe(name, channel).await?;
     }
@@ -206,38 +189,24 @@ async fn handle(
     focus: &mut Option<String>,
     line: &str,
 ) -> Result<bool> {
-    if line.is_empty() {
-        return Ok(true);
-    }
-    if let Some(rest) = line.strip_prefix('/') {
-        return slash(mesh, supervisor, me, focus, rest).await;
-    }
-
-    // Addressing. `@name` and `#channel` name a recipient for this line only;
-    // `!` reaches everybody. A bare line goes wherever the focus is, which is
-    // what makes a back-and-forth with one agent feel like a conversation.
-    let (kind, target, body) = if let Some(rest) = line.strip_prefix('@') {
-        let (name, body) = rest.split_once(char::is_whitespace).unwrap_or((rest, ""));
-        (MessageKind::Direct, Some(name.to_owned()), body)
-    } else if let Some(rest) = line.strip_prefix('#') {
-        let (name, body) = rest.split_once(char::is_whitespace).unwrap_or((rest, ""));
-        (MessageKind::Channel, Some(name.to_owned()), body)
-    } else if let Some(rest) = line.strip_prefix('!') {
-        (MessageKind::Broadcast, None, rest)
-    } else {
-        match focus.clone() {
-            Some(name) => (MessageKind::Direct, Some(name), line),
-            None => {
-                eprintln!("nobody is focused — use @name, #channel, ! for everyone, or /focus");
-                return Ok(true);
-            }
+    // Addressing is `relay::console`'s, not this file's. The desktop Console
+    // reads the same grammar, and two copies of it would mean two grammars.
+    let (kind, target, body) = match relay::console::read(line, focus.as_deref()) {
+        relay::console::Line::Blank => return Ok(true),
+        relay::console::Line::Command(rest) => {
+            return slash(mesh, supervisor, me, focus, &rest).await;
         }
+        relay::console::Line::Empty => {
+            eprintln!("nothing to send");
+            return Ok(true);
+        }
+        relay::console::Line::Undirected => {
+            eprintln!("{}", relay::console::UNDIRECTED);
+            return Ok(true);
+        }
+        relay::console::Line::Message { kind, target, body } => (kind, target, body),
     };
-    let body = body.trim();
-    if body.is_empty() {
-        eprintln!("nothing to send");
-        return Ok(true);
-    }
+    let body = body.as_str();
     // A direct message to a name nobody answers to is held for whoever
     // registers under it later, which is what lets a supervisor brief a worker
     // it is still starting. It is also what a typo looks like, so say so.
@@ -459,15 +428,6 @@ fn stray(arguments: &[OsString]) -> Option<String> {
         return Some(value.into_owned());
     }
     None
-}
-
-/// The name to join under when none was given. A login name is what the person
-/// already answers to, and it is already the shape a mesh name has to be.
-fn whoami() -> Result<String> {
-    let candidate = std::env::var("USER")
-        .or_else(|_| std::env::var("LOGNAME"))
-        .unwrap_or_else(|_| "me".to_owned());
-    relay::store::validname(&candidate).or_else(|_| Ok("me".to_owned()))
 }
 
 #[cfg(test)]
