@@ -2,6 +2,7 @@ use crate::brain::{
     Brain, MemoryScope, RecallRequest, RecallResponse, RememberRequest, RememberResponse,
 };
 use crate::relay::{Mesh, Supervisor};
+use crate::skill::Receipts;
 use crate::vault::{VaultStatusRequest, VaultStatusResponse, VaultStore};
 use rmcp::handler::server::{router::tool::ToolRouter, wrapper::Parameters};
 use rmcp::model::{Implementation, ServerCapabilities, ServerInfo};
@@ -17,6 +18,10 @@ pub struct Server {
     /// the router otherwise, so a user who does not run agent teams never pays
     /// for their definitions in context.
     pub(super) mesh: Option<Mesh>,
+    /// Present only when the learn setting is on, and the whole of what the
+    /// self-improvement tools need: the library is the filesystem, and this is
+    /// everything Synapse records about it.
+    pub(super) receipts: Option<Receipts>,
     /// The background workers this session owns.
     pub(super) supervisor: Supervisor,
     /// The name this session registered on the mesh under. One session is one
@@ -28,15 +33,25 @@ pub struct Server {
 
 #[tool_router(router = memorytools)]
 impl Server {
-    fn new(brain: Brain, vaults: VaultStore, mesh: Option<Mesh>, instructions: String) -> Self {
+    fn new(
+        brain: Brain,
+        vaults: VaultStore,
+        mesh: Option<Mesh>,
+        receipts: Option<Receipts>,
+        instructions: String,
+    ) -> Self {
         let mut toolrouter = Self::memorytools();
         if mesh.is_some() {
             toolrouter += Self::meshtools();
+        }
+        if receipts.is_some() {
+            toolrouter += Self::learntools();
         }
         Self {
             brain,
             vaults,
             mesh,
+            receipts,
             supervisor: Supervisor::new(),
             identity: Arc::new(Mutex::new(None)),
             instructions,
@@ -132,6 +147,17 @@ impl Server {
     }
 }
 
+impl Server {
+    /// The skill records, for a session where learning is switched on. A tool
+    /// call can only reach this through a router that was merged in for the
+    /// same reason, so the error is a guard rather than something a user sees.
+    pub(super) fn receipts(&self) -> Result<&Receipts, String> {
+        self.receipts.as_ref().ok_or_else(|| {
+            "self-improvement is off; turn it on with `synapse settings learn on`".to_owned()
+        })
+    }
+}
+
 pub(super) fn projectpath(requested: Option<&str>) -> Option<std::path::PathBuf> {
     requested
         .filter(|value| !value.trim().is_empty())
@@ -157,9 +183,10 @@ pub async fn run(
     brain: Brain,
     vaults: VaultStore,
     mesh: Option<Mesh>,
+    receipts: Option<Receipts>,
     instructions: String,
 ) -> anyhow::Result<()> {
-    let server = Server::new(brain, vaults, mesh, instructions);
+    let server = Server::new(brain, vaults, mesh, receipts, instructions);
     let closing = server.clone();
     let service = server.serve(stdio()).await?;
     service.waiting().await?;

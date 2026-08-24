@@ -16,6 +16,12 @@ pub enum Action {
     DeleteMemory(i64),
     SetOptimization(Optimization),
     ToggleMesh,
+    ToggleLearn,
+    /// Install a proposed skill and stop calling it proposed. The skill's name
+    /// and the project it belongs to, empty for a global one.
+    ApproveSkill(String, String),
+    /// Turn one down, which removes it from the library.
+    RejectSkill(String, String),
     /// Wire the tool under the cursor into memory and the vault.
     Connect(String),
     /// Undo that.
@@ -101,6 +107,9 @@ fn confirm(state: &mut State, key: KeyEvent, pending: Pending) -> Action {
     let action = match (key.code, pending) {
         (KeyCode::Char('y'), Pending::DeleteMemory(id)) => Action::DeleteMemory(id),
         (KeyCode::Char('y'), Pending::Disconnect(slug)) => Action::Disconnect(slug),
+        (KeyCode::Char('y'), Pending::RejectSkill(name, project)) => {
+            Action::RejectSkill(name, project)
+        }
         _ => {
             state.notice = Notice::Ready;
             Action::None
@@ -203,6 +212,40 @@ fn browse(state: &mut State, key: KeyEvent) -> Action {
             None => Action::None,
         },
 
+        // Approving is not destructive, so it happens on one key. Turning a
+        // skill down deletes it, so it does not.
+        KeyCode::Enter | KeyCode::Char('a') if state.page == Page::Skills => {
+            match state::selectedskill(state)
+                .map(|row| (row.proposed, row.skill.clone(), row.project.clone()))
+            {
+                Some((true, name, project)) => Action::ApproveSkill(name, project),
+                Some((false, ..)) => {
+                    state.notice = Notice::Error("that skill is not waiting for review".to_owned());
+                    Action::None
+                }
+                None => Action::None,
+            }
+        }
+        KeyCode::Char('d') if state.page == Page::Skills => {
+            match state::selectedskill(state)
+                .map(|row| (row.proposed, row.skill.clone(), row.project.clone()))
+            {
+                Some((true, name, project)) => {
+                    state.notice = Notice::Error(format!("turn down `{name}`? y to confirm"));
+                    state.mode = Mode::Confirm(Pending::RejectSkill(name, project));
+                    Action::None
+                }
+                Some((false, ..)) => {
+                    state.notice = Notice::Error(
+                        "only a proposed skill is turned down here; use `synapse skill delete`"
+                            .to_owned(),
+                    );
+                    Action::None
+                }
+                None => Action::None,
+            }
+        }
+
         KeyCode::Char('f') if state.page == Page::Settings => {
             Action::SetOptimization(Optimization::Full)
         }
@@ -213,6 +256,7 @@ fn browse(state: &mut State, key: KeyEvent) -> Action {
             Action::SetOptimization(Optimization::Lean)
         }
         KeyCode::Char('m') if state.page == Page::Settings => Action::ToggleMesh,
+        KeyCode::Char('s') if state.page == Page::Settings => Action::ToggleLearn,
 
         _ => Action::None,
     }

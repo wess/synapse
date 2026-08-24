@@ -47,6 +47,8 @@ instructions = "{home}/AGENTS.md"   # the file a managed guidance block goes in
 settings = "{home}/settings.json"
 integration = "{home}/settings.json" # where a registered MCP server is recorded
 skills = "{home}/skills"
+# projectskills = ".mytool/skills"  # relative to a project root, for skills
+                                    # that belong to one repository
 
 # Run against the tool's own CLI. `{server}` is the Synapse binary.
 [connect]
@@ -178,6 +180,10 @@ struct Paths {
     settings: String,
     integration: String,
     skills: String,
+    /// Relative to a project root rather than to the user's home, because that
+    /// is the only thing it can be relative to.
+    #[serde(default)]
+    projectskills: String,
 }
 
 /// Every descriptor across the layers, built-ins first and in the order they are
@@ -285,6 +291,12 @@ fn parse(home: &Path, slug: &str, text: &str, source: Source) -> Result<Agent> {
         settings: resolvepath(home, &toolhome, &file.paths.settings),
         integration: resolvepath(home, &toolhome, &file.paths.integration),
         skills: resolvepath(home, &toolhome, &file.paths.skills),
+        projectskills: file
+            .paths
+            .projectskills
+            .trim()
+            .trim_start_matches('/')
+            .to_owned(),
         connect: file.connect,
         detect: file.detect,
         launch: file.launch,

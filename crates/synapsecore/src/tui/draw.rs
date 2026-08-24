@@ -123,10 +123,20 @@ fn keys(frame: &mut Frame, area: Rect, state: &State) {
                 ("?", "help"),
                 ("q", "quit"),
             ],
+            Page::Skills => &[
+                ("↹", "page"),
+                ("jk", "move"),
+                ("a", "approve"),
+                ("d", "turn down"),
+                ("r", "refresh"),
+                ("?", "help"),
+                ("q", "quit"),
+            ],
             Page::Settings => &[
                 ("↹", "page"),
                 ("f/b/n", "budget"),
                 ("m", "mesh"),
+                ("s", "learn"),
                 ("r", "refresh"),
                 ("?", "help"),
                 ("q", "quit"),
@@ -150,7 +160,7 @@ fn keys(frame: &mut Frame, area: Rect, state: &State) {
 
 fn help(frame: &mut Frame, area: Rect) {
     let width = 52.min(area.width.saturating_sub(4));
-    let height = 16.min(area.height.saturating_sub(2));
+    let height = 17.min(area.height.saturating_sub(2));
     let box_ = Rect {
         x: area.x + (area.width.saturating_sub(width)) / 2,
         y: area.y + (area.height.saturating_sub(height)) / 2,
@@ -185,8 +195,12 @@ fn help(frame: &mut Frame, area: Rect) {
             Span::raw("full, balanced, lean recall"),
         ]),
         Line::from(vec![
-            Span::styled("  m              ", theme::accent()),
-            Span::raw("turn the mesh on or off"),
+            Span::styled("  m s            ", theme::accent()),
+            Span::raw("mesh, and agent-written skills"),
+        ]),
+        Line::from(vec![
+            Span::styled("  a              ", theme::accent()),
+            Span::raw("approve a skill waiting for review"),
         ]),
         Line::from(vec![
             Span::styled("  r              ", theme::accent()),

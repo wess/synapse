@@ -81,6 +81,12 @@ Commands:
   skill status [name] [--json]     Show where each skill is installed
   skill adopt <name> [--tool <tool>]
                                    Copy a tool's own skill into the library
+  skill proposed [--json]          List skills agents wrote, awaiting review
+  skill approve <name> [--tool <tool>]
+                                   Install a proposed skill and stop proposing it
+  skill reject <name> --confirm    Turn down a proposed skill
+  skill history <name> [--json]    Show what a skill used to say
+  skill revert <name> [<id>]       Put an earlier version of a skill back
   tool list [--json]               List the tools Synapse can connect to
   tool show <name>                 Print one tool's descriptor
   tool create <name>               Describe a tool Synapse does not ship
@@ -94,6 +100,7 @@ Commands:
   settings optimize <full|balanced|lean>
                                    Set the MCP recall response budget
   settings mesh <on|off>           Turn the agent mesh tools on or off
+  settings learn <on|off>          Let agents write and correct skills
   install                          Install the synapse CLI for this user
   connect [tool]                   Wire a tool into memory, or every one found
   disconnect [tool]                Undo one tool's connection, or every tool's
@@ -449,7 +456,11 @@ fn data(arguments: &[OsString]) -> Result<Outcome> {
 }
 
 fn settings(arguments: &[OsString]) -> Result<Outcome> {
-    let action = textarg(arguments, 0, "usage: synapse settings <show|optimize|mesh>")?;
+    let action = textarg(
+        arguments,
+        0,
+        "usage: synapse settings <show|optimize|mesh|learn>",
+    )?;
     let runtime = runtime()?;
     let brain = runtime.block_on(crate::brain::Brain::open(crate::files::database()?))?;
     match action.as_str() {
@@ -472,6 +483,14 @@ fn settings(arguments: &[OsString]) -> Result<Outcome> {
                     "off"
                 }
             );
+            println!(
+                "learn\t{}",
+                if runtime.block_on(brain.learn())? {
+                    "on"
+                } else {
+                    "off"
+                }
+            );
             println!("shell modes\tcommand-scoped, ambient directory");
             println!("zsh hook\teval \"$(synapse hook zsh)\"");
         }
@@ -487,6 +506,24 @@ fn settings(arguments: &[OsString]) -> Result<Outcome> {
                 "Agent mesh {}. Connected tools pick this up the next time they start.",
                 if enabled { "on" } else { "off" }
             );
+        }
+        "learn" => {
+            let enabled =
+                match textarg(arguments, 1, "usage: synapse settings learn <on|off>")?.as_str() {
+                    "on" => true,
+                    "off" => false,
+                    value => anyhow::bail!("expected `on` or `off`, got `{value}`"),
+                };
+            runtime.block_on(brain.setlearn(enabled))?;
+            match enabled {
+                true => println!(
+                    "Self-improvement on. Connected tools pick this up the next time they start; \
+                     a skill an agent writes waits in `synapse skill proposed` until you approve it."
+                ),
+                false => println!(
+                    "Self-improvement off. Skills already in the library stay where they are."
+                ),
+            }
         }
         "optimize" => {
             let value = textarg(

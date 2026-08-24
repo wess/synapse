@@ -63,6 +63,10 @@ pub struct Skills {
     pub library: usize,
     pub installed: usize,
     pub stale: usize,
+    /// Whether agents may write skills.
+    pub learning: bool,
+    /// Written by an agent and waiting for the user.
+    pub proposed: usize,
     pub problems: Vec<String>,
 }
 
@@ -132,6 +136,10 @@ fn print(report: &Report) {
     println!("  In the library {}", report.skills.library);
     println!("  Installed      {}", report.skills.installed);
     println!("  Out of date    {}", report.skills.stale);
+    println!("  Agents write   {}", yesno(report.skills.learning));
+    if report.skills.proposed > 0 {
+        println!("  Awaiting you   {}", report.skills.proposed);
+    }
     for problem in &report.skills.problems {
         println!("  skipped        {problem}");
     }
@@ -194,6 +202,8 @@ fn collect() -> Report {
             library: 0,
             installed: 0,
             stale: 0,
+            learning: false,
+            proposed: 0,
             problems: vec!["could not locate the home directory".to_owned()],
         }),
         mesh: mesh(database.as_deref().ok()),
@@ -297,9 +307,27 @@ fn skills(home: &Path) -> Skills {
     let library = crate::skill::library::all()
         .map(|(skills, _)| skills.len())
         .unwrap_or(0);
+    let (learning, proposed) = runtime()
+        .and_then(|runtime| {
+            runtime.block_on(async {
+                let database = crate::files::database()?;
+                let learning = crate::brain::Brain::glance(&database)
+                    .await?
+                    .learn()
+                    .await?;
+                let waiting = crate::skill::Receipts::glance(&database)
+                    .await?
+                    .waiting()
+                    .await?;
+                Ok((learning, waiting as usize))
+            })
+        })
+        .unwrap_or((false, 0));
     match surveyed {
         Ok((statuses, problems)) => Skills {
             library,
+            learning,
+            proposed,
             installed: statuses
                 .iter()
                 .filter(|status| status.state == crate::skill::State::Installed)
@@ -312,6 +340,8 @@ fn skills(home: &Path) -> Skills {
         },
         Err(error) => Skills {
             library,
+            learning,
+            proposed,
             installed: 0,
             stale: 0,
             problems: vec![format!("{error:#}")],

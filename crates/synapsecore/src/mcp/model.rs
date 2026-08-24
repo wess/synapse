@@ -147,3 +147,71 @@ pub struct DoneResponse {
     pub done: bool,
     pub note: String,
 }
+
+/// Where a taught skill belongs. The same split memory makes, and the same
+/// default: a procedure worked out in a repository is usually about it.
+#[derive(Clone, Copy, Debug, Deserialize, JsonSchema, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum SkillScope {
+    Global,
+    Project,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct TeachRequest {
+    /// Short lowercase name, words joined by hyphens, such as
+    /// `cut-a-release` or `debug-a-flaky-test`.
+    pub name: String,
+    /// One line saying what the skill does and when to reach for it. Agents read
+    /// this line alone to decide whether to load the rest, so lead with the case
+    /// that matters most.
+    pub description: String,
+    /// The procedure itself, as Markdown. Write it for somebody doing this for
+    /// the first time: what it is for, the steps in order, and what to watch out
+    /// for. Do not include a frontmatter fence; Synapse writes that.
+    pub instructions: String,
+    /// `project` by default. Use `global` only for a procedure that holds away
+    /// from this repository.
+    pub scope: Option<SkillScope>,
+    /// Absolute project root this belongs to.
+    pub project: Option<String>,
+    /// One line for the user saying why this is worth keeping.
+    pub note: Option<String>,
+}
+
+#[derive(Debug, Serialize, JsonSchema)]
+pub struct TeachResponse {
+    pub skill: String,
+    pub scope: String,
+    pub path: String,
+    /// Always true: a taught skill waits for the user, by design.
+    pub proposed: bool,
+    pub note: String,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct ReviseRequest {
+    /// The skill to correct, by name.
+    pub name: String,
+    /// The corrected instructions, in full. This replaces the body rather than
+    /// being appended to it.
+    pub instructions: String,
+    /// A new one-line description, when the old one no longer fits.
+    pub description: Option<String>,
+    /// One line saying what was wrong with the version being replaced.
+    pub note: Option<String>,
+    /// Absolute project root, so a project's own copy is found before the
+    /// shared one.
+    pub project: Option<String>,
+}
+
+#[derive(Debug, Serialize, JsonSchema)]
+pub struct ReviseResponse {
+    pub skill: String,
+    pub scope: String,
+    /// The id holding what it used to say, restorable with `synapse skill
+    /// revert`.
+    pub revision: i64,
+    /// The tools this correction reached.
+    pub updated: Vec<String>,
+}

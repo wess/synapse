@@ -503,6 +503,14 @@ impl Brain {
         crate::brain::settings::writemesh(&self.pool, enabled).await
     }
 
+    pub async fn learn(&self) -> Result<bool> {
+        crate::brain::settings::learn(&self.pool).await
+    }
+
+    pub async fn setlearn(&self, enabled: bool) -> Result<()> {
+        crate::brain::settings::writelearn(&self.pool, enabled).await
+    }
+
     pub async fn preference(&self, key: &str) -> Result<Option<String>> {
         crate::brain::settings::value(&self.pool, key).await
     }

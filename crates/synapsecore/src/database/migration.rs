@@ -3,7 +3,7 @@ use anyhow::{Context, Result};
 use sqlx::SqlitePool;
 use std::path::Path;
 
-pub const LATEST: i64 = 9;
+pub const LATEST: i64 = 10;
 
 struct Migration {
     version: i64,
@@ -194,6 +194,61 @@ const MIGRATIONS: &[Migration] = &[
             // Partial, because the rows worth finding this way are the live
             // ones and almost every row is live.
             "CREATE INDEX memorymetalive ON memorymeta(scope, project) WHERE superseded = 0",
+        ],
+    },
+    Migration {
+        version: 10,
+        statements: &[
+            // Which shelf an installed copy came from. A skill can now belong to
+            // one project as well as to everybody, and the same name can exist
+            // on both shelves at once in two different folders — so the tool and
+            // the name no longer identify a copy on their own. SQLite cannot
+            // widen a primary key in place, hence the rebuild.
+            "ALTER TABLE skillinstall RENAME TO skillinstallold",
+            "CREATE TABLE skillinstall(\
+             shelf TEXT NOT NULL DEFAULT '', \
+             skill TEXT NOT NULL, \
+             tool TEXT NOT NULL, \
+             path TEXT NOT NULL, \
+             digest TEXT NOT NULL, \
+             source TEXT NOT NULL DEFAULT '', \
+             installed INTEGER NOT NULL, \
+             PRIMARY KEY(shelf, skill, tool))",
+            "INSERT INTO skillinstall(shelf, skill, tool, path, digest, source, installed) \
+             SELECT '', skill, tool, path, digest, source, installed FROM skillinstallold",
+            "DROP TABLE skillinstallold",
+            // A skill an agent wrote, waiting for a person to approve it.
+            //
+            // The row *is* the proposal: approving deletes it and installs the
+            // skill, rejecting deletes it and the skill with it. Nothing reaches
+            // a tool's own skills folder while a row is here, which is what
+            // makes teaching one free — a session that writes a mediocre skill
+            // has cost the user a line in a list, not context in every session
+            // on the machine.
+            "CREATE TABLE skillproposal(\
+             shelf TEXT NOT NULL DEFAULT '', \
+             skill TEXT NOT NULL, \
+             project TEXT NOT NULL DEFAULT '', \
+             tool TEXT NOT NULL DEFAULT '', \
+             note TEXT NOT NULL DEFAULT '', \
+             created INTEGER NOT NULL, \
+             PRIMARY KEY(shelf, skill))",
+            // What a skill said before it was revised.
+            //
+            // A revision reaches every copy Synapse installed, so it changes how
+            // sessions behave without anybody watching it happen. Keeping the
+            // previous text is what makes that reversible, and it is the same
+            // bargain `memorymeta.superseded` makes for a corrected memory:
+            // nothing is hidden without a way back.
+            "CREATE TABLE skillrevision(\
+             id INTEGER PRIMARY KEY AUTOINCREMENT, \
+             shelf TEXT NOT NULL DEFAULT '', \
+             skill TEXT NOT NULL, \
+             body TEXT NOT NULL, \
+             note TEXT NOT NULL DEFAULT '', \
+             tool TEXT NOT NULL DEFAULT '', \
+             created INTEGER NOT NULL)",
+            "CREATE INDEX skillrevisionskill ON skillrevision(shelf, skill, id DESC)",
         ],
     },
 ];

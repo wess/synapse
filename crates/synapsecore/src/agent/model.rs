@@ -36,6 +36,11 @@ pub struct Agent {
     pub integration: PathBuf,
     /// Where this tool reads personal Agent Skills from.
     pub skills: PathBuf,
+    /// Where it reads a project's own Agent Skills from, relative to that
+    /// project's root. Empty for a tool that has no such place, which is a fact
+    /// about the tool and not a misconfiguration: a project skill simply has
+    /// nowhere to go there.
+    pub projectskills: String,
     pub connect: super::tool::Connect,
     pub detect: super::tool::Detect,
     pub launch: super::tool::Launch,

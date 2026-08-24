@@ -122,10 +122,12 @@ async fn skills(agent: &Agent) -> Removed {
             return removed;
         }
     };
-    for skill in installed {
+    for (shelf, skill) in installed {
+        // The receipt carries the path, so a project skill is taken back out of
+        // the project it went into without this needing to find that project.
         removed.step(
             &format!("{} skill `{skill}`", agent.name),
-            crate::skill::remove(&receipts, agent, &skill, false).await,
+            crate::skill::remove(&receipts, agent, &shelf, &skill, false).await,
         );
     }
     removed

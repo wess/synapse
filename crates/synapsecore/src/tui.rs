@@ -145,6 +145,49 @@ fn pump(
             });
             Ok(())
         }
+        Action::ToggleLearn => {
+            runtime.block_on(async {
+                let wanted = !state.learnenabled;
+                match crate::brain::Brain::open(&state.database).await {
+                    Ok(brain) => match brain.setlearn(wanted).await {
+                        Ok(()) => {
+                            state.learnenabled = wanted;
+                            state.notice = Notice::Success(
+                                if wanted {
+                                    "agents can write skills · they wait here for you"
+                                } else {
+                                    "agents can no longer write skills"
+                                }
+                                .to_owned(),
+                            );
+                        }
+                        Err(error) => state.notice = Notice::Error(error.to_string()),
+                    },
+                    Err(error) => state.notice = Notice::Error(error.to_string()),
+                }
+                load::refresh(state).await;
+            });
+            Ok(())
+        }
+        Action::ApproveSkill(name, project) => {
+            state.notice = match runtime.block_on(approveskill(&name, &project)) {
+                Ok(tools) if tools.is_empty() => {
+                    Notice::Error(format!("no connected tool can hold `{name}`"))
+                }
+                Ok(tools) => Notice::Success(format!("{name} → {}", tools.join(", "))),
+                Err(error) => Notice::Error(format!("{error:#}")),
+            };
+            runtime.block_on(load::refresh(state));
+            Ok(())
+        }
+        Action::RejectSkill(name, project) => {
+            state.notice = match runtime.block_on(rejectskill(&name, &project)) {
+                Ok(()) => Notice::Success(format!("turned down `{name}`")),
+                Err(error) => Notice::Error(format!("{error:#}")),
+            };
+            runtime.block_on(load::refresh(state));
+            Ok(())
+        }
         Action::Connect(slug) => {
             state.notice = match connect(&slug) {
                 Ok(name) => Notice::Success(format!("{name} is connected to Synapse")),
@@ -213,6 +256,35 @@ async fn disconnect(slug: &str) -> Result<String> {
     })
 }
 
+/// Install a skill an agent wrote, into every tool that can hold it.
+async fn approveskill(name: &str, project: &str) -> Result<Vec<String>> {
+    let home = crate::files::home()?;
+    let receipts = crate::skill::Receipts::open(crate::files::database()?).await?;
+    let skill = locateskill(name, project)?;
+    let agents = crate::agent::agents(&home);
+    let results = crate::skill::approve(&receipts, &agents, &skill, false).await?;
+    Ok(results
+        .into_iter()
+        .filter_map(|(tool, outcome)| outcome.ok().map(|_| tool))
+        .collect())
+}
+
+async fn rejectskill(name: &str, project: &str) -> Result<()> {
+    let receipts = crate::skill::Receipts::open(crate::files::database()?).await?;
+    let skill = locateskill(name, project)?;
+    crate::skill::reject(&receipts, &skill).await.map(|_| ())
+}
+
+/// The skill a dashboard row names. The row carries the project rather than the
+/// shelf, because a project root is the whole of what identifies one.
+fn locateskill(name: &str, project: &str) -> Result<crate::skill::Skill> {
+    let shelf = match project.is_empty() {
+        true => crate::skill::Shelf::Global,
+        false => crate::skill::Shelf::project(std::path::Path::new(project)),
+    };
+    crate::skill::library::read(&shelf, name)
+}
+
 async fn deletememory(state: &state::State, id: i64) -> Result<()> {
     let brain = crate::brain::Brain::open(&state.database).await?;
     brain
@@ -241,6 +313,7 @@ mod tests {
             stats: Default::default(),
             optimization: Default::default(),
             meshenabled: false,
+            learnenabled: false,
             connections: Vec::new(),
             cli: crate::cli::InstallStatus::Missing,
             shell: None,

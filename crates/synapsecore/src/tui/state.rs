@@ -84,6 +84,9 @@ pub enum Pending {
     /// Taking a tool back out. Recoverable, unlike a memory, but it edits
     /// somebody else's configuration and so is still asked about first.
     Disconnect(String),
+    /// Turning down a proposed skill, which deletes it. The name and the
+    /// project it belongs to, which together are the skill.
+    RejectSkill(String, String),
 }
 
 pub struct Connection {
@@ -101,6 +104,7 @@ pub struct State {
     pub stats: Stats,
     pub optimization: Optimization,
     pub meshenabled: bool,
+    pub learnenabled: bool,
 
     pub connections: Vec<Connection>,
     pub cli: InstallStatus,
@@ -176,6 +180,14 @@ pub fn selectedmemory(state: &State) -> Option<&Memory> {
         return None;
     }
     state.memories.get(cursor(state))
+}
+
+/// The skill row the cursor is on, when the skills page is showing one.
+pub fn selectedskill(state: &State) -> Option<&SkillStatus> {
+    if state.page != Page::Skills {
+        return None;
+    }
+    state.skills.get(cursor(state))
 }
 
 /// The tool the cursor is on. `None` on the last row, which is the one that

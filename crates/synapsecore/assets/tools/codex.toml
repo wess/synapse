@@ -12,6 +12,8 @@ integration = "{home}/config.toml"
 # Codex reads personal skills from the shared Agent Skills folder rather than
 # its own home. `.codex/skills` holds the set it ships.
 skills = ".agents/skills"
+# The same shared location, inside the repository rather than the home.
+projectskills = ".agents/skills"
 
 [connect]
 add = ["mcp", "add", "synapse", "--", "{server}", "mcp"]

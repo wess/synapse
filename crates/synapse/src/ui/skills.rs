@@ -12,6 +12,15 @@ pub struct Row {
     pub description: String,
     pub files: usize,
     pub places: Vec<Status>,
+    /// `global` or `project`.
+    pub scope: String,
+    /// The project a project skill belongs to, empty otherwise.
+    pub project: String,
+    /// Written by an agent and not yet approved. It is in the library and in no
+    /// tool, and stays there until somebody here says otherwise.
+    pub proposed: bool,
+    /// The one line the agent left saying why it wrote this.
+    pub note: String,
 }
 
 pub struct View {
@@ -31,6 +40,10 @@ pub struct Actions {
     pub install: Box<dyn Fn(String) -> Click>,
     /// Copy a tool's own skill into the library, by (tool, skill).
     pub adopt: Box<dyn Fn(String, String) -> Click>,
+    /// Install a proposed skill and stop proposing it, by (skill, project).
+    pub approve: Box<dyn Fn(String, String) -> Click>,
+    /// Turn one down, which removes it, by (skill, project).
+    pub reject: Box<dyn Fn(String, String) -> Click>,
 }
 
 pub fn render(view: View, actions: Actions, cx: &App) -> AnyElement {
@@ -43,8 +56,11 @@ pub fn render(view: View, actions: Actions, cx: &App) -> AnyElement {
         openfolder,
         install,
         adopt,
+        approve,
+        reject,
     } = actions;
     let empty = view.rows.is_empty();
+    let waiting = view.rows.iter().filter(|row| row.proposed).count();
 
     div()
         .id("skillsmain")
@@ -81,7 +97,15 @@ pub fn render(view: View, actions: Actions, cx: &App) -> AnyElement {
                                     )
                                     .size(Size::Sm)
                                     .dimmed(),
-                                ),
+                                )
+                                .when(waiting > 0, |element| {
+                                    element.child(
+                                        Text::new(format!(
+                                            "{waiting} written by an agent and waiting for you. Nothing below is in any tool until you approve it.",
+                                        ))
+                                        .size(Size::Sm),
+                                    )
+                                }),
                         )
                         .child(
                             div()
@@ -156,10 +180,9 @@ pub fn render(view: View, actions: Actions, cx: &App) -> AnyElement {
                         .flex_col()
                         .gap(px(12.0))
                         .children(
-                            view.rows
-                                .into_iter()
-                                .enumerate()
-                                .map(|(index, row)| skill(index, row, &install, border, surface)),
+                            view.rows.into_iter().enumerate().map(|(index, row)| {
+                                skill(index, row, &install, &approve, &reject, border, surface)
+                            }),
                         )
                         .into_any_element()
                 })
@@ -209,10 +232,18 @@ fn skill(
     index: usize,
     row: Row,
     install: &dyn Fn(String) -> Click,
+    approve: &dyn Fn(String, String) -> Click,
+    reject: &dyn Fn(String, String) -> Click,
     border: gpui::Hsla,
     surface: gpui::Hsla,
 ) -> AnyElement {
     let action = install(row.name.clone());
+    let accept = approve(row.name.clone(), row.project.clone());
+    let decline = reject(row.name.clone(), row.project.clone());
+    let proposed = row.proposed;
+    let project = row.project.clone();
+    let note = row.note.clone();
+    let scope = row.scope.clone();
     // A skill nobody has, or whose copies have fallen behind, is the one worth
     // acting on; the button says which.
     let pending = row
@@ -256,6 +287,18 @@ fn skill(
                                         .size(Size::Sm)
                                         .weight(FontWeight::SEMIBOLD),
                                 )
+                                .when(scope == "project", |element| {
+                                    element.child(
+                                        Badge::new("project").size(Size::Sm).color(ColorName::Blue),
+                                    )
+                                })
+                                .when(proposed, |element| {
+                                    element.child(
+                                        Badge::new("waiting for review")
+                                            .size(Size::Sm)
+                                            .color(ColorName::Violet),
+                                    )
+                                })
                                 .when(row.files > 1, |element| {
                                     element.child(
                                         Badge::new(format!("{} files", row.files))
@@ -264,25 +307,59 @@ fn skill(
                                     )
                                 }),
                         )
-                        .child(Text::new(row.description).size(Size::Xs).dimmed()),
+                        .child(Text::new(row.description).size(Size::Xs).dimmed())
+                        .when(!project.is_empty(), |element| {
+                            element.child(Text::new(project.clone()).size(Size::Xs).dimmed())
+                        })
+                        .when(proposed && !note.is_empty(), |element| {
+                            element.child(Text::new(format!("“{note}”")).size(Size::Xs).dimmed())
+                        }),
                 )
-                .child(
-                    div().flex_none().child(
-                        Button::new(("skillinstall", index), label)
-                            .variant(Variant::Light)
-                            .color(ColorName::Violet)
-                            .size(Size::Xs)
-                            .on_click(move |event, window, cx| action(event, window, cx)),
-                    ),
-                ),
+                .child(if proposed {
+                    div()
+                        .flex_none()
+                        .flex()
+                        .items_center()
+                        .gap(px(8.0))
+                        .child(
+                            Button::new(("skillreject", index), "Turn down")
+                                .variant(Variant::Subtle)
+                                .color(ColorName::Red)
+                                .size(Size::Xs)
+                                .on_click(move |event, window, cx| decline(event, window, cx)),
+                        )
+                        .child(
+                            Button::new(("skillapprove", index), "Approve")
+                                .variant(Variant::Filled)
+                                .color(ColorName::Violet)
+                                .size(Size::Xs)
+                                .on_click(move |event, window, cx| accept(event, window, cx)),
+                        )
+                        .into_any_element()
+                } else {
+                    div()
+                        .flex_none()
+                        .child(
+                            Button::new(("skillinstall", index), label)
+                                .variant(Variant::Light)
+                                .color(ColorName::Violet)
+                                .size(Size::Xs)
+                                .on_click(move |event, window, cx| action(event, window, cx)),
+                        )
+                        .into_any_element()
+                }),
         )
-        .child(
-            div()
-                .flex()
-                .items_center()
-                .gap(px(8.0))
-                .children(row.places.into_iter().map(place)),
-        )
+        // A proposed skill is in no tool by design, so a row of "not installed"
+        // badges under it would read as something to fix.
+        .when(!proposed, |element| {
+            element.child(
+                div()
+                    .flex()
+                    .items_center()
+                    .gap(px(8.0))
+                    .children(row.places.into_iter().map(place)),
+            )
+        })
         .into_any_element()
 }
 

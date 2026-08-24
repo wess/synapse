@@ -33,6 +33,7 @@ pub async fn initial() -> Result<State> {
         stats: Default::default(),
         optimization: Default::default(),
         meshenabled: false,
+        learnenabled: false,
         connections: Vec::new(),
         cli: cli::InstallStatus::Missing,
         shell: None,
@@ -84,6 +85,9 @@ pub async fn memories(state: &mut State) {
     }
     if let Ok(enabled) = brain.mesh().await {
         state.meshenabled = enabled;
+    }
+    if let Ok(enabled) = brain.learn().await {
+        state.learnenabled = enabled;
     }
 }
 

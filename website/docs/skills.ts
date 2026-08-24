@@ -5,7 +5,7 @@ export const skills: Page = {
   path: "docs/skills/index.html",
   title: "Skills",
   description:
-    "Keep your Agent Skills in one library and install them into every connected tool, instead of copying folders by hand and watching the copies drift.",
+    "Keep your Agent Skills in one library, install them into every connected tool, and let a session write down a procedure it worked out \u2014 for you to approve before it reaches anything.",
   kind: "docs",
   toc: [
     { label: "Why a library", id: "why" },
@@ -14,6 +14,8 @@ export const skills: Page = {
     { label: "Installing", id: "installing" },
     { label: "What each state means", id: "states" },
     { label: "Adopting what you already have", id: "adopting" },
+    { label: "Project skills", id: "projects" },
+    { label: "Skills agents write", id: "learning" },
     { label: "Limits", id: "limits" },
   ],
   body: `
@@ -26,9 +28,11 @@ export const skills: Page = {
       <thead><tr><th>Place</th><th>Path</th></tr></thead>
       <tbody>
         <tr><td>The Synapse library</td><td><code>&lt;data&gt;/skills/&lt;name&gt;/SKILL.md</code></td></tr>
+        <tr><td>&hellip; for one project</td><td><code>&lt;data&gt;/skills/@&lt;project&gt;/&lt;name&gt;/SKILL.md</code></td></tr>
         <tr><td>Claude Code</td><td><code>~/.claude/skills/&lt;name&gt;/SKILL.md</code></td></tr>
         <tr><td>Codex</td><td><code>~/.agents/skills/&lt;name&gt;/SKILL.md</code></td></tr>
         <tr><td>pi</td><td><code>~/.pi/agent/skills/&lt;name&gt;/SKILL.md</code></td></tr>
+        <tr><td>A project's own</td><td><code>&lt;project&gt;/.claude/skills/</code>, <code>.agents/skills/</code>, <code>.pi/agent/skills/</code></td></tr>
       </tbody>
     </table>
     ${note("Codex reads personal skills from the shared <code>~/.agents/skills</code> folder rather than from its own home. <code>~/.codex/skills</code> holds the set Codex ships with, and Synapse does not write there.")}
@@ -70,6 +74,7 @@ synapse skill remove my-workflow       # take it back out`)}
         <tr><td>changed in place</td><td>Synapse installed it, and it has been edited inside the tool.</td><td>Refuse, unless you pass <code>--replace</code>.</td></tr>
         <tr><td>not ours</td><td>A skill of the same name that Synapse never wrote.</td><td>Refuse. It is yours, not Synapse's.</td></tr>
         <tr><td>not in the library</td><td>The tool has a skill Synapse does not know about.</td><td>Nothing, until you adopt it.</td></tr>
+        <tr><td>waiting for review</td><td>An agent wrote it and you have not looked at it yet.</td><td>Nothing, until you approve it.</td></tr>
       </tbody>
     </table>
     <p>Synapse knows which copies are its own because it records the digest it wrote and the library digest it came from. Without that record, "the library moved on" and "somebody wrote this by hand" look identical, and the safe response to both would be to do nothing.</p>
@@ -80,12 +85,41 @@ synapse skill remove my-workflow       # take it back out`)}
 synapse skill install humanize`)}
     <p>The app lists these under <strong>Already in your tools</strong> on the Skills screen, with an Adopt button beside each.</p>
 
+    <h2 id="projects">Project skills</h2>
+    <p>A procedure you work out in one repository is usually about that repository. A library where every skill is global costs every session on the machine to hold one project's checklist, so skills have <strong>shelves</strong>: the library root for what is true everywhere, and one shelf per project beside it.</p>
+    ${code("shell", `synapse skill create release --project        # this repository's own
+synapse skill install release --project      # into this repository's .claude/skills
+synapse skill list --global                  # or just the shared ones`)}
+    <p>A project skill installs into that project's own skills folders rather than into your home, so it is loaded when you work there and nowhere else. It also travels with the repository once it is installed, which is the point.</p>
+    <p>Every command that takes a bare name looks at this project's shelf before the global one, so <code>synapse skill show release</code> run inside a repository shows that repository's version. A global skill and a project skill can share a name without colliding; <code>--global</code> and <code>--project [folder]</code> say which you mean when it matters.</p>
+    ${note("Not every tool has a place for these", "A project skill needs a project-local skills folder, and a tool described without one simply has nowhere to put it. Synapse leaves that pairing out of <code>skill status</code> rather than reporting it as something to fix.")}
+
+    <h2 id="learning">Skills agents write</h2>
+    <p>Switch this on and a session can write down a procedure it worked out, and correct one that turned out wrong:</p>
+    ${code("shell", `synapse settings learn on`)}
+    <p>That adds two tools, <code>teach</code> and <code>revise</code>, to every connected session, and the guidance explaining them arrives with them. It is off until you ask for it, because a tool definition costs context in every session that loads it.</p>
+    <p>Synapse has no model and runs no loop, so it never reflects on a session. The session decides what it learned; Synapse decides where that lands and who has to agree to it.</p>
+    <h3>Nothing reaches a tool until you say so</h3>
+    <p>A skill an agent writes is <strong>proposed</strong>. It is in the library and in no tool, and it stays there until you approve it. The gate is on installing rather than on writing, because the library is Synapse's own folder while a skill's description is loaded into every session of every tool holding it — so writing one costs you a line in a list, and installing it is the decision.</p>
+    ${code("shell", `synapse skill proposed                  # what is waiting, and who wrote it
+synapse skill show cut-a-release        # read it
+synapse skill approve cut-a-release     # install it where it belongs
+synapse skill reject cut-a-release --confirm`)}
+    <p><code>synapse skill install</code> with no name steps over anything waiting, so a proposal never reaches a tool because you installed everything. The app shows the same queue on the <strong>Skills</strong> screen with Approve and Turn down beside each, and the terminal dashboard does it with <code>a</code> and <code>d</code>.</p>
+    <p>You will also see it said once at the start of a session — <code>Synapse connected · 1 skill to review</code> — and nowhere else. Waiting is what a proposal is for; a queue that interrupts is not a queue.</p>
+    <h3>Corrections do reach the copies</h3>
+    <p><code>revise</code> is the deliberate exception. You already agreed to that skill being loaded, and a correction that never arrives leaves every session running the version that was wrong — so a revision goes out to the copies Synapse installed. It reaches only copies Synapse wrote that nobody has edited since; one you changed by hand is yours and is left where it is.</p>
+    <p>Nothing is lost doing it. What the skill said before is kept, and putting it back is one command:</p>
+    ${code("shell", `synapse skill history cut-a-release     # what it used to say, and what was wrong
+synapse skill revert cut-a-release      # put the last version back`)}
+    <p>Reverting is itself a revision, so a revert can be reverted. The newest twenty versions of each skill are kept.</p>
+
     <h2 id="limits">Limits</h2>
     <ul>
-      <li>Personal skills only. Project skills, in a repository's own <code>.claude/skills</code> or <code>.agents/skills</code>, belong to that repository and Synapse leaves them alone.</li>
       <li>Installing copies the directory rather than linking it, so a copy stays put if the library moves. The cost is that an edit in the library has to be installed again to reach the tools, which is what <code>status</code> is for.</li>
       <li>Deleting a skill from the library does not remove the copies already installed. Use <code>synapse skill remove</code> for that, before or after.</li>
       <li>A skill whose <code>SKILL.md</code> does not parse is reported and skipped rather than copied anywhere.</li>
+      <li>A skill an agent writes is only ever a skill. It cannot install itself, cannot reach a tool, and cannot write anywhere except the library.</li>
     </ul>
   `,
 };

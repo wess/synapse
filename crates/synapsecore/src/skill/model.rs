@@ -27,6 +27,89 @@ pub struct Skill {
     /// Content digest of the whole directory, which is how an installed copy is
     /// recognised as current, changed, or somebody else's.
     pub digest: String,
+    /// Which shelf it was read from. Carried on the skill rather than passed
+    /// beside it because everything downstream — where to install it, which
+    /// receipt describes it, which folder it came from — needs it, and a pair
+    /// that can be split is a pair that gets split.
+    pub shelf: Shelf,
+}
+
+/// Where a skill lives: the shared library, or one project's.
+///
+/// A procedure worked out in one repository is usually about that repository,
+/// and a library where every skill is global is a library that costs every
+/// session on the machine to hold one project's checklist. This is the split
+/// memory already makes, for the same reason.
+#[derive(Clone, Debug, Serialize, JsonSchema, PartialEq, Eq, Default)]
+#[serde(tag = "scope", rename_all = "lowercase")]
+pub enum Shelf {
+    #[default]
+    Global,
+    Project {
+        /// The shelf's directory name under the library.
+        slug: String,
+        /// The project root it belongs to, as it was when the shelf was made.
+        root: String,
+    },
+}
+
+impl Shelf {
+    /// The shelf for a project root. Canonicalised where possible, so the same
+    /// repository reached through a symlink is one shelf and not two.
+    pub fn project(root: &Path) -> Self {
+        let resolved = std::fs::canonicalize(root).unwrap_or_else(|_| root.to_path_buf());
+        Self::Project {
+            slug: slug(&resolved),
+            root: resolved.display().to_string(),
+        }
+    }
+
+    /// What the database stores. Empty is global, which keeps every receipt
+    /// written before shelves existed pointing at the shelf it came from.
+    pub fn key(&self) -> &str {
+        match self {
+            Self::Global => "",
+            Self::Project { slug, .. } => slug,
+        }
+    }
+
+    pub fn label(&self) -> &'static str {
+        match self {
+            Self::Global => "global",
+            Self::Project { .. } => "project",
+        }
+    }
+
+    pub fn root(&self) -> Option<&str> {
+        match self {
+            Self::Global => None,
+            Self::Project { root, .. } => Some(root),
+        }
+    }
+}
+
+/// A project shelf's directory name: something a person can recognise, plus
+/// enough of a digest that two checkouts called `api` are two shelves.
+pub fn slug(root: &Path) -> String {
+    use sha2::{Digest, Sha256};
+
+    let digest = format!("{:x}", Sha256::digest(root.to_string_lossy().as_bytes()));
+    let readable: String = root
+        .file_name()
+        .and_then(|value| value.to_str())
+        .unwrap_or("project")
+        .chars()
+        .map(|item| match item.is_ascii_alphanumeric() {
+            true => item.to_ascii_lowercase(),
+            false => '-',
+        })
+        .collect();
+    let readable = readable.trim_matches('-');
+    let readable = match readable.is_empty() {
+        true => "project",
+        false => &readable[..readable.len().min(32)],
+    };
+    format!("{readable}-{}", &digest[..8])
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -54,8 +137,8 @@ pub fn split(content: &str) -> Result<(&str, &str)> {
     Ok((&rest[..end], body))
 }
 
-/// Read and validate the `SKILL.md` in `directory`.
-pub fn read(directory: &Path) -> Result<Skill> {
+/// Read and validate the `SKILL.md` in `directory`, as a skill on `shelf`.
+pub fn read(directory: &Path, shelf: Shelf) -> Result<Skill> {
     let name = directory
         .file_name()
         .and_then(|value| value.to_str())
@@ -71,6 +154,7 @@ pub fn read(directory: &Path) -> Result<Skill> {
         name: name.clone(),
         description: parse(&name, &content)?.1,
         files,
+        shelf,
     })
 }
 
@@ -118,6 +202,37 @@ pub fn parse(name: &str, content: &str) -> Result<(String, String)> {
         "`{name}` has no instructions after its frontmatter"
     );
     Ok((declared.to_owned(), description.to_owned()))
+}
+
+/// Build a whole `SKILL.md` from its parts, and refuse to return one that is
+/// not valid.
+///
+/// This is how a skill an agent wrote gets made. The agent supplies the name,
+/// the one-line description, and the instructions; Synapse writes the
+/// frontmatter. Letting a model hand over raw frontmatter would mean letting it
+/// write YAML keys nobody reads and a `name` that disagrees with its own
+/// directory — so it does not get to.
+pub fn compose(name: &str, description: &str, body: &str) -> Result<String> {
+    validname(name)?;
+    let description = description.split_whitespace().collect::<Vec<_>>().join(" ");
+    anyhow::ensure!(
+        !description.is_empty(),
+        "`{name}` needs a description saying when to reach for it"
+    );
+    let body = body.trim();
+    anyhow::ensure!(!body.is_empty(), "`{name}` needs instructions");
+    let content = format!(
+        "---\nname: {name}\ndescription: {}\n---\n\n{body}\n",
+        quoted(&description)
+    );
+    parse(name, &content)?;
+    Ok(content)
+}
+
+/// A double-quoted YAML scalar, so a description holding `: ` or a quote is
+/// text rather than a parse error.
+fn quoted(value: &str) -> String {
+    format!("\"{}\"", value.replace('\\', "\\\\").replace('"', "\\\""))
 }
 
 /// Whether a frontmatter line holds an unquoted value that itself contains
@@ -300,7 +415,7 @@ mod tests {
         std::fs::write(root.join(ENTRY), GOOD).unwrap();
         std::fs::write(root.join("references").join("more.md"), "detail").unwrap();
 
-        let skill = read(&root).unwrap();
+        let skill = read(&root, Shelf::Global).unwrap();
 
         assert_eq!(skill.name, "demo");
         assert_eq!(skill.files, ["SKILL.md", "references/more.md"]);
@@ -313,14 +428,18 @@ mod tests {
         let root = directory.path().join("demo");
         std::fs::create_dir_all(&root).unwrap();
         std::fs::write(root.join(ENTRY), GOOD).unwrap();
-        let first = read(&root).unwrap().digest;
+        let first = read(&root, Shelf::Global).unwrap().digest;
 
         std::fs::write(root.join("extra.md"), "detail").unwrap();
-        let second = read(&root).unwrap().digest;
+        let second = read(&root, Shelf::Global).unwrap().digest;
         assert_ne!(first, second, "a new file must change the digest");
 
         std::fs::write(root.join("extra.md"), "different").unwrap();
-        assert_ne!(second, read(&root).unwrap().digest, "so must an edit");
+        assert_ne!(
+            second,
+            read(&root, Shelf::Global).unwrap().digest,
+            "so must an edit"
+        );
     }
 
     #[test]
@@ -329,13 +448,51 @@ mod tests {
         let root = directory.path().join("demo");
         std::fs::create_dir_all(&root).unwrap();
         std::fs::write(root.join(ENTRY), GOOD).unwrap();
-        let clean = read(&root).unwrap();
+        let clean = read(&root, Shelf::Global).unwrap();
 
         std::fs::write(root.join("SKILL.md.synapsebackup"), "old").unwrap();
         std::fs::write(root.join(".DS_Store"), "junk").unwrap();
 
-        let after = read(&root).unwrap();
+        let after = read(&root, Shelf::Global).unwrap();
         assert_eq!(after.files, clean.files);
         assert_eq!(after.digest, clean.digest);
+    }
+
+    #[test]
+    fn a_composed_skill_is_valid_and_its_description_survives_punctuation() {
+        let content = compose(
+            "cut-a-release",
+            "Use this when: shipping a build, including the notarization step.",
+            "1. Bump the version.\n2. Tag it.",
+        )
+        .unwrap();
+
+        let (name, description) = parse("cut-a-release", &content).unwrap();
+        assert_eq!(name, "cut-a-release");
+        assert!(
+            description.contains("Use this when: shipping"),
+            "got {description}"
+        );
+        assert!(content.ends_with("2. Tag it.\n"));
+    }
+
+    #[test]
+    fn composing_refuses_what_would_not_be_a_skill() {
+        assert!(compose("Bad Name", "Fine.", "Steps.").is_err());
+        assert!(compose("mine", "   ", "Steps.").is_err());
+        assert!(compose("mine", "Fine.", "  \n ").is_err());
+        // A quote in the description is text, not a broken fence.
+        let quoted = compose("mine", "Say \"hello\" first.", "Steps.").unwrap();
+        assert_eq!(parse("mine", &quoted).unwrap().1, "Say \"hello\" first.");
+    }
+
+    #[test]
+    fn a_shelf_slug_is_readable_and_specific_to_the_path() {
+        let left = slug(Path::new("/one/api"));
+        let right = slug(Path::new("/two/api"));
+        assert!(left.starts_with("api-"), "got {left}");
+        assert_ne!(left, right);
+        assert_eq!(left, slug(Path::new("/one/api")));
+        assert!(slug(Path::new("/")).starts_with("project-"));
     }
 }

@@ -12,6 +12,7 @@ pub type Click = Box<dyn Fn(&ClickEvent, &mut Window, &mut App) + 'static>;
 pub struct View {
     pub optimization: Optimization,
     pub mesh: bool,
+    pub learn: bool,
     pub thememode: Mode,
     pub clistatus: InstallStatus,
     pub clipath: String,
@@ -25,6 +26,8 @@ pub struct View {
 pub struct Actions {
     pub meshon: Click,
     pub meshoff: Click,
+    pub learnon: Click,
+    pub learnoff: Click,
     pub full: Click,
     pub balanced: Click,
     pub lean: Click,
@@ -46,6 +49,8 @@ pub fn render(view: View, actions: Actions, cx: &App) -> AnyElement {
     let Actions {
         meshon,
         meshoff,
+        learnon,
+        learnoff,
         full,
         balanced,
         lean,
@@ -189,6 +194,7 @@ pub fn render(view: View, actions: Actions, cx: &App) -> AnyElement {
                         ),
                 )
                 .child(meshpanel(view.mesh, meshon, meshoff, border, surface))
+                .child(learnpanel(view.learn, learnon, learnoff, border, surface))
                 .child(guidancepanel(
                     view.guidance,
                     view.pendingguidance,
@@ -393,6 +399,87 @@ fn meshpanel(
         .child(
             Text::new(
                 "Messages stay in the same local database as your memory. Tools already running pick this up the next time they start.",
+            )
+            .size(Size::Xs)
+            .dimmed(),
+        )
+        .into_any_element()
+}
+
+/// The self-improvement switch. Same shape as the mesh, and the same bargain:
+/// two more tools in every session, plus agents writing into a library. What
+/// makes it safe to leave on is on the Skills page, so this says so.
+fn learnpanel(
+    enabled: bool,
+    on: Click,
+    off: Click,
+    border: gpui::Hsla,
+    surface: gpui::Hsla,
+) -> AnyElement {
+    div()
+        .rounded(px(14.0))
+        .border_1()
+        .border_color(border)
+        .bg(surface)
+        .p(px(18.0))
+        .flex()
+        .flex_col()
+        .gap(px(13.0))
+        .child(
+            div()
+                .flex()
+                .items_start()
+                .justify_between()
+                .gap(px(24.0))
+                .child(
+                    div()
+                        .flex()
+                        .flex_col()
+                        .gap(px(4.0))
+                        .child(
+                            div()
+                                .flex()
+                                .items_center()
+                                .gap(px(8.0))
+                                .child(Icon::new(IconName::Sparkles).size(Size::Sm))
+                                .child(Text::new("Self-improvement").size(Size::Sm).bold()),
+                        )
+                        .child(
+                            Text::new(
+                                "Lets a session write down a procedure it worked out as a skill, and correct one that turned out wrong.",
+                            )
+                            .size(Size::Xs)
+                            .dimmed(),
+                        ),
+                )
+                .child(
+                    Badge::new(if enabled { "On" } else { "Off" }).color(if enabled {
+                        ColorName::Teal
+                    } else {
+                        ColorName::Gray
+                    }),
+                ),
+        )
+        .child(
+            div()
+                .flex()
+                .gap(px(10.0))
+                .child(option(
+                    "Off",
+                    "Only you write skills · the smallest tool list",
+                    !enabled,
+                    off,
+                ))
+                .child(option(
+                    "On",
+                    "Agents may write and correct skills · costs context in every session",
+                    enabled,
+                    on,
+                )),
+        )
+        .child(
+            Text::new(
+                "A skill an agent writes goes into the library and into no tool. It waits on the Skills page until you approve it, so nothing changes how your sessions behave without you having read it first.",
             )
             .size(Size::Xs)
             .dimmed(),

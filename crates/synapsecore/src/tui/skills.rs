@@ -3,6 +3,10 @@
 //! The second list is the important one. A skill Synapse did not write is never
 //! overwritten, so showing those separately is not a courtesy — it is the
 //! difference between "the library moved on" and "somebody wrote this by hand".
+//!
+//! A row marked as waiting for review is a skill an agent wrote. It is in the
+//! library and in no tool, and it stays that way until somebody presses `a`
+//! here — which is the whole of the gate on self-improvement.
 
 use crate::skill::State as SkillState;
 use crate::tui::state::{self, State};
@@ -28,21 +32,27 @@ fn library(frame: &mut Frame, area: Rect, state: &State) {
         )));
     }
     for (index, status) in state.skills.iter().enumerate() {
-        let (mark, style, word) = describe(status.state);
+        let (mark, style, word) = match status.proposed {
+            true => (theme::mark(false), theme::accent(), "waiting for review"),
+            false => describe(status.state),
+        };
         lines.push(draw::row(
             vec![
                 Span::styled(format!(" {mark} "), style),
                 Span::styled(format!("{:<24}", status.skill), theme::text()),
+                Span::styled(format!("{:<8}", status.scope), theme::dim()),
                 Span::styled(format!("{:<14}", status.tool), theme::dim()),
                 Span::styled(word, style),
             ],
             index == cursor,
         ));
     }
-    frame.render_widget(
-        Paragraph::new(lines).block(draw::panel("Library · synapse skill install")),
-        area,
-    );
+    let waiting = state.skills.iter().filter(|status| status.proposed).count();
+    let title = match waiting {
+        0 => "Library · synapse skill install".to_owned(),
+        _ => format!("Library · {waiting} waiting · a approve · d turn down"),
+    };
+    frame.render_widget(Paragraph::new(lines).block(draw::panel(&title)), area);
 }
 
 fn describe(state: SkillState) -> (&'static str, ratatui::style::Style, &'static str) {

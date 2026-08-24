@@ -43,6 +43,11 @@ pub struct Report {
     pub project: Option<String>,
     pub mesh: bool,
     pub agents: usize,
+    /// Whether agents may write skills. Nothing about self-improvement is said
+    /// when it is off, including the count below.
+    pub learn: bool,
+    /// Skills agents have written that nobody has looked at yet.
+    pub proposed: i64,
     pub vault: String,
     /// What a session opening here should already know. Read for the session
     /// hook and left empty for the status line, which redraws every turn.
@@ -126,6 +131,17 @@ fn reminder(report: &Report) -> String {
              memory's id as `supersedes` so the outdated version stops coming back.",
         );
     }
+    // The procedural half of the same moment. A fact worth keeping and a
+    // procedure worth repeating are both about to stop existing, and the second
+    // is the one nothing has ever asked for.
+    if report.learn {
+        text.push_str(
+            " Do the same for procedure: if this session worked out a repeatable way of doing \
+             something that is not already a skill, call `teach` with the steps; if a skill it \
+             loaded turned out wrong or incomplete, call `revise`. Neither is a summary of the \
+             session — a skill is instructions for doing this again from nothing.",
+        );
+    }
     text
 }
 
@@ -159,6 +175,13 @@ pub fn notice(report: &Report) -> String {
             count => format!("mesh · {count} agents"),
         });
     }
+    // Said once, at the boundary, and never again. Waiting is what a proposed
+    // skill is for — a queue that interrupts is not a queue.
+    match report.proposed {
+        0 => {}
+        1 => parts.push("1 skill to review".to_owned()),
+        count => parts.push(format!("{count} skills to review")),
+    }
     parts.join(" · ")
 }
 
@@ -181,6 +204,14 @@ fn context(report: &Report) -> String {
          connected` line yourself.",
         report.memories
     );
+    if report.proposed > 0 {
+        context.push_str(&format!(
+            " {} skill(s) written in earlier sessions are waiting for the user to approve them: \
+             they are not installed and not loaded, so do not teach the same procedure again and \
+             do not rely on one being available.",
+            report.proposed
+        ));
+    }
     if report.recalled.is_empty() {
         context.push_str(
             " Nothing is stored for this project yet. Call `remember` once a durable decision, \
@@ -267,6 +298,8 @@ fn collect(root: Option<&Path>, recall: Recall) -> Report {
             project: None,
             mesh: false,
             agents: 0,
+            learn: false,
+            proposed: 0,
             vault: "inactive".to_owned(),
             recalled: Vec::new(),
             problem: Some(shortened(&format!("{error:#}"))),
@@ -284,6 +317,18 @@ fn gather(root: Option<&Path>, recall: Recall) -> Result<Report> {
         let brain = crate::brain::Brain::glance(&database).await?;
         let memories = brain.reach(root).await?;
         let mesh = brain.mesh().await?;
+        let learn = brain.learn().await?;
+        // Only while learning is on. With it off there is no self-improvement
+        // surface at all, and the status line should not pay for a count it
+        // would never show.
+        let proposed = match learn {
+            true => crate::skill::Receipts::glance(&database)
+                .await?
+                .waiting()
+                .await
+                .unwrap_or(0),
+            false => 0,
+        };
         let agents = if mesh {
             crate::relay::Mesh::glance(&database)
                 .await?
@@ -332,6 +377,8 @@ fn gather(root: Option<&Path>, recall: Recall) -> Result<Report> {
             project,
             mesh,
             agents,
+            learn,
+            proposed,
             vault: vault.to_owned(),
             recalled,
             problem: None,
@@ -400,6 +447,8 @@ mod tests {
             project: Some("/work/api".to_owned()),
             mesh: false,
             agents: 0,
+            learn: false,
+            proposed: 0,
             vault: "inactive".to_owned(),
             recalled: Vec::new(),
             problem: None,

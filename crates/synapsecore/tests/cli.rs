@@ -824,15 +824,15 @@ fn one_skill_library_installs_into_every_connected_tool() {
 
     let before = success(run(root.path(), &["skill", "status"], None));
     assert!(
-        before.contains("synapse-mesh\tCodex\tnot installed"),
+        before.contains("synapse-mesh\tglobal\tCodex\tnot installed"),
         "got {before}"
     );
     assert!(
-        before.contains("synapse-mesh\tClaude Code\tnot installed"),
+        before.contains("synapse-mesh\tglobal\tClaude Code\tnot installed"),
         "got {before}"
     );
     assert!(
-        before.contains("synapse-mesh\tpi\tnot installed"),
+        before.contains("synapse-mesh\tglobal\tpi\tnot installed"),
         "got {before}"
     );
 
@@ -859,7 +859,7 @@ fn one_skill_library_installs_into_every_connected_tool() {
 
     let after = success(run(root.path(), &["skill", "status"], None));
     assert!(
-        after.contains("synapse-mesh\tCodex\tinstalled"),
+        after.contains("synapse-mesh\tglobal\tCodex\tinstalled"),
         "got {after}"
     );
 
@@ -874,7 +874,7 @@ fn one_skill_library_installs_into_every_connected_tool() {
 
     let stale = success(run(root.path(), &["skill", "status"], None));
     assert!(
-        stale.contains("synapse-mesh\tCodex\tupdate available"),
+        stale.contains("synapse-mesh\tglobal\tCodex\tupdate available"),
         "got {stale}"
     );
 
@@ -903,7 +903,7 @@ fn a_skill_synapse_did_not_write_is_never_overwritten() {
     // It is reported as present but unmanaged, rather than ignored.
     let status = success(run(root.path(), &["skill", "status"], None));
     assert!(
-        status.contains("mine\tClaude Code\tnot in the library"),
+        status.contains("mine\tglobal\tClaude Code\tnot in the library"),
         "got {status}"
     );
 
@@ -916,7 +916,7 @@ fn a_skill_synapse_did_not_write_is_never_overwritten() {
     ));
     let adopted = success(run(root.path(), &["skill", "status", "mine"], None));
     assert!(
-        adopted.contains("mine\tClaude Code\tinstalled"),
+        adopted.contains("mine\tglobal\tClaude Code\tinstalled"),
         "got {adopted}"
     );
 
@@ -931,7 +931,7 @@ fn a_skill_synapse_did_not_write_is_never_overwritten() {
     .unwrap();
     let changed = success(run(root.path(), &["skill", "status", "mine"], None));
     assert!(
-        changed.contains("mine\tCodex\tchanged in place"),
+        changed.contains("mine\tglobal\tCodex\tchanged in place"),
         "got {changed}"
     );
 
@@ -1419,5 +1419,95 @@ fn a_tool_nobody_shipped_connects_the_same_way_the_built_ins_do() {
     assert!(
         !guidance.contains("<!-- synapse:begin -->"),
         "the managed block should be gone: {guidance}"
+    );
+}
+
+/// A skill about one repository belongs to that repository, and installs beside
+/// it rather than into every session on the machine.
+#[test]
+fn a_project_skill_stays_with_its_project() {
+    let root = tempfile::tempdir().unwrap();
+    let home = root.path().join("home");
+    let project = root.path().join("repo");
+    fs::create_dir_all(&project).unwrap();
+    let folder = project.display().to_string();
+
+    success(run(
+        root.path(),
+        &["skill", "create", "release", "--project", &folder],
+        None,
+    ));
+
+    // A global skill of the same name is a different skill, not a collision.
+    success(run(root.path(), &["skill", "create", "release"], None));
+    let listed = success(run(root.path(), &["skill", "list"], None));
+    assert_eq!(listed.matches("release\t").count(), 2, "got {listed}");
+    assert!(listed.contains("release\tproject"), "got {listed}");
+    assert!(listed.contains("release\tglobal"), "got {listed}");
+
+    success(run(
+        root.path(),
+        &["skill", "install", "release", "--project", &folder],
+        None,
+    ));
+
+    assert!(
+        project.join(".claude/skills/release/SKILL.md").is_file(),
+        "a project skill installs beside its project"
+    );
+    assert!(
+        !home.join(".claude/skills/release").exists(),
+        "and never into the personal skills folder"
+    );
+
+    // Codex keeps project skills in the shared location inside the repository.
+    assert!(project.join(".agents/skills/release/SKILL.md").is_file());
+
+    let status = success(run(root.path(), &["skill", "status", "release"], None));
+    assert!(
+        status.contains("release\tproject\tClaude Code\tinstalled"),
+        "got {status}"
+    );
+    assert!(
+        status.contains("release\tglobal\tClaude Code\tnot installed"),
+        "got {status}"
+    );
+
+    // Disconnecting takes back what went into the project, not just the home.
+    success(run(root.path(), &["disconnect", "claude"], None));
+    assert!(!project.join(".claude/skills/release").exists());
+    assert!(
+        project.join(".agents/skills/release").exists(),
+        "Codex keeps its own"
+    );
+}
+
+/// The learn setting is off until it is asked for, and says so.
+#[test]
+fn self_improvement_is_off_until_it_is_switched_on() {
+    let root = tempfile::tempdir().unwrap();
+
+    let settings = success(run(root.path(), &["settings", "show"], None));
+    assert!(settings.contains("learn\toff"), "got {settings}");
+
+    let switched = success(run(root.path(), &["settings", "learn", "on"], None));
+    assert!(
+        switched.contains("waits in `synapse skill proposed`"),
+        "got {switched}"
+    );
+    assert!(success(run(root.path(), &["settings", "show"], None)).contains("learn\ton"));
+
+    let waiting = success(run(root.path(), &["skill", "proposed"], None));
+    assert!(waiting.contains("Nothing is waiting"), "got {waiting}");
+
+    // A skill nobody proposed cannot be turned down; that is `delete`, which
+    // says what it does.
+    success(run(root.path(), &["skill", "create", "mine"], None));
+    let refused = run(root.path(), &["skill", "reject", "mine", "--confirm"], None);
+    assert!(!refused.status.success());
+    assert!(
+        String::from_utf8_lossy(&refused.stderr).contains("not waiting for review"),
+        "got {}",
+        String::from_utf8_lossy(&refused.stderr)
     );
 }

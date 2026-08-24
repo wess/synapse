@@ -494,6 +494,190 @@ fn session(home: &std::path::Path, data: &std::path::Path) -> Session {
     }
 }
 
+/// A session teaching itself something, across a real process boundary.
+///
+/// The property worth protecting is not that `teach` writes a file — it is that
+/// what it writes reaches the library and reaches no tool, so a session cannot
+/// change how the next one behaves without a person in between.
+#[test]
+fn a_session_writes_a_skill_that_waits_for_a_person() {
+    let root = tempfile::tempdir().unwrap();
+    let home = root.path().join("home");
+    let data = root.path().join("data");
+    let project = root.path().join("repo");
+    std::fs::create_dir_all(home.join(".claude/skills")).unwrap();
+    std::fs::create_dir_all(&project).unwrap();
+
+    // Off by default: neither tool is in the list and neither is the guidance.
+    let mut before = session(&home, &data);
+    let listed = names(&mut before);
+    assert!(!listed.iter().any(|name| name == "teach"), "got {listed:?}");
+    assert!(!before.instructions.contains("## Self-improvement"));
+    before.child.kill().ok();
+
+    let switched = Command::new(env!("CARGO_BIN_EXE_synapse-cli"))
+        .args(["settings", "learn", "on"])
+        .env("SYNAPSE_HOME", &home)
+        .env("SYNAPSE_DATA", &data)
+        .output()
+        .unwrap();
+    assert!(switched.status.success(), "could not turn learning on");
+
+    let mut agent = session(&home, &data);
+    let listed = names(&mut agent);
+    assert!(listed.iter().any(|name| name == "teach"), "got {listed:?}");
+    assert!(listed.iter().any(|name| name == "revise"), "got {listed:?}");
+    assert!(listed.iter().any(|name| name == "remember"));
+    // The tools and the guidance that explains them arrive together.
+    assert!(agent.instructions.contains("## Self-improvement"));
+    assert!(
+        agent
+            .instructions
+            .contains("into no tool until the user approves it")
+    );
+
+    let taught = tool(
+        &mut agent,
+        10,
+        "teach",
+        json!({
+            "name": "cut-a-release",
+            "description": "Use this when shipping a signed build.",
+            "instructions": "1. Bump the version.\n2. Tag it.\n3. Notarize.",
+            "scope": "project",
+            "project": project.display().to_string(),
+            "note": "worked it out the hard way twice"
+        }),
+    );
+    assert!(
+        taught.to_string().contains("waiting for the user"),
+        "got {taught}"
+    );
+
+    // It is in the library, on this project's shelf, and in no tool.
+    let waiting = run(&home, &data, &["skill", "proposed"]);
+    assert!(waiting.contains("cut-a-release"), "got {waiting}");
+    assert!(waiting.contains("project"), "got {waiting}");
+    assert!(
+        !home.join(".claude/skills/cut-a-release").exists(),
+        "a proposed skill must not reach a tool"
+    );
+
+    // And a bulk install steps over it, which is where the gate would leak.
+    run(&home, &data, &["skill", "install"]);
+    assert!(
+        !project.join(".claude/skills/cut-a-release").exists(),
+        "`skill install` must not install a proposal"
+    );
+
+    // Approving puts it where a project skill belongs: beside the project.
+    run(
+        &home,
+        &data,
+        &[
+            "skill",
+            "approve",
+            "cut-a-release",
+            "--project",
+            &project.display().to_string(),
+        ],
+    );
+    let installed = project.join(".claude/skills/cut-a-release/SKILL.md");
+    assert!(installed.is_file(), "expected {}", installed.display());
+    assert!(
+        !home.join(".claude/skills/cut-a-release").exists(),
+        "a project skill must not reach the personal skills folder"
+    );
+    assert!(
+        std::fs::read_to_string(&installed)
+            .unwrap()
+            .contains("Notarize")
+    );
+
+    // A correction does reach the copy, and what it replaced is kept.
+    let revised = tool(
+        &mut agent,
+        11,
+        "revise",
+        json!({
+            "name": "cut-a-release",
+            "instructions": "1. Bump the version.\n2. Tag it.\n3. Notarize.\n4. Staple the ticket.",
+            "note": "stapling was missing",
+            "project": project.display().to_string()
+        }),
+    );
+    assert!(revised.to_string().contains("Claude Code"), "got {revised}");
+    assert!(
+        std::fs::read_to_string(&installed)
+            .unwrap()
+            .contains("Staple the ticket")
+    );
+
+    let history = run(
+        &home,
+        &data,
+        &[
+            "skill",
+            "history",
+            "cut-a-release",
+            "--project",
+            &project.display().to_string(),
+        ],
+    );
+    assert!(history.contains("stapling was missing"), "got {history}");
+
+    run(
+        &home,
+        &data,
+        &[
+            "skill",
+            "revert",
+            "cut-a-release",
+            "--project",
+            &project.display().to_string(),
+        ],
+    );
+    assert!(
+        !std::fs::read_to_string(&installed)
+            .unwrap()
+            .contains("Staple the ticket"),
+        "reverting has to reach the installed copy too"
+    );
+
+    agent.child.kill().ok();
+}
+
+fn names(session: &mut Session) -> Vec<String> {
+    let tools = call(
+        &mut session.stdin,
+        &mut session.stdout,
+        json!({"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}}),
+        2,
+    );
+    tools["result"]["tools"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|tool| tool["name"].as_str().unwrap().to_owned())
+        .collect()
+}
+
+fn run(home: &std::path::Path, data: &std::path::Path, arguments: &[&str]) -> String {
+    let output = Command::new(env!("CARGO_BIN_EXE_synapse-cli"))
+        .args(arguments)
+        .env("SYNAPSE_HOME", home)
+        .env("SYNAPSE_DATA", data)
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "`synapse {}` failed: {}",
+        arguments.join(" "),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    String::from_utf8_lossy(&output.stdout).into_owned()
+}
+
 fn tool(session: &mut Session, id: i64, name: &str, arguments: Value) -> Value {
     let response = call(
         &mut session.stdin,

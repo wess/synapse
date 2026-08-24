@@ -17,9 +17,15 @@ pub struct Receipt {
     pub path: String,
 }
 
+/// What Synapse has recorded about skills: which copies it wrote, which
+/// proposals are waiting for a person, and what a revised skill used to say.
+///
+/// One handle rather than three, because every command that touches a skill
+/// wants at least two of them and opening `brain.db` again for each would cost
+/// an integrity check per store.
 #[derive(Clone)]
 pub struct Receipts {
-    pool: SqlitePool,
+    pub(in crate::skill) pool: SqlitePool,
     _lock: Arc<File>,
 }
 
@@ -32,10 +38,23 @@ impl Receipts {
         })
     }
 
-    pub async fn receipt(&self, skill: &str, tool: &str) -> Result<Option<Receipt>> {
+    /// Open without the whole-page integrity scan, for a caller that only
+    /// reports. The session hook and the status line both want the number of
+    /// proposals, and the status line redraws on every turn.
+    pub async fn glance(path: impl AsRef<Path>) -> Result<Self> {
+        let opened = crate::database::glance(path.as_ref()).await?;
+        Ok(Self {
+            pool: opened.pool,
+            _lock: opened.lock,
+        })
+    }
+
+    pub async fn receipt(&self, shelf: &str, skill: &str, tool: &str) -> Result<Option<Receipt>> {
         let row: Option<(String, String, String)> = sqlx::query_as(
-            "SELECT digest, source, path FROM skillinstall WHERE skill = ? AND tool = ?",
+            "SELECT digest, source, path FROM skillinstall \
+             WHERE shelf = ? AND skill = ? AND tool = ?",
         )
+        .bind(shelf)
         .bind(skill)
         .bind(tool)
         .fetch_optional(&self.pool)
@@ -50,6 +69,7 @@ impl Receipts {
 
     pub async fn record(
         &self,
+        shelf: &str,
         skill: &str,
         tool: &str,
         path: &Path,
@@ -61,12 +81,13 @@ impl Receipts {
             .context("system clock is before the Unix epoch")?
             .as_secs() as i64;
         sqlx::query(
-            "INSERT INTO skillinstall(skill, tool, path, digest, source, installed) \
-             VALUES (?, ?, ?, ?, ?, ?) \
-             ON CONFLICT(skill, tool) DO UPDATE SET \
+            "INSERT INTO skillinstall(shelf, skill, tool, path, digest, source, installed) \
+             VALUES (?, ?, ?, ?, ?, ?, ?) \
+             ON CONFLICT(shelf, skill, tool) DO UPDATE SET \
              path = excluded.path, digest = excluded.digest, source = excluded.source, \
              installed = excluded.installed",
         )
+        .bind(shelf)
         .bind(skill)
         .bind(tool)
         .bind(path.display().to_string())
@@ -79,18 +100,32 @@ impl Receipts {
         Ok(())
     }
 
-    /// Every skill Synapse has installed into one tool, which is what
-    /// disconnecting that tool has to take back out.
-    pub async fn installed(&self, tool: &str) -> Result<Vec<String>> {
-        sqlx::query_scalar("SELECT skill FROM skillinstall WHERE tool = ? ORDER BY skill")
+    /// Every skill Synapse has installed into one tool, with the shelf it came
+    /// from — which is what disconnecting that tool has to take back out.
+    pub async fn installed(&self, tool: &str) -> Result<Vec<(String, String)>> {
+        sqlx::query_as("SELECT shelf, skill FROM skillinstall WHERE tool = ? ORDER BY shelf, skill")
             .bind(tool)
             .fetch_all(&self.pool)
             .await
             .context("could not read the installed skills")
     }
 
-    pub async fn forget(&self, skill: &str, tool: &str) -> Result<()> {
-        sqlx::query("DELETE FROM skillinstall WHERE skill = ? AND tool = ?")
+    /// Every tool holding a copy of one skill, so a revision knows where it has
+    /// to reach.
+    pub async fn holders(&self, shelf: &str, skill: &str) -> Result<Vec<String>> {
+        sqlx::query_scalar(
+            "SELECT tool FROM skillinstall WHERE shelf = ? AND skill = ? ORDER BY tool",
+        )
+        .bind(shelf)
+        .bind(skill)
+        .fetch_all(&self.pool)
+        .await
+        .context("could not read who has this skill")
+    }
+
+    pub async fn forget(&self, shelf: &str, skill: &str, tool: &str) -> Result<()> {
+        sqlx::query("DELETE FROM skillinstall WHERE shelf = ? AND skill = ? AND tool = ?")
+            .bind(shelf)
             .bind(skill)
             .bind(tool)
             .execute(&self.pool)
@@ -117,6 +152,7 @@ mod tests {
 
         receipts
             .record(
+                "",
                 "mine",
                 "Claude Code",
                 Path::new("/tools/mine"),
@@ -126,7 +162,7 @@ mod tests {
             .await
             .unwrap();
         let stored = receipts
-            .receipt("mine", "Claude Code")
+            .receipt("", "mine", "Claude Code")
             .await
             .unwrap()
             .unwrap();
@@ -136,6 +172,7 @@ mod tests {
 
         receipts
             .record(
+                "",
                 "mine",
                 "Claude Code",
                 Path::new("/tools/mine"),
@@ -146,7 +183,7 @@ mod tests {
             .unwrap();
         assert_eq!(
             receipts
-                .receipt("mine", "Claude Code")
+                .receipt("", "mine", "Claude Code")
                 .await
                 .unwrap()
                 .unwrap()
@@ -159,28 +196,34 @@ mod tests {
     async fn each_tool_keeps_its_own_record() {
         let (receipts, _directory) = receipts().await;
         receipts
-            .record("mine", "Claude Code", Path::new("/a"), "aaa", "src")
+            .record("", "mine", "Claude Code", Path::new("/a"), "aaa", "src")
             .await
             .unwrap();
         receipts
-            .record("mine", "Codex", Path::new("/b"), "bbb", "src")
+            .record("", "mine", "Codex", Path::new("/b"), "bbb", "src")
             .await
             .unwrap();
 
         assert_eq!(
             receipts
-                .receipt("mine", "Codex")
+                .receipt("", "mine", "Codex")
                 .await
                 .unwrap()
                 .unwrap()
                 .digest,
             "bbb"
         );
-        receipts.forget("mine", "Codex").await.unwrap();
-        assert!(receipts.receipt("mine", "Codex").await.unwrap().is_none());
+        receipts.forget("", "mine", "Codex").await.unwrap();
         assert!(
             receipts
-                .receipt("mine", "Claude Code")
+                .receipt("", "mine", "Codex")
+                .await
+                .unwrap()
+                .is_none()
+        );
+        assert!(
+            receipts
+                .receipt("", "mine", "Claude Code")
                 .await
                 .unwrap()
                 .is_some()
@@ -190,6 +233,12 @@ mod tests {
     #[tokio::test]
     async fn an_unknown_skill_has_no_receipt() {
         let (receipts, _directory) = receipts().await;
-        assert!(receipts.receipt("nobody", "Codex").await.unwrap().is_none());
+        assert!(
+            receipts
+                .receipt("", "nobody", "Codex")
+                .await
+                .unwrap()
+                .is_none()
+        );
     }
 }

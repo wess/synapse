@@ -59,6 +59,7 @@ pub struct Dashboard {
     appmenu: Option<Entity<MenuBar>>,
     optimization: Optimization,
     meshenabled: bool,
+    learnenabled: bool,
     meshagents: Vec<synapsecore::relay::AgentView>,
     meshworkers: Vec<synapsecore::relay::WorkerView>,
     meshfeed: Vec<synapsecore::relay::Message>,
@@ -209,6 +210,7 @@ impl Dashboard {
         if let Some(error) = soulerror {
             notice = Notice::Error(format!("Could not create SOUL.md: {error}"));
         }
+        let learnenabled = loadlearn(&database).unwrap_or(false);
         Self {
             rows: loadrows(),
             stats,
@@ -247,6 +249,7 @@ impl Dashboard {
             appmenu,
             optimization,
             meshenabled: meshdata.enabled,
+            learnenabled,
             meshagents: meshdata.agents,
             meshworkers: meshdata.workers,
             meshfeed: meshdata.feed,
@@ -587,11 +590,24 @@ impl Dashboard {
             let receipts =
                 synapsecore::skill::Receipts::open(synapsecore::files::database()?).await?;
             let (library, _) = synapsecore::skill::library::all()?;
+            let waiting = receipts.proposals().await.unwrap_or_default();
             let mut done = 0_usize;
             let mut refused = Vec::new();
             for agent in agent::agents(&home) {
                 for skill in &library {
                     if only.as_ref().is_some_and(|name| name != &skill.name) {
+                        continue;
+                    }
+                    // Installing everything means everything approved. A
+                    // proposal reaching a tool from this button is the one way
+                    // the gate leaks.
+                    if waiting
+                        .iter()
+                        .any(|item| item.skill == skill.name && item.shelf == skill.shelf.key())
+                    {
+                        continue;
+                    }
+                    if synapsecore::skill::target(&agent, &skill.shelf, &skill.name).is_none() {
                         continue;
                     }
                     match synapsecore::skill::install(&receipts, &agent, skill, false).await {
@@ -636,6 +652,47 @@ impl Dashboard {
         self.refreshskills(cx);
     }
 
+    /// Install a skill an agent wrote, everywhere it can go, and stop calling
+    /// it proposed.
+    fn approveskill(&mut self, name: String, project: String, cx: &mut Context<Self>) {
+        let home = files::home().unwrap_or_else(|_| PathBuf::from("."));
+        let result = block(async move {
+            let receipts =
+                synapsecore::skill::Receipts::open(synapsecore::files::database()?).await?;
+            let skill = locateskill(&name, &project)?;
+            let agents = agent::agents(&home);
+            let reached = synapsecore::skill::approve(&receipts, &agents, &skill, false).await?;
+            Ok::<_, anyhow::Error>(
+                reached
+                    .into_iter()
+                    .filter_map(|(tool, outcome)| outcome.ok().map(|_| tool))
+                    .collect::<Vec<_>>(),
+            )
+        });
+        self.notice = match result {
+            Ok(tools) if tools.is_empty() => {
+                Notice::Error("No connected tool could take that skill.".to_owned())
+            }
+            Ok(tools) => Notice::Success(format!("Approved. Installed into {}.", tools.join(", "))),
+            Err(error) => Notice::Error(format!("Could not approve it: {error}")),
+        };
+        self.refreshskills(cx);
+    }
+
+    fn rejectskill(&mut self, name: String, project: String, cx: &mut Context<Self>) {
+        let result = block(async move {
+            let receipts =
+                synapsecore::skill::Receipts::open(synapsecore::files::database()?).await?;
+            let skill = locateskill(&name, &project)?;
+            synapsecore::skill::reject(&receipts, &skill).await
+        });
+        self.notice = match result {
+            Ok(path) => Notice::Success(format!("Turned it down and removed {}.", path.display())),
+            Err(error) => Notice::Error(format!("Could not turn it down: {error}")),
+        };
+        self.refreshskills(cx);
+    }
+
     fn openskills(&mut self) {
         self.notice = match synapsecore::skill::library::directory()
             .and_then(|path| files::reveal(&path).map(|_| path))
@@ -661,6 +718,28 @@ impl Dashboard {
         self.meshfeed = loaded.feed;
         self.mesherror = loaded.error;
         cx.notify();
+    }
+
+    fn setlearn(&mut self, enabled: bool, cx: &mut Context<Self>) {
+        let database = self.database.clone();
+        let result = block(async {
+            let brain = synapsecore::brain::Brain::open(database).await?;
+            brain.setlearn(enabled).await
+        });
+        match result {
+            Ok(()) => {
+                self.learnenabled = enabled;
+                self.notice = Notice::Success(match enabled {
+                    true => "Self-improvement on. A skill an agent writes waits on the Skills page until you approve it.".to_owned(),
+                    false => "Self-improvement off. Skills already in the library stay where they are.".to_owned(),
+                });
+                self.refreshskills(cx);
+            }
+            Err(error) => {
+                self.notice = Notice::Error(format!("Could not change self-improvement: {error}"));
+                cx.notify();
+            }
+        }
     }
 
     fn setmesh(&mut self, enabled: bool, cx: &mut Context<Self>) {
@@ -1486,6 +1565,26 @@ impl Render for Dashboard {
                     .ok();
                 })
             };
+            let approvehost = cx.entity().downgrade();
+            let approve = move |name: String, project: String| -> skills::Click {
+                let host = approvehost.clone();
+                Box::new(move |_, _, cx| {
+                    host.update(cx, |this, cx| {
+                        this.approveskill(name.clone(), project.clone(), cx)
+                    })
+                    .ok();
+                })
+            };
+            let rejecthost = cx.entity().downgrade();
+            let reject = move |name: String, project: String| -> skills::Click {
+                let host = rejecthost.clone();
+                Box::new(move |_, _, cx| {
+                    host.update(cx, |this, cx| {
+                        this.rejectskill(name.clone(), project.clone(), cx)
+                    })
+                    .ok();
+                })
+            };
             return shell
                 .child(skills::render(
                     skills::View {
@@ -1509,6 +1608,8 @@ impl Render for Dashboard {
                         openfolder: Box::new(cx.listener(|this, _, _, _| this.openskills())),
                         install: Box::new(install),
                         adopt: Box::new(adopt),
+                        approve: Box::new(approve),
+                        reject: Box::new(reject),
                     },
                     cx,
                 ))
@@ -1538,6 +1639,7 @@ impl Render for Dashboard {
                     settings::View {
                         optimization: self.optimization,
                         mesh: self.meshenabled,
+                        learn: self.learnenabled,
                         thememode: crate::ui::theme::mode(cx),
                         clistatus,
                         clipath,
@@ -1558,6 +1660,8 @@ impl Render for Dashboard {
                     settings::Actions {
                         meshon: Box::new(cx.listener(|this, _, _, cx| this.setmesh(true, cx))),
                         meshoff: Box::new(cx.listener(|this, _, _, cx| this.setmesh(false, cx))),
+                        learnon: Box::new(cx.listener(|this, _, _, cx| this.setlearn(true, cx))),
+                        learnoff: Box::new(cx.listener(|this, _, _, cx| this.setlearn(false, cx))),
                         full: Box::new(cx.listener(|this, _, _, cx| {
                             this.setoptimization(Optimization::Full, cx)
                         })),
@@ -1893,6 +1997,16 @@ struct SkillData {
     problems: Vec<String>,
 }
 
+/// The skill a page row names. The row carries the project rather than the
+/// shelf, because a project root is the whole of what identifies one.
+fn locateskill(name: &str, project: &str) -> anyhow::Result<synapsecore::skill::Skill> {
+    let shelf = match project.is_empty() {
+        true => synapsecore::skill::Shelf::Global,
+        false => synapsecore::skill::Shelf::project(std::path::Path::new(project)),
+    };
+    synapsecore::skill::library::read(&shelf, name)
+}
+
 fn loadskills() -> SkillData {
     let home = files::home().unwrap_or_else(|_| PathBuf::from("."));
     let (statuses, mut problems) = match block(synapsecore::skill::survey(&home)) {
@@ -1905,18 +2019,39 @@ fn loadskills() -> SkillData {
     let (library, listing) = synapsecore::skill::library::all().unwrap_or_default();
     problems.extend(listing);
     let known: Vec<String> = library.iter().map(|skill| skill.name.clone()).collect();
+    let waiting = block(async {
+        let receipts =
+            synapsecore::skill::Receipts::glance(synapsecore::files::database()?).await?;
+        receipts.proposals().await
+    })
+    .unwrap_or_default();
     SkillData {
         rows: library
             .into_iter()
-            .map(|skill| skills::Row {
-                places: statuses
+            .map(|skill| {
+                // Matched on the shelf as well as the name. The same name can
+                // be a global skill and a project's — and two projects' — so a
+                // match on the name and the word `project` would report one
+                // repository's copy under another's heading.
+                let shelf = skill.shelf.key();
+                let root = skill.shelf.root().unwrap_or_default();
+                let proposal = waiting
                     .iter()
-                    .filter(|status| status.skill == skill.name)
-                    .cloned()
-                    .collect(),
-                name: skill.name,
-                description: skill.description,
-                files: skill.files.len(),
+                    .find(|item| item.skill == skill.name && item.shelf == shelf);
+                skills::Row {
+                    places: statuses
+                        .iter()
+                        .filter(|status| status.skill == skill.name && status.project == root)
+                        .cloned()
+                        .collect(),
+                    name: skill.name,
+                    description: skill.description,
+                    files: skill.files.len(),
+                    scope: skill.shelf.label().to_owned(),
+                    project: skill.shelf.root().unwrap_or_default().to_owned(),
+                    proposed: proposal.is_some(),
+                    note: proposal.map(|item| item.note.clone()).unwrap_or_default(),
+                }
             })
             .collect(),
         unmanaged: agent::agents(&home)
@@ -1974,6 +2109,13 @@ fn loadmesh(database: &std::path::Path) -> anyhow::Result<bool> {
     block(async {
         let brain = synapsecore::brain::Brain::open(database).await?;
         brain.mesh().await
+    })
+}
+
+fn loadlearn(database: &std::path::Path) -> anyhow::Result<bool> {
+    block(async {
+        let brain = synapsecore::brain::Brain::open(database).await?;
+        brain.learn().await
     })
 }
 

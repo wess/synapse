@@ -299,9 +299,19 @@
     <p>The names in available tell a tool what a scoped command or activated shell could receive. vaultstatus never reads the corresponding Keychain values and cannot change a connected tool’s environment.</p>
   </aside>
 
+    <h2 id="learning">teach and revise</h2>
+    <p>Two tools that appear only while <code>synapse settings learn on</code> is set. They are how a session writes down a procedure it worked out, and corrects one that turned out wrong. Both write to the Synapse skill library and to nothing else.</p>
+    <p><code>teach</code> takes a <code>name</code>, a one-line <code>description</code>, the <code>instructions</code> as Markdown, a <code>scope</code> of <code>project</code> (the default) or <code>global</code>, the absolute <code>project</code> root, and a <code>note</code> for you saying why it was worth keeping. Synapse writes the frontmatter itself rather than accepting it, so a model never gets to invent YAML keys or a name that disagrees with its own directory. The result always says the same thing: stored, and waiting for you.</p>
+    <p><code>revise</code> takes the <code>name</code>, the corrected <code>instructions</code> in full, and a <code>note</code> saying what was wrong with the version it replaces. It returns the revision id holding the old text and the tools the correction reached.</p>
+    
+  <aside class="note">
+    <strong>Teaching is free; installing is the decision</strong>
+    <p>A taught skill is in the library and in no tool until you approve it, so a session can never change how the next one behaves. A revision is the exception and reaches the copies Synapse installed — you already agreed to that skill being loaded, and a correction that never arrives leaves every session running the version that was wrong. What it said before is kept either way. See the <a href="../skills/#learning">skills guide</a>.</p>
+  </aside>
+
     <h2 id="mesh">Mesh tools</h2>
-    <p>Three tools are always present. Sixteen more appear only while the agent mesh is switched on, because a tool definition costs context in every session that loads it. They let connected sessions register under a name, message each other directly or by channel, park on <code>wait</code> until work arrives, report and watch work state, and start or stop background workers.</p>
-    <p>The guidance explaining them is sent with them and withdrawn with them, so the tool list and the instructions can never be out of step. See the <a href="../mesh/">agent mesh guide</a> for the full list and what each one is for.</p>
+    <p>Three tools are always present. Sixteen more appear only while the agent mesh is switched on, and two more while self-improvement is, because a tool definition costs context in every session that loads it. They let connected sessions register under a name, message each other directly or by channel, park on <code>wait</code> until work arrives, report and watch work state, and start or stop background workers.</p>
+    <p>The guidance explaining them is sent with them and withdrawn with them, so the tool list and the instructions can never be out of step. That is true of both switches. See the <a href="../mesh/">agent mesh guide</a> for the full list and what each one is for.</p>
 
     <h2 id="behavior">Operational behavior</h2>
     <ul>
@@ -315,7 +325,7 @@
     </main>
     <aside class="ontoc" aria-label="On this page">
         <span>On this page</span>
-        <ol><li><a href="#server">Server</a></li><li><a href="#sessionstart">Session start</a></li><li><a href="#compaction">Before compaction</a></li><li><a href="#remember">remember</a></li><li><a href="#recall">recall</a></li><li><a href="#vaultstatus">vaultstatus</a></li><li><a href="#mesh">Mesh tools</a></li><li><a href="#behavior">Operational behavior</a></li></ol>
+        <ol><li><a href="#server">Server</a></li><li><a href="#sessionstart">Session start</a></li><li><a href="#compaction">Before compaction</a></li><li><a href="#remember">remember</a></li><li><a href="#recall">recall</a></li><li><a href="#vaultstatus">vaultstatus</a></li><li><a href="#learning">teach and revise</a></li><li><a href="#mesh">Mesh tools</a></li><li><a href="#behavior">Operational behavior</a></li></ol>
       </aside>
   </div>
   

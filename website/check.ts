@@ -203,17 +203,25 @@ for (const command of [
   "synapse data restore",
   "synapse settings mesh",
   "synapse settings optimize",
+  "synapse settings learn",
+  "synapse skill proposed",
+  "synapse skill approve",
+  "synapse skill reject",
+  "synapse skill history",
+  "synapse skill revert",
 ]) {
   if (!corpus.includes(command)) fail(`documentation is missing subcommand: ${command}`);
 }
 
-// The three always-present tools, then the sixteen the mesh adds. A mesh tool
-// that ships without documentation is one an agent can call and a reader cannot
-// look up.
+// The three always-present tools, the two self-improvement adds, then the
+// sixteen the mesh adds. A tool that ships without documentation is one an
+// agent can call and a reader cannot look up.
 for (const tool of [
   "remember",
   "recall",
   "vaultstatus",
+  "teach",
+  "revise",
   "register",
   "send",
   "post",

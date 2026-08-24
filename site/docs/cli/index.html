@@ -541,6 +541,47 @@
     </div>
     <p>Copy a skill a tool already has into the library and record that tool as having it, so it stops reading as unmanaged.</p>
   </section>
+    <p>Every command that takes a bare name resolves this project's shelf before the global one, so a repository's own <code>release</code> shadows the shared one rather than colliding with it. Pass <code>--global</code> or <code>--project [folder]</code> to say which you mean.</p>
+    
+  <section class="command" id="skillproposed">
+    <div>
+      <h3>skill proposed</h3>
+      <code>synapse skill proposed [--json]</code>
+    </div>
+    <p>List the skills agents have written that nobody has looked at yet, oldest first, with the tool that wrote each one and the line it left saying why. A proposed skill is in the library and in no tool.</p>
+  </section>
+    
+  <section class="command" id="skillapprove">
+    <div>
+      <h3>skill approve</h3>
+      <code>synapse skill approve &amp;lt;name&amp;gt; [--tool &amp;lt;tool&amp;gt;]</code>
+    </div>
+    <p>Install a proposed skill where it belongs and stop calling it proposed. A global skill goes into every connected tool's personal skills folder; a project skill goes into that project's.</p>
+  </section>
+    
+  <section class="command" id="skillreject">
+    <div>
+      <h3>skill reject</h3>
+      <code>synapse skill reject &amp;lt;name&amp;gt; --confirm</code>
+    </div>
+    <p>Turn a proposed skill down. It leaves the library with its history, and nothing else on the machine ever knew about it. Only a skill still waiting for review can be rejected — once one is approved it is an ordinary skill, and <code>skill delete</code> is what removes it.</p>
+  </section>
+    
+  <section class="command" id="skillhistory">
+    <div>
+      <h3>skill history</h3>
+      <code>synapse skill history &amp;lt;name&amp;gt; [--json]</code>
+    </div>
+    <p>Show what a skill used to say, newest first, with the line saying what was wrong with each version. The newest twenty are kept.</p>
+  </section>
+    
+  <section class="command" id="skillrevert">
+    <div>
+      <h3>skill revert</h3>
+      <code>synapse skill revert &amp;lt;name&amp;gt; [&amp;lt;id&amp;gt;]</code>
+    </div>
+    <p>Put an earlier version back, in the library and in every tool holding a copy Synapse wrote. What it said is kept as a new revision, so a revert can itself be reverted.</p>
+  </section>
 
     <h2 id="data">Data and settings</h2>
     
@@ -590,6 +631,14 @@
       <code>synapse settings mesh &amp;lt;on|off&amp;gt;</code>
     </div>
     <p>Turn the agent mesh tools on or off. Connected tools pick the change up the next time they start.</p>
+  </section>
+    
+  <section class="command" id="settingslearn">
+    <div>
+      <h3>settings learn</h3>
+      <code>synapse settings learn &amp;lt;on|off&amp;gt;</code>
+    </div>
+    <p>Let agents write and correct skills, adding <code>teach</code> and <code>revise</code> to every connected session. Off by default. A skill an agent writes waits in <code>skill proposed</code> until you approve it, so turning this on never changes how a session behaves without you having read what changed it.</p>
   </section>
 
   <section class="command" id="guidanceshow">

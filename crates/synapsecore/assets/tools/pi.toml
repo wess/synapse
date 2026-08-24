@@ -14,6 +14,7 @@ settings = "{home}/settings.json"
 # reads everything else from.
 integration = "{home}/settings.json"
 skills = "{home}/skills"
+projectskills = ".pi/agent/skills"
 
 [connect]
 add = ["install", "{package}"]

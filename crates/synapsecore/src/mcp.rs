@@ -1,3 +1,4 @@
+mod learn;
 mod mesh;
 mod model;
 mod server;
@@ -20,6 +21,13 @@ pub async fn run() -> anyhow::Result<()> {
     } else {
         None
     };
-    let instructions = crate::instructions::modelfacing(&guidance, enabled);
-    server::run(brain, vaults, mesh, instructions).await
+    // Read once at startup for the same reason the mesh is: the tool list a
+    // client sees is fixed for the life of its session.
+    let learning = brain.learn().await?;
+    let receipts = match learning {
+        true => Some(crate::skill::Receipts::open(&database).await?),
+        false => None,
+    };
+    let instructions = crate::instructions::modelfacing(&guidance, enabled, learning);
+    server::run(brain, vaults, mesh, receipts, instructions).await
 }

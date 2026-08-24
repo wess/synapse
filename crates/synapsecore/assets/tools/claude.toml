@@ -10,6 +10,9 @@ settings = "{home}/settings.json"
 # Claude Code keeps its MCP registry beside its home rather than inside it.
 integration = ".claude.json"
 skills = "{home}/skills"
+# A repository's own skills, which is where a skill about this repository
+# belongs rather than in every session on the machine.
+projectskills = ".claude/skills"
 
 [connect]
 add = ["mcp", "add", "--scope", "user", "synapse", "--", "{server}", "mcp"]
