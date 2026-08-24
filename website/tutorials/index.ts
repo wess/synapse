@@ -4,7 +4,7 @@ export const tutorials: Page = {
   path: "tutorials/index.html",
   title: "Tutorials",
   description:
-    "Nine guided walkthroughs arranged by how far into Synapse you are, from a first connection to running agent teams and removing everything cleanly.",
+    "Eleven guided walkthroughs arranged by how far into Synapse you are, from a first connection to running agent teams and removing everything cleanly.",
   kind: "tutorial",
   toc: [
     { label: "Newcomer", id: "newcomer" },
@@ -29,6 +29,7 @@ export const tutorials: Page = {
       <li><h3><a href="curate/">Curate and optimize memory</a></h3><p>Add, find, correct, delete, and budget durable memory using both human-readable and JSON output. The one to read if recall is returning too much or the wrong thing.</p></li>
       <li><h3><a href="secrets/">Use a scoped secret in either shell mode</a></h3><p>Create a Keychain-backed value, compare one-command and ambient loading without printing the value, and watch trust invalidate when the file changes.</p></li>
       <li><h3><a href="skills/">Keep one skill library across every tool</a></h3><p>Write an Agent Skill once, install it into every connected tool, and see how Synapse tells a library that moved on from a copy somebody edited by hand.</p></li>
+      <li><h3><a href="learn/">Let your agents write skills</a></h3><p>Let a session write down a procedure it worked out, prove for yourself that it reaches no tool until you approve it, then correct it and take the correction back.</p></li>
     </ol>
 
     <h2 id="operator">Level 3 · Team operator</h2>
@@ -36,6 +37,7 @@ export const tutorials: Page = {
     <ol class="steps">
       <li><h3><a href="launch/">Start a tool with everything in place</a></h3><p>Open a tool with memory, scoped credentials, and the project root already wired, without writing anything into that tool's own configuration.</p></li>
       <li><h3><a href="mesh/">Run a team of agents and drive it yourself</a></h3><p>Turn on the mesh, open a team, read what every agent is doing from one terminal, answer a worker that gets stuck, and shut it all down cleanly.</p></li>
+      <li><h3><a href="overseer/">Hand a job to one agent and watch it grow a team</a></h3><p>Describe an outcome instead of picking a roster, answer the question only you can answer, and reach a worker directly without going through the agent that started it.</p></li>
     </ol>
 
     <h2 id="maintainer">Level 4 · Maintainer</h2>

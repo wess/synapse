@@ -20,8 +20,10 @@
   <url><loc>https://wess.io/synapse/tutorials/curate/</loc></url>
   <url><loc>https://wess.io/synapse/tutorials/secrets/</loc></url>
   <url><loc>https://wess.io/synapse/tutorials/skills/</loc></url>
+  <url><loc>https://wess.io/synapse/tutorials/learn/</loc></url>
   <url><loc>https://wess.io/synapse/tutorials/launch/</loc></url>
   <url><loc>https://wess.io/synapse/tutorials/mesh/</loc></url>
+  <url><loc>https://wess.io/synapse/tutorials/overseer/</loc></url>
   <url><loc>https://wess.io/synapse/tutorials/recovery/</loc></url>
   <url><loc>https://wess.io/synapse/tutorials/lifecycle/</loc></url>
 </urlset>

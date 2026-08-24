@@ -4,7 +4,7 @@ Your tools forget. Synapse remembers.
 
 Synapse keeps project decisions and credentials on your Mac, ready for the tools and terminal sessions that need them. There is no account to create and no cloud memory to manage.
 
-[Download the macOS beta](https://github.com/wess/synapse/releases/download/v0.1.0-beta.21/synapse.zip) · [Read the guide](https://wess.io/synapse/docs/)
+[Download the macOS beta](https://github.com/wess/synapse/releases/latest/download/synapse.zip) · [Read the guide](https://wess.io/synapse/docs/)
 
 Apple silicon · macOS 13 or later · Developer ID signed and notarized
 
@@ -16,8 +16,10 @@ Apple silicon · macOS 13 or later · Developer ID signed and notarized
 - **Corrects without arguing.** When a convention changes, the new memory supersedes the old one instead of contradicting it. Recall returns the current version; the old text stays readable and comes back if you were wrong.
 - **Brings history with you.** Preview and import existing Claude and Codex memory into project-scoped Synapse records without changing the originals.
 - **Shares one playbook.** Keep global working guidance in one editable `SOUL.md`, with every connected tool pointed at it.
-- **Writes a skill once.** Keep your Agent Skills in one library and install them into Claude Code, Codex, and pi together, instead of copying folders by hand and watching the copies drift apart.
+- **Writes a skill once.** Keep your Agent Skills in one library and install them into Claude Code, Codex, and pi together, instead of copying folders by hand and watching the copies drift apart. A skill about one repository belongs to that repository.
+- **Learns a procedure.** Let a session write down something it worked out as a skill, and correct one that turned out wrong. What an agent writes waits for you to approve it and reaches no tool until you do. Off by default.
 - **Lets agents work together.** Turn on the mesh and your connected tools can message each other, split up a job, and wait for free between tasks. Off by default.
+- **Gives you a seat at the table.** The Console puts you on the mesh under your own name, so an agent that hits a decision it should not make alone has somebody to ask — and every worker stays directly addressable rather than reachable only through a lead.
 - **Scopes credentials.** Keep secret values in macOS Keychain and choose which approved folders may receive which environment variables.
 - **Leaves you in control.** Search, edit, export, restore, or delete what Synapse stores. Nothing is hidden behind an account or remote service.
 
@@ -50,6 +52,27 @@ synapse skill status              # where each one is, and what has drifted
 
 Editing a skill in the library marks the installed copies as out of date; `install` brings them back in step. A skill Synapse did not put there is left alone.
 
+A procedure that is really about one repository belongs to it rather than to every session on the machine:
+
+```sh
+synapse skill create release --project   # this repository's own
+synapse skill install release --project  # into its .claude/skills, not your home
+```
+
+## Letting agents improve themselves
+
+Turn it on and a session can write down a procedure it worked out, and correct one that turned out wrong:
+
+```sh
+synapse settings learn on
+synapse skill proposed            # what agents wrote and nobody has looked at
+synapse skill approve cut-a-release
+synapse skill history cut-a-release   # what it used to say
+synapse skill revert cut-a-release    # and back again
+```
+
+The gate is on installing rather than on writing. A taught skill sits in the library and in no tool until you approve it, so writing one costs you a line in a list rather than context in every session on the machine. Corrections are the deliberate exception: they reach the copies Synapse installed, because you already agreed to that skill being loaded and a correction that never arrives leaves every session running the version that was wrong. Nothing it replaces is lost.
+
 ## Working as a team
 
 Turn the mesh on in **Settings → Agent mesh**, or from the terminal:
@@ -62,6 +85,16 @@ synapse relay feed --follow      # watch them talk
 ```
 
 Each agent launches with a role — a durable brief describing what it owns. The built-in roles cover the usual shape of a team, and `synapse relay role create <name>` writes your own into the project so it travels with the checkout.
+
+Most jobs do not want four agents, and picking a roster before you understand the job is its own small chore. The `overseer` team is one agent that grows its own:
+
+```sh
+synapse mux --team overseer
+
+@overseer get the release notes written and the changelog updated
+```
+
+You are on the roster yourself either way, so nothing is interposed: any worker it starts is directly addressable without going through it. The app has the same seat on its **Console** screen, with a transcript, the roster, and a box to type in.
 
 ## Using pi
 

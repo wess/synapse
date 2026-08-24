@@ -70,8 +70,10 @@
         <li><a href="../../tutorials/curate/">Curate and optimize memory</a></li>
         <li><a href="../../tutorials/secrets/">Use a scoped secret in either shell mode</a></li>
         <li><a href="../../tutorials/skills/">Keep one skill library across every tool</a></li>
+        <li><a href="../../tutorials/learn/">Let your agents write skills</a></li>
         <li><a href="../../tutorials/launch/">Start a tool with everything in place</a></li>
         <li><a href="../../tutorials/mesh/">Run a team of agents and drive it yourself</a></li>
+        <li><a href="../../tutorials/overseer/">Hand a job to one agent and watch it grow a team</a></li>
         <li><a href="../../tutorials/recovery/">Export and restore safely</a></li>
         <li><a href="../../tutorials/lifecycle/" aria-current="page">Check, migrate, and remove Synapse</a></li></ul>
       </nav>
@@ -112,35 +114,40 @@
       <span>text</span>
       <button type="button" data-copy aria-live="polite">Copy</button>
     </div>
-    <pre><code>Synapse 0.1.0-beta.17
+    <pre><code>Synapse 0.1.0-beta.24
 
 Store
   State          ok
-  Schema         v7
+  Schema         v10
   Memories       0
   Size           0 MB
   Backups        0
   Recall budget  balanced
 
 Connected tools
-  Codex          installed, not connected
-    version      codex-cli 0.145.0
-    guidance     no
-    notice       no
-    status line  none
   Claude Code    installed, not connected
-    version      2.1.220 (Claude Code)
+    version      2.1.241 (Claude Code)
     guidance     no
     notice       no
+    compaction   no
     status line  none
+  Codex          installed, not connected
+    version      codex-cli 0.147.0
+    guidance     no
+    notice       no
+    compaction   no
+    status line  none
+  pi             not installed
 
 Skills
-  In the library 2
-  Installed      2</code></pre>
+  In the library 1
+  Installed      0
+  Out of date    0
+  Agents write   no</code></pre>
   </div>
         <p>This is what to attach to a bug report. It answers most first questions without a round trip: which version, whether the store is sound, what schema it is on, whether each tool is actually connected rather than merely installed, and whether the guidance pointer, session notice, and status line are in place.</p>
         <p><code>--json</code> gives the same thing structured. Note what is <em>not</em> here: no memory contents, no secret names, no file paths outside Synapse's own. A doctor report is safe to paste into a public issue.</p>
-        <p>Read the tool rows carefully. <code>installed, not connected</code> means the tool is on the machine but has no Synapse entry. A tool that was connected and whose executable later moved reports as stale rather than healthy, because detection resolves the stored command rather than trusting the entry exists.</p>
+        <p>Read the tool rows carefully. <code>installed, not connected</code> means the tool is on the machine but has no Synapse entry. <code>Agents write</code> under Skills is whether self-improvement is on, and a count of anything waiting for you appears under it when there is any. A tool that was connected and whose executable later moved reports as stale rather than healthy, because detection resolves the stored command rather than trusting the entry exists.</p>
       </li>
 
       <li>

@@ -17,8 +17,10 @@ import { continuity } from "./tutorials/continuity";
 import { curate } from "./tutorials/curate";
 import { tutorials } from "./tutorials/index";
 import { launch } from "./tutorials/launch";
+import { learn } from "./tutorials/learn";
 import { lifecycle } from "./tutorials/lifecycle";
 import { meshtutorial } from "./tutorials/mesh";
+import { overseer } from "./tutorials/overseer";
 import { recovery } from "./tutorials/recovery";
 import { secrets } from "./tutorials/secrets";
 import { skills as skillstutorial } from "./tutorials/skills";
@@ -45,8 +47,10 @@ export const pages: Page[] = [
   curate,
   secrets,
   skillstutorial,
+  learn,
   launch,
   meshtutorial,
+  overseer,
   recovery,
   lifecycle,
 ];

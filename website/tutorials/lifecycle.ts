@@ -30,34 +30,39 @@ export const lifecycle: Page = {
       <li>
         <h3 id="doctor">Get the whole picture in one command</h3>
         ${code("shell", `synapse doctor`)}
-        ${code("text", `Synapse 0.1.0-beta.17
+        ${code("text", `Synapse 0.1.0-beta.24
 
 Store
   State          ok
-  Schema         v7
+  Schema         v10
   Memories       0
   Size           0 MB
   Backups        0
   Recall budget  balanced
 
 Connected tools
-  Codex          installed, not connected
-    version      codex-cli 0.145.0
-    guidance     no
-    notice       no
-    status line  none
   Claude Code    installed, not connected
-    version      2.1.220 (Claude Code)
+    version      2.1.241 (Claude Code)
     guidance     no
     notice       no
+    compaction   no
     status line  none
+  Codex          installed, not connected
+    version      codex-cli 0.147.0
+    guidance     no
+    notice       no
+    compaction   no
+    status line  none
+  pi             not installed
 
 Skills
-  In the library 2
-  Installed      2`)}
+  In the library 1
+  Installed      0
+  Out of date    0
+  Agents write   no`)}
         <p>This is what to attach to a bug report. It answers most first questions without a round trip: which version, whether the store is sound, what schema it is on, whether each tool is actually connected rather than merely installed, and whether the guidance pointer, session notice, and status line are in place.</p>
         <p><code>--json</code> gives the same thing structured. Note what is <em>not</em> here: no memory contents, no secret names, no file paths outside Synapse's own. A doctor report is safe to paste into a public issue.</p>
-        <p>Read the tool rows carefully. <code>installed, not connected</code> means the tool is on the machine but has no Synapse entry. A tool that was connected and whose executable later moved reports as stale rather than healthy, because detection resolves the stored command rather than trusting the entry exists.</p>
+        <p>Read the tool rows carefully. <code>installed, not connected</code> means the tool is on the machine but has no Synapse entry. <code>Agents write</code> under Skills is whether self-improvement is on, and a count of anything waiting for you appears under it when there is any. A tool that was connected and whose executable later moved reports as stale rather than healthy, because detection resolves the stored command rather than trusting the entry exists.</p>
       </li>
 
       <li>

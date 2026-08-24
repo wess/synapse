@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hand a job to one agent and watch it grow a team — Synapse</title>
+  <meta name="description" content="Start a single overseer, describe an outcome instead of picking a roster, answer it when it asks, and see why nothing sits between you and the workers it starts.">
+  <meta name="theme-color" content="#0a43c8">
+  <meta property="og:title" content="Hand a job to one agent and watch it grow a team">
+  <meta property="og:description" content="Start a single overseer, describe an outcome instead of picking a roster, answer it when it asks, and see why nothing sits between you and the workers it starts.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://wess.io/synapse/tutorials/overseer/">
+  <link rel="canonical" href="https://wess.io/synapse/tutorials/overseer/">
+  <link rel="icon" href="../../icon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Fragment+Mono&family=Manrope:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="../../style.css">
+  <script type="module" src="../../site.js"></script>
+</head>
+<body class="tutorial" data-root="../../">
+  
+  <a class="skip" href="#content">Skip to content</a>
+  <header class="topbar">
+    <a class="wordmark" href="../../" aria-label="Synapse home">
+      <img src="../../icon.svg" width="30" height="30" alt="">
+      <span>Synapse</span>
+    </a>
+    <button class="navtoggle" type="button" aria-expanded="false" aria-controls="topnav">Menu</button>
+    <nav id="topnav" aria-label="Primary">
+      <a href="../../docs/">Docs</a>
+      <a href="../../tutorials/" aria-current="page">Tutorials</a>
+      <a href="https://github.com/wess/synapse">GitHub <span aria-hidden="true">↗</span></a>
+      <a class="navdownload" href="https://github.com/wess/synapse/releases/download/v0.1.0-beta.24/synapse.zip">Download</a>
+    </nav>
+  </header>
+  
+  <div class="doclayout">
+    
+  <aside class="docsrail" aria-label="Documentation navigation">
+    <div class="searchbox">
+      <label for="search">Search the guide</label>
+      <input id="search" type="search" placeholder="Memory, vaults, restore…" autocomplete="off">
+      <div class="searchresults" data-results hidden></div>
+      <span class="searchstatus" data-searchstatus role="status" aria-live="polite"></span>
+    </div>
+    <details class="railnav" open>
+      <summary>Browse all guides</summary>
+      <nav aria-label="All guides">
+        <h2>Documentation</h2>
+        <ul>
+        <li><a href="../../docs/">Start here</a></li>
+        <li><a href="../../docs/install/">Install and connect</a></li>
+        <li><a href="../../docs/app/">Desktop app reference</a></li>
+        <li><a href="../../docs/memory/">Memory and recall</a></li>
+        <li><a href="../../docs/mcp/">MCP tool reference</a></li>
+        <li><a href="../../docs/mesh/">Agent mesh</a></li>
+        <li><a href="../../docs/skills/">Skills</a></li>
+        <li><a href="../../docs/vault/">Vaults and scopes</a></li>
+        <li><a href="../../docs/data/">Data lifecycle</a></li>
+        <li><a href="../../docs/config/">Configuration and paths</a></li>
+        <li><a href="../../docs/security/">Security model</a></li>
+        <li><a href="../../docs/cli/">CLI reference</a></li>
+        <li><a href="../../docs/troubleshoot/">Troubleshooting</a></li></ul>
+        <h2>Tutorials</h2>
+        <ul>
+        <li><a href="../../tutorials/">Tutorials</a></li>
+        <li><a href="../../tutorials/connect/">Install and connect your first tools</a></li>
+        <li><a href="../../tutorials/continuity/">Carry one decision between tools</a></li>
+        <li><a href="../../tutorials/curate/">Curate and optimize memory</a></li>
+        <li><a href="../../tutorials/secrets/">Use a scoped secret in either shell mode</a></li>
+        <li><a href="../../tutorials/skills/">Keep one skill library across every tool</a></li>
+        <li><a href="../../tutorials/learn/">Let your agents write skills</a></li>
+        <li><a href="../../tutorials/launch/">Start a tool with everything in place</a></li>
+        <li><a href="../../tutorials/mesh/">Run a team of agents and drive it yourself</a></li>
+        <li><a href="../../tutorials/overseer/" aria-current="page">Hand a job to one agent and watch it grow a team</a></li>
+        <li><a href="../../tutorials/recovery/">Export and restore safely</a></li>
+        <li><a href="../../tutorials/lifecycle/">Check, migrate, and remove Synapse</a></li></ul>
+      </nav>
+    </details>
+  </aside>
+    <main class="article" id="content">
+      <header class="articlehead">
+        <h1>Hand a job to one agent and watch it grow a team</h1>
+        <span>Start a single overseer, describe an outcome instead of picking a roster, answer it when it asks, and see why nothing sits between you and the workers it starts.</span>
+      </header>
+      
+    <h2 id="outcome">Outcome and prerequisites</h2>
+    <p>You will start one agent, give it a goal rather than a task list, and let it decide whether the work needs a team at all. Along the way you will answer a question it cannot answer itself, and message a worker it started without going through it — which is the difference between this and every other way of running agents.</p>
+    <ul>
+      <li>The <code>synapse</code> CLI installed and on <code>PATH</code>, with the mesh on: <code>synapse settings mesh on</code>.</li>
+      <li>Claude Code installed and signed in. The agents run under whatever account you already have — Synapse holds no model credential and makes no model call.</li>
+      <li>A checkout you can afford to have edited. Agents here touch real files.</li>
+      <li>About thirty minutes.</li>
+    </ul>
+    <p>If the mesh is new to you, read <a href="../mesh/">Run a team of agents and drive it yourself</a> first. This tutorial is the same machinery with one agent instead of four.</p>
+
+    <ol class="steps">
+      <li>
+        <h2 id="start">Start one agent, not a roster</h2>
+        <p>The other teams ask you to choose a shape before you understand the job. <code>overseer</code> is one member:</p>
+        
+  <div class="codeblock">
+    <div class="codebar">
+      <span>shell</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>cd ~/code/your-project
+synapse relay team show overseer
+synapse mux --team overseer</code></pre>
+  </div>
+        <p>Two things happened. An agent started in the background under the <code>overseer</code> role, and <em>you</em> joined the mesh under your login name. Check both:</p>
+        
+  <div class="codeblock">
+    <div class="codebar">
+      <span>shell</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>/agents</code></pre>
+  </div>
+        <p>You should see two rows: yourself, marked as a person, and <code>overseer</code>. The mark matters — every agent on the mesh is told to ask a human row questions and never delegate work to one.</p>
+      </li>
+
+      <li>
+        <h2 id="describe">Describe an outcome</h2>
+        <p>Say what you want to be true, not which steps to run:</p>
+        
+  <div class="codeblock">
+    <div class="codebar">
+      <span>text</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>@overseer the release notes for the next version are missing. Work out what changed since the last tag and write them.</code></pre>
+  </div>
+        <p>Watch what it does before it does anything:</p>
+        
+  <div class="codeblock">
+    <div class="codebar">
+      <span>shell</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>/agents</code></pre>
+  </div>
+        <p>Its note is the interesting part. An overseer's brief tells it to weigh doing the work itself against splitting it, because every worker it starts is a separate session on the same account you are paying for. A small job stays one agent. A job with two genuinely parallel halves gets a second.</p>
+        
+  <aside class="note">
+    <strong>Spawning is not free, and it knows that</strong>
+    <p>The role says so in as many words: spawn for work two agents can do at the same time, not to look busy, and stop one whose piece is finished rather than leaving it idling.</p>
+  </aside>
+      </li>
+
+      <li>
+        <h2 id="answer">Answer it when it asks</h2>
+        <p>Sooner or later it will reach something only you can settle — which version number, whether a change is worth mentioning, whether to touch a file it is unsure about. It will send you the question and report itself blocked:</p>
+        
+  <div class="codeblock">
+    <div class="codebar">
+      <span>shell</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>/agents</code></pre>
+  </div>
+        <p>A row reading <code>blocked</code> with a note is an agent waiting on you. Reply to it like anything else:</p>
+        
+  <div class="codeblock">
+    <div class="codebar">
+      <span>text</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>@overseer call it 2.4.0, and leave the vendored files out entirely</code></pre>
+  </div>
+        <p>This is the whole reason a person belongs on the roster. A headless worker runs with its permission prompts bypassed, so without somebody to address, its only option at a fork is to guess.</p>
+      </li>
+
+      <li>
+        <h2 id="past">Reach past it</h2>
+        <p>If the overseer started workers, they are on the roster too — and you can address them directly:</p>
+        
+  <div class="codeblock">
+    <div class="codebar">
+      <span>shell</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>/agents
+/log notes</code></pre>
+  </div>
+        
+  <div class="codeblock">
+    <div class="codebar">
+      <span>text</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>@notes skip the dependency bumps, they are noise</code></pre>
+  </div>
+        <p>Nothing was relayed. You did not interrupt the overseer's context to correct one of its workers, and it did not have to spend a turn passing the message along.</p>
+        
+  <aside class="note">
+    <strong>Why that matters more than it sounds</strong>
+    <p>A lead that relays for you pays its own context on every message and becomes a bottleneck for a job it is not doing. The overseer is addressable, never interposed — which is the same reason <code>synapse mux</code> exists at all.</p>
+  </aside>
+      </li>
+
+      <li>
+        <h2 id="app">Do the same from the app</h2>
+        <p>Open Synapse and click <strong>Console</strong>. It is the same seat: a transcript of everything said, what the mesh is doing, the roster, and a box to type in. Opening it registers you under the same login name, so an agent looking for somebody to ask finds one row rather than two.</p>
+        <p>Click an agent in the roster to aim a bare line at it, or use <code>@name</code> exactly as in the terminal. The grammar is one piece of code shared by both surfaces.</p>
+      </li>
+
+      <li>
+        <h2 id="bound">Bound the fan-out</h2>
+        <p>How many agents a machine can usefully carry is a fact about the machine:</p>
+        
+  <div class="codeblock">
+    <div class="codebar">
+      <span>shell</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>synapse settings workers 4
+synapse settings show | grep workers</code></pre>
+  </div>
+        <p>A supervisor already running picks this up on its next spawn. The number is clamped to a ceiling in code as well as refused on the way in, so a mistyped digit cannot buy an unbounded fleet — the setting is a preference, and the ceiling is the promise.</p>
+      </li>
+
+      <li>
+        <h2 id="cleanup">Clean up</h2>
+        
+  <div class="codeblock">
+    <div class="codebar">
+      <span>shell</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>/workers
+/kill notes
+/quit</code></pre>
+  </div>
+        <p>Leaving takes the workers it started with it, and drops your roster row so no agent goes on addressing questions to somebody who is not there.</p>
+      </li>
+    </ol>
+
+    <h2>What to read next</h2>
+    <p><a href="../mesh/">Run a team of agents and drive it yourself</a> is the same mesh with a roster you choose. <a href="../learn/">Let your agents write skills</a> turns a procedure one of these sessions worked out into something the next one starts with.</p>
+  
+    </main>
+    <aside class="ontoc" aria-label="On this page">
+        <span>On this page</span>
+        <ol><li><a href="#outcome">Outcome</a></li><li><a href="#start">Start one agent</a></li><li><a href="#describe">Describe an outcome</a></li><li><a href="#answer">Answer it</a></li><li><a href="#past">Reach past it</a></li><li><a href="#app">Do it from the app</a></li><li><a href="#bound">Bound the fan-out</a></li><li><a href="#cleanup">Clean up</a></li></ol>
+      </aside>
+  </div>
+  
+  <footer class="footer">
+    <div>
+      <a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">Synapse</a>
+      <p>Project memory and scoped credentials, kept on your Mac.</p>
+    </div>
+    <nav aria-label="Footer">
+      <a href="../../docs/">Documentation</a>
+      <a href="../../tutorials/">Tutorials</a>
+      <a href="https://github.com/wess/synapse">Source</a>
+      <a href="https://github.com/wess/synapse/releases">Releases</a>
+    </nav>
+    <p class="footerfine">No account required. Apple silicon · macOS 13+.</p>
+  </footer>
+</body>
+</html>

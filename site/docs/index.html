@@ -70,8 +70,10 @@
         <li><a href="../tutorials/curate/">Curate and optimize memory</a></li>
         <li><a href="../tutorials/secrets/">Use a scoped secret in either shell mode</a></li>
         <li><a href="../tutorials/skills/">Keep one skill library across every tool</a></li>
+        <li><a href="../tutorials/learn/">Let your agents write skills</a></li>
         <li><a href="../tutorials/launch/">Start a tool with everything in place</a></li>
         <li><a href="../tutorials/mesh/">Run a team of agents and drive it yourself</a></li>
+        <li><a href="../tutorials/overseer/">Hand a job to one agent and watch it grow a team</a></li>
         <li><a href="../tutorials/recovery/">Export and restore safely</a></li>
         <li><a href="../tutorials/lifecycle/">Check, migrate, and remove Synapse</a></li></ul>
       </nav>
@@ -99,6 +101,7 @@
         <tr><td>Scope approvals</td><td>Local SQLite database as a path and content digest</td><td>Synapse</td></tr>
         <tr><td>Mesh roster, channels, and messages between agents</td><td>Local SQLite database, while the mesh is on</td><td>Desktop app, CLI, and agents that have joined</td></tr>
         <tr><td>Agent Skills library</td><td>The Synapse data directory, copied into each tool's own skills folder</td><td>You, and every tool that reads the Agent Skills format</td></tr>
+        <tr><td>Skills agents proposed, and what a skill used to say</td><td>Local SQLite database, while self-improvement is on</td><td>You. A proposed skill reaches no tool until you approve it</td></tr>
         <tr><td>Agent roles and team rosters</td><td>TOML in the project's <code>.synapse</code> folder or the Synapse data directory</td><td>You, Synapse, and the repository if you commit them</td></tr>
       </tbody>
     </table>
@@ -125,6 +128,10 @@
       <dd>Read <a href="vault/">Vaults and scopes</a>, then build a complete approved scope in <a href="../tutorials/secrets/">Use a scoped secret in either shell mode</a>.</dd>
       <dt>I want my tools to work together.</dt>
       <dd>Read <a href="mesh/">Agent mesh</a>. It covers turning it on, roles, teams, background workers, and what the mesh deliberately does not do.</dd>
+      <dt>I want to talk to my agents rather than watch them.</dt>
+      <dd>The app's <a href="app/#console">Console</a> puts you on the mesh under your own name. <a href="../tutorials/overseer/">Hand a job to one agent</a> walks through describing an outcome and letting it decide whether the work needs a team.</dd>
+      <dt>I keep re-deriving the same procedure.</dt>
+      <dd>Let a session write it down. <a href="../tutorials/learn/">Let your agents write skills</a> covers what an agent may and may not do to your library, and why the gate is on installing rather than on writing.</dd>
       <dt>I keep copying the same skill into every tool.</dt>
       <dd>Read <a href="skills/">Skills</a>. One library, installed into Claude Code, Codex, and pi together, with drift reported rather than silently resolved.</dd>
       <dt>I need automation or exact syntax.</dt>
