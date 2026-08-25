@@ -151,6 +151,8 @@ pub fn render(view: View, actions: Actions, cx: &App) -> AnyElement {
                                 .gap(px(24.0))
                                 .child(
                                     div()
+                                        .flex_1()
+                                        .min_w(px(0.0))
                                         .flex()
                                         .flex_col()
                                         .gap(px(4.0))
@@ -184,18 +186,21 @@ pub fn render(view: View, actions: Actions, cx: &App) -> AnyElement {
                                 .flex()
                                 .gap(px(10.0))
                                 .child(option(
+                                    "optimization",
                                     "Full",
                                     "Up to 25 results · original formatting · no response budget",
                                     view.optimization == Optimization::Full,
                                     full,
                                 ))
                                 .child(option(
+                                    "optimization",
                                     "Balanced",
                                     "Up to 8 results · compact whitespace · about 1,500 tokens",
                                     view.optimization == Optimization::Balanced,
                                     balanced,
                                 ))
                                 .child(option(
+                                    "optimization",
                                     "Lean",
                                     "Up to 4 results · deduplicated · about 700 tokens",
                                     view.optimization == Optimization::Lean,
@@ -380,6 +385,8 @@ fn meshpanel(
                 .gap(px(24.0))
                 .child(
                     div()
+                        .flex_1()
+                        .min_w(px(0.0))
                         .flex()
                         .flex_col()
                         .gap(px(4.0))
@@ -412,12 +419,14 @@ fn meshpanel(
                 .flex()
                 .gap(px(10.0))
                 .child(option(
+                    "mesh",
                     "Off",
                     "Memory and vault tools only · the smallest tool list",
                     !enabled,
                     off,
                 ))
                 .child(option(
+                    "mesh",
                     "On",
                     "Adds the coordination tools · costs context in every session",
                     enabled,
@@ -461,6 +470,8 @@ fn learnpanel(
                 .gap(px(24.0))
                 .child(
                     div()
+                        .flex_1()
+                        .min_w(px(0.0))
                         .flex()
                         .flex_col()
                         .gap(px(4.0))
@@ -493,12 +504,14 @@ fn learnpanel(
                 .flex()
                 .gap(px(10.0))
                 .child(option(
+                    "learn",
                     "Off",
                     "Only you write skills · the smallest tool list",
                     !enabled,
                     off,
                 ))
                 .child(option(
+                    "learn",
                     "On",
                     "Agents may write and correct skills · costs context in every session",
                     enabled,
@@ -540,6 +553,8 @@ fn workerpanel(
                 .gap(px(24.0))
                 .child(
                     div()
+                        .flex_1()
+                        .min_w(px(0.0))
                         .flex()
                         .flex_col()
                         .gap(px(4.0))
@@ -567,8 +582,10 @@ fn workerpanel(
                 .gap(px(10.0))
                 .children([2_usize, 4, 8, 16].into_iter().map(|count| {
                     let action = set(count);
+                    let label = count.to_string();
                     option(
-                        Box::leak(count.to_string().into_boxed_str()),
+                        "workers",
+                        &label,
                         match count {
                             2 => "One thing at a time, with a reviewer",
                             4 => "A small team",
@@ -773,8 +790,8 @@ fn reactorpanel(
                 div()
                     .flex()
                     .gap(px(10.0))
-                    .child(option("Off", "Just the numbers", !on, disable))
-                    .child(option("On", "Draw the dial", on, enable)),
+                    .child(option("reactor", "Off", "Just the numbers", !on, disable))
+                    .child(option("reactor", "On", "Draw the dial", on, enable)),
             )
         })
         .into_any_element()
@@ -827,6 +844,8 @@ fn guidancepanel(
                 .gap(px(24.0))
                 .child(
                     div()
+                        .flex_1()
+                        .min_w(px(0.0))
                         .flex()
                         .flex_col()
                         .gap(px(4.0))
@@ -967,6 +986,8 @@ fn shellmodes(
                 .gap(px(24.0))
                 .child(
                     div()
+                        .flex_1()
+                        .min_w(px(0.0))
                         .flex()
                         .flex_col()
                         .gap(px(4.0))
@@ -1184,7 +1205,17 @@ fn shellmode(
         .child(Text::new(description.to_owned()).size(Size::Xs).dimmed())
 }
 
-fn option(label: &str, description: &str, selected: bool, click: Click) -> impl IntoElement {
+/// One choice in a panel. `panel` is what keeps the ids apart: every switch
+/// here labels its two buttons "Off" and "On", and gpui takes the first element
+/// with a given id and drops the rest — which is why the mesh switch worked and
+/// the two below it did nothing at all.
+fn option(
+    panel: &str,
+    label: &str,
+    description: &str,
+    selected: bool,
+    click: Click,
+) -> impl IntoElement {
     div()
         .flex_1()
         .min_w(px(0.0))
@@ -1193,7 +1224,7 @@ fn option(label: &str, description: &str, selected: bool, click: Click) -> impl 
         .gap(px(6.0))
         .child(
             Button::new(
-                gpui::ElementId::Name(format!("optimization{}", label.to_lowercase()).into()),
+                gpui::ElementId::Name(format!("{panel}{}", label.to_lowercase()).into()),
                 label.to_owned(),
             )
             .variant(if selected {

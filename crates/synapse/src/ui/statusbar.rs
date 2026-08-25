@@ -1,6 +1,9 @@
 use async_channel::Sender;
 use cocoa::appkit::{
-    NSApp, NSApplication, NSApplicationActivationPolicy::NSApplicationActivationPolicyAccessory,
+    NSApp, NSApplication,
+    NSApplicationActivationPolicy::{
+        NSApplicationActivationPolicyAccessory, NSApplicationActivationPolicyRegular,
+    },
 };
 use gpui::Global;
 use tray_icon::menu::{Menu, MenuEvent, MenuItem, PredefinedMenuItem, Submenu};
@@ -75,10 +78,27 @@ pub fn install(sender: Sender<Action>) -> anyhow::Result<Statusbar> {
         .with_icon(icon()?)
         .build()?;
 
+    Ok(Statusbar { _tray: tray })
+}
+
+/// macOS reads two separate things off the activation policy: whether the app
+/// has a Dock icon, and whether it has a menu bar. An accessory app has
+/// neither, and a window with no menu bar is a window where ⌘X does nothing —
+/// there is no Edit menu to claim the keystroke and no Quit item to bind ⌘Q.
+///
+/// So the policy follows the window rather than the status item: regular while
+/// the window is up, accessory once it is put away. The menu bar item is there
+/// either way, which is what it was for.
+pub fn foreground() {
+    unsafe {
+        NSApp().setActivationPolicy_(NSApplicationActivationPolicyRegular);
+    }
+}
+
+pub fn background() {
     unsafe {
         NSApp().setActivationPolicy_(NSApplicationActivationPolicyAccessory);
     }
-    Ok(Statusbar { _tray: tray })
 }
 
 fn icon() -> anyhow::Result<Icon> {

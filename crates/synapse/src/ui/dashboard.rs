@@ -1889,6 +1889,9 @@ impl Dashboard {
             let save = Box::new(cx.listener(|this, _, _, cx| this.savedocument(cx)));
             let close = Box::new(cx.listener(|this, _, _, cx| this.closedocument(cx)));
             let discard = Box::new(cx.listener(|this, _, _, cx| this.discarddocument(cx)));
+            // No sidebar: the editor is a mode, and `render` already leaves the
+            // column off for it. One here as well put a full-height sidebar at
+            // the top of a vertical stack and left the editor no room at all.
             return div()
                 .size_full()
                 .flex()
@@ -1896,12 +1899,6 @@ impl Dashboard {
                 .bg(theme.body().hsla())
                 .text_color(theme.text().hsla())
                 .on_action(cx.listener(|this, _: &SaveDocument, _window, cx| this.savedocument(cx)))
-                .child(sidebar::render(
-                    self.page,
-                    self.appmenu.clone(),
-                    self.navigation(cx),
-                    cx,
-                ))
                 .child(document::render(document, save, close, discard, cx))
                 .into_any_element();
         }
@@ -2349,6 +2346,11 @@ impl Dashboard {
 
         shell
             .child(
+                // gpui measures a run of text at its full unwrapped width, so
+                // every box between here and a label has to be told it may be
+                // narrower than its contents. Without that the column silently
+                // widens to the longest line on the page and the controls on
+                // the right of each row go off the edge of the window.
                 div()
                     .id("synapsemain")
                     .flex_1()
@@ -2357,6 +2359,7 @@ impl Dashboard {
                     .child(
                         div()
                             .w_full()
+                            .min_w(px(0.0))
                             .max_w(px(980.0))
                             .mx_auto()
                             .px(px(34.0))
@@ -2373,7 +2376,9 @@ impl Dashboard {
                             ))
                             .child(
                                 div()
-                                    .w_full()
+                                    .min_w(px(0.0))
+                                    .flex()
+                                    .flex_col()
                                     .rounded(px(14.0))
                                     .border_1()
                                     .border_color(border)

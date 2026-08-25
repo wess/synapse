@@ -43,20 +43,30 @@ pub fn render(
         (summary, hooks.notice)
     });
 
+    // Wrapping is the fallback rather than shrinking: at some width the name
+    // and the four controls stop fitting on one line, and a button crushed to
+    // one letter per line is worse than a button on the next row.
     div()
         .flex()
+        .flex_wrap()
         .items_center()
-        .justify_between()
+        .justify_end()
         .gap(px(24.0))
         .min_h(px(92.0))
+        .min_w(px(0.0))
         .px(px(22.0))
         .py(px(16.0))
         .child(
+            // The half that gives way. Everything on the right is a control,
+            // and a control pushed off the edge of the window is a control
+            // nobody can reach — so the description shrinks and wraps instead.
             div()
                 .flex()
                 .items_center()
                 .gap(px(14.0))
-                .min_w(px(260.0))
+                .flex_grow()
+                .flex_shrink()
+                .min_w(px(220.0))
                 .child(
                     div()
                         .flex_none()
@@ -74,9 +84,12 @@ pub fn render(
                         .flex()
                         .flex_col()
                         .gap(px(5.0))
+                        .flex_1()
+                        .min_w(px(0.0))
                         .child(
                             div()
                                 .flex()
+                                .flex_wrap()
                                 .items_center()
                                 .gap(px(9.0))
                                 .child(
@@ -91,6 +104,7 @@ pub fn render(
                             element.child(
                                 div()
                                     .flex()
+                                    .flex_wrap()
                                     .items_center()
                                     .gap(px(6.0))
                                     .child(Icon::new(IconName::Sparkles).size(Size::Xs))
@@ -114,6 +128,7 @@ pub fn render(
         .child(
             div()
                 .flex()
+                .flex_none()
                 .items_center()
                 .justify_end()
                 .gap(px(8.0))

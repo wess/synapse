@@ -1,7 +1,6 @@
-use crate::ui::{Dashboard, SaveDocument};
+use crate::ui::Dashboard;
 use gpui::{
-    App, AppContext, Bounds, KeyBinding, SharedString, TitlebarOptions, WindowBounds,
-    WindowOptions, px, size,
+    App, AppContext, Bounds, SharedString, TitlebarOptions, WindowBounds, WindowOptions, px, size,
 };
 
 pub fn run() {
@@ -10,10 +9,6 @@ pub fn run() {
     synapsecore::crashes::capture();
     gpui::Application::new().run(|cx: &mut App| {
         crate::ui::theme::initialize(cx);
-        cx.bind_keys([
-            KeyBinding::new("cmd-s", SaveDocument, None),
-            KeyBinding::new("ctrl-s", SaveDocument, None),
-        ]);
 
         let bounds = Bounds::centered(None, size(px(1240.0), px(680.0)), cx);
         let window = cx
@@ -32,7 +27,7 @@ pub fn run() {
                         .observe_window_appearance(crate::ui::theme::sync)
                         .detach();
                     window.on_window_should_close(cx, |_window, cx| {
-                        cx.hide();
+                        crate::ui::menu::dismiss(cx);
                         false
                     });
                     let dashboard = cx.new(Dashboard::new);
@@ -41,6 +36,8 @@ pub fn run() {
                 },
             )
             .expect("open Synapse window");
+        // The menus carry the keymap with them, so they are configured before
+        // anything can be typed at the window.
         crate::ui::menu::configure(window, cx);
 
         #[cfg(target_os = "macos")]
@@ -64,13 +61,11 @@ pub fn run() {
             let data = synapsecore::files::data().ok();
             let task: Task<()> = cx.spawn(async move |cx| {
                 while let Ok(action) = receiver.recv().await {
+                    // Every one of these has a twin in the menu bar. They go
+                    // through the same functions so the two cannot come to mean
+                    // different things.
                     let _ = cx.update(|cx| match action {
-                        Action::Open => {
-                            cx.activate(true);
-                            let _ = window.update(cx, |_view, window, _cx| {
-                                window.activate_window();
-                            });
-                        }
+                        Action::Open => crate::ui::menu::show(window, cx),
                         Action::Data => {
                             if let Some(path) = data.as_deref() {
                                 let _ = synapsecore::files::reveal(path);
@@ -86,21 +81,12 @@ pub fn run() {
                         Action::DarkTheme => {
                             crate::ui::theme::set(crate::ui::theme::Mode::Dark, cx)
                         }
-                        Action::Quit => {
-                            let canquit = window
-                                .update(cx, |view, window, cx| view.preparequit(window, cx))
-                                .unwrap_or(true);
-                            if canquit {
-                                cx.quit();
-                            } else {
-                                cx.activate(true);
-                            }
-                        }
+                        Action::Quit => crate::ui::menu::quit(window, cx),
                     });
                 }
             });
             task.detach();
         }
-        cx.activate(true);
+        crate::ui::menu::show(window, cx);
     });
 }
