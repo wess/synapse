@@ -1,14 +1,14 @@
 # Its own workspace root rather than a member of the one above.
 #
 # Cargo loads every workspace member's manifest whatever you asked it to build,
-# so as a member this crate could not be built without ../guise on disk — a
-# headless Linux server would have needed a checkout of a GPUI theming library
-# it never links. Standing on its own means `cd crates/synapseserve && cargo
-# build` works on a bare machine with nothing but a Rust toolchain.
+# so as a member this crate would still resolve the desktop's GPUI and guise
+# graph on a headless Linux server that never links it. Standing on its own
+# means `cd crates/synapseserve && cargo build` works on a bare machine with
+# nothing but a Rust toolchain.
 #
 # The cost is that dependency versions are written out here instead of
 # inherited, and that a workspace-wide `cargo test` does not reach these tests.
-# CI runs them in their own job, on Linux, with no guise checked out — which is
+# CI runs them in their own job, on Linux, without the desktop graph — which is
 # also what keeps the property above from quietly regressing.
 [workspace]
 

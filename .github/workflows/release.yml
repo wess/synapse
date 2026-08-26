@@ -13,11 +13,6 @@ on:
 permissions:
   contents: write
 
-env:
-  # guise-ui is a path dependency on a sibling checkout, so the build resolves
-  # ../guise/crates/guise. Bump this whenever Cargo.toml wants a newer guise.
-  GUISE_REF: v1.4.0
-
 jobs:
   check-version:
     runs-on: ubuntu-latest
@@ -67,13 +62,6 @@ jobs:
       - uses: actions/checkout@v5
         with:
           path: synapse
-
-      # Sibling checkout so Cargo.toml's ../guise/crates/guise path resolves.
-      - uses: actions/checkout@v5
-        with:
-          repository: wess/guise
-          ref: ${{ env.GUISE_REF }}
-          path: guise
 
       - uses: dtolnay/rust-toolchain@stable
 
@@ -137,13 +125,6 @@ jobs:
         with:
           ref: "v${{ needs.check-version.outputs.version }}"
           path: synapse
-
-      # Sibling checkout so Cargo.toml's ../guise/crates/guise path resolves.
-      - uses: actions/checkout@v5
-        with:
-          repository: wess/guise
-          ref: ${{ env.GUISE_REF }}
-          path: guise
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable

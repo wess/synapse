@@ -2,10 +2,9 @@
 members = ["crates/synapse", "crates/synapsesync"]
 # synapsecore and synapseserve are their own workspace roots, not members here.
 # Cargo loads every member's manifest whatever you asked it to build, so as
-# members they could not be built without ../guise on disk — a terminal-only
-# machine would have needed a checkout of a GPUI theming library it never
-# links. Each keeps its own lockfile, which also matches how they ship: on
-# their own schedules.
+# members their headless workspaces would still resolve the desktop's GPUI and
+# guise graph. Each keeps its own lockfile, which also matches how they ship:
+# on their own schedules.
 #
 # Being excluded is not the same as being unreachable: crates/synapse depends on
 # synapsecore by path, so building this workspace still builds it.
@@ -16,10 +15,9 @@ resolver = "3"
 edition = "2024"
 
 [workspace.dependencies]
-# guise-ui is a path dependency on a sibling checkout. It is declared here
-# rather than in the package so the path stays relative to the workspace root:
-# CI checks guise out beside this repository, not beside the crate.
-guise-ui = { path = "../guise/crates/guise", default-features = false }
+# Pin the published crate exactly. The desktop release must be reproducible
+# without depending on whichever revision happens to be in a sibling checkout.
+guise-ui = { version = "=1.5.0", default-features = false }
 
 # Shared by more than one crate. Desktop-only dependencies (gpui, cocoa,
 # tray-icon, rmcp, and the rest) stay in the package that needs them, so a

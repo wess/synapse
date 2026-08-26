@@ -12,12 +12,6 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  # Keep in sync with release.yml. guise-ui is a path dependency on a sibling
-  # checkout, so every job that builds Rust must resolve ../guise/crates/guise
-  # at the same ref the release build uses.
-  GUISE_REF: v1.4.0
-
 jobs:
   # macOS because the Keychain, shell-hook, and bundle tests are macOS-only —
   # on any other runner the suite silently skips the parts most worth checking.
@@ -31,13 +25,6 @@ jobs:
       - uses: actions/checkout@v5
         with:
           path: synapse
-
-      # Sibling checkout so Cargo.toml's ../guise/crates/guise path resolves.
-      - uses: actions/checkout@v5
-        with:
-          repository: wess/guise
-          ref: ${{ env.GUISE_REF }}
-          path: guise
 
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -70,32 +57,20 @@ jobs:
         with:
           path: synapse
 
-      # cargo fmt shells out to `cargo metadata`, which loads every workspace
-      # member's manifest and so has to resolve ../guise/crates/guise. Without
-      # this checkout the command fails before rustfmt runs at all, and
-      # continue-on-error hides it — an advisory check that silently checks
-      # nothing.
-      - uses: actions/checkout@v5
-        with:
-          repository: wess/guise
-          ref: ${{ env.GUISE_REF }}
-          path: guise
-
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt
 
-      # No --all: it resolves through the guise path dependency and reports
-      # that project's formatting as ours. The bare form covers every workspace
-      # member and stops at the workspace boundary.
+      # The bare form covers every root workspace member and stops at the
+      # workspace boundary.
       - name: Format check
         run: cargo fmt --check
         continue-on-error: true
 
-  # The terminal-only build, on the machine it exists for: Linux, no guise
-  # checkout, no display, nothing from the desktop half on disk. This is the job
-  # that keeps the promise — the property is invisible to every other job,
-  # because they all have guise beside them and would keep passing on the day
+  # The terminal-only build, on the machine it exists for: Linux, no desktop
+  # dependency graph, no display. This is the job that keeps the promise — the
+  # property is invisible to every other job,
+  # because they resolve the desktop graph and would keep passing on the day
   # synapsecore grew a dependency on the window.
   #
   # It carries the whole test suite, which the macOS job also runs: these tests
@@ -141,7 +116,7 @@ jobs:
           test "$app" = "$cli"
 
   # The sync server, built the way somebody self-hosting would build it: Linux,
-  # no guise checkout, no macOS, nothing from the desktop half on disk. The
+  # no desktop dependency graph, no macOS. The
   # workspace-level jobs cannot check this — synapseserve is its own workspace
   # root precisely so that it does not need any of that — so this job is what
   # keeps the server from quietly growing a dependency on the app.

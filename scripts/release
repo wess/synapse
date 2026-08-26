@@ -18,9 +18,9 @@ rustc -vV | grep -q '^host: aarch64-apple-darwin$'
 # features, no microphone, and no entitlements — see below.
 features=${SYNAPSE_FEATURES:-}
 if [ -n "$features" ]; then
-  cargo bundle --release --format osx --features "$features"
+  cargo --locked bundle --release --format osx --features "$features"
 else
-  cargo bundle --release --format osx
+  cargo --locked bundle --release --format osx
 fi
 
 ditto --norsrc --noextattr --noqtn --noacl "$bundle" "$stage/synapse.app"

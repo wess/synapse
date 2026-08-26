@@ -2,13 +2,13 @@
 name = "synapse"
 # Bumping this on main is the release trigger. Keep it in step with
 # crates/synapsecore, which is where `synapse version` reads its number from.
-version = "1.0.1"
+version = "1.0.2"
 edition.workspace = true
 description = "Local memory and scoped credentials for developer tools"
 
 # The desktop half: a GPUI window over synapsecore. Everything that is not
 # drawing lives in that crate, so a terminal-only machine builds the same
-# commands without a checkout of guise. If a change here would alter what a
+# commands without resolving guise. If a change here would alter what a
 # command does, it belongs on the other side of the line.
 [dependencies]
 anyhow.workspace = true

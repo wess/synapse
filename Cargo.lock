@@ -2812,7 +2812,9 @@ checksum = "12101ecc8225ea6d675bc70263074eab6169079621c2186fe0c66590b2df9681"
 
 [[package]]
 name = "guise-ui"
-version = "1.4.0"
+version = "1.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "788c2576146eee7babd706d8294e20b147ef04ae0e735addb67fc5783fcc04f0"
 dependencies = [
  "gpui",
 ]
@@ -6471,7 +6473,7 @@ dependencies = [
 
 [[package]]
 name = "synapse"
-version = "1.0.1"
+version = "1.0.2"
 dependencies = [
  "anyhow",
  "async-channel 2.5.0",
@@ -6492,7 +6494,7 @@ dependencies = [
 
 [[package]]
 name = "synapsecore"
-version = "1.0.1"
+version = "1.0.2"
 dependencies = [
  "anyhow",
  "chrono",
