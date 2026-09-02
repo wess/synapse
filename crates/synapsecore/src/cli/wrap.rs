@@ -112,7 +112,7 @@ fn split(arguments: &[OsString]) -> (Vec<OsString>, Vec<String>) {
 /// it with a shell.
 ///
 /// Prints variable *names* and never a value. A preview that leaked a secret
-/// into a terminal would defeat the reason the values are in Keychain at all.
+/// into a terminal would defeat the reason the values are in a vault at all.
 async fn print(built: &crate::relay::Launch, root: &std::path::Path, novault: bool) -> Result<()> {
     let mut line = vec![built.program.display().to_string()];
     line.extend(built.arguments.iter().map(|value| {
@@ -128,7 +128,7 @@ async fn print(built: &crate::relay::Launch, root: &std::path::Path, novault: bo
     }
     if !novault {
         for name in crate::vault::names(root).await? {
-            println!("env  {name}=<from keychain>");
+            println!("env  {name}=<from the vault>");
         }
     }
     Ok(())

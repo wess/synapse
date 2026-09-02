@@ -126,6 +126,7 @@ export const mcp: Page = {
     <p><code>path</code> is optional. Resolution falls back to <code>SYNAPSE_PROJECT_DIR</code>, then the server process’s current directory.</p>
     ${code("json", `{
   "path": "/Users/example/project",
+  "backend": "encrypted",
   "available": ["DATABASE_URL"],
   "ambient": "ready",
   "shell": "zsh",
@@ -141,9 +142,9 @@ export const mcp: Page = {
     }
   ],
   "warnings": [],
-  "note": "Values stay in Keychain. Use synapse run for one child or install the shell hook for an approved directory."
+  "note": "Values stay in the vault and never in a response. Use synapse run for one child or install the shell hook for an approved directory."
 }`)}
-    ${note("Metadata, not a secret channel", "The names in available tell a tool what a scoped command or activated shell could receive. vaultstatus never reads the corresponding Keychain values and cannot change a connected tool’s environment.")}
+    ${note("Metadata, not a secret channel", "The names in available tell a tool what a scoped command or activated shell could receive. vaultstatus never reads the corresponding values and cannot change a connected tool’s environment. backend names the store this machine keeps them in, which is a fact about the machine and not a way to reach one.")}
 
     <h2 id="learning">teach and revise</h2>
     <p>Two tools that appear only while <code>synapse settings learn on</code> is set. They are how a session writes down a procedure it worked out, and corrects one that turned out wrong. Both write to the Synapse skill library and to nothing else.</p>

@@ -20,7 +20,7 @@ name = "synapsecore"
 # Keep this in step with crates/synapse: `synapse version` reads the version of
 # the crate that holds the command, and the two ship as one product. Only the
 # desktop crate's version triggers the release workflow.
-version = "1.0.3"
+version = "1.1.0"
 edition = "2024"
 description = "Memory, credentials, and the command surface for Synapse, without a window"
 
@@ -40,6 +40,9 @@ reqwest = { version = "0.12", default-features = false, features = [
     "json",
     "rustls-tls",
 ] }
+# The vault's encrypted backend. Same primitive and same version as the sync
+# envelopes, so there is one AEAD in this repository rather than two.
+chacha20poly1305 = "0.10"
 chrono = { version = "0.4", default-features = false, features = ["clock"] }
 directories = "6.0"
 fs2 = "0.4"
@@ -81,9 +84,9 @@ tui = ["dep:ratatui"]
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"
 
-# Secret values live in the macOS Keychain. Off macOS the vault reports that it
-# cannot hold a value rather than inventing somewhere to put one; memory, the
-# MCP server, the mesh, skills, and scope resolution all work without it.
+# The Keychain backend. It is one of two: the encrypted store needs nothing
+# from the platform, so off macOS the vault holds values like everywhere else
+# and only `vault backend keychain` is unavailable.
 [target.'cfg(target_os = "macos")'.dependencies]
 security-framework = "3.7"
 

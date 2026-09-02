@@ -14,7 +14,7 @@ use synapsecore::agent::{self, GuidanceState};
 use synapsecore::brain::{Brain, Memory, MemoryScope, Optimization, Stats};
 use synapsecore::files;
 use synapsecore::imports::{ImportBatch, ImportProvider, ImportSummary};
-use synapsecore::vault::{ScopeState, Secret, Vault, VaultStore};
+use synapsecore::vault::{Backend, ScopeState, Secret, Vault, VaultStore};
 
 /// Preference key recording that the CLI prompt was dismissed for good.
 const CLIPROMPT: &str = "cliprompt";
@@ -56,6 +56,9 @@ pub struct Dashboard {
     addglobal: bool,
     pendingforget: Option<i64>,
     pendingvault: Option<i64>,
+    /// Where values are kept, and whether a move has been asked for once.
+    backend: Backend,
+    pendingbackend: bool,
     appmenu: Option<Entity<MenuBar>>,
     optimization: Optimization,
     meshenabled: bool,
@@ -98,6 +101,7 @@ struct VaultData {
     vaults: Vec<Vault>,
     selected: Option<i64>,
     secrets: Vec<Secret>,
+    backend: Backend,
 }
 
 struct MemoryData {
@@ -213,22 +217,25 @@ impl Dashboard {
             this.refreshscope(cx);
         })
         .detach();
-        let (vaultstore, vaults, selectedvault, secrets, mut notice) = match loadvaults(&database) {
-            Ok(data) => (
-                Some(data.store),
-                data.vaults,
-                data.selected,
-                data.secrets,
-                Notice::Ready,
-            ),
-            Err(error) => (
-                None,
-                Vec::new(),
-                None,
-                Vec::new(),
-                Notice::Error(format!("Could not open vaults: {error}")),
-            ),
-        };
+        let (vaultstore, vaults, selectedvault, secrets, backend, mut notice) =
+            match loadvaults(&database) {
+                Ok(data) => (
+                    Some(data.store),
+                    data.vaults,
+                    data.selected,
+                    data.secrets,
+                    data.backend,
+                    Notice::Ready,
+                ),
+                Err(error) => (
+                    None,
+                    Vec::new(),
+                    None,
+                    Vec::new(),
+                    Backend::Encrypted,
+                    Notice::Error(format!("Could not open vaults: {error}")),
+                ),
+            };
         if let Some(error) = memoryerror {
             notice = Notice::Error(format!("Could not open memories: {error}"));
         }
@@ -273,6 +280,8 @@ impl Dashboard {
             addglobal: false,
             pendingforget: None,
             pendingvault: None,
+            backend,
+            pendingbackend: false,
             appmenu,
             optimization,
             meshenabled: meshdata.enabled,
@@ -1331,12 +1340,14 @@ impl Dashboard {
                 Some(id) => store.secrets(id).await?,
                 None => Vec::new(),
             };
-            Ok::<_, anyhow::Error>((vaults, selected, secrets))
+            let backend = synapsecore::vault::backend().await?;
+            Ok::<_, anyhow::Error>((vaults, selected, secrets, backend))
         }) {
-            Ok((vaults, selected, secrets)) => {
+            Ok((vaults, selected, secrets, backend)) => {
                 self.vaults = vaults;
                 self.selectedvault = selected;
                 self.secrets = secrets;
+                self.backend = backend;
             }
             Err(error) => self.notice = Notice::Error(format!("Could not refresh vaults: {error}")),
         }
@@ -1420,7 +1431,7 @@ impl Dashboard {
         let global = self.addglobal;
         match block(async move {
             let secret = store.createsecret(vaultid, &name, &env, global).await?;
-            if let Err(error) = synapsecore::vault::setsecret(&secret.account, &value) {
+            if let Err(error) = synapsecore::vault::setsecret(&secret.account, &value).await {
                 let _ = store.deletesecret(secret.id).await;
                 return Err(error);
             }
@@ -1471,6 +1482,60 @@ impl Dashboard {
         }
     }
 
+    /// Move every value into the other store and read from it afterwards.
+    ///
+    /// Two clicks, like every other move that is hard to watch happen. It is
+    /// not destructive — values are copied and read back before the originals
+    /// go — but it touches every credential on the machine at once, and that
+    /// is worth being asked about.
+    fn switchbackend(&mut self, cx: &mut Context<Self>) {
+        let target = self.backend.other();
+        if !self.pendingbackend {
+            self.pendingbackend = true;
+            self.notice = Notice::Error(format!(
+                "Choose Confirm move to put every value in the {} vault.",
+                target.name()
+            ));
+            cx.notify();
+            return;
+        }
+        self.pendingbackend = false;
+        match block(synapsecore::vault::migrate(target, false)) {
+            Ok(migration) => {
+                let moved = migration
+                    .moved
+                    .iter()
+                    .filter(|(_, moved)| *moved == synapsecore::vault::Moved::Copied)
+                    .count();
+                self.notice = Notice::Success(format!(
+                    "Moved {moved} value(s) into the {} vault.",
+                    migration.target.name()
+                ));
+                self.refreshvaults(cx);
+            }
+            Err(error) => {
+                self.notice = Notice::Error(format!("Could not move the values: {error}"));
+                cx.notify();
+            }
+        }
+    }
+
+    /// The value goes to the clipboard and nowhere else: it is not returned
+    /// here, so it never reaches an element, a notice, or the crash log.
+    fn copysecret(&mut self, id: i64, cx: &mut Context<Self>) {
+        let Some(secret) = self.secrets.iter().find(|secret| secret.id == id) else {
+            return;
+        };
+        self.notice = match block(synapsecore::vault::copysecret(&secret.account)) {
+            Ok(()) => Notice::Success(format!(
+                "Copied {}.{} to the clipboard.",
+                secret.vault, secret.name
+            )),
+            Err(error) => Notice::Error(format!("Could not copy secret: {error}")),
+        };
+        cx.notify();
+    }
+
     fn replacesecret(&mut self, id: i64, cx: &mut Context<Self>) {
         let value = self.secretvalue.read(cx).text();
         let Some(secret) = self.secrets.iter().find(|secret| secret.id == id) else {
@@ -1481,7 +1546,7 @@ impl Dashboard {
                 "Enter the replacement in Secret value, then choose Replace.".to_owned(),
             );
         } else {
-            self.notice = match synapsecore::vault::setsecret(&secret.account, &value) {
+            self.notice = match block(synapsecore::vault::setsecret(&secret.account, &value)) {
                 Ok(()) => {
                     self.secretvalue
                         .update(cx, |input, cx| input.set_text("", cx));
@@ -1509,8 +1574,10 @@ impl Dashboard {
         ) else {
             return;
         };
-        let result = synapsecore::vault::deletesecret(&secret.account)
-            .and_then(|_| block(store.deletesecret(id)).map(|_| ()));
+        let result = block(async move {
+            synapsecore::vault::deletesecret(&secret.account).await?;
+            store.deletesecret(id).await.map(|_| ())
+        });
         match result {
             Ok(()) => {
                 self.pendingforget = None;
@@ -2285,6 +2352,19 @@ impl Dashboard {
                     host.update(cx, |this, cx| this.toggleglobal(id, cx)).ok();
                 })
             };
+            let backendhost = cx.entity().downgrade();
+            let switchbackend: vaults::Click = Box::new(move |_, _, cx| {
+                backendhost
+                    .update(cx, |this, cx| this.switchbackend(cx))
+                    .ok();
+            });
+            let copyhost = cx.entity().downgrade();
+            let copysecret = move |id| -> vaults::Click {
+                let host = copyhost.clone();
+                Box::new(move |_, _, cx| {
+                    host.update(cx, |this, cx| this.copysecret(id, cx)).ok();
+                })
+            };
             let replacehost = cx.entity().downgrade();
             let replacesecret = move |id| -> vaults::Click {
                 let host = replacehost.clone();
@@ -2315,6 +2395,8 @@ impl Dashboard {
                         addglobal: self.addglobal,
                         pendingforget: self.pendingforget,
                         pendingvault: self.pendingvault,
+                        backend: self.backend,
+                        pendingbackend: self.pendingbackend,
                         notice: self.notice.clone(),
                     },
                     vaults::Actions {
@@ -2325,6 +2407,8 @@ impl Dashboard {
                             cx.listener(|this, _, _, cx| this.togglenewglobal(cx)),
                         ),
                         toggleglobal: Box::new(toggleglobal),
+                        switchbackend,
+                        copysecret: Box::new(copysecret),
                         replacesecret: Box::new(replacesecret),
                         forgetsecret: Box::new(forgetsecret),
                         deletevault: Box::new(cx.listener(|this, _, _, cx| this.deletevault(cx))),
@@ -2723,6 +2807,7 @@ fn loadvaults(database: &std::path::Path) -> anyhow::Result<VaultData> {
             vaults,
             selected,
             secrets,
+            backend: synapsecore::vault::backend().await?,
         })
     })
 }

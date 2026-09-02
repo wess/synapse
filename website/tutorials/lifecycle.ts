@@ -132,7 +132,7 @@ Add --confirm to go ahead.`)}
         <p>Two flags, both required, and a sentence that says it cannot be undone. If you want a copy first, <code>synapse data export</code> writes a consistent snapshot you can restore into a fresh install later — see <a href="../recovery/">Export and restore safely</a>.</p>
         ${code("shell", `synapse data export ~/synapse-final-snapshot.db   # optional, but do it
 synapse uninstall --data --confirm`)}
-        ${note("Keychain values are not in the data folder", "Secret values live in macOS Keychain, and only their names and references are in the database. Removing the data folder removes Synapse's ability to find them; it does not delete the Keychain items themselves. Use <code>synapse secret forget</code> for those, before uninstalling.")}
+        ${note("Check where your values live first", "On the encrypted store, <code>vault.db</code> and <code>vault.key</code> are in the data folder, so <code>--data</code> deletes every secret value with it. The command says so before it acts. On the Keychain store the values are outside the folder and survive: removing it costs Synapse the ability to find them, so use <code>synapse secret forget</code> for those first. <code>synapse vault backend</code> says which store this machine uses.")}
       </li>
     </ol>
 
@@ -146,7 +146,7 @@ synapse uninstall --data --confirm`)}
         <tr><td>A status line somebody else configured</td><td>JSON has no comments, so entries are recognized by the command they run. One that is not Synapse's is reported, never replaced.</td></tr>
         <tr><td>Other MCP servers in either tool</td><td>Removal goes through the tool's own CLI, by name, for the <code>synapse</code> entry only.</td></tr>
         <tr><td>Your memory, unless <code>--data</code></td><td>Memory is never removed as a side effect of removing software.</td></tr>
-        <tr><td>Keychain secret values</td><td>They were never in the database, so removing it cannot delete them.</td></tr>
+        <tr><td>Secret values on the Keychain store</td><td>They were never in the data folder, so removing it cannot delete them. On the encrypted store they are <em>in</em> that folder, and <code>--data</code> takes them with it.</td></tr>
         <tr><td>A project's <code>.synapse.yaml</code> and <code>.synapse/roles/</code></td><td>They belong to the checkout, not to your machine.</td></tr>
       </tbody>
     </table>

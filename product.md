@@ -29,7 +29,7 @@ Developers who move between multiple coding tools and want decisions, preference
 - One-click user-level setup for Codex, Claude Code, and pi, including a session notice and status line that state the connection before the model has written anything, and a pre-compaction hook that asks a long session to write down what it settled before its context goes. pi has no MCP client, so its connection is the `synapse-pi` package, which carries the tools, the notice, and the guidance together.
 - One editable `SOUL.md` for shared guidance, with managed pointers in each tool's global instruction file.
 - Safe pointer sync plus explicit, backed-up consolidation of existing global guidance.
-- Keychain-backed vaults managed from the dashboard.
+- Vaults managed from the dashboard, over one of two value stores: an encrypted `vault.db` sealed with a key only this account can read, or macOS Keychain. Encrypted is the default and the only one off macOS; `synapse vault migrate` moves every value between them without a gap.
 - Global, project, and folder resolution through approved `.synapse.yaml` files.
 - `synapse run -- <command>` for one-child scoped environment injection.
 - One-click Settings management for optional zsh, bash, and fish hooks, with automatic loading in explicitly approved directories and `allow` and `deny` controls.

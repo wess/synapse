@@ -13,7 +13,7 @@ export const overview: Page = {
   ],
   body: `
     <h2 id="model">The model</h2>
-    <p>Synapse is a local service with two deliberately separate jobs. Its <strong>memory layer</strong> gives connected developer tools one durable, searchable context store. Its <strong>vault layer</strong> gives commands or opted-in shells carefully scoped environment variables while keeping secret values in macOS Keychain.</p>
+    <p>Synapse is a local service with two deliberately separate jobs. Its <strong>memory layer</strong> gives connected developer tools one durable, searchable context store. Its <strong>vault layer</strong> gives commands or opted-in shells carefully scoped environment variables while keeping secret values sealed in a store of their own.</p>
     <p>The desktop app is the control surface. The CLI exposes the same memory, vault, scope, settings, and data-lifecycle operations. The MCP stdio server gives connected tools three narrow capabilities: remember durable context, recall it, and inspect value-free vault status. An optional <strong>agent mesh</strong> adds a fourth job on top of the same store: letting those connected tools coordinate with each other.</p>
 
     <h2 id="stores">What Synapse stores</h2>
@@ -22,8 +22,8 @@ export const overview: Page = {
       <tbody>
         <tr><td>Memory text, source, global or project scope, origin, and import history</td><td>Local SQLite database</td><td>Desktop app, CLI, and scoped MCP memory tools</td></tr>
         <tr><td>Shared working guidance</td><td><code>SOUL.md</code> in the Synapse data directory</td><td>You and every connected tool through managed global pointers</td></tr>
-        <tr><td>Vault names, secret labels, Keychain account references, global mappings</td><td>Local SQLite database</td><td>Desktop app and CLI; MCP receives names only</td></tr>
-        <tr><td>Secret values</td><td>macOS Keychain</td><td>Synapse, a child launched with <code>synapse run</code>, or processes launched from an activated shell</td></tr>
+        <tr><td>Vault names, secret labels, account references, global mappings</td><td><code>brain.db</code>, the local SQLite database</td><td>Desktop app and CLI; MCP receives names only</td></tr>
+        <tr><td>Secret values</td><td><code>vault.db</code>, sealed under the key in <code>vault.key</code> — or macOS Keychain, if that is what the machine is set to. Never <code>brain.db</code>.</td><td>Synapse, a child launched with <code>synapse run</code>, or processes launched from an activated shell</td></tr>
         <tr><td>Project and folder mappings</td><td>Approved <code>.synapse.yaml</code> files</td><td>You, Synapse, and the repository if you commit the file</td></tr>
         <tr><td>Scope approvals</td><td>Local SQLite database as a path and content digest</td><td>Synapse</td></tr>
         <tr><td>Mesh roster, channels, and messages between agents</td><td>Local SQLite database, while the mesh is on</td><td>Desktop app, CLI, and agents that have joined</td></tr>

@@ -115,9 +115,19 @@ pub fn uninstall(arguments: &[OsString]) -> Result<Outcome> {
     if !alsodata && let Ok(data) = crate::files::data() {
         println!();
         println!("Your memory is untouched, in {}.", data.display());
+        if holdsvalues() {
+            println!("So are your secret values, in vault.db beside it.");
+        }
         println!("Remove it with `synapse uninstall --data --confirm`, or delete the folder.");
     }
     Ok(Outcome::Exit(i32::from(!removed.problems.is_empty())))
+}
+
+/// Whether the encrypted store is the one holding this machine's values, which
+/// is what makes the data folder worth a second warning: on the Keychain
+/// backend, deleting it costs the labels and leaves the values behind.
+fn holdsvalues() -> bool {
+    crate::files::data().is_ok_and(|data| data.join("vault.db").is_file())
 }
 
 /// Say what would go before anything does. Uninstalling is the one operation
@@ -159,6 +169,12 @@ fn preview(alsodata: bool) -> Result<Outcome> {
             data.display()
         );
         println!("including all of your memory. That cannot be undone.");
+        if holdsvalues() {
+            println!();
+            println!("That folder also holds vault.db and vault.key, which together");
+            println!("are every secret value you have stored. Move them somewhere");
+            println!("safe first, or `synapse vault migrate keychain` before this.");
+        }
     } else {
         println!("Your memory in {} would be left alone.", data.display());
     }

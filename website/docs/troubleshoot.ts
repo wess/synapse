@@ -4,7 +4,7 @@ import type { Page } from "../types";
 export const troubleshoot: Page = {
   path: "docs/troubleshoot/index.html",
   title: "Troubleshooting",
-  description: "Diagnose installation, tool connection, scope, Keychain, memory, database, and restore failures without risking user-owned data.",
+  description: "Diagnose installation, tool connection, scope, vault, memory, database, and restore failures without risking user-owned data.",
   kind: "docs",
   toc: [
     { label: "Start with status", id: "status" },
@@ -64,9 +64,13 @@ synapse doctor --json`)}
     <h3>A narrower mapping does not apply</h3>
     <p>Check every ancestor scope. A broader <code>deny</code> permanently blocks that environment name for narrower scopes. Also confirm the nested file itself is approved and the command’s working directory is below it.</p>
     <h3>Keychain access fails</h3>
-    <p>Unlock the login Keychain and retry from an interactive user session. If a label exists but its item was removed externally, set the secret again. If the credential itself may be invalid, rotate it at its issuer before storing the replacement.</p>
+    <p>This applies on the Keychain store only; run <code>synapse vault backend</code> to see which one this machine uses. Unlock the login Keychain and retry from an interactive user session. If a label exists but its item was removed externally, set the secret again. If the credential itself may be invalid, rotate it at its issuer before storing the replacement. A denied Keychain prompt during <code>vault migrate</code> stops the migration with nothing moved and nothing switched, so retrying after granting access is safe.</p>
+    <h3>A secret has no value in the encrypted vault</h3>
+    <p>The label is in <code>brain.db</code> and the sealed value is not in <code>vault.db</code>. That happens when the two came from different machines, or when a value was set while the machine was on the other store. Run <code>synapse vault backend</code> to confirm which store is in use, <code>synapse vault migrate</code> to bring values across from the other one, or <code>synapse secret set</code> to write the value again.</p>
+    <h3>Nothing opens with the vault key</h3>
+    <p><code>vault.key</code> is the only thing that opens <code>vault.db</code>, and a replaced key cannot be recovered from the sealed values. If the key was lost, set each value again with <code>synapse secret set</code>; the labels and mappings in <code>brain.db</code> tell you which ones are expected. Back the two files up together, and treat that backup like the credentials it holds.</p>
     <h3>The child sees a value but MCP does not</h3>
-    <p>This is expected. MCP reports only names and trust state. Values are read from Keychain only for <code>synapse run -- &lt;command&gt;</code> or while an installed shell hook activates an approved directory.</p>
+    <p>This is expected. MCP reports only names, trust state, and which store this machine uses. Values are read out of the vault only for <code>synapse run -- &lt;command&gt;</code>, while an installed shell hook activates an approved directory, or when you ask for one with <code>synapse secret copy</code>.</p>
 
     <h2 id="database">Memory and database</h2>
     <h3>Recall returns too little content</h3>
@@ -87,7 +91,7 @@ synapse doctor --json`)}
     <p>Quit the desktop app and close every developer-tool session connected to the MCP server. Confirm no <code>synapse mcp</code> process remains, then retry. The refusal proves the exclusive lifecycle guard is working.</p>
     <h3>The backup version is unsupported</h3>
     <p>The source schema must match the current release. Keep the source unchanged. Open it first with the Synapse version that created it, let that version migrate normally if appropriate, export a fresh snapshot, then restore that compatible export with the current app.</p>
-    <h3>Secrets are missing after moving to another Mac</h3>
-    <p>Database exports do not contain Keychain values. Recreate each value with <code>synapse secret set</code> on the destination Mac. Existing vault labels and references in the restored database tell you which entries are expected.</p>
+    <h3>Secrets are missing after moving to another machine</h3>
+    <p>Database exports carry <code>brain.db</code> and never a value. Recreate each value with <code>synapse secret set</code> on the destination, or — on the encrypted store — copy <code>vault.db</code> and <code>vault.key</code> across together, since neither is any use without the other. Existing vault labels and references in the restored database tell you which entries are expected.</p>
   `,
 };

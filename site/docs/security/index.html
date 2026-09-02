@@ -4,10 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Security model — Synapse</title>
-  <meta name="description" content="Understand the trust boundary around local memory, Keychain values, MCP metadata, approved scopes, child processes, and configuration writes.">
+  <meta name="description" content="Understand the trust boundary around local memory, stored secret values, MCP metadata, approved scopes, child processes, and configuration writes.">
   <meta name="theme-color" content="#0a43c8">
   <meta property="og:title" content="Security model">
-  <meta property="og:description" content="Understand the trust boundary around local memory, Keychain values, MCP metadata, approved scopes, child processes, and configuration writes.">
+  <meta property="og:description" content="Understand the trust boundary around local memory, stored secret values, MCP metadata, approved scopes, child processes, and configuration writes.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://wess.io/synapse/docs/security/">
   <link rel="canonical" href="https://wess.io/synapse/docs/security/">
@@ -82,11 +82,11 @@
     <main class="article" id="content">
       <header class="articlehead">
         <h1>Security model</h1>
-        <span>Understand the trust boundary around local memory, Keychain values, MCP metadata, approved scopes, child processes, and configuration writes.</span>
+        <span>Understand the trust boundary around local memory, stored secret values, MCP metadata, approved scopes, child processes, and configuration writes.</span>
       </header>
       
     <h2 id="boundary">Trust boundary</h2>
-    <p>Synapse is local-first, not a sandbox. It removes unnecessary network and file exposure from the memory-and-credential workflow, but it still runs as your macOS user. Any process already able to control your account, inspect your terminal, or access an unlocked Keychain may sit inside the same trust boundary.</p>
+    <p>Synapse is local-first, not a sandbox. It removes unnecessary network and file exposure from the memory-and-credential workflow, but it still runs as your macOS user. Any process already able to control your account, inspect your terminal, read your home directory, or access an unlocked Keychain may sit inside the same trust boundary.</p>
     <p>The application requires no Synapse account or hosted service. MCP uses local stdio. Memory and metadata live in a local SQLite file. Synapse includes no telemetry, no remote synchronization, and no web server.</p>
 
     <h2 id="memory">Memory</h2>
@@ -95,8 +95,11 @@
     <p>Database files use owner-only permissions on Unix systems and are checked for page and foreign-key integrity before use. These controls protect against accidental broad access and corruption; they do not encrypt memory at rest.</p>
 
     <h2 id="secrets">Secret values</h2>
-    <p>Secret values are written to macOS Keychain. SQLite stores the vault, label, environment name, and Keychain account reference. YAML stores only a <code>vault.name</code> reference. MCP <code>vaultstatus</code> returns environment names and scope state only.</p>
-    <p><code>secret set</code> does not accept a value argument. Interactive input uses a hidden prompt; piped input remains available for automation. Application logs and MCP responses do not contain values.</p>
+    <p>A secret value is never in <code>brain.db</code>, never in YAML, never in a log, never in an MCP response, and never at rest in plaintext. <code>brain.db</code> stores the vault, label, environment name, and account reference. The value goes to one of two stores.</p>
+    <p><strong>The encrypted store</strong> is the default, and the only one available off macOS. Each value is sealed with XChaCha20-Poly1305 under a random 24-byte nonce, with its account reference authenticated as associated data, and written to <code>vault.db</code> in the data folder. The 32-byte key lives beside it in <code>vault.key</code>, created once with owner-only permissions and never overwritten. Deleted rows are zeroed rather than left on a free page.</p>
+    <p>Be clear about what that protects. It protects a vault that has been <em>copied</em> — a backup, a synced folder, a disk image, a laptop somebody else now has. It does not protect you from a process already running as your user, which can read <code>vault.key</code> exactly the way Synapse reads it. This is encryption at rest, not an access control.</p>
+    <p><strong>macOS Keychain</strong> is the other store, and on a Mac it is the stronger of the two: it adds per-application access control that the operating system enforces, which a key file cannot. It is one setting away in either direction, and <code>synapse vault migrate</code> moves every value across without a gap.</p>
+    <p><code>secret set</code> does not accept a value argument. Interactive input uses a hidden prompt; piped input remains available for automation. <code>secret copy</code> is the only way a stored value comes back out, and it goes to the clipboard rather than to a screen, handed to <code>pbcopy</code> over stdin rather than as an argument that would be readable in <code>ps</code>. Anything on the clipboard is readable by every program that can ask for it, and Synapse does not clear it for you.</p>
     
   <aside class="note">
     <strong>Metadata can still be sensitive</strong>
@@ -108,7 +111,7 @@
     <p>Resolution walks from broad ancestor folders toward the working folder. Narrower approved files can replace a mapping, but a name denied by a broader scope remains denied. Any scope warning prevents <code>synapse run</code> from launching and makes the shell hook unload its managed values, avoiding silent partial configuration.</p>
 
     <h2 id="children">Environment boundaries</h2>
-    <p><code>synapse run -- &lt;command&gt;</code> reads only the selected Keychain values and places them in the environment of a new child process. That command and all of its descendants can read those values normally. Synapse cannot stop the child from logging, transmitting, or persisting them.</p>
+    <p><code>synapse run -- &lt;command&gt;</code> reads only the selected values out of the vault and places them in the environment of a new child process. That command and all of its descendants can read those values normally. Synapse cannot stop the child from logging, transmitting, or persisting them.</p>
     <p>The optional zsh, bash, or fish hook asks the shell to evaluate quoted environment changes. It activates only inside a directory with at least one approved discovered scope. Leaving, revoking approval, or changing any discovered scope unloads managed variables and restores values that existed before activation.</p>
     <p>Settings installs the hook inside a marked startup-file block using the absolute managed CLI path. It backs up and atomically replaces an existing file, refuses incomplete or duplicate Synapse blocks, and removes only the marked block when disabled.</p>
     
@@ -127,8 +130,10 @@
     <h2 id="limits">Operational limits</h2>
     <ul>
       <li>Synapse does not isolate a malicious connected MCP client from recalled memory. Only connect tools you trust.</li>
-      <li>Keychain protects stored values, but an authorized local child receives plaintext environment variables.</li>
-      <li>Database exports omit Keychain values but include memory and credential metadata.</li>
+      <li>Both stores protect a value at rest, but an authorized local child receives plaintext environment variables.</li>
+      <li>On the encrypted store, the key sits beside the sealed values in the data folder. Anything running as you can open the vault; a copy of the folder taken without the key cannot.</li>
+      <li>Database exports contain <code>brain.db</code> only — memory and credential metadata, never a value. <code>vault.db</code> is a separate file for exactly that reason, and it is not in the export.</li>
+      <li>Deleting the data folder deletes <code>vault.db</code> and <code>vault.key</code> with it, which is every stored value. On the Keychain store the values survive it. <code>synapse uninstall</code> says so before it does anything.</li>
       <li><code>SOUL.md</code> is ordinary local Markdown. Both connected tools can read it, so do not put secrets there.</li>
       <li>Configuration writes are validated, backed up, and atomic, but external programs can still change the same files afterward.</li>
       <li>A scope digest proves that you approved exact bytes at a path; it does not prove the commands launched from that folder are safe.</li>

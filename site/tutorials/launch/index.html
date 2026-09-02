@@ -90,7 +90,7 @@
     <ul>
       <li>The <code>synapse</code> CLI installed and on <code>PATH</code>.</li>
       <li>Codex, Claude Code, or pi installed. None of them needs to be connected — that is the point of this tutorial.</li>
-      <li>A scratch project folder. Steps four and five create a disposable Keychain value.</li>
+      <li>A scratch project folder. Steps four and five create a disposable vault value.</li>
     </ul>
 
     
@@ -213,9 +213,9 @@ synapse launch claude --print</code></pre>
     </div>
     <pre><code>/Users/example/.local/bin/claude --mcp-config …/launch.66c4a25fcfe8.mcp.json
 env  SYNAPSE_PROJECT_DIR=/Users/example/tmp/launchtutorial
-env  DEMO_TOKEN=&lt;from keychain&gt;</code></pre>
+env  DEMO_TOKEN=&lt;from the vault&gt;</code></pre>
   </div>
-        <p><code>&lt;from keychain&gt;</code> is not a redaction applied to a value that was read. A preview calls a different code path that lists names and never opens the Keychain at all, so there is no value in the process to leak.</p>
+        <p><code>&lt;from the vault&gt;</code> is not a redaction applied to a value that was read. A preview calls a different code path that lists names and never opens the vault at all, so there is no value in the process to leak.</p>
       </li>
 
       <li>
@@ -293,7 +293,7 @@ synapse launch claude --print</code></pre>
     </div>
     <pre><code>/Users/example/.local/bin/claude --mcp-config …/launch.66c4a25fcfe8.mcp.json --resume --model opus
 env  SYNAPSE_PROJECT_DIR=/Users/example/tmp/launchtutorial
-env  DEMO_TOKEN=&lt;from keychain&gt;</code></pre>
+env  DEMO_TOKEN=&lt;from the vault&gt;</code></pre>
   </div>
         <p>The split happens before Synapse parses anything, which is why a flag both programs understand still reaches the right one. Without that, a <code>--model</code> meant for the tool would be eaten by Synapse.</p>
       </li>
@@ -335,7 +335,7 @@ synapse secret forget demo.token
 synapse vault delete demo
 cd .. &amp;&amp; rm -rf launchtutorial</code></pre>
   </div>
-    <p>Forgetting the secret removes both the Keychain item and Synapse's record of it. The generated MCP configuration under the data folder is harmless — it names this binary and nothing else — and is overwritten on the next launch in the same folder.</p>
+    <p>Forgetting the secret removes the stored value and Synapse's record of it. The generated MCP configuration under the data folder is harmless — it names this binary and nothing else — and is overwritten on the next launch in the same folder.</p>
 
     <h2>What you can rely on</h2>
     <ul>

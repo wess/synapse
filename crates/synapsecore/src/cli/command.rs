@@ -23,10 +23,15 @@ Commands:
   vault list                       List vaults
   vault create <name>              Create a vault
   vault delete <name>              Delete an empty vault
+  vault backend [<keychain|encrypted>]
+                                   Show or choose where values are stored
+  vault migrate <keychain|encrypted> [--keep]
+                                   Move every value into the other store
   secret list <vault>              List secret names without values
   secret set <vault> <name> <env> [--global]
                                    Read a value securely and save it
-  secret forget <vault.name>       Remove a Keychain value and its label
+  secret copy <vault.name>         Copy a value to the clipboard
+  secret forget <vault.name>       Remove a stored value and its label
   secret global <vault.name> <on|off>
                                    Change global availability
   scope init [folder] [--folder]   Create .synapse.yaml
@@ -173,6 +178,7 @@ fn status(arguments: &[OsString]) -> Result<Outcome> {
         println!("{}", serde_json::to_string_pretty(&response)?);
     } else {
         println!("Folder: {}", response.path);
+        println!("Backend: {}", response.backend);
         if response.available.is_empty() {
             println!("Available: none");
         } else {
@@ -214,19 +220,30 @@ async fn statusresponse(path: &Path) -> Result<VaultStatusResponse> {
     } else {
         "blocked"
     };
+    let backend = crate::vault::backend().await?;
     Ok(VaultStatusResponse {
         path: path.display().to_string(),
+        backend: backend.name().to_owned(),
         available: resolved.env.keys().cloned().collect(),
         scopes: resolved.scopes.into_iter().map(Into::into).collect(),
         warnings: resolved.warnings,
         ambient: ambient.to_owned(),
         shell: std::env::var("SYNAPSE_SHELL_ACTIVE").ok(),
-        note: "Values remain in Keychain.".to_owned(),
+        note: match backend {
+            crate::vault::Backend::Keychain => "Values remain in Keychain.".to_owned(),
+            crate::vault::Backend::Encrypted => {
+                "Values remain sealed in vault.db, under a key this account owns.".to_owned()
+            }
+        },
     })
 }
 
 fn vault(arguments: &[OsString]) -> Result<Outcome> {
-    let action = textarg(arguments, 0, "usage: synapse vault <list|create|delete>")?;
+    let action = textarg(
+        arguments,
+        0,
+        "usage: synapse vault <list|create|delete|backend|migrate>",
+    )?;
     let runtime = runtime()?;
     let store = runtime.block_on(VaultStore::open(crate::files::database()?))?;
     match action.as_str() {
@@ -250,16 +267,76 @@ fn vault(arguments: &[OsString]) -> Result<Outcome> {
             runtime.block_on(store.deletevault(vault.id))?;
             println!("Deleted vault {}", vault.name);
         }
+        "backend" => backend(&runtime, &store, arguments)?,
+        "migrate" => {
+            let name = textarg(
+                arguments,
+                1,
+                "usage: synapse vault migrate <keychain|encrypted> [--keep]",
+            )?;
+            let target = crate::vault::Backend::parse(&name)?;
+            let keep = arguments.iter().any(|value| value == "--keep");
+            let migration = runtime.block_on(crate::vault::migrate(target, keep))?;
+            for (secret, moved) in &migration.moved {
+                println!(
+                    "{}.{}\t{}",
+                    secret.vault,
+                    secret.name,
+                    match moved {
+                        crate::vault::Moved::Copied => "moved",
+                        crate::vault::Moved::Already => "already there",
+                        crate::vault::Moved::Absent => "no value found",
+                    }
+                );
+            }
+            println!(
+                "Values now live in the {} vault{}",
+                migration.target.name(),
+                if migration.removed {
+                    " and were removed from the other one"
+                } else {
+                    "; the other one still holds its copies"
+                }
+            );
+        }
         _ => anyhow::bail!("unknown vault command `{action}`"),
     }
     Ok(Outcome::Exit(0))
+}
+
+/// Show or choose where values are stored.
+///
+/// Choosing moves nothing, so it refuses to leave secrets behind in a store
+/// this machine would stop reading: `vault migrate` is the way across, and it
+/// carries the values with it.
+fn backend(
+    runtime: &tokio::runtime::Runtime,
+    store: &VaultStore,
+    arguments: &[OsString],
+) -> Result<()> {
+    let current = runtime.block_on(crate::vault::backend())?;
+    let Some(name) = arguments.get(1).and_then(|value| value.to_str()) else {
+        println!("{}", current.name());
+        return Ok(());
+    };
+    let target = crate::vault::Backend::parse(name)?;
+    if target != current {
+        anyhow::ensure!(
+            runtime.block_on(store.allsecrets())?.is_empty(),
+            "this machine already holds secrets; move them with `synapse vault migrate {}`",
+            target.name()
+        );
+        runtime.block_on(crate::vault::setbackend(target))?;
+    }
+    println!("Values are stored in the {} vault", target.name());
+    Ok(())
 }
 
 fn secret(arguments: &[OsString]) -> Result<Outcome> {
     let action = textarg(
         arguments,
         0,
-        "usage: synapse secret <list|set|forget|global>",
+        "usage: synapse secret <list|set|copy|forget|global>",
     )?;
     let runtime = runtime()?;
     let store = runtime.block_on(VaultStore::open(crate::files::database()?))?;
@@ -282,12 +359,20 @@ fn secret(arguments: &[OsString]) -> Result<Outcome> {
             }
         }
         "set" => setsecret(&runtime, &store, arguments)?,
+        "copy" => {
+            let reference = textarg(arguments, 1, "usage: synapse secret copy <vault.name>")?;
+            let secret = runtime
+                .block_on(store.findsecret(&reference))?
+                .context("secret not found")?;
+            runtime.block_on(crate::vault::copysecret(&secret.account))?;
+            println!("Copied {reference} to the clipboard");
+        }
         "forget" => {
             let reference = textarg(arguments, 1, "usage: synapse secret forget <vault.name>")?;
             let secret = runtime
                 .block_on(store.findsecret(&reference))?
                 .context("secret not found")?;
-            crate::vault::deletesecret(&secret.account)?;
+            runtime.block_on(crate::vault::deletesecret(&secret.account))?;
             runtime.block_on(store.deletesecret(secret.id))?;
             println!("Forgot {reference}");
         }
@@ -356,18 +441,21 @@ fn setsecret(
             "existing secret uses environment name {}",
             secret.env
         );
-        crate::vault::setsecret(&secret.account, &value)?;
+        runtime.block_on(crate::vault::setsecret(&secret.account, &value))?;
         if global {
             runtime.block_on(store.setglobal(secret.id, true))?;
         }
     } else {
         let secret = runtime.block_on(store.createsecret(vault.id, &name, &env, global))?;
-        if let Err(error) = crate::vault::setsecret(&secret.account, &value) {
+        if let Err(error) = runtime.block_on(crate::vault::setsecret(&secret.account, &value)) {
             let _ = runtime.block_on(store.deletesecret(secret.id));
             return Err(error);
         }
     }
-    println!("Saved {reference} in Keychain");
+    println!(
+        "Saved {reference} in the {} vault",
+        runtime.block_on(crate::vault::backend())?.name()
+    );
     Ok(())
 }
 

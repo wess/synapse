@@ -4,9 +4,9 @@ Synapse for [pi](https://pi.dev): durable local memory, scoped credential
 metadata, and the agent mesh, as native pi tools.
 
 [Synapse](https://wess.io/synapse/) keeps developer memory in local SQLite, lets
-connected coding agents coordinate over that same database, and brokers
-Keychain-backed credentials into scoped environments. Local-first: no account, no
-network service, nothing leaves the machine.
+connected coding agents coordinate over that same database, and brokers vaulted
+credentials into scoped environments. Local-first: no account, no network
+service, nothing leaves the machine.
 
 ```sh
 pi install npm:synapse-pi
@@ -63,7 +63,8 @@ already put it in `~/.pi/agent/APPEND_SYSTEM.md`.
 
 ## Credentials
 
-Secret values live in the macOS Keychain and never reach this extension. What it
+Secret values live in Synapse's own encrypted store, or in the macOS Keychain if
+that is what the machine is set to, and never reach this extension. What it
 can show you is metadata — which variable names are available for a folder,
 whether the `.synapse.yaml` scope there is approved — which is what `vaultstatus`
 answers.

@@ -177,7 +177,15 @@ fn mcp_stdio_lists_and_calls_every_tool() {
         .unwrap();
     assert_eq!(remaining.len(), 1, "got {after}");
     assert_eq!(remaining[0]["body"], "mcp durable marker, corrected");
-    assert!(vault.to_string().contains("Values stay in Keychain"));
+    // The note names no store: which one holds the values is the machine's
+    // business, and a model that starts reasoning about Keychain has been told
+    // something it cannot act on.
+    assert!(
+        vault
+            .to_string()
+            .contains("Values stay in the vault and never in a response")
+    );
+    assert!(vault.to_string().contains("\"backend\""));
 }
 
 #[test]

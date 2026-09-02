@@ -116,7 +116,7 @@
       <h3>run</h3>
       <code>synapse run -- &lt;command&gt; [arguments]</code>
     </div>
-    <p>Resolve global, project, and folder vault mappings for the current directory, refuse on any scope warning, read selected Keychain values, and launch the child. Synapse returns the child exit code, or 1 when the operating system reports no code.</p>
+    <p>Resolve global, project, and folder vault mappings for the current directory, refuse on any scope warning, read the selected values out of the vault, and launch the child. Synapse returns the child exit code, or 1 when the operating system reports no code.</p>
   </section>
     
   <section class="command" id="launch">
@@ -132,7 +132,7 @@
       <h3>status</h3>
       <code>synapse status [folder] [--json]</code>
     </div>
-    <p>Show the resolved folder, available environment names, discovered scope states, warnings, ambient readiness, and detected shell hook. Values remain in Keychain. The folder defaults to the current directory.</p>
+    <p>Show the resolved folder, available environment names, discovered scope states, warnings, ambient readiness, and detected shell hook. Reports which value store this machine uses and never a value. The folder defaults to the current directory.</p>
   </section>
 
     <h2 id="shell">Shell environments</h2>
@@ -200,6 +200,22 @@
     <p>Delete an empty vault. Forget every contained secret first.</p>
   </section>
     
+  <section class="command" id="vaultbackend">
+    <div>
+      <h3>vault backend</h3>
+      <code>synapse vault backend [&amp;lt;keychain|encrypted&amp;gt;]</code>
+    </div>
+    <p>Print which store holds this machine's secret values, or choose one. Choosing moves nothing, so it refuses once secrets exist and points at <code>vault migrate</code>. The encrypted store is the default on a new installation and the only one off macOS.</p>
+  </section>
+    
+  <section class="command" id="vaultmigrate">
+    <div>
+      <h3>vault migrate</h3>
+      <code>synapse vault migrate &amp;lt;keychain|encrypted&amp;gt; [--keep]</code>
+    </div>
+    <p>Move every value into the other store: copy them all, read each one back, switch the setting, then remove the originals. <code>--keep</code> leaves the originals in place. A source that cannot be read stops the migration with nothing moved and nothing switched.</p>
+  </section>
+    
   <section class="command" id="secretlist">
     <div>
       <h3>secret list</h3>
@@ -213,7 +229,15 @@
       <h3>secret set</h3>
       <code>synapse secret set &lt;vault&gt; &lt;name&gt; &lt;env&gt; [--global]</code>
     </div>
-    <p>Read a value from a hidden terminal prompt or stdin and save it in Keychain. Creates metadata when the label is new; updates the existing Keychain item when the environment name matches. <code>--global</code> also enables the mapping.</p>
+    <p>Read a value from a hidden terminal prompt or stdin and save it in the vault. Creates metadata when the label is new; replaces the stored value when the environment name matches. <code>--global</code> also enables the mapping.</p>
+  </section>
+    
+  <section class="command" id="secretcopy">
+    <div>
+      <h3>secret copy</h3>
+      <code>synapse secret copy &lt;vault.name&gt;</code>
+    </div>
+    <p>Put one value on the clipboard. The only way a stored value comes back out, and it never reaches the terminal: the command prints the reference and nothing else. Set <code>SYNAPSE_CLIPBOARD</code> to use something other than <code>pbcopy</code>.</p>
   </section>
     
   <section class="command" id="secretforget">
@@ -221,7 +245,7 @@
       <h3>secret forget</h3>
       <code>synapse secret forget &lt;vault.name&gt;</code>
     </div>
-    <p>Delete the Keychain value, its metadata, and any global mapping.</p>
+    <p>Delete the stored value, its metadata, and any global mapping. The value is removed from both stores, so a machine that has switched backends leaves nothing behind in the one it stopped reading.</p>
   </section>
     
   <section class="command" id="secretglobal">
@@ -351,7 +375,7 @@
       <h3>memory wipe</h3>
       <code>synapse memory wipe --confirm</code>
     </div>
-    <p>Delete every memory entry and import batch while leaving SOUL.md, settings, vaults, Keychain values, and scope approvals intact. The exact guard is required.</p>
+    <p>Delete every memory entry and import batch while leaving SOUL.md, settings, vaults, stored values, and scope approvals intact. The exact guard is required.</p>
   </section>
 
     <h2 id="mesh">Agent mesh</h2>
@@ -600,7 +624,7 @@
       <h3>data export</h3>
       <code>synapse data export &lt;file&gt;</code>
     </div>
-    <p>Create and validate a consistent SQLite snapshot at a destination that does not already exist. Secret values remain in Keychain and are not included.</p>
+    <p>Create and validate a consistent SQLite snapshot of <code>brain.db</code> at a destination that does not already exist. Secret values live in a separate store — Keychain, or <code>vault.db</code> beside it — and are never in the snapshot.</p>
   </section>
     
   <section class="command" id="datarestore">

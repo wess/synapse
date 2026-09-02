@@ -1,11 +1,14 @@
 //! Vaults, the names inside them, and what this folder resolves to.
 //!
 //! No value is ever on this screen, and there is no key that would put one
-//! there. Secret values live in the Keychain and reach a child process, never a
-//! display, a log, or a response — the terminal is not an exception to that.
+//! there. Secret values live in whichever store this machine keeps them in and
+//! reach a child process, never a display, a log, or a response — the terminal
+//! is not an exception to that. Getting one back is `synapse secret copy`,
+//! which puts it on the clipboard and still never draws it.
 
 use crate::tui::state::{self, State};
 use crate::tui::{draw, theme};
+use crate::vault::Backend;
 use ratatui::Frame;
 use ratatui::layout::{Constraint, Layout, Rect};
 use ratatui::text::{Line, Span};
@@ -59,7 +62,14 @@ fn secrets(frame: &mut Frame, area: Rect, state: &State) {
     }
     lines.push(Line::raw(""));
     lines.push(Line::from(Span::styled(
-        " Values live in the Keychain and are never shown.",
+        match state.backend {
+            Backend::Keychain => " Values live in the Keychain and are never shown.",
+            Backend::Encrypted => " Values live sealed in vault.db and are never shown.",
+        },
+        theme::dim(),
+    )));
+    lines.push(Line::from(Span::styled(
+        " synapse secret copy <vault.name> puts one on the clipboard.",
         theme::dim(),
     )));
     frame.render_widget(

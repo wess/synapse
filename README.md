@@ -20,7 +20,7 @@ Apple silicon · macOS 13 or later · Developer ID signed and notarized
 - **Learns a procedure.** Let a session write down something it worked out as a skill, and correct one that turned out wrong. What an agent writes waits for you to approve it and reaches no tool until you do. Off by default.
 - **Lets agents work together.** Turn on the mesh and your connected tools can message each other, split up a job, and wait for free between tasks. Off by default.
 - **Gives you a seat at the table.** The Console puts you on the mesh under your own name, so an agent that hits a decision it should not make alone has somebody to ask — and every worker stays directly addressable rather than reachable only through a lead.
-- **Scopes credentials.** Keep secret values in macOS Keychain and choose which approved folders may receive which environment variables.
+- **Scopes credentials.** Keep secret values in an encrypted store this machine owns — or in macOS Keychain, whichever you choose — and pick which approved folders may receive which environment variables. A value never reaches a project file, a log, or a response, and comes back out only onto your clipboard.
 - **Leaves you in control.** Search, edit, export, restore, or delete what Synapse stores. Nothing is hidden behind an account or remote service.
 
 ## A simple workflow

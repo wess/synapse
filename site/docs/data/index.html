@@ -142,8 +142,8 @@ synapse data check --json</code></pre>
     <p>The destination must not already exist. Synapse opens the active database normally, writes a consistent compact snapshot, secures its permissions, then reopens it read-only and validates integrity before reporting success.</p>
     
   <aside class="note">
-    <strong>Keychain values are separate</strong>
-    <p>The exported database contains vault metadata and Keychain account references, but not secret values. Restoring it on another Mac does not transfer those values.</p>
+    <strong>Secret values are separate</strong>
+    <p>The export covers brain.db: memory, vault metadata, and account references, and never a value. Values live in their own store — vault.db beside it, or macOS Keychain — and neither is in the snapshot. Restoring on another machine restores the labels; the values are set again there, or vault.db and vault.key are carried across together and treated like the secret they are.</p>
   </aside>
 
     <h2 id="restore">Restore a snapshot</h2>
@@ -165,8 +165,8 @@ synapse data check</code></pre>
     <p>When a current database exists, Synapse validates it and creates a recovery snapshot before atomically replacing it. WAL and SHM sidecars are cleared, file permissions are secured, and the containing directory is synced.</p>
 
     <h2 id="wipe">Memory wipe is not a reset</h2>
-    <p><code>synapse memory wipe --confirm</code> removes every memory entry and import batch but leaves <code>SOUL.md</code>, settings, vault labels, Keychain values, global mappings, and scope approvals. Use it when you want a clean memory history without rebuilding guidance or credential setup.</p>
-    <p>There is no one-command factory reset. To remove Synapse completely, first forget each Keychain secret through the app or CLI, then quit all processes and remove the application, installed launcher, and data directory deliberately.</p>
+    <p><code>synapse memory wipe --confirm</code> removes every memory entry and import batch but leaves <code>SOUL.md</code>, settings, vault labels, stored values, global mappings, and scope approvals. Use it when you want a clean memory history without rebuilding guidance or credential setup.</p>
+    <p>There is no one-command factory reset. To remove Synapse completely, first forget each secret through the app or CLI, then quit all processes and remove the application, installed launcher, and data directory deliberately. On the encrypted store the data directory <em>is</em> the credential store, so removing it takes every value with it — <code>synapse uninstall --data</code> says so before it acts.</p>
   
     </main>
     <aside class="ontoc" aria-label="On this page">

@@ -1017,7 +1017,7 @@ fn shellmodes(
                 .child(shellmode(
                     "Command scoped",
                     "synapse run -- cargo test",
-                    "Reads Keychain values for one child process. Your current shell remains unchanged.",
+                    "Reads vault values for one child process. Your current shell remains unchanged.",
                     border,
                 ))
                 .child(shellmode(

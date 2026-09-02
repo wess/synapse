@@ -85,6 +85,20 @@ impl VaultStore {
         .context("could not list secrets")
     }
 
+    /// Every secret on the machine, whatever vault holds it. What a backend
+    /// migration walks.
+    pub async fn allsecrets(&self) -> Result<Vec<Secret>> {
+        sqlx::query_as(
+            "SELECT secret.id, secret.vaultid, vault.name AS vault, secret.name, secret.env, \
+             secret.account, EXISTS(SELECT 1 FROM globalenv WHERE secretid = secret.id) AS global, \
+             secret.created FROM secret JOIN vault ON vault.id = secret.vaultid \
+             ORDER BY lower(vault.name), lower(secret.name)",
+        )
+        .fetch_all(&self.pool)
+        .await
+        .context("could not list secrets")
+    }
+
     pub async fn createsecret(
         &self,
         vaultid: i64,

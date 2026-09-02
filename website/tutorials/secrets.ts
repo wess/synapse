@@ -5,7 +5,7 @@ export const secrets: Page = {
   path: "tutorials/secrets/index.html",
   title: "Use a scoped secret in either shell mode",
   description:
-    "Create a Keychain-backed value, approve its project mapping, compare one-command and ambient loading without ever printing it, and watch trust invalidate the moment the file changes.",
+    "Create a vaulted value, approve its project mapping, compare one-command and ambient loading without ever printing it, and watch trust invalidate the moment the file changes.",
   kind: "tutorial",
   toc: [
     { label: "Outcome", id: "outcome" },
@@ -22,9 +22,9 @@ export const secrets: Page = {
   ],
   body: `
     <h2 id="outcome">Outcome and prerequisites</h2>
-    <p>You will create a disposable value in macOS Keychain, map it to one project, and exercise both ways Synapse can hand it to something — without the value ever appearing on screen. Then you will break the approval on purpose and watch every path refuse.</p>
+    <p>You will create a disposable value in the vault, map it to one project, and exercise both ways Synapse can hand it to something — without the value ever appearing on screen. Then you will break the approval on purpose and watch every path refuse.</p>
     <ul>
-      <li>The <code>synapse</code> CLI installed and the login Keychain unlocked.</li>
+      <li>The <code>synapse</code> CLI installed. If <code>synapse vault backend</code> says <code>keychain</code>, unlock your login Keychain first.</li>
       <li>An empty temporary folder. Do not run this in a real project.</li>
       <li>About twenty-five minutes.</li>
     </ul>
@@ -34,13 +34,13 @@ export const secrets: Page = {
     <table>
       <thead><tr><th>Thing</th><th>Stored where</th></tr></thead>
       <tbody>
-        <tr><td>The secret value</td><td>macOS Keychain. Only there, ever.</td></tr>
-        <tr><td>Its name, its variable name, its Keychain reference</td><td>Synapse's SQLite database.</td></tr>
+        <tr><td>The secret value</td><td>The value store, and only there. That is <code>vault.db</code> — sealed, one envelope per secret, under the key in <code>vault.key</code> — or macOS Keychain if the machine is set to it. <code>synapse vault backend</code> says which.</td></tr>
+        <tr><td>Its name, its variable name, its account reference</td><td><code>brain.db</code>, Synapse's SQLite database. Never the value.</td></tr>
         <tr><td>Which variable a folder should get</td><td><code>.synapse.yaml</code> in the project, which holds a reference and never a value.</td></tr>
         <tr><td>Whether that file is trusted</td><td>A SHA-256 digest of its exact bytes, recorded when you approve it.</td></tr>
       </tbody>
     </table>
-    <p>No secret value is ever written to SQLite, to YAML, to an MCP response, or to a log. A value is read from Keychain at the moment a child process is launched and goes nowhere else.</p>
+    <p>No secret value is ever written to <code>brain.db</code>, to YAML, to an MCP response, or to a log, and neither store keeps one in plaintext. A value is read out of the vault at the moment a child process is launched, and goes nowhere else unless you ask for it with <code>synapse secret copy</code>, which puts it on the clipboard and still never prints it.</p>
 
     <ol class="steps">
       <li>
@@ -51,7 +51,7 @@ synapse vault create tutorial
 synapse secret set tutorial demo SYNAPSE_TUTORIAL_TOKEN`)}
         <p>Enter a disposable value at the hidden prompt and confirm it. A vault is an organizational label; the three arguments are the vault, the secret's name inside it, and the environment variable it will become.</p>
         ${code("text", `Created vault tutorial
-Saved tutorial.demo in Keychain`)}
+Saved tutorial.demo in the encrypted vault`)}
         <p>Now list what exists. Metadata only — there is no command that prints a value, because there is no reason for one to exist:</p>
         ${code("shell", `synapse secret list tutorial`)}
         ${code("text", `tutorial.demo	SYNAPSE_TUTORIAL_TOKEN	scoped`)}
@@ -85,7 +85,7 @@ Ambient: ready
         ${code("shell", `synapse run -- sh -c 'test -n "$SYNAPSE_TUTORIAL_TOKEN" && echo "tutorial token available"'`)}
         <p>The child prints only the fixed sentence. Confirm the parent shell was never touched:</p>
         ${code("shell", `test -z "$SYNAPSE_TUTORIAL_TOKEN" && echo "parent unchanged"`)}
-        <p>Synapse read the Keychain item, set it on that one child, and the child exited with it. Nothing was exported into your session.</p>
+        <p>Synapse read the stored value, set it on that one child, and the child exited with it. Nothing was exported into your session.</p>
         ${note("The child is fully trusted with the value", "Any process launched through <code>synapse run</code> can read and disclose what it is given. This tutorial uses a disposable value and a child that only tests whether it is non-empty. The boundary Synapse enforces is which processes receive a value, not what they do with it afterwards.")}
       </li>
 
@@ -159,7 +159,7 @@ Ambient: inactive`)}
       <li>
         <h3 id="tools">Check what a connected tool can actually see</h3>
         <p>Go back to the tutorial folder and ask a connected coding tool to call <code>vaultstatus</code>. It reports the variable names available here, the trust state of each scope, and whether ambient mode is ready — and no values, because that tool has no code path that reads one.</p>
-        <p>The same is true of a preview. <code>synapse launch claude --print</code> shows <code>DEMO_TOKEN=&lt;from keychain&gt;</code> rather than a redacted value, because a preview calls a different function that lists names and never opens the Keychain at all. There is no value in the process to leak.</p>
+        <p>The same is true of a preview. <code>synapse launch claude --print</code> shows <code>DEMO_TOKEN=&lt;from the vault&gt;</code> rather than a redacted value, because a preview calls a different function that lists names and never opens the vault at all. There is no value in the process to leak.</p>
       </li>
     </ol>
 
@@ -170,11 +170,11 @@ synapse vault delete tutorial
 cd .. && rm -rf synapsetutorial`)}
     ${code("text", `Forgot tutorial.demo
 Deleted vault tutorial`)}
-    <p>The next prompt unloads the ambient value. Forgetting the secret removes both the Keychain item and Synapse's record of it — this is the one cleanup step that matters, because uninstalling Synapse later would remove its knowledge of the item without removing the item itself.</p>
+    <p>The next prompt unloads the ambient value. Forgetting the secret removes the stored value and Synapse's record of it, from both stores rather than only the one in use — so a machine that has switched backends leaves nothing behind in the one it stopped reading.</p>
 
     <h2>What you can rely on</h2>
     <ul>
-      <li>Secret values never reach SQLite, YAML, an MCP response, or a log.</li>
+      <li>Secret values never reach <code>brain.db</code>, YAML, an MCP response, or a log, and are never at rest in plaintext.</li>
       <li>Secrets are never accepted as command arguments — only from a TTY prompt or stdin.</li>
       <li>An ambient shell never activates from a global mapping alone, nor from an unapproved, changed, or incomplete scope.</li>
       <li>Unloading restores values that existed before activation rather than unsetting them.</li>

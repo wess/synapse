@@ -51,9 +51,9 @@ pub async fn restore(database: &Path, source: &Path) -> Result<Option<PathBuf>> 
     let existed = permission::prepare(database)?;
     let _lock = permission::exclusivelock(database)?;
     let backup = if existed {
-        let current = connect(database).await?;
+        let current = connect(database, crate::database::Schema::Brain).await?;
         integrity(&current).await?;
-        migration::run(&current, database, true).await?;
+        migration::run(&current, database, true, crate::database::Schema::Brain).await?;
         let backup = backup::create(&current, database, "restore").await?;
         sqlx::query("PRAGMA wal_checkpoint(TRUNCATE)")
             .execute(&current)

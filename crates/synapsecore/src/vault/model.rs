@@ -69,6 +69,9 @@ pub struct VaultStatusRequest {
 #[derive(Debug, Serialize, JsonSchema)]
 pub struct VaultStatusResponse {
     pub path: String,
+    /// Which store holds the values on this machine: `keychain` or
+    /// `encrypted`. Names the store, never what is in it.
+    pub backend: String,
     pub available: Vec<String>,
     pub scopes: Vec<VaultScopeResponse>,
     pub warnings: Vec<String>,

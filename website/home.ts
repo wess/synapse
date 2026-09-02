@@ -99,7 +99,7 @@ Each file should have one clear job.
   <section class="vaultscene" data-take="Scene 03">
     <div class="vaultcopy">
       <h2>Credentials without the sprawl.</h2>
-      <p>Secret values stay protected by macOS Keychain. Projects receive only the environment variables you approve for them.</p>
+      <p>Secret values are sealed in a store only you can open — Synapse's own, or macOS Keychain if you prefer it. Projects receive only the environment variables you approve for them.</p>
       <p>Use the boundary for one command, or turn on shell integration in Settings to load an approved environment when you enter its folder.</p>
       <a class="button" href="docs/vault/">See how scopes work</a>
     </div>

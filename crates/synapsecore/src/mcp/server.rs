@@ -134,14 +134,18 @@ impl Server {
         } else {
             "blocked"
         };
+        let backend = crate::vault::backend()
+            .await
+            .map_err(|error| error.to_string())?;
         Ok(Json(VaultStatusResponse {
             path: path.display().to_string(),
+            backend: backend.name().to_owned(),
             available: resolved.env.keys().cloned().collect(),
             scopes: resolved.scopes.into_iter().map(Into::into).collect(),
             warnings: resolved.warnings,
             ambient: ambient.to_owned(),
             shell: std::env::var("SYNAPSE_SHELL_ACTIVE").ok(),
-            note: "Values stay in Keychain. Use `synapse run -- <command>` for one child or an installed shell hook for an approved directory."
+            note: "Values stay in the vault and never in a response. Use `synapse run -- <command>` for one child or an installed shell hook for an approved directory."
                 .to_owned(),
         }))
     }

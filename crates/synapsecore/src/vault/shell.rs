@@ -1,4 +1,4 @@
-use crate::vault::{VaultStore, getsecret, resolve};
+use crate::vault::{Values, VaultStore, resolve};
 use anyhow::Result;
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
@@ -56,8 +56,9 @@ pub async fn changes(
     }
 
     let mut values = BTreeMap::new();
+    let vault = Values::open().await?;
     for (name, secret) in resolved.env {
-        values.insert(name, getsecret(&secret.account)?);
+        values.insert(name, vault.get(&secret.account).await?);
     }
     let scope = resolved
         .scopes

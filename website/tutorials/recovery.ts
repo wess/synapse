@@ -91,7 +91,7 @@ synapse memory list synapserecovery`)}
     <table>
       <thead><tr><th>Not in the export</th><th>Why, and what to do</th></tr></thead>
       <tbody>
-        <tr><td>Secret values</td><td>They live in macOS Keychain and were never in the database. On the same Mac, restored metadata still points at the existing items and everything works. On another Mac, recreate each with <code>synapse secret set</code>.</td></tr>
+        <tr><td>Secret values</td><td>They live in their own store and were never in <code>brain.db</code>. On the same machine, restored metadata still points at them and everything works. On another machine, recreate each with <code>synapse secret set</code> — or, on the encrypted store, carry <code>vault.db</code> and <code>vault.key</code> across together, since neither is any use without the other.</td></tr>
         <tr><td>Your <code>SOUL.md</code></td><td>A file beside the database, not a table inside it. Copy it separately if it matters — and it usually does.</td></tr>
         <tr><td>Your skill library</td><td>Directories under the data folder. Copy <code>skills/</code> separately.</td></tr>
         <tr><td>Roles and teams</td><td>TOML under the data folder, plus anything in a project's own <code>.synapse/roles/</code>, which travels with that checkout instead.</td></tr>

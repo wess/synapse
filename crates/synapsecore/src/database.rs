@@ -7,7 +7,7 @@ mod tests;
 
 pub use backup::{folder as backupfolder, snapshots};
 pub use lifecycle::{check, export, restore};
-pub use permission::securefile;
+pub use permission::{securedirectory, securefile};
 
 use anyhow::{Context, Result};
 use sqlx::SqlitePool;
@@ -23,9 +23,26 @@ pub struct Opened {
     pub lock: Arc<File>,
 }
 
+/// Which store a file holds.
+///
+/// The two share the habits — owner-only permissions, a lock, an integrity
+/// check, a backup before migrating — and nothing else. A table of sealed
+/// secret values has no business in the file `data export` hands somebody, and
+/// the memory schema has no business in the file the vault key opens.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum Schema {
+    Brain,
+    Vault,
+}
+
 /// Open the store for use: verified, migrated, and owner-only.
 pub async fn open(path: &Path) -> Result<Opened> {
-    opened(path, Scan::Whole).await
+    opened(path, Scan::Whole, Schema::Brain).await
+}
+
+/// Open a store that is not `brain.db`.
+pub async fn openas(path: &Path, schema: Schema) -> Result<Opened> {
+    opened(path, Scan::Whole, schema).await
 }
 
 /// Open the store to report on it.
@@ -39,7 +56,7 @@ pub async fn open(path: &Path) -> Result<Opened> {
 /// actually reaches is still reported, and `synapse data check` is still the
 /// way to ask the whole question.
 pub async fn glance(path: &Path) -> Result<Opened> {
-    opened(path, Scan::None).await
+    opened(path, Scan::None, Schema::Brain).await
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -48,14 +65,14 @@ enum Scan {
     None,
 }
 
-async fn opened(path: &Path, scan: Scan) -> Result<Opened> {
+async fn opened(path: &Path, scan: Scan, schema: Schema) -> Result<Opened> {
     // Snapshot the file before opening it, so that connecting — which touches
     // the write-ahead log whether or not anything is stored — cannot make the
     // store look changed to the next handle this process asks for.
     let state = identity(path);
     let existed = permission::prepare(path)?;
     let lock = Arc::new(permission::sharedlock(path)?);
-    let pool = connect(path).await?;
+    let pool = connect(path, schema).await?;
     if unverified(path, state) {
         relationships(&pool).await?;
         if scan == Scan::Whole {
@@ -63,7 +80,7 @@ async fn opened(path: &Path, scan: Scan) -> Result<Opened> {
             verified(path, state);
         }
     }
-    migration::run(&pool, path, existed).await?;
+    migration::run(&pool, path, existed, schema).await?;
     permission::securefiles(path)?;
     Ok(Opened { pool, lock })
 }
@@ -111,13 +128,22 @@ fn identity(path: &Path) -> Identity {
     state
 }
 
-async fn connect(path: &Path) -> Result<SqlitePool> {
+async fn connect(path: &Path, schema: Schema) -> Result<SqlitePool> {
     let options = SqliteConnectOptions::from_str("sqlite://synapse")?
         .filename(path)
         .create_if_missing(true)
         .foreign_keys(true)
         .busy_timeout(Duration::from_secs(5))
         .journal_mode(sqlx::sqlite::SqliteJournalMode::Wal);
+    // A deleted row is normally left on the page until something else needs
+    // the space. For the vault that means a forgotten secret's envelope sits
+    // in the file until it happens to be written over, so it is zeroed on the
+    // way out instead. It costs a write per free page, on a file holding one
+    // small row per secret.
+    let options = match schema {
+        Schema::Vault => options.pragma("secure_delete", "ON"),
+        Schema::Brain => options,
+    };
     SqlitePoolOptions::new()
         .max_connections(5)
         .connect_with(options)

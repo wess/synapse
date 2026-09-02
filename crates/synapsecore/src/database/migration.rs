@@ -1,9 +1,14 @@
-use crate::database::{backup, version};
+use crate::database::{Schema, backup, version};
 use anyhow::{Context, Result};
 use sqlx::SqlitePool;
 use std::path::Path;
 
-pub const LATEST: i64 = 10;
+pub const LATEST: i64 = 11;
+
+/// The vault's own schema, in its own file. One table today, with the numbered
+/// migration around it anyway: the day it grows a column is not the day to
+/// start keeping track of what a file has already had done to it.
+pub const VAULTLATEST: i64 = 1;
 
 struct Migration {
     version: i64,
@@ -251,15 +256,42 @@ const MIGRATIONS: &[Migration] = &[
             "CREATE INDEX skillrevisionskill ON skillrevision(shelf, skill, id DESC)",
         ],
     },
+    Migration {
+        version: 11,
+        statements: &[
+            // Where secret values are kept became a choice in this release, and
+            // the answer for a machine that already has some is settled here
+            // rather than guessed at every read: anything stored before now is
+            // in the Keychain, because that is the only place there was. A
+            // fresh install runs this against an empty table, writes nothing,
+            // and gets the encrypted store. Either way `vault migrate` is what
+            // changes the answer, and it moves the values with it.
+            "INSERT OR IGNORE INTO setting(key, value) \
+             SELECT 'vault.backend', 'keychain' WHERE EXISTS(SELECT 1 FROM secret)",
+        ],
+    },
 ];
 
-pub async fn run(pool: &SqlitePool, path: &Path, existed: bool) -> Result<()> {
+/// `vault.db`. One row per secret, holding a sealed envelope and nothing else:
+/// the account name is already in `brain.db`, and repeating it here is what
+/// lets the envelope authenticate the name it was sealed under.
+const VAULTMIGRATIONS: &[Migration] = &[Migration {
+    version: 1,
+    statements: &["CREATE TABLE IF NOT EXISTS secretvalue(\
+         account TEXT PRIMARY KEY, envelope BLOB NOT NULL, updated INTEGER NOT NULL)"],
+}];
+
+pub async fn run(pool: &SqlitePool, path: &Path, existed: bool, schema: Schema) -> Result<()> {
+    let (migrations, latest) = match schema {
+        Schema::Brain => (MIGRATIONS, LATEST),
+        Schema::Vault => (VAULTMIGRATIONS, VAULTLATEST),
+    };
     let current = version(pool).await?;
     anyhow::ensure!(
-        current <= LATEST,
+        current <= latest,
         "database version {current} is newer than this Synapse release supports"
     );
-    if current == LATEST {
+    if current == latest {
         return Ok(());
     }
     if existed {
@@ -272,7 +304,7 @@ pub async fn run(pool: &SqlitePool, path: &Path, existed: bool) -> Result<()> {
     let current = sqlx::query_scalar::<_, i64>("PRAGMA user_version")
         .fetch_one(&mut *transaction)
         .await?;
-    for migration in MIGRATIONS.iter().filter(|item| item.version > current) {
+    for migration in migrations.iter().filter(|item| item.version > current) {
         for statement in migration.statements {
             sqlx::query(statement).execute(&mut *transaction).await?;
         }
@@ -291,6 +323,74 @@ mod tests {
     use super::*;
     use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
     use std::str::FromStr;
+
+    async fn oldstore(path: &Path, version: i64) -> SqlitePool {
+        let pool = SqlitePoolOptions::new()
+            .connect_with(
+                SqliteConnectOptions::from_str("sqlite://test")
+                    .unwrap()
+                    .filename(path)
+                    .create_if_missing(true),
+            )
+            .await
+            .unwrap();
+        for migration in MIGRATIONS.iter().filter(|item| item.version <= version) {
+            for statement in migration.statements {
+                sqlx::query(statement).execute(&pool).await.unwrap();
+            }
+        }
+        sqlx::query(&format!("PRAGMA user_version = {version}"))
+            .execute(&pool)
+            .await
+            .unwrap();
+        pool
+    }
+
+    /// A machine that stored secrets before the encrypted vault existed has to
+    /// keep resolving them, and one that stored none has no reason to be sent
+    /// to a Keychain it may not have.
+    #[tokio::test]
+    async fn only_a_store_that_already_holds_secrets_is_pinned_to_the_keychain() {
+        let directory = tempfile::tempdir().unwrap();
+
+        let existing = directory.path().join("existing.db");
+        let pool = oldstore(&existing, 10).await;
+        sqlx::query("INSERT INTO vault(name, created) VALUES ('work', 1)")
+            .execute(&pool)
+            .await
+            .unwrap();
+        sqlx::query(
+            "INSERT INTO secret(vaultid, name, env, account, created) \
+             VALUES (1, 'token', 'TOKEN', 'work.token', 1)",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        run(&pool, &existing, true, Schema::Brain).await.unwrap();
+        assert_eq!(
+            sqlx::query_scalar::<_, String>(
+                "SELECT value FROM setting WHERE key = 'vault.backend'"
+            )
+            .fetch_optional(&pool)
+            .await
+            .unwrap()
+            .as_deref(),
+            Some("keychain")
+        );
+
+        let empty = directory.path().join("empty.db");
+        let pool = oldstore(&empty, 10).await;
+        run(&pool, &empty, true, Schema::Brain).await.unwrap();
+        assert_eq!(
+            sqlx::query_scalar::<_, String>(
+                "SELECT value FROM setting WHERE key = 'vault.backend'"
+            )
+            .fetch_optional(&pool)
+            .await
+            .unwrap(),
+            None
+        );
+    }
 
     /// Every shipped migration has to survive being applied to a store that
     /// stopped at the version before it. Creating a fresh database only proves
@@ -333,7 +433,7 @@ mod tests {
         .await
         .unwrap();
 
-        run(&pool, &path, false).await.unwrap();
+        run(&pool, &path, false, Schema::Brain).await.unwrap();
 
         assert_eq!(version(&pool).await.unwrap(), LATEST);
         assert_eq!(

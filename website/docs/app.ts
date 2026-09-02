@@ -20,7 +20,7 @@ export const app: Page = {
   ],
   body: `
     <h2 id="navigation">Navigation and shared state</h2>
-    <p>The desktop app is a local control surface over the same SQLite database, Keychain items, scope files, and tool configuration used by the CLI and MCP server. A column down the left moves between seven screens, grouped by what they answer: what Synapse is wired into, what is running, and what it is holding for you.</p>
+    <p>The desktop app is a local control surface over the same SQLite database, vault, scope files, and tool configuration used by the CLI and MCP server. A column down the left moves between seven screens, grouped by what they answer: what Synapse is wired into, what is running, and what it is holding for you.</p>
     <table>
       <thead><tr><th>Screen</th><th>Use it for</th><th>Material it can change</th></tr></thead>
       <tbody>
@@ -29,7 +29,7 @@ export const app: Page = {
         <tr><td>Console</td><td>Talk to the agents. Opening it puts you on the roster under your login name.</td><td>Messages you send, and one roster row that is you.</td></tr>
         <tr><td>Mesh</td><td>Turn the agent mesh on and watch who has joined, what they report, and what they send each other.</td><td>One local preference. The roster and messages are written by the agents themselves.</td></tr>
         <tr><td>Skills</td><td>Keep one Agent Skills library and install it into every connected tool.</td><td>The library in the Synapse data directory, and skill folders inside each tool.</td></tr>
-        <tr><td>Vaults</td><td>Manage labels, Keychain values, mappings, and approved project scopes.</td><td>Vault metadata, Keychain items, and <code>.synapse.yaml</code>.</td></tr>
+        <tr><td>Vaults</td><td>Manage labels, stored values, mappings, the value store itself, and approved project scopes.</td><td>Vault metadata, stored values, and <code>.synapse.yaml</code>.</td></tr>
         <tr><td>Settings</td><td>Manage shared guidance, recall, the mesh, self-improvement, the worker limit, the console reactor, dictation, appearance, CLI, and shell integration.</td><td><code>SOUL.md</code>, global pointers, local preferences, the CLI launcher, and one managed shell block.</td></tr>
       </tbody>
     </table>
@@ -52,7 +52,7 @@ export const app: Page = {
     <h2 id="memory">Memory</h2>
     <p>The import panel previews Claude and Codex separately. <strong>Import safe</strong> stores recognized project memory, skips anything credential-shaped, leaves source files untouched, and records a reversible batch. <strong>Review source</strong> opens the provider folder. Undo requires confirmation and preserves imported records that were edited or linked from another source.</p>
     <p>An empty search shows recent memory; a query searches the stored body and shows up to 100 results. Select an entry to inspect its ID, local creation time, full Markdown body, source, and visibility. <strong>Global</strong> makes it available everywhere; <strong>Project</strong> requires a project root. <strong>Save changes</strong> replaces the selected body, source, and scope in place.</p>
-    <p><strong>Delete</strong> changes to <strong>Confirm delete</strong> before removing one entry. <strong>Wipe memories</strong> separately changes to <strong>Confirm wipe</strong> before deleting the entire memory table. A wipe does not affect vault labels, Keychain values, scope approvals, or settings.</p>
+    <p><strong>Delete</strong> changes to <strong>Confirm delete</strong> before removing one entry. <strong>Wipe memories</strong> separately changes to <strong>Confirm wipe</strong> before deleting the entire memory table. A wipe does not affect vault labels, stored values, scope approvals, or settings.</p>
     <p>Recall optimization changes responses, not what this screen stores or displays. Read <a href="../memory/">Memory and recall</a> for search behavior, response budgets, and CLI equivalents.</p>
 
     <h2 id="console">Console</h2>
@@ -65,7 +65,7 @@ export const app: Page = {
 
     <h3>Dictation</h3>
     <p>A build made with <code>--features voice</code> puts a microphone beside the composer. Push to talk: start, say something, stop, and what you said appears as text you read before sending. Speech is transcribed on your Mac by macOS's own recogniser — no vendor, no key, and nothing billed per minute — and Synapse refuses to transcribe at all rather than fall back to sending your voice to Apple.</p>
-    ${note("Not in the download", "Dictation is off by default, and that is a decision about what Synapse is rather than about the feature. This is the program holding a Keychain reference to every secret you own, so the release build has no Speech framework in it and is signed with no microphone entitlement. You get both by building with the feature yourself.")}
+    ${note("Not in the download", "Dictation is off by default, and that is a decision about what Synapse is rather than about the feature. This is the program holding every secret you own, so the release build has no Speech framework in it and is signed with no microphone entitlement. You get both by building with the feature yourself.")}
 
     <h2 id="mesh">Mesh</h2>
     <p>The Mesh screen is off until you turn it on, here or in Settings. While it is off the screen explains the trade: the coordination tools are loaded by every connected tool, and that costs context in each session.</p>
@@ -78,13 +78,15 @@ export const app: Page = {
     <p>See <a href="../skills/">Skills</a> for the format, the exact folders, and what each state means.</p>
 
     <h2 id="vaults">Vaults and scopes</h2>
-    <p>Create a vault, select it, then provide a label, environment name, and value under <strong>Add a secret</strong>. <strong>Save to Keychain</strong> writes the value directly to macOS Keychain while SQLite keeps only its label, environment name, account reference, and scope state. The app never shows a saved value again.</p>
+    <p>Create a vault, select it, then provide a label, environment name, and value under <strong>Add a secret</strong>. <strong>Save to the vault</strong> writes the value straight into the value store while <code>brain.db</code> keeps only its label, environment name, account reference, and scope state. The app never shows a saved value again.</p>
     <ul>
       <li><strong>Project only</strong> requires an approved YAML mapping; <strong>Global</strong> makes that environment name available without a project mapping.</li>
-      <li><strong>Replace</strong> reads the current Secret value field and overwrites the selected Keychain item without changing its reference.</li>
-      <li><strong>Forget</strong> requires <strong>Confirm</strong>, then removes both the Keychain item and its SQLite metadata.</li>
+      <li><strong>Copy</strong> puts one value on the clipboard. It is the only way a stored value comes back out, and it never passes through the window.</li>
+      <li><strong>Replace</strong> reads the current Secret value field and overwrites the stored value without changing its reference.</li>
+      <li><strong>Forget</strong> requires <strong>Confirm</strong>, then removes the stored value and its metadata.</li>
       <li><strong>Delete vault</strong> is available only when the selected vault is empty and requires a second confirmation.</li>
     </ul>
+    <p>A badge beside the counts names the store this machine keeps values in — <strong>Encrypted vault.db</strong> or <strong>macOS Keychain</strong> — and the button next to it moves every value into the other one. That takes two clicks: the first asks, the second migrates. See <a href="../vault/#backend">Where values live</a> for what the two stores protect.</p>
     <p>Under <strong>Project and folder scopes</strong>, choose a directory, create or edit its <code>.synapse.yaml</code>, inspect the reported state, then choose <strong>Approve</strong> only after reviewing the exact file. Any later edit invalidates that digest and requires another review. Secret values never enter YAML. See <a href="../vault/">Vaults and scopes</a> for resolution order and both process boundaries.</p>
 
     <h2 id="settings">Settings</h2>

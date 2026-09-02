@@ -23,7 +23,7 @@ export const launch: Page = {
     <ul>
       <li>The <code>synapse</code> CLI installed and on <code>PATH</code>.</li>
       <li>Codex, Claude Code, or pi installed. None of them needs to be connected — that is the point of this tutorial.</li>
-      <li>A scratch project folder. Steps four and five create a disposable Keychain value.</li>
+      <li>A scratch project folder. Steps four and five create a disposable vault value.</li>
     </ul>
 
     ${note("Launching is not connecting", "<code>synapse connect</code> is a decision you make once: it registers the MCP server in the tool's own configuration and leaves it there. <code>synapse launch</code> makes no such change. If the tool has no connection of its own, Synapse hands it a generated configuration for that one process and the machine is unchanged when it exits.")}
@@ -76,8 +76,8 @@ synapse launch claude --print`)}
         <p>The preview now names the variable and refuses to show what is in it:</p>
         ${code("text", `/Users/example/.local/bin/claude --mcp-config …/launch.66c4a25fcfe8.mcp.json
 env  SYNAPSE_PROJECT_DIR=/Users/example/tmp/launchtutorial
-env  DEMO_TOKEN=<from keychain>`)}
-        <p><code>&lt;from keychain&gt;</code> is not a redaction applied to a value that was read. A preview calls a different code path that lists names and never opens the Keychain at all, so there is no value in the process to leak.</p>
+env  DEMO_TOKEN=<from the vault>`)}
+        <p><code>&lt;from the vault&gt;</code> is not a redaction applied to a value that was read. A preview calls a different code path that lists names and never opens the vault at all, so there is no value in the process to leak.</p>
       </li>
 
       <li>
@@ -107,7 +107,7 @@ synapse launch claude --print`)}
         ${code("shell", `synapse launch claude --print -- --resume --model opus`)}
         ${code("text", `/Users/example/.local/bin/claude --mcp-config …/launch.66c4a25fcfe8.mcp.json --resume --model opus
 env  SYNAPSE_PROJECT_DIR=/Users/example/tmp/launchtutorial
-env  DEMO_TOKEN=<from keychain>`)}
+env  DEMO_TOKEN=<from the vault>`)}
         <p>The split happens before Synapse parses anything, which is why a flag both programs understand still reaches the right one. Without that, a <code>--model</code> meant for the tool would be eaten by Synapse.</p>
       </li>
 
@@ -127,7 +127,7 @@ env  DEMO_TOKEN=<from keychain>`)}
 synapse secret forget demo.token
 synapse vault delete demo
 cd .. && rm -rf launchtutorial`)}
-    <p>Forgetting the secret removes both the Keychain item and Synapse's record of it. The generated MCP configuration under the data folder is harmless — it names this binary and nothing else — and is overwritten on the next launch in the same folder.</p>
+    <p>Forgetting the secret removes the stored value and Synapse's record of it. The generated MCP configuration under the data folder is harmless — it names this binary and nothing else — and is overwritten on the next launch in the same folder.</p>
 
     <h2>What you can rely on</h2>
     <ul>

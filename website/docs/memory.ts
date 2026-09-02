@@ -73,7 +73,7 @@ Searched:   credentials
 Dropped:    where, are, the (matches nearly every memory)
 Matches:    1
 
--0.4596	31	global	vault	Credentials live in Keychain, never in the repository.`)}
+-0.4596	31	global	vault	Credentials live in the vault, never in the repository.`)}
 
     <h2 id="control">Inspect and correct</h2>
     <p>The desktop <strong>Memories</strong> screen searches the same store and lets you inspect, edit, or delete individual entries. CLI edits replace the body and optionally the source:</p>
@@ -120,7 +120,7 @@ synapse settings optimize balanced`)}
     ${note("Originals remain intact", "Balanced and Lean transform only the MCP response. The database and memory-management views keep the complete stored body, abridged results included.")}
 
     <h2 id="destructive">Destructive actions</h2>
-    <p>Deleting one memory, undoing an import, and wiping every memory require explicit confirmation. The desktop app presents a separate confirmation. A wipe removes memory and import history but leaves guidance, vault labels, Keychain values, scope approvals, and settings intact.</p>
+    <p>Deleting one memory, undoing an import, and wiping every memory require explicit confirmation. The desktop app presents a separate confirmation. A wipe removes memory and import history but leaves guidance, vault labels, stored values, scope approvals, and settings intact.</p>
     ${code("shell", `synapse memory delete 24 --confirm
 synapse memory wipe --confirm`)}
     <p>Before a large cleanup, create a portable snapshot with <code>synapse data export</code>. Use a wipe when the goal is to clear context while retaining the vault setup; use a database restore when the goal is to return the entire Synapse state to an earlier snapshot.</p>

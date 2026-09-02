@@ -11,7 +11,7 @@ use crate::cli::InstallStatus;
 use crate::relay::{AgentView, WorkerView};
 use crate::shellsetup::Integration;
 use crate::skill::Status as SkillStatus;
-use crate::vault::{Resolved, Secret, Vault};
+use crate::vault::{Backend, Resolved, Secret, Vault};
 use std::path::PathBuf;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -141,6 +141,8 @@ pub struct State {
     pub vaults: Vec<Vault>,
     pub secrets: Vec<Secret>,
     pub scope: Option<Resolved>,
+    /// Which store holds the values. Named on the page, never opened by it.
+    pub backend: Backend,
 
     /// One cursor per page, so moving away and back does not lose your place.
     pub cursor: [usize; PAGES.len()],

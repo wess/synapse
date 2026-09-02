@@ -337,6 +337,7 @@ mod tests {
             unmanaged: Vec::new(),
             vaults: Vec::new(),
             secrets: Vec::new(),
+            backend: crate::vault::Backend::Encrypted,
             scope: None,
             cursor: [0; PAGES.len()],
         }

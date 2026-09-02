@@ -133,7 +133,7 @@ for (const phrase of [
   "Desktop app reference",
   "Edit instructions",
   "Confirm wipe",
-  "Save to Keychain",
+  "Save to the vault",
   "Enable shell hook",
   "Repair hook",
   "Remove hook",
@@ -211,6 +211,9 @@ for (const command of [
   "synapse skill reject",
   "synapse skill history",
   "synapse skill revert",
+  "synapse vault backend",
+  "synapse vault migrate",
+  "synapse secret copy",
 ]) {
   if (!corpus.includes(command)) fail(`documentation is missing subcommand: ${command}`);
 }

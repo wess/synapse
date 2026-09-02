@@ -530,6 +530,7 @@ fn clean_install_copies_an_executable_and_protects_conflicts() {
 #[cfg(target_os = "macos")]
 #[test]
 fn keychain_secret_reaches_only_the_launched_process() {
+    use std::os::unix::fs::PermissionsExt;
     use std::time::{SystemTime, UNIX_EPOCH};
 
     let root = tempfile::tempdir().unwrap();
@@ -538,6 +539,9 @@ fn keychain_secret_reaches_only_the_launched_process() {
         .unwrap()
         .as_nanos();
     let vault = format!("synapsetest{suffix}");
+    // The encrypted store is the default now, so this test has to ask for the
+    // backend it is about. Nothing is stored yet, so choosing is allowed.
+    success(run(root.path(), &["vault", "backend", "keychain"], None));
     success(run(root.path(), &["vault", "create", &vault], None));
     let reference = format!("{vault}.token");
 
@@ -574,20 +578,222 @@ fn keychain_secret_reaches_only_the_launched_process() {
     ));
     let ambient = runfrom(root.path(), Some(&project), &["export", "zsh"], None);
 
+    // The value comes back out the one way it is allowed to: onto the
+    // pasteboard, without the process that put it there ever printing it.
+    let pasteboard = root.path().join("pasteboard");
+    let stub = root.path().join("clipboard.sh");
+    fs::write(
+        &stub,
+        format!("#!/bin/sh\ncat > \"{}\"\n", pasteboard.display()),
+    )
+    .unwrap();
+    fs::set_permissions(&stub, fs::Permissions::from_mode(0o755)).unwrap();
+    let copied = command(root.path())
+        .env("SYNAPSE_CLIPBOARD", &stub)
+        .args(["secret", "copy", &reference])
+        .output()
+        .unwrap();
+
     let forgotten = run(root.path(), &["secret", "forget", &reference], None);
     let deleted = run(root.path(), &["vault", "delete", &vault], None);
     let saved = success(saved);
     let listed = success(listed);
     let launched = success(launched);
     let ambient = success(ambient);
+    let copied = success(copied);
     success(forgotten);
     success(deleted);
     assert!(!saved.contains("keychainvalue"));
+    assert!(saved.contains("keychain vault"));
     assert!(listed.contains("SYNAPSE_TEST_VALUE"));
     assert!(!listed.contains("keychainvalue"));
     assert_eq!(launched.trim(), "keychainvalue");
     assert!(ambient.contains("export SYNAPSE_TEST_VALUE='keychainvalue'"));
     assert!(ambient.contains("__synapse_state='active'"));
+    assert!(!copied.contains("keychainvalue"));
+    assert_eq!(fs::read_to_string(&pasteboard).unwrap(), "keychainvalue");
+}
+
+/// The encrypted store, which is the one every fresh machine gets and the only
+/// one that exists off macOS. Not gated on the platform on purpose: this is the
+/// test that says the vault works on a Linux box.
+#[test]
+fn the_encrypted_vault_holds_a_value_that_is_nowhere_on_disk_in_the_clear() {
+    let root = tempfile::tempdir().unwrap();
+    let data = root.path().join("data");
+
+    assert_eq!(
+        success(run(root.path(), &["vault", "backend"], None)).trim(),
+        "encrypted"
+    );
+    success(run(root.path(), &["vault", "create", "work"], None));
+    let saved = success(run(
+        root.path(),
+        &[
+            "secret",
+            "set",
+            "work",
+            "token",
+            "SYNAPSE_TEST_VALUE",
+            "--global",
+        ],
+        Some("sealedvalue\n"),
+    ));
+    assert!(saved.contains("encrypted vault"));
+    assert!(!saved.contains("sealedvalue"));
+
+    // It reaches a child process, which is the whole point of holding it.
+    let launched = success(run(
+        root.path(),
+        &["run", "--", "printenv", "SYNAPSE_TEST_VALUE"],
+        None,
+    ));
+    assert_eq!(launched.trim(), "sealedvalue");
+
+    let listed = success(run(root.path(), &["secret", "list", "work"], None));
+    assert!(listed.contains("SYNAPSE_TEST_VALUE"));
+    assert!(!listed.contains("sealedvalue"));
+
+    let status = success(run(root.path(), &["status", "--json"], None));
+    let status: Value = serde_json::from_str(&status).unwrap();
+    assert_eq!(status["backend"], "encrypted");
+
+    // The value is in its own file, sealed, and `brain.db` still holds none of
+    // it: `data export` hands somebody memory and not credentials.
+    assert!(data.join("vault.db").is_file());
+    assert!(data.join("vault.key").is_file());
+    for file in fs::read_dir(&data).unwrap() {
+        let file = file.unwrap().path();
+        if file.is_file() {
+            let bytes = fs::read(&file).unwrap();
+            assert!(
+                !String::from_utf8_lossy(&bytes).contains("sealedvalue"),
+                "{} holds the value in the clear",
+                file.display()
+            );
+        }
+    }
+
+    let pasteboard = root.path().join("pasteboard");
+    let stub = root.path().join("clipboard.sh");
+    fs::write(
+        &stub,
+        format!("#!/bin/sh\ncat > \"{}\"\n", pasteboard.display()),
+    )
+    .unwrap();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(&stub, fs::Permissions::from_mode(0o755)).unwrap();
+    }
+    let copied = success(
+        command(root.path())
+            .env("SYNAPSE_CLIPBOARD", &stub)
+            .args(["secret", "copy", "work.token"])
+            .output()
+            .unwrap(),
+    );
+    assert!(!copied.contains("sealedvalue"));
+    assert_eq!(fs::read_to_string(&pasteboard).unwrap(), "sealedvalue");
+
+    success(run(root.path(), &["secret", "forget", "work.token"], None));
+    let gone = run(
+        root.path(),
+        &["run", "--", "printenv", "SYNAPSE_TEST_VALUE"],
+        None,
+    );
+    assert!(!gone.status.success() || String::from_utf8_lossy(&gone.stdout).trim().is_empty());
+}
+
+#[cfg(unix)]
+#[test]
+fn the_encrypted_vault_and_its_key_are_owner_only() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let root = tempfile::tempdir().unwrap();
+    success(run(root.path(), &["vault", "create", "work"], None));
+    success(run(
+        root.path(),
+        &["secret", "set", "work", "token", "TOKEN", "--global"],
+        Some("sealedvalue\n"),
+    ));
+    for name in ["vault.db", "vault.key"] {
+        let mode = fs::metadata(root.path().join("data").join(name))
+            .unwrap()
+            .permissions()
+            .mode();
+        assert_eq!(mode & 0o777, 0o600, "{name} is readable by somebody else");
+    }
+}
+
+/// Both directions, because a person who tries the encrypted store has to be
+/// able to go back to the Keychain without losing anything.
+#[cfg(target_os = "macos")]
+#[test]
+fn a_value_moves_between_the_two_stores_and_leaves_the_old_one_empty() {
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    let root = tempfile::tempdir().unwrap();
+    let suffix = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let vault = format!("synapsemove{suffix}");
+    let reference = format!("{vault}.token");
+    success(run(root.path(), &["vault", "create", &vault], None));
+    success(run(
+        root.path(),
+        &[
+            "secret",
+            "set",
+            &vault,
+            "token",
+            "SYNAPSE_TEST_VALUE",
+            "--global",
+        ],
+        Some("movedvalue\n"),
+    ));
+
+    let out = run(root.path(), &["vault", "migrate", "keychain"], None);
+    let backend = run(root.path(), &["vault", "backend"], None);
+    let resolved = run(
+        root.path(),
+        &["run", "--", "/usr/bin/printenv", "SYNAPSE_TEST_VALUE"],
+        None,
+    );
+    let back = run(root.path(), &["vault", "migrate", "encrypted"], None);
+    let afterwards = run(
+        root.path(),
+        &["run", "--", "/usr/bin/printenv", "SYNAPSE_TEST_VALUE"],
+        None,
+    );
+    // Clean up the Keychain before asserting, so a failure does not leave an
+    // item behind on the machine that ran the suite.
+    let forgotten = run(root.path(), &["secret", "forget", &reference], None);
+
+    let out = success(out);
+    assert!(out.contains("moved"));
+    assert_eq!(success(backend).trim(), "keychain");
+    assert_eq!(success(resolved).trim(), "movedvalue");
+    success(back);
+    assert_eq!(success(afterwards).trim(), "movedvalue");
+    success(forgotten);
+
+    // The value left the Keychain when it moved back out of it.
+    let found = Command::new("/usr/bin/security")
+        .args([
+            "find-generic-password",
+            "-s",
+            "app.synapse.vault",
+            "-a",
+            &reference,
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        !found.status.success(),
+        "the value is still in the Keychain"
+    );
 }
 
 #[test]

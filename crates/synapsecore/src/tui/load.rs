@@ -48,6 +48,7 @@ pub async fn initial() -> Result<State> {
         unmanaged: Vec::new(),
         vaults: Vec::new(),
         secrets: Vec::new(),
+        backend: vault::Backend::Encrypted,
         scope: None,
         cursor: [0; PAGES.len()],
     };
@@ -157,6 +158,7 @@ async fn vaults(state: &mut State) {
             return;
         }
     };
+    state.backend = vault::backend().await.unwrap_or(vault::Backend::Encrypted);
     state.vaults = store.vaults().await.unwrap_or_default();
     let selected = state
         .cursor

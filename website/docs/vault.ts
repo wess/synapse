@@ -4,11 +4,13 @@ import type { Page } from "../types";
 export const vault: Page = {
   path: "docs/vault/index.html",
   title: "Vaults and scopes",
-  description: "Keep values in Keychain, map names through approved YAML, understand precedence, and choose a command-scoped or ambient environment.",
+  description: "Keep values in an encrypted store or macOS Keychain, map names through approved YAML, understand precedence, and choose a command-scoped or ambient environment.",
   kind: "docs",
   toc: [
     { label: "Storage model", id: "model" },
+    { label: "Where values live", id: "backend" },
     { label: "Create a secret", id: "create" },
+    { label: "Get a value back", id: "copy" },
     { label: "Scope files", id: "files" },
     { label: "Approval", id: "approval" },
     { label: "Precedence and deny", id: "precedence" },
@@ -16,7 +18,7 @@ export const vault: Page = {
   ],
   body: `
     <h2 id="model">Storage model</h2>
-    <p>A vault is an organizational name. A secret record connects a vault-local label to an environment-variable name and a macOS Keychain account. SQLite stores that metadata; Keychain stores the value.</p>
+    <p>A vault is an organizational name. A secret record connects a vault-local label to an environment-variable name and an account reference. <code>brain.db</code> stores that metadata and never a value; the value itself goes to whichever store this machine keeps values in.</p>
     <p>A reference uses <code>vault.name</code> form, such as <code>work.database</code>. Scope YAML maps an environment name such as <code>DATABASE_URL</code> to that reference. A repository can therefore contain the mapping without containing the value.</p>
     <table>
       <thead><tr><th>Object</th><th>Example</th><th>Rules</th></tr></thead>
@@ -28,6 +30,22 @@ export const vault: Page = {
       </tbody>
     </table>
 
+    <h2 id="backend">Where values live</h2>
+    <p>Synapse has two value stores, and the choice is yours rather than the platform's.</p>
+    <table>
+      <thead><tr><th>Store</th><th>What it is</th><th>What it protects</th></tr></thead>
+      <tbody>
+        <tr><td><code>encrypted</code></td><td><code>vault.db</code> in the data folder, one XChaCha20-Poly1305 envelope per secret, sealed with a 32-byte key in <code>vault.key</code>. Both files are owner-only.</td><td>A vault that has been copied — a backup, a synced folder, a disk image, a machine somebody else now has.</td></tr>
+        <tr><td><code>keychain</code></td><td>macOS Keychain, one generic password per secret under the <code>app.synapse.vault</code> service.</td><td>The same, plus per-application access control enforced by macOS.</td></tr>
+      </tbody>
+    </table>
+    <p>The encrypted store is the default on a new installation and the only one available off macOS. A machine that was already holding secrets before this release stays on Keychain until you move it, so an upgrade never stops resolving a credential.</p>
+    ${code("shell", `synapse vault backend
+synapse vault migrate keychain
+synapse vault migrate encrypted --keep`)}
+    <p><code>vault backend</code> with no argument prints the current store. With an argument it only records a choice, and refuses once secrets exist — moving is <code>vault migrate</code>, which copies every value, reads each one back, switches the setting, and then removes the originals. <code>--keep</code> leaves the originals where they are. A store that cannot be read stops the migration before anything switches, so a Keychain prompt you decline cannot strand your values.</p>
+    ${note("Keychain is the stronger bargain on a Mac", "It gates access per application, where a key file protects a vault that has been copied and not a process already running as you. It is a setting away in both directions, and neither store ever holds a value in plaintext.")}
+
     <h2 id="create">Create a secret</h2>
     ${code("shell", `synapse vault create work
 synapse secret set work database DATABASE_URL
@@ -38,6 +56,11 @@ synapse secret list work`)}
     <p>Add <code>--global</code> to make the environment name available in every folder, or change an existing label later:</p>
     ${code("shell", `synapse secret set work registry NPM_TOKEN --global
 synapse secret global work.registry off`)}
+
+    <h2 id="copy">Get a value back</h2>
+    <p>A value never appears on screen, in a log, or in an MCP response. The one way to retrieve one is onto the clipboard:</p>
+    ${code("shell", `synapse secret copy work.database`)}
+    <p>The command prints the reference it copied and never the value. In the desktop app the same thing is a <strong>Copy</strong> button on the secret's row. On macOS the value goes through <code>pbcopy</code> over stdin, never as a command argument; set <code>SYNAPSE_CLIPBOARD</code> to name a different command.</p>
 
     <h2 id="files">Scope files</h2>
     <p>From a project folder, create <code>.synapse.yaml</code>:</p>
@@ -81,7 +104,7 @@ synapse scope status .`)}
 synapse status .
 synapse run -- cargo test
 synapse run -- bun run deploy`)}
-    <p><code>synapse run</code> resolves the current working folder, verifies every discovered scope, reads each selected value from Keychain, and sets it only on the new child process. Normal environment inheritance still applies; Synapse adds or replaces the resolved names. Your current shell is unchanged.</p>
+    <p><code>synapse run</code> resolves the current working folder, verifies every discovered scope, reads each selected value out of the vault, and sets it only on the new child process. Normal environment inheritance still applies; Synapse adds or replaces the resolved names. Your current shell is unchanged.</p>
 
     <h3>Ambient directory</h3>
     <p>Open <strong>Settings → Shell environments</strong> and choose <strong>Enable shell hook</strong>. Synapse detects the default shell, installs the CLI if needed, and manages a marked startup-file block. Open a new terminal, then allow the project:</p>

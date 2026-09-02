@@ -6473,7 +6473,7 @@ dependencies = [
 
 [[package]]
 name = "synapse"
-version = "1.0.3"
+version = "1.1.0"
 dependencies = [
  "anyhow",
  "async-channel 2.5.0",
@@ -6494,9 +6494,10 @@ dependencies = [
 
 [[package]]
 name = "synapsecore"
-version = "1.0.3"
+version = "1.1.0"
 dependencies = [
  "anyhow",
+ "chacha20poly1305",
  "chrono",
  "directories",
  "fs2",

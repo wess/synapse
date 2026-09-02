@@ -277,6 +277,7 @@
     </div>
     <pre><code>{
   &quot;path&quot;: &quot;/Users/example/project&quot;,
+  &quot;backend&quot;: &quot;encrypted&quot;,
   &quot;available&quot;: [&quot;DATABASE_URL&quot;],
   &quot;ambient&quot;: &quot;ready&quot;,
   &quot;shell&quot;: &quot;zsh&quot;,
@@ -292,13 +293,13 @@
     }
   ],
   &quot;warnings&quot;: [],
-  &quot;note&quot;: &quot;Values stay in Keychain. Use synapse run for one child or install the shell hook for an approved directory.&quot;
+  &quot;note&quot;: &quot;Values stay in the vault and never in a response. Use synapse run for one child or install the shell hook for an approved directory.&quot;
 }</code></pre>
   </div>
     
   <aside class="note">
     <strong>Metadata, not a secret channel</strong>
-    <p>The names in available tell a tool what a scoped command or activated shell could receive. vaultstatus never reads the corresponding Keychain values and cannot change a connected tool’s environment.</p>
+    <p>The names in available tell a tool what a scoped command or activated shell could receive. vaultstatus never reads the corresponding values and cannot change a connected tool’s environment. backend names the store this machine keeps them in, which is a fact about the machine and not a way to reach one.</p>
   </aside>
 
     <h2 id="learning">teach and revise</h2>

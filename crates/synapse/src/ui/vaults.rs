@@ -3,7 +3,7 @@ use gpui::prelude::*;
 use gpui::{AnyElement, App, ClickEvent, Entity, Window, div, px};
 use guise::prelude::*;
 use std::path::Path;
-use synapsecore::vault::{ScopeState, Secret, Vault};
+use synapsecore::vault::{Backend, ScopeState, Secret, Vault};
 
 pub type Click = Box<dyn Fn(&ClickEvent, &mut Window, &mut App) + 'static>;
 pub type Select = Box<dyn Fn(i64) -> Click + 'static>;
@@ -14,6 +14,9 @@ pub struct Actions {
     pub addsecret: Click,
     pub togglenewglobal: Click,
     pub toggleglobal: Select,
+    /// Move every value into the other store.
+    pub switchbackend: Click,
+    pub copysecret: Select,
     pub replacesecret: Select,
     pub forgetsecret: Select,
     pub deletevault: Click,
@@ -35,6 +38,8 @@ pub struct View {
     pub addglobal: bool,
     pub pendingforget: Option<i64>,
     pub pendingvault: Option<i64>,
+    pub backend: Backend,
+    pub pendingbackend: bool,
     pub notice: Notice,
 }
 
@@ -57,6 +62,8 @@ pub fn render(view: View, actions: Actions, cx: &App) -> AnyElement {
         addsecret,
         togglenewglobal,
         toggleglobal,
+        switchbackend,
+        copysecret,
         replacesecret,
         forgetsecret,
         deletevault,
@@ -79,7 +86,7 @@ pub fn render(view: View, actions: Actions, cx: &App) -> AnyElement {
                 .flex()
                 .flex_col()
                 .gap(px(20.0))
-                .child(hero(&view, cx))
+                .child(hero(&view, switchbackend, cx))
                 .child(
                     div()
                         .flex()
@@ -132,6 +139,7 @@ pub fn render(view: View, actions: Actions, cx: &App) -> AnyElement {
                                 .bg(surface)
                                 .overflow_hidden()
                                 .child(secretpanel(
+                                    view.backend,
                                     selectedname,
                                     view.secrets,
                                     view.secretname,
@@ -143,6 +151,7 @@ pub fn render(view: View, actions: Actions, cx: &App) -> AnyElement {
                                     addsecret,
                                     togglenewglobal,
                                     toggleglobal,
+                                    copysecret,
                                     replacesecret,
                                     forgetsecret,
                                     deletevault,
@@ -163,7 +172,7 @@ pub fn render(view: View, actions: Actions, cx: &App) -> AnyElement {
         .into_any_element()
 }
 
-fn hero(view: &View, cx: &App) -> impl IntoElement {
+fn hero(view: &View, switchbackend: Click, cx: &App) -> impl IntoElement {
     let theme = guise::theme(cx);
     let noticecolor = match view.notice {
         Notice::Error(_) => theme.danger(),
@@ -171,9 +180,14 @@ fn hero(view: &View, cx: &App) -> impl IntoElement {
         Notice::Ready => theme.dimmed(),
     };
     let message = match &view.notice {
-        Notice::Ready => {
-            "Values stay in Keychain. Synapse stores only labels and scoped references."
-        }
+        Notice::Ready => match view.backend {
+            Backend::Keychain => {
+                "Values stay in Keychain. brain.db holds only labels and scoped references."
+            }
+            Backend::Encrypted => {
+                "Values are sealed in vault.db under a key only this account can read. brain.db holds only labels and scoped references."
+            }
+        },
         Notice::Success(message) | Notice::Error(message) => message,
     };
     div()
@@ -206,7 +220,8 @@ fn hero(view: &View, cx: &App) -> impl IntoElement {
                         .items_center()
                         .gap(px(10.0))
                         .child(metric("Vaults", view.vaults.len()))
-                        .child(metric("Secrets", view.secrets.len())),
+                        .child(metric("Secrets", view.secrets.len()))
+                        .child(store(view, switchbackend)),
                 ),
         )
         .child(
@@ -222,6 +237,40 @@ fn hero(view: &View, cx: &App) -> impl IntoElement {
 
 fn metric(label: &str, value: usize) -> impl IntoElement {
     Badge::new(format!("{value} {label}")).color(ColorName::Gray)
+}
+
+/// Which store holds the values, and the way to the other one.
+///
+/// Both are always here rather than one being the platform's answer: Keychain
+/// gates access per application and is the stronger of the two on a Mac, and
+/// the encrypted file is one this program owns, can back up, and can carry to a
+/// machine that has no Keychain at all. Moving is `migrate`, which takes the
+/// values with it — switching without them would leave every credential in a
+/// store nothing reads.
+fn store(view: &View, switchbackend: Click) -> impl IntoElement {
+    let (name, color) = match view.backend {
+        Backend::Keychain => ("macOS Keychain", ColorName::Teal),
+        Backend::Encrypted => ("Encrypted vault.db", ColorName::Violet),
+    };
+    div()
+        .flex()
+        .items_center()
+        .gap(px(6.0))
+        .child(Badge::new(name).color(color))
+        .child(
+            Button::new(
+                "switchbackend",
+                if view.pendingbackend {
+                    "Confirm move".to_owned()
+                } else {
+                    format!("Move to {}", view.backend.other().name())
+                },
+            )
+            .variant(Variant::Subtle)
+            .size(Size::Xs)
+            .left_section(Icon::new(IconName::ArrowLeftRight).size(Size::Xs))
+            .on_click(move |event, window, cx| switchbackend(event, window, cx)),
+        )
 }
 
 fn vaultlist(vaults: &[Vault], selected: Option<i64>, select: impl Fn(i64) -> Click) -> AnyElement {
@@ -256,6 +305,7 @@ fn vaultlist(vaults: &[Vault], selected: Option<i64>, select: impl Fn(i64) -> Cl
 
 #[allow(clippy::too_many_arguments)]
 fn secretpanel(
+    backend: Backend,
     selected: Option<String>,
     secrets: Vec<Secret>,
     name: Entity<TextInput>,
@@ -267,6 +317,7 @@ fn secretpanel(
     add: Click,
     togglenewglobal: Click,
     toggleglobal: impl Fn(i64) -> Click,
+    copy: impl Fn(i64) -> Click,
     replace: impl Fn(i64) -> Click,
     forget: impl Fn(i64) -> Click,
     deletevault: Click,
@@ -290,7 +341,7 @@ fn secretpanel(
                     .child(Icon::new(IconName::KeyRound).size(Size::Lg))
                     .child(Text::new("Select or create a vault").size(Size::Sm).bold())
                     .child(
-                        Text::new("Secret values are written directly to macOS Keychain.")
+                        Text::new("Secret values are written straight into the store, never into a project file.")
                             .size(Size::Xs)
                             .dimmed(),
                     ),
@@ -311,6 +362,7 @@ fn secretpanel(
     }
     for secret in secrets {
         let globalclick = toggleglobal(secret.id);
+        let copyclick = copy(secret.id);
         let replaceclick = replace(secret.id);
         let forgetclick = forget(secret.id);
         let confirming = pendingforget == Some(secret.id);
@@ -378,6 +430,16 @@ fn secretpanel(
                         )
                         .child(
                             Button::new(
+                                gpui::ElementId::Name(format!("copy{}", secret.id).into()),
+                                "Copy",
+                            )
+                            .variant(Variant::Subtle)
+                            .size(Size::Xs)
+                            .left_section(Icon::new(IconName::Copy).size(Size::Xs))
+                            .on_click(move |event, window, cx| copyclick(event, window, cx)),
+                        )
+                        .child(
+                            Button::new(
                                 gpui::ElementId::Name(format!("replace{}", secret.id).into()),
                                 "Replace",
                             )
@@ -416,9 +478,14 @@ fn secretpanel(
                         .gap(px(3.0))
                         .child(Text::new(selected).size(Size::Sm).bold())
                         .child(
-                            Text::new("Labels in SQLite · values in Keychain")
-                                .size(Size::Xs)
-                                .dimmed(),
+                            Text::new(match backend {
+                                Backend::Keychain => "Labels in brain.db · values in Keychain",
+                                Backend::Encrypted => {
+                                    "Labels in brain.db · values sealed in vault.db"
+                                }
+                            })
+                            .size(Size::Xs)
+                            .dimmed(),
                         ),
                 )
                 .child(
@@ -488,7 +555,7 @@ fn secretpanel(
                             .on_click(move |event, window, cx| togglenewglobal(event, window, cx)),
                         )
                         .child(
-                            Button::new("addsecret", "Save to Keychain")
+                            Button::new("addsecret", "Save to the vault")
                                 .variant(Variant::Filled)
                                 .color(ColorName::Violet)
                                 .size(Size::Sm)
