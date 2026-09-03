@@ -25,7 +25,7 @@ const BUILTINS: &[(&str, &str)] = &[
 
 /// The template a new role starts from, so an empty file is never saved.
 pub const TEMPLATE: &str = "# channels = [\"frontend\"]  # joined automatically at launch\n\
-     # tool = \"claude\"           # Claude Code or Codex\n\
+     # tool = \"claude\"           # Claude, Codex, pi, Ainz, or a custom tool\n\
      # model = \"\"                # model override\n\
      # driver = true             # stay interactive instead of parking on wait\n\
      # tools = [\"Read\", \"Edit\", \"Bash(git:*)\"]  # pre-granted tool rules\n\
@@ -39,7 +39,7 @@ pub const TEMPLATE: &str = "# channels = [\"frontend\"]  # joined automatically 
 struct File {
     #[serde(default)]
     channels: Vec<String>,
-    /// Which connected tool to launch: `claude`, `codex`, or `pi`.
+    /// Which connected tool to launch, such as `claude`, `codex`, `pi`, or `ainz`.
     tool: Option<String>,
     model: Option<String>,
     #[serde(default)]

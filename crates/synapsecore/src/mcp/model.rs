@@ -110,7 +110,7 @@ pub struct SpawnRequest {
     pub role: Option<String>,
     /// Standing focus for this worker, distinct from its durable role.
     pub task: Option<String>,
-    /// Which connected tool to run: `claude`, `codex`, or `pi`.
+    /// Which connected tool to run, such as `claude`, `codex`, `pi`, or `ainz`.
     pub tool: Option<String>,
     /// Channels the worker should join.
     pub channels: Option<Vec<String>>,

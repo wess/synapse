@@ -60,7 +60,7 @@ export const overview: Page = {
       <dt>I keep re-deriving the same procedure.</dt>
       <dd>Let a session write it down. <a href="../tutorials/learn/">Let your agents write skills</a> covers what an agent may and may not do to your library, and why the gate is on installing rather than on writing.</dd>
       <dt>I keep copying the same skill into every tool.</dt>
-      <dd>Read <a href="skills/">Skills</a>. One library, installed into Claude Code, Codex, and pi together, with drift reported rather than silently resolved.</dd>
+      <dd>Read <a href="skills/">Skills</a>. One library, installed into Claude Code, Codex, pi, and Ainz together, with drift reported rather than silently resolved.</dd>
       <dt>I need automation or exact syntax.</dt>
       <dd>Use the <a href="cli/">complete CLI reference</a> and <a href="mcp/">MCP tool reference</a>.</dd>
       <dt>I am planning backups or a recovery.</dt>

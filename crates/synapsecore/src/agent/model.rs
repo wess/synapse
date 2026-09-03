@@ -1,7 +1,8 @@
 use crate::relay::Source;
 use std::path::PathBuf;
 
-/// Which of the three Synapse ships a tool is, or that it is none of them.
+/// Which tool with behaviour beyond a descriptor this is, or that it is none
+/// of them.
 ///
 /// This is not the tool's identity — that is [`Agent::slug`], and it is a string
 /// because there is no fixed set of them. What this narrows is the two pieces of
@@ -23,7 +24,7 @@ pub enum Kind {
 
 /// A connectable tool: where it keeps its files, what to run to connect it, how
 /// to read that back, and how to start it. Built from a descriptor — see
-/// [`crate::agent::tool`] — including for the three Synapse ships.
+/// [`crate::agent::tool`] — including for the tools Synapse ships.
 #[derive(Debug, Clone)]
 pub struct Agent {
     pub kind: Kind,

@@ -27,7 +27,8 @@ pub struct Options<'a> {
     /// and the child is told about it through `SYNAPSE_PROJECT_DIR` so its
     /// memory and mesh registration are scoped to the right checkout.
     pub root: &'a Path,
-    /// `claude`, `codex`, or `pi`; falls back to the role's tool, then Claude Code.
+    /// A connected tool such as `claude`, `codex`, `pi`, or `ainz`; falls back
+    /// to the role's tool, then Claude Code.
     pub tool: Option<&'a str>,
     /// Per-launch focus, distinct from the role's durable brief.
     pub task: Option<&'a str>,
@@ -206,7 +207,7 @@ pub fn launch(options: &Options) -> Result<Launch> {
 ///
 /// Every slot is optional: one a tool does not declare is a flag it does not
 /// have, and is simply never passed. That is what lets a tool nobody has heard
-/// of launch through the same path as the three that ship.
+/// of launch through the same path as the built-ins.
 fn fromslots(
     agent: &Agent,
     program: &Path,
@@ -464,7 +465,7 @@ mod tests {
         let mut options = options(directory.path(), "gemini");
         options.tool = Some("gemini");
         let error = launch(&options).unwrap_err().to_string();
-        assert!(error.contains("claude, codex, pi"), "got {error}");
+        assert!(error.contains("claude, codex, pi, ainz"), "got {error}");
         // A tool nobody shipped is a descriptor away, and the error says so
         // rather than reading like a closed list.
         assert!(error.contains("synapse tool create"), "got {error}");
@@ -569,6 +570,54 @@ mod tests {
                 .iter()
                 .any(|item| item == "--strict-mcp-config"),
             "the generated config is additive unless strict was asked for"
+        );
+    }
+
+    #[test]
+    fn ainz_launches_interactively_or_headless_with_an_ephemeral_server() {
+        let attended = argv(
+            "ainz",
+            Some("coordinate the release"),
+            Some(Path::new("/tmp/lead.mcp.json")),
+            &options(Path::new("/tmp"), "ainz"),
+            &[],
+            Some("openai/gpt-5"),
+        );
+        assert_eq!(
+            attended.arguments,
+            [
+                "--initial-prompt",
+                "coordinate the release",
+                "--mcp-config",
+                "/tmp/lead.mcp.json",
+                "--model",
+                "openai/gpt-5"
+            ]
+        );
+
+        let headless = argv(
+            "ainz",
+            Some("inspect the tests"),
+            Some(Path::new("/tmp/worker.mcp.json")),
+            &Options {
+                headless: true,
+                ..options(Path::new("/tmp"), "ainz")
+            },
+            &[],
+            None,
+        );
+        assert_eq!(
+            headless.arguments,
+            [
+                "ask",
+                "inspect the tests",
+                "--json",
+                "--no-save",
+                "--permissions",
+                "auto",
+                "--mcp-config",
+                "/tmp/worker.mcp.json"
+            ]
         );
     }
 

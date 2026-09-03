@@ -16,7 +16,7 @@ Apple silicon · macOS 13 or later · Developer ID signed and notarized
 - **Corrects without arguing.** When a convention changes, the new memory supersedes the old one instead of contradicting it. Recall returns the current version; the old text stays readable and comes back if you were wrong.
 - **Brings history with you.** Preview and import existing Claude and Codex memory into project-scoped Synapse records without changing the originals.
 - **Shares one playbook.** Keep global working guidance in one editable `SOUL.md`, with every connected tool pointed at it.
-- **Writes a skill once.** Keep your Agent Skills in one library and install them into Claude Code, Codex, and pi together, instead of copying folders by hand and watching the copies drift apart. A skill about one repository belongs to that repository.
+- **Writes a skill once.** Keep your Agent Skills in one library and install them into Claude Code, Codex, pi, and Ainz together, instead of copying folders by hand and watching the copies drift apart. A skill about one repository belongs to that repository.
 - **Learns a procedure.** Let a session write down something it worked out as a skill, and correct one that turned out wrong. What an agent writes waits for you to approve it and reaches no tool until you do. Off by default.
 - **Lets agents work together.** Turn on the mesh and your connected tools can message each other, split up a job, and wait for free between tasks. Off by default.
 - **Gives you a seat at the table.** The Console puts you on the mesh under your own name, so an agent that hits a decision it should not make alone has somebody to ask — and every worker stays directly addressable rather than reachable only through a lead.
@@ -40,7 +40,7 @@ Or enable shell integration in Settings to load approved project environments wh
 
 ## One skill library
 
-Claude Code, Codex, and [pi](https://pi.dev) all read the [Agent Skills](https://agentskills.io) format, each from its own folder. Synapse keeps one copy and installs it into each:
+Claude Code, Codex, [pi](https://pi.dev), and [Ainz](https://github.com/wess/ainz) all read the [Agent Skills](https://agentskills.io) format, each from its own folder. Synapse keeps one copy and installs it into each:
 
 ```sh
 synapse skill list                # what is in your library

@@ -5,7 +5,7 @@ import { releaseurl } from "../deploy";
 export const install: Page = {
   path: "docs/install/index.html",
   title: "Install and connect",
-  description: "Install the signed macOS build, add the CLI, and connect Codex, Claude Code, or pi without replacing your configuration.",
+  description: "Install the signed macOS build, add the CLI, and connect Codex, Claude Code, pi, or Ainz without replacing your configuration.",
   kind: "docs",
   toc: [
     { label: "Requirements", id: "requirements" },
@@ -21,7 +21,7 @@ export const install: Page = {
     <h2 id="requirements">Requirements</h2>
     <ul>
       <li>Apple-silicon Mac running macOS 13 or later.</li>
-      <li>At least one supported tool on <code>PATH</code>: Codex, Claude Code, or pi.</li>
+      <li>At least one supported tool on <code>PATH</code>: Codex, Claude Code, pi, or Ainz.</li>
       <li>A writable <code>~/.local/bin</code>, or a custom path supplied through <code>SYNAPSE_BIN</code>.</li>
     </ul>
 
@@ -55,7 +55,7 @@ synapse version`)}
     <p>The app shows <strong>Needs repair</strong> if the managed block changes. Repair replaces only that block. Remove deletes only that block; already-running terminals retain the loaded hook until they close. Every changed existing startup file receives a <code>.synapsebackup</code> sibling and an atomic replacement.</p>
 
     <h2 id="tools">Connect tools</h2>
-    <p>On the Synapse dashboard, each detected tool shows its installation and connection state. Choose <strong>Connect</strong> for Codex, Claude Code, or pi.</p>
+    <p>On the Synapse dashboard, each detected tool shows its installation and connection state. Choose <strong>Connect</strong> for Codex, Claude Code, pi, or Ainz.</p>
     <p>Setup performs two changes as one rollback-protected operation:</p>
     <ol>
       <li>It registers the installed Synapse executable as a user-level MCP stdio server with the single argument <code>mcp</code>. pi has no MCP client, so its step is <code>pi install npm:synapse-pi</code> instead: one package that starts the same server and offers the same tools.</li>
@@ -69,6 +69,7 @@ synapse version`)}
         <tr><td>Codex</td><td><code>~/.codex/config.toml</code></td><td><code>~/.codex/AGENTS.md</code></td></tr>
         <tr><td>Claude Code</td><td><code>~/.claude.json</code></td><td><code>~/.claude/CLAUDE.md</code></td></tr>
         <tr><td>pi</td><td><code>~/.pi/agent/settings.json</code></td><td><code>~/.pi/agent/APPEND_SYSTEM.md</code></td></tr>
+        <tr><td>Ainz</td><td><code>~/Library/Application Support/ainz/mcp.toml</code></td><td><code>~/Library/Application Support/ainz/AGENTS.md</code></td></tr>
       </tbody>
     </table>
     <p>Before changing a tool store or instruction file, Synapse creates a sibling <code>.synapsebackup</code>. If either half of setup fails, both files are restored.</p>

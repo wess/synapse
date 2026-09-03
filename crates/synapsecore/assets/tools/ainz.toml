@@ -1,0 +1,39 @@
+name = "Ainz"
+command = "ainz"
+
+# Ainz keeps everything in the platform's configuration directory, which is two
+# different places: `Library/Application Support/ainz` on a Mac and
+# `.config/ainz` on Linux. `AINZ_CONFIG` and `AINZ_MCP_PROFILE` name single
+# files rather than this directory, so neither can stand in for it.
+[home]
+default = "{configdir}/ainz"
+
+[paths]
+instructions = "{home}/AGENTS.md"
+settings = "{home}/config.toml"
+# Ainz keeps its MCP servers in their own file rather than in the settings it
+# reads everything else from.
+integration = "{home}/mcp.toml"
+skills = "{home}/skills"
+projectskills = ".ainz/skills"
+
+# `--required` because Ainz loads a server's own instructions only from the
+# servers marked required. Without it the tools arrive and the guidance that
+# explains them does not, which is the one thing that must never come apart.
+[connect]
+add = ["mcp", "add", "synapse", "--required", "--", "{server}", "mcp"]
+remove = ["mcp", "remove", "synapse"]
+
+[detect]
+format = "toml"
+at = ["servers", "synapse"]
+args = ["mcp"]
+
+# Ainz takes its opening prompt as a flag rather than an argument, so a bare
+# `{prompt}` would be read as a subcommand.
+[launch]
+prompt = ["--initial-prompt", "{prompt}"]
+headless = ["ask", "{prompt}", "--json", "--no-save"]
+skippermissions = ["--permissions", "auto"]
+config = ["--mcp-config", "{config}"]
+model = ["--model", "{model}"]

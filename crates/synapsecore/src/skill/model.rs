@@ -2,8 +2,8 @@
 //!
 //! A skill is a directory holding a `SKILL.md` with YAML frontmatter and
 //! Markdown instructions, plus whatever scripts, references, and assets it
-//! needs. Claude Code, Codex, and pi all read the same format, which is the
-//! whole reason one library can serve them together.
+//! needs. Claude Code, Codex, pi, and Ainz all read the same format, which is
+//! the whole reason one library can serve them together.
 
 use anyhow::{Context, Result};
 use schemars::JsonSchema;

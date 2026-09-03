@@ -2,8 +2,8 @@
 //! machine with no window can still wire a tool in.
 //!
 //! Connecting used to live only in the desktop, which made the window the one
-//! place a tool could be set up. That was survivable while the three tools
-//! Synapse ships were the only ones there were; it stopped being survivable when
+//! place a tool could be set up. That was survivable while the original built-in
+//! tools were the only ones there were; it stopped being survivable when
 //! a person could describe their own, because they could write a descriptor from
 //! the terminal and then have nowhere to act on it.
 

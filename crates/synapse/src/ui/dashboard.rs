@@ -1726,7 +1726,7 @@ impl Dashboard {
         self.opendocument(slug, instructionspath, "instructions", window, cx);
     }
 
-    /// Open a tool's descriptor for editing. Editing one of the three Synapse
+    /// Open a tool's descriptor for editing. Editing one of the tools Synapse
     /// ships copies it into a layer the user owns first, so the shipped file
     /// stays as it was and can always be returned to by deleting the copy.
     fn opendescriptor(&mut self, slug: &str, window: &mut Window, cx: &mut Context<Self>) {

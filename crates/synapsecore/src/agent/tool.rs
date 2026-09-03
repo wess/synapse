@@ -9,7 +9,7 @@
 //!
 //! Descriptors resolve project → user → built-in through the same layered store
 //! roles and teams use, so a repository can carry the tool its team works in and
-//! a person can override a built-in without waiting for a release. The three
+//! a person can override a built-in without waiting for a release. The tools
 //! Synapse ships are ordinary descriptors in `assets/tools/`, which is what
 //! stops a custom tool from being a second-class path through the same code.
 //!
@@ -29,6 +29,7 @@ const BUILTINS: &[(&str, &str)] = &[
     ("claude", include_str!("../../assets/tools/claude.toml")),
     ("codex", include_str!("../../assets/tools/codex.toml")),
     ("pi", include_str!("../../assets/tools/pi.toml")),
+    ("ainz", include_str!("../../assets/tools/ainz.toml")),
 ];
 
 /// The template a new descriptor starts from. Everything a tool that follows the
@@ -38,10 +39,13 @@ command = "mytool"        # the binary, found on PATH
 
 [home]
 # env = "MYTOOL_HOME"     # the tool's own override, if it has one
-default = ".mytool"       # under the user's home directory
+default = ".mytool"       # under the user's home directory, or "{configdir}/mytool"
+                          # for a tool that keeps its files where the platform
+                          # puts configuration
 
-# `{home}` is the directory above. A path without it is relative to the user's
-# home, and an absolute path is used as written.
+# `{home}` is the directory above, `{configdir}` is the platform's configuration
+# directory. A path without either is relative to the user's home, and an
+# absolute path is used as written.
 [paths]
 instructions = "{home}/AGENTS.md"   # the file a managed guidance block goes in
 settings = "{home}/settings.json"
@@ -264,8 +268,9 @@ pub fn draft(slug: &str) -> Result<PathBuf> {
     save(slug, true, &root, &seed)
 }
 
-/// Whether a slug names one of the three Synapse ships, which have behaviour
-/// beyond their descriptor and so cannot be reduced to one.
+/// Whether a slug names a tool with behaviour beyond its descriptor, which
+/// therefore cannot be reduced to one. Everything else, shipped or described, is
+/// [`Kind::Custom`].
 pub fn kind(slug: &str) -> Kind {
     match slug {
         "codex" => Kind::Codex,
@@ -305,27 +310,45 @@ fn parse(home: &Path, slug: &str, text: &str, source: Source) -> Result<Agent> {
 }
 
 /// The tool's own directory: its environment override when it has one and that
-/// variable is set, and the descriptor's default under the user's home otherwise.
+/// variable is set, and the descriptor's default otherwise.
 fn toolhome(home: &Path, declared: &Home) -> PathBuf {
     if !declared.env.is_empty()
         && let Some(value) = std::env::var_os(&declared.env).filter(|value| !value.is_empty())
     {
         return PathBuf::from(value);
     }
-    home.join(&declared.default)
+    resolvepath(home, home, &declared.default)
 }
 
-/// `{home}` is the tool's directory, a bare relative path is under the user's
-/// home, and an absolute path is used as written.
+/// `{home}` is the tool's directory, `{configdir}` is where this platform keeps
+/// a program's configuration, a bare relative path is under the user's home, and
+/// an absolute path is used as written.
 fn resolvepath(home: &Path, toolhome: &Path, declared: &str) -> PathBuf {
     if let Some(rest) = declared.strip_prefix("{home}") {
         return toolhome.join(rest.trim_start_matches('/'));
+    }
+    if let Some(rest) = declared.strip_prefix("{configdir}") {
+        return configdirectory(home).join(rest.trim_start_matches('/'));
     }
     let path = Path::new(declared);
     if path.is_absolute() {
         return path.to_path_buf();
     }
     home.join(path)
+}
+
+/// Where this platform keeps a program's configuration. A tool built on the
+/// usual directory crates has one home written two ways — `Library/Application
+/// Support/ainz` on a Mac and `.config/ainz` everywhere else — and a descriptor
+/// naming only the first reads a Linux connection as absent. Derived from the
+/// home Synapse already resolved rather than asked of the system, so a test that
+/// redirects `SYNAPSE_HOME` redirects this with it.
+fn configdirectory(home: &Path) -> PathBuf {
+    if cfg!(target_os = "macos") {
+        home.join("Library/Application Support")
+    } else {
+        home.join(".config")
+    }
 }
 
 /// Build a descriptor straight from text, for tests elsewhere in the crate that
@@ -343,7 +366,7 @@ mod tests {
         resolve(home, None, slug).unwrap().unwrap()
     }
 
-    /// The three Synapse ships have to survive the move into data unchanged, or
+    /// The tools Synapse ships have to survive the move into data unchanged, or
     /// every existing connection on every machine stops being recognised.
     #[test]
     fn the_built_ins_resolve_to_the_paths_they_have_always_used() {
@@ -372,6 +395,17 @@ mod tests {
         // else from, so the two are one file.
         assert_eq!(pi.integration, pi.settings);
         assert_eq!(pi.skills, home.join(".pi/agent/skills"));
+
+        let ainz = builtin("ainz", home);
+        // Ainz keeps its home where the platform puts configuration, which is
+        // not one path -- so the expectation is written the same way.
+        let ainzhome = configdirectory(home).join("ainz");
+        assert_eq!(ainz.instructions, ainzhome.join("AGENTS.md"));
+        assert_eq!(ainz.settings, ainzhome.join("config.toml"));
+        // Its MCP servers live in their own file rather than in those settings.
+        assert_eq!(ainz.integration, ainzhome.join("mcp.toml"));
+        assert_eq!(ainz.skills, ainzhome.join("skills"));
+        assert_eq!(ainz.projectskills, ".ainz/skills");
     }
 
     #[test]
@@ -393,6 +427,24 @@ mod tests {
         unsafe { std::env::remove_var("SYNAPSE_TOOLHOME_TEST") };
 
         assert_eq!(tool.instructions, Path::new("/elsewhere/A.md"));
+    }
+
+    #[test]
+    fn a_tool_that_lives_in_the_platform_config_directory_resolves_there() {
+        let home = Path::new("/users/test");
+        let text = "name = \"T\"\ncommand = \"t\"\n\
+             [home]\ndefault = \"{configdir}/t\"\n\
+             [paths]\ninstructions = \"{home}/A.md\"\nsettings = \"{home}/s\"\n\
+             integration = \"{home}/s\"\nskills = \"{configdir}/t/skills\"\n";
+        let tool = parse(home, "t", text, Source::User).unwrap();
+
+        let expected = configdirectory(home).join("t");
+        assert_eq!(tool.instructions, expected.join("A.md"));
+        // The same token works in a path of its own, not only in the home.
+        assert_eq!(tool.skills, expected.join("skills"));
+        // And it is somewhere other than the home itself, or it would not be
+        // worth having: this is the difference between the two platforms.
+        assert_ne!(expected, home.join("t"));
     }
 
     #[test]
@@ -437,10 +489,11 @@ mod tests {
     }
 
     #[test]
-    fn only_the_three_that_carry_extra_behaviour_are_built_in_kinds() {
+    fn only_tools_that_carry_extra_behaviour_get_special_kinds() {
         assert_eq!(kind("codex"), Kind::Codex);
         assert_eq!(kind("claude"), Kind::Claude);
         assert_eq!(kind("pi"), Kind::Pi);
+        assert_eq!(kind("ainz"), Kind::Custom);
         assert_eq!(kind("hermes"), Kind::Custom);
     }
 }

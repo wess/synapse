@@ -539,7 +539,7 @@ mod tests {
 
     #[test]
     fn every_tool_is_the_default_and_an_unknown_one_is_refused() {
-        assert_eq!(chosen(&arguments(&["install"])).unwrap().len(), 3);
+        assert_eq!(chosen(&arguments(&["install"])).unwrap().len(), 4);
         assert!(chosen(&arguments(&["install", "--tool", "emacs"])).is_err());
     }
 

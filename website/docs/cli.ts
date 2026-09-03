@@ -116,10 +116,10 @@ ${command("guidance adopt", "synapse guidance adopt --confirm", "Move unmanaged 
 
     <h2 id="tools">Tools Synapse does not ship</h2>
     <p>
-      Codex, Claude Code, and pi are ordinary descriptors, not special cases. A
-      descriptor is a TOML file saying where a tool keeps its files, what to run
-      against its own CLI to connect it, how to read that back, and which flags
-      it takes when Synapse starts it. Yours resolve from
+      Codex, Claude Code, pi, and Ainz are ordinary descriptors, not special
+      cases. A descriptor is a TOML file saying where a tool keeps its files,
+      what to run against its own CLI to connect it, how to read that back, and
+      which flags it takes when Synapse starts it. Yours resolve from
       <code>.synapse/tools/</code> in a repository first, then your data
       directory, then the ones Synapse ships \u2014 so a project can carry the tool
       its team works in, and you can correct a built-in without waiting for a

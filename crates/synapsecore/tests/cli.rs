@@ -1576,7 +1576,7 @@ fn a_tool_nobody_shipped_connects_the_same_way_the_built_ins_do() {
         command.spawn().unwrap().wait_with_output().unwrap()
     };
 
-    // It is listed beside the three that ship, and labelled as the user's.
+    // It is listed beside the built-ins, and labelled as the user's.
     let listed = success(hermes(&["tool", "list"]));
     assert!(listed.contains("hermes\tuser"), "got {listed}");
     assert!(listed.contains("codex\tbuilt-in"), "got {listed}");

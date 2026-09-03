@@ -62,6 +62,7 @@ SYNAPSE_BIN="$HOME/bin/synapse" synapse install`)}
         <tr><td>Codex</td><td><code>~/.codex/config.toml</code></td><td><code>~/.codex/AGENTS.md</code></td><td><code>~/.codex/config.toml</code></td></tr>
         <tr><td>Claude Code</td><td><code>~/.claude.json</code></td><td><code>~/.claude/CLAUDE.md</code></td><td><code>~/.claude/settings.json</code></td></tr>
         <tr><td>pi</td><td><code>~/.pi/agent/settings.json</code></td><td><code>~/.pi/agent/APPEND_SYSTEM.md</code></td><td><code>~/.pi/agent/settings.json</code></td></tr>
+        <tr><td>Ainz</td><td><code>~/Library/Application Support/ainz/mcp.toml</code></td><td><code>~/Library/Application Support/ainz/AGENTS.md</code></td><td><code>~/Library/Application Support/ainz/config.toml</code></td></tr>
       </tbody>
     </table>
     <p>Connection detection parses the actual TOML or JSON entry named <code>synapse</code>. It reports connected only when the stored command resolves to the expected executable and the arguments equal <code>["mcp"]</code>. A deleted development binary therefore appears stale instead of healthy.</p>
@@ -75,7 +76,7 @@ SYNAPSE_BIN="$HOME/bin/synapse" synapse install`)}
         <tr><td><code>statusLine</code></td><td><code>synapse statusline</code></td><td>One line under the prompt for the rest of the session: model, folder, memory count, and mesh size.</td></tr>
       </tbody>
     </table>
-    <p>Both are removed by <code>synapse disconnect claude</code>. Codex exposes neither, so a Codex connection is the MCP entry and the instruction pointer only. pi has no settings entries of this kind either — its notice and status line come from the extension in its package rather than from a hook it has to be configured with.</p>
+    <p>Both are removed by <code>synapse disconnect claude</code>. Codex and Ainz expose neither, so those connections are the MCP entry and the instruction pointer only. pi has no settings entries of this kind either — its notice and status line come from the extension in its package rather than from a hook it has to be configured with.</p>
 
     <h2 id="writes">Safe writes</h2>
     <p>The built-in document views validate JSON, TOML, and YAML before saving. A write with changed content:</p>
