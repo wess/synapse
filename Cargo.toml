@@ -17,7 +17,7 @@ edition = "2024"
 [workspace.dependencies]
 # Pin the published crate exactly. The desktop release must be reproducible
 # without depending on whichever revision happens to be in a sibling checkout.
-guise-ui = { version = "=1.5.4", default-features = false }
+guise-ui = { version = "=1.6.0", default-features = false }
 
 # Shared by more than one crate. Desktop-only dependencies (gpui, cocoa,
 # tray-icon, rmcp, and the rest) stay in the package that needs them, so a
