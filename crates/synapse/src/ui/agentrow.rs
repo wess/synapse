@@ -69,30 +69,27 @@ pub fn render(index: usize, row: Row, actions: Actions) -> AnyElement {
         (summary, hooks.notice)
     });
 
-    // Wrapping is the fallback rather than shrinking: at some width the name
-    // and the four controls stop fitting on one line, and a button crushed to
-    // one letter per line is worse than a button on the next row.
+    // Identity above controls, in a column, rather than the two side by side.
+    //
+    // They used to share one wrapping line, which held while a row carried four
+    // controls: at the width the page is capped to, a connected row now carries
+    // six, the line wraps whether the window is wide or not, and a wrapped line
+    // lands against the *next* tool's name — so every group of buttons read as
+    // belonging to the row below it. A column cannot do that at any width, and
+    // the controls were already dropping to their own line in practice.
     div()
         .flex()
-        .flex_wrap()
-        .items_center()
-        .justify_end()
-        .gap(px(24.0))
-        .min_h(px(92.0))
+        .flex_col()
+        .gap(px(12.0))
         .min_w(px(0.0))
         .px(px(22.0))
         .py(px(16.0))
         .child(
-            // The half that gives way. Everything on the right is a control,
-            // and a control pushed off the edge of the window is a control
-            // nobody can reach — so the description shrinks and wraps instead.
             div()
                 .flex()
                 .items_center()
                 .gap(px(14.0))
-                .flex_grow()
-                .flex_shrink()
-                .min_w(px(220.0))
+                .min_w(px(0.0))
                 .child(
                     div()
                         .flex_none()
@@ -152,9 +149,11 @@ pub fn render(index: usize, row: Row, actions: Actions) -> AnyElement {
                 ),
         )
         .child(
+            // Still wraps, but now only against itself: on a narrow window the
+            // controls stack among themselves instead of colliding with a name.
             div()
                 .flex()
-                .flex_none()
+                .flex_wrap()
                 .items_center()
                 .justify_end()
                 .gap(px(8.0))

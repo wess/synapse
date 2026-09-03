@@ -303,9 +303,19 @@ pub async fn run(pool: &SqlitePool, path: &Path, existed: bool, schema: Schema) 
         Schema::Vault => (VAULTMIGRATIONS, VAULTLATEST),
     };
     let current = version(pool).await?;
+    // Name the way out. This is the one error a person cannot reason their way
+    // through from the message alone: the store is fine, nothing is corrupt,
+    // and the fix is to upgrade the thing reporting it — but "version 12 is
+    // newer than this release supports" reads like a broken database and
+    // sends people looking for a backup to restore. It happens whenever a
+    // newer Synapse has opened the same folder: a development build, or an app
+    // upgraded on one machine and syncing to another that was not.
     anyhow::ensure!(
         current <= latest,
-        "database version {current} is newer than this Synapse release supports"
+        "this store is at schema {current} and Synapse {} only understands {latest}. \
+         Something newer has opened it — upgrade Synapse and try again. \
+         Your memory is intact, and a pre-migration copy is in the `backups` folder.",
+        env!("CARGO_PKG_VERSION")
     );
     if current == latest {
         return Ok(());

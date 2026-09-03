@@ -1858,7 +1858,8 @@ impl Dashboard {
             });
         self.notice = match result {
             Ok(()) => Notice::Success(format!(
-                "{} is connected from this release's descriptor.",
+                "Re-applied {}'s descriptor: registration rewritten, guidance pointer \
+                 and startup notice refreshed. Nothing was removed.",
                 row.agent.name
             )),
             Err(error) => Notice::Error(format!("Could not update {}: {error}", row.agent.name)),
@@ -1893,9 +1894,10 @@ impl Dashboard {
                 row.agent.name,
                 removed.problems.join("; ")
             )),
-            Ok(_) => Notice::Success(format!(
-                "{} was disconnected and connected again.",
-                row.agent.name
+            Ok(removed) => Notice::Success(format!(
+                "{} was disconnected and connected again{}",
+                row.agent.name,
+                listing(&removed.done)
             )),
             Err(error) => Notice::Error(format!("Could not reset {}: {error}", row.agent.name)),
         };
@@ -1923,13 +1925,14 @@ impl Dashboard {
                 row.agent.name,
                 removed.problems.join("; ")
             )),
-            Ok(removed) if removed.done.is_empty() => {
-                Notice::Success(format!("{} had nothing to disconnect.", row.agent.name))
-            }
+            Ok(removed) if removed.done.is_empty() => Notice::Success(format!(
+                "{} had nothing to disconnect — Synapse had written nothing into it.",
+                row.agent.name
+            )),
             Ok(removed) => Notice::Success(format!(
-                "Disconnected {} · {} thing(s) removed.",
+                "Disconnected {}{}",
                 row.agent.name,
-                removed.done.len()
+                listing(&removed.done)
             )),
             Err(error) => {
                 Notice::Error(format!("Could not disconnect {}: {error}", row.agent.name))
@@ -2751,6 +2754,21 @@ impl Dashboard {
                     ),
             )
             .into_any_element()
+    }
+}
+
+/// What a teardown actually took out, as prose.
+///
+/// The count on its own ("4 thing(s) removed") is the shape of the information
+/// without any of it: disconnecting a tool removes its registration, a block
+/// from its instruction file, sometimes two entries from its settings, and
+/// however many skills Synapse had installed into it. Which of those happened
+/// is the whole question somebody has after pressing the button, and the
+/// teardown already knows the answer — it was being thrown away.
+fn listing(done: &[String]) -> String {
+    match done {
+        [] => ".".to_owned(),
+        items => format!(" · removed {}.", items.join(", ").to_lowercase()),
     }
 }
 
