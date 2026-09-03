@@ -41,10 +41,11 @@ pub fn disconnect(arguments: &[OsString]) -> Result<Outcome> {
         known.join(", ")
     );
 
+    let database = crate::files::database()?;
     let runtime = tokio::runtime::Runtime::new()?;
     let mut removed = crate::agent::Removed::default();
     for agent in &chosen {
-        let outcome = runtime.block_on(crate::agent::disconnect(agent, &server));
+        let outcome = runtime.block_on(crate::agent::remove(agent, &server, &database));
         removed.done.extend(outcome.done);
         removed.problems.extend(outcome.problems);
     }
@@ -64,8 +65,15 @@ pub fn uninstall(arguments: &[OsString]) -> Result<Outcome> {
     let runtime = tokio::runtime::Runtime::new()?;
     let mut removed = crate::agent::Removed::default();
 
+    // Uninstall is allowed to lose the connection records with everything else,
+    // but not to stop over them: a database that will not open is exactly the
+    // machine somebody is uninstalling from.
+    let database = crate::files::database().ok();
     for agent in crate::agent::agents(&home) {
-        let outcome = runtime.block_on(crate::agent::disconnect(&agent, &server));
+        let outcome = match &database {
+            Some(database) => runtime.block_on(crate::agent::remove(&agent, &server, database)),
+            None => runtime.block_on(crate::agent::disconnect(&agent, &server)),
+        };
         removed.done.extend(outcome.done);
         removed.problems.extend(outcome.problems);
     }

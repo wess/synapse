@@ -1628,6 +1628,147 @@ fn a_tool_nobody_shipped_connects_the_same_way_the_built_ins_do() {
     );
 }
 
+/// A descriptor that moves in a release has to be able to reach a machine that
+/// is already connected. Detection cannot see that on its own — it compares the
+/// stored command against this binary, so an entry written under an older
+/// descriptor reads as perfectly healthy — which is why `--refresh` exists and
+/// why the connection record exists to say when it is worth pressing.
+#[test]
+#[cfg(unix)]
+fn a_descriptor_that_moves_reaches_a_tool_that_is_already_connected() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let root = tempfile::tempdir().unwrap();
+    let home = root.path().join("home");
+    let bin = root.path().join("toolbin");
+    fs::create_dir_all(&bin).unwrap();
+    fs::create_dir_all(home.join(".hermes")).unwrap();
+
+    let settings = home.join(".hermes/settings.json");
+    let log = root.path().join("hermes.log");
+    let executable = bin.join("hermes");
+    fs::write(
+        &executable,
+        format!(
+            "#!/bin/sh\nprintf '%s\\n' \"$*\" >> '{}'\n\
+             if [ \"$1\" = mcp ] && [ \"$2\" = add ]; then\n\
+               printf '{{\"servers\":{{\"synapse\":{{\"command\":\"%s\",\"args\":[\"mcp\"]}}}}}}' \"$5\" > '{}'\n\
+             fi\n\
+             if [ \"$1\" = mcp ] && [ \"$2\" = remove ]; then printf '{{}}' > '{}'; fi\nexit 0\n",
+            log.display(),
+            settings.display(),
+            settings.display()
+        ),
+    )
+    .unwrap();
+    fs::set_permissions(&executable, fs::Permissions::from_mode(0o700)).unwrap();
+
+    let tools = root.path().join("data/tools");
+    fs::create_dir_all(&tools).unwrap();
+    let descriptor = |extra: &str| {
+        format!(
+            "name = \"Hermes\"\ncommand = \"hermes\"\n\
+             [home]\ndefault = \".hermes\"\n\
+             [paths]\ninstructions = \"{{home}}/AGENTS.md\"\nsettings = \"{{home}}/settings.json\"\n\
+             integration = \"{{home}}/settings.json\"\nskills = \"{{home}}/skills\"\n\
+             [connect]\nadd = [\"mcp\", \"add\", \"synapse\"{extra}, \"--\", \"{{server}}\", \"mcp\"]\n\
+             remove = [\"mcp\", \"remove\", \"synapse\"]\n\
+             [detect]\nformat = \"json\"\nat = [\"servers\", \"synapse\"]\nargs = [\"mcp\"]\n"
+        )
+    };
+    fs::write(tools.join("hermes.toml"), descriptor("")).unwrap();
+
+    let path = format!(
+        "{}:{}",
+        bin.display(),
+        std::env::var("PATH").unwrap_or_default()
+    );
+    let hermes = |arguments: &[&str]| -> Output {
+        let mut command = command(root.path());
+        command
+            .args(arguments)
+            .env("PATH", &path)
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
+        command.spawn().unwrap().wait_with_output().unwrap()
+    };
+    let registrations = || {
+        fs::read_to_string(&log)
+            .unwrap_or_default()
+            .lines()
+            .filter(|line| line.starts_with("mcp add synapse"))
+            .count()
+    };
+
+    success(hermes(&["connect", "hermes"]));
+    assert_eq!(registrations(), 1);
+
+    // Connecting again leaves a working registration alone. That is the whole
+    // reason a descriptor change cannot ride in on an ordinary connect.
+    success(hermes(&["connect", "hermes"]));
+    assert_eq!(
+        registrations(),
+        1,
+        "an ordinary connect should not re-register"
+    );
+
+    // Nothing has moved yet, so nothing claims an update is available.
+    let before = success(hermes(&["doctor"]));
+    assert!(before.contains("Hermes"), "got {before}");
+    assert!(
+        !before.contains("update available"),
+        "an unchanged descriptor is not an update: {before}"
+    );
+
+    // The descriptor gains a flag — the shape of the Ainz `--required` change,
+    // which detection has no way to notice.
+    fs::write(tools.join("hermes.toml"), descriptor(", \"--required\"")).unwrap();
+
+    let moved = success(hermes(&["doctor"]));
+    assert!(
+        moved.contains("connected · update available"),
+        "a moved descriptor should be reported: {moved}"
+    );
+
+    // Refreshing writes the registration again, with the flag this time.
+    success(hermes(&["connect", "hermes", "--refresh"]));
+    assert_eq!(registrations(), 2, "--refresh should re-register");
+    let asked = fs::read_to_string(&log).unwrap();
+    assert!(
+        asked.lines().any(|line| line.contains("--required")),
+        "the new descriptor's flag should have reached the tool: {asked}"
+    );
+
+    // And the row stops asking, because the record now matches what resolves.
+    let after = success(hermes(&["doctor"]));
+    assert!(
+        !after.contains("update available"),
+        "refreshing should settle it: {after}"
+    );
+
+    // Reset is the bigger hammer: out first, then in again.
+    success(hermes(&["connect", "hermes", "--reset"]));
+    assert_eq!(registrations(), 3, "--reset should register again too");
+    let asked = fs::read_to_string(&log).unwrap();
+    assert!(
+        asked
+            .lines()
+            .any(|line| line.starts_with("mcp remove synapse")),
+        "a reset should have disconnected first: {asked}"
+    );
+
+    // Disconnecting forgets the record with the connection. A record that
+    // outlived its connection would report the next one as current the moment
+    // it was made, whatever descriptor it actually used.
+    success(hermes(&["disconnect", "hermes"]));
+    fs::write(tools.join("hermes.toml"), descriptor("")).unwrap();
+    let gone = success(hermes(&["doctor"]));
+    assert!(
+        !gone.contains("update available"),
+        "a disconnected tool has nothing to compare: {gone}"
+    );
+}
+
 /// A skill about one repository belongs to that repository, and installs beside
 /// it rather than into every session on the machine.
 #[test]

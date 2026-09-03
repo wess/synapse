@@ -10,10 +10,10 @@
 //! machine with no mesh, no vault, and no connected tool is a normal machine,
 //! and the dashboard for it should still draw.
 
-use crate::agent::{self, Detection};
+use crate::agent;
 use crate::brain::Brain;
 use crate::relay::Mesh;
-use crate::tui::state::{Connection, Mode, Notice, PAGES, State};
+use crate::tui::state::{Mode, Notice, PAGES, State};
 use crate::vault::VaultStore;
 use crate::{cli, files, shellsetup, skill, vault};
 use anyhow::Result;
@@ -60,7 +60,7 @@ pub async fn initial() -> Result<State> {
 /// its own last-known contents alone rather than emptying the screen.
 pub async fn refresh(state: &mut State) {
     memories(state).await;
-    connections(state);
+    connections(state).await;
     mesh(state).await;
     skills(state).await;
     vaults(state).await;
@@ -92,18 +92,12 @@ pub async fn memories(state: &mut State) {
     }
 }
 
-fn connections(state: &mut State) {
+async fn connections(state: &mut State) {
     let Ok(home) = files::home() else {
         return;
     };
     let server = cli::destination().ok();
-    state.connections = agent::agents(&home)
-        .into_iter()
-        .map(|agent| {
-            let detection = detect(&agent, server.as_deref());
-            Connection { agent, detection }
-        })
-        .collect();
+    state.connections = agent::connections(&home, server.as_deref(), &state.database).await;
     state.cli = cli::status().unwrap_or(cli::InstallStatus::Missing);
     state.shell = cli::destination()
         .ok()
@@ -111,10 +105,6 @@ fn connections(state: &mut State) {
     if let Ok(soul) = files::soul() {
         state.guidance = Some(agent::guidancestate(&home, &soul));
     }
-}
-
-fn detect(agent: &agent::Agent, server: Option<&std::path::Path>) -> Detection {
-    agent::detect(agent, server)
 }
 
 async fn mesh(state: &mut State) {

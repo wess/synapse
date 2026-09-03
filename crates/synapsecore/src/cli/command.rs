@@ -110,6 +110,8 @@ Commands:
   settings reactor <on|off>        Draw the console's reactor in the app
   install                          Install the synapse CLI for this user
   connect [tool]                   Wire a tool into memory, or every one found
+  connect <tool> --refresh         Re-apply this release's descriptor to it
+  connect <tool> --reset           Disconnect it and connect it again
   disconnect [tool]                Undo one tool's connection, or every tool's
   uninstall [--data] [--confirm]   Remove everything Synapse installed
   path                             Print the local data and CLI paths

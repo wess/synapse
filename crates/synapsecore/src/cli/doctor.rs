@@ -52,6 +52,10 @@ pub struct Tool {
     pub installed: bool,
     pub version: Option<String>,
     pub connected: bool,
+    /// Connected, and this release would connect it differently — the
+    /// descriptor moved after the connection was made. See
+    /// [`crate::agent::receipt`].
+    pub outdated: bool,
     pub guidance: bool,
     pub notice: bool,
     pub compact: bool,
@@ -114,10 +118,14 @@ fn print(report: &Report) {
         println!("  none detected");
     }
     for tool in &report.tools {
-        let state = match (tool.installed, tool.connected) {
-            (false, _) => "not installed".to_owned(),
-            (true, false) => "installed, not connected".to_owned(),
-            (true, true) => "connected".to_owned(),
+        let state = match (tool.installed, tool.connected, tool.outdated) {
+            (false, ..) => "not installed".to_owned(),
+            (true, false, _) => "installed, not connected".to_owned(),
+            // Worth a line of its own in a bug report: a tool connected under an
+            // older descriptor behaves like the release that connected it, not
+            // like the one being reported on.
+            (true, true, true) => "connected · update available".to_owned(),
+            (true, true, false) => "connected".to_owned(),
         };
         println!("  {:<14} {state}", tool.name);
         if let Some(version) = &tool.version {
@@ -278,6 +286,23 @@ fn store(database: Option<&Path>) -> Store {
 fn tools(home: &Path) -> Vec<Tool> {
     let server = crate::cli::destination().ok();
     let soul = crate::files::soul().unwrap_or_default();
+    // Every check here reports rather than fails, so a database that will not
+    // open costs the staleness column and nothing else.
+    let rows = crate::files::database()
+        .ok()
+        .zip(runtime().ok())
+        .map(|(database, runtime)| {
+            runtime.block_on(crate::agent::connections(
+                home,
+                server.as_deref(),
+                &database,
+            ))
+        })
+        .unwrap_or_default();
+    let outdated = |slug: &str| {
+        rows.iter()
+            .any(|row| row.agent.slug == slug && row.outdated)
+    };
     crate::agent::agents(home)
         .into_iter()
         .map(|agent| {
@@ -287,6 +312,7 @@ fn tools(home: &Path) -> Vec<Tool> {
                 installed: detection.executable.is_some(),
                 version: detection.version.clone(),
                 connected: detection.configured,
+                outdated: outdated(&agent.slug),
                 guidance: crate::agent::pointermatches(&agent.instructions, &soul),
                 notice: detection.hooks.notice,
                 compact: detection.hooks.compact,

@@ -3,7 +3,7 @@ use anyhow::{Context, Result};
 use sqlx::SqlitePool;
 use std::path::Path;
 
-pub const LATEST: i64 = 11;
+pub const LATEST: i64 = 12;
 
 /// The vault's own schema, in its own file. One table today, with the numbered
 /// migration around it anyway: the day it grows a column is not the day to
@@ -268,6 +268,22 @@ const MIGRATIONS: &[Migration] = &[
             // changes the answer, and it moves the values with it.
             "INSERT OR IGNORE INTO setting(key, value) \
              SELECT 'vault.backend', 'keychain' WHERE EXISTS(SELECT 1 FROM secret)",
+        ],
+    },
+    Migration {
+        version: 12,
+        statements: &[
+            // What a connection was made from, so a descriptor that moves in a
+            // later release can say so instead of waiting to be guessed at. The
+            // digest is of the descriptor text as it stood when Synapse set the
+            // tool up; a different one now means this release would connect it
+            // differently. Same bargain `skillinstall` makes for a skill.
+            //
+            // A machine that connected its tools before this release has no
+            // rows here, and an absent row reads as "nothing to compare",
+            // never as out of date — inventing a stale connection for every
+            // existing user would be a worse lie than saying nothing.
+            "CREATE TABLE IF NOT EXISTS toolconnect(             slug TEXT PRIMARY KEY, descriptor TEXT NOT NULL, connected INTEGER NOT NULL)",
         ],
     },
 ];

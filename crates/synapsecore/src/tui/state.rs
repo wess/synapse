@@ -5,7 +5,9 @@
 //! tree: the terminal redraws the whole frame every tick anyway, so there is
 //! nothing here to keep in step but the numbers themselves.
 
-use crate::agent::{Agent, Detection, GuidanceState};
+pub use crate::agent::Connection;
+
+use crate::agent::GuidanceState;
 use crate::brain::{Memory, Optimization, Stats};
 use crate::cli::InstallStatus;
 use crate::relay::{AgentView, WorkerView};
@@ -102,11 +104,10 @@ pub enum Pending {
     /// Turning down a proposed skill, which deletes it. The name and the
     /// project it belongs to, which together are the skill.
     RejectSkill(String, String),
-}
-
-pub struct Connection {
-    pub agent: Agent,
-    pub detection: Detection,
+    /// Taking a connection out and making it again. Asked about because the
+    /// tool spends a moment disconnected and its installed skills go with it,
+    /// which is more than the word "reset" promises on its own.
+    Reset(String),
 }
 
 pub struct State {
@@ -209,6 +210,17 @@ pub fn selectedskill(state: &State) -> Option<&SkillStatus> {
 
 /// The tool the cursor is on. `None` on the last row, which is the one that
 /// adds a tool rather than naming one.
+/// How many of the tools are wired in. The list is sorted with those first, so
+/// this is also where the connected half ends and the rest begins — the one
+/// number both panels are drawn from.
+pub fn connectedcount(state: &State) -> usize {
+    state
+        .connections
+        .iter()
+        .filter(|row| row.connected())
+        .count()
+}
+
 pub fn selectedtool(state: &State) -> Option<&Connection> {
     if state.page != Page::Connections {
         return None;

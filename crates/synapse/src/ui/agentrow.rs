@@ -5,24 +5,50 @@ use guise::prelude::*;
 
 type Click = Box<dyn Fn(&ClickEvent, &mut Window, &mut App) + 'static>;
 
-pub fn render(
-    index: usize,
-    row: Row,
-    onset: Click,
-    oninstructions: Click,
-    onsettings: Click,
-    onnotice: Click,
-    ondescriptor: Click,
-) -> AnyElement {
-    let installed = row.detection.executable.is_some();
-    let connected = row.detection.configured;
-    let status = if connected {
+/// Everything a row can be asked to do. A struct rather than seven positional
+/// arguments, which was already one too many to read at the call site and is
+/// where a mix-up would be silent — every one of them has the same type.
+pub struct Actions {
+    /// Connect a tool that is not connected.
+    pub set: Click,
+    /// Apply this release's descriptor to one that is.
+    pub update: Click,
+    /// Disconnect and connect again.
+    pub reset: Click,
+    /// Disconnect and leave it that way.
+    pub remove: Click,
+    pub instructions: Click,
+    pub settings: Click,
+    pub notice: Click,
+    pub descriptor: Click,
+}
+
+pub fn render(index: usize, row: Row, actions: Actions) -> AnyElement {
+    let installed = row.installed();
+    let connected = row.connected();
+    let outdated = row.outdated;
+    let status = if outdated {
+        // Connected, and this release would connect it differently. Amber
+        // rather than red: nothing is broken, there is just something newer to
+        // apply, and colouring it as a fault would teach people to ignore it.
+        ("Update available", ColorName::Orange)
+    } else if connected {
         ("Connected", ColorName::Teal)
     } else if installed {
         ("Detected", ColorName::Blue)
     } else {
         ("Not installed", ColorName::Gray)
     };
+    let Actions {
+        set: onset,
+        update: onupdate,
+        reset: onreset,
+        remove: onremove,
+        instructions: oninstructions,
+        settings: onsettings,
+        notice: onnotice,
+        descriptor: ondescriptor,
+    } = actions;
     let detail = row
         .detection
         .version
@@ -156,26 +182,52 @@ pub fn render(
                         .left_section(Icon::new(IconName::Settings2).size(Size::Xs))
                         .on_click(move |event, window, cx| onsettings(event, window, cx)),
                 )
-                .child(
-                    Button::new(
-                        ("setup", index),
-                        if connected { "Connected" } else { "Set up" },
+                // A connected row carries what you can do to the connection;
+                // an unconnected one carries the one thing worth doing to it.
+                // The badge already says "Connected", so a disabled button
+                // repeating it was a control that could never be pressed.
+                .when(connected, |element| {
+                    element
+                        .child(
+                            Button::new(("update", index), "Update")
+                                .variant(if outdated {
+                                    Variant::Filled
+                                } else {
+                                    Variant::Subtle
+                                })
+                                .color(ColorName::Violet)
+                                .size(Size::Xs)
+                                .left_section(Icon::new(IconName::RefreshCw).size(Size::Xs))
+                                .on_click(move |event, window, cx| onupdate(event, window, cx)),
+                        )
+                        .child(
+                            Button::new(("reset", index), "Reset")
+                                .variant(Variant::Subtle)
+                                .color(ColorName::Violet)
+                                .size(Size::Xs)
+                                .left_section(Icon::new(IconName::RotateCcw).size(Size::Xs))
+                                .on_click(move |event, window, cx| onreset(event, window, cx)),
+                        )
+                        .child(
+                            Button::new(("remove", index), "Remove")
+                                .variant(Variant::Subtle)
+                                .color(ColorName::Red)
+                                .size(Size::Xs)
+                                .left_section(Icon::new(IconName::Unplug).size(Size::Xs))
+                                .on_click(move |event, window, cx| onremove(event, window, cx)),
+                        )
+                })
+                .when(!connected, |element| {
+                    element.child(
+                        Button::new(("setup", index), "Set up")
+                            .variant(Variant::Filled)
+                            .size(Size::Xs)
+                            .color(ColorName::Violet)
+                            .disabled(!installed)
+                            .left_section(Icon::new(IconName::PlugZap))
+                            .on_click(move |event, window, cx| onset(event, window, cx)),
                     )
-                    .variant(if connected {
-                        Variant::Light
-                    } else {
-                        Variant::Filled
-                    })
-                    .size(Size::Xs)
-                    .color(ColorName::Violet)
-                    .disabled(!installed || connected)
-                    .left_section(Icon::new(if connected {
-                        IconName::CircleCheck
-                    } else {
-                        IconName::PlugZap
-                    }))
-                    .on_click(move |event, window, cx| onset(event, window, cx)),
-                ),
+                }),
         )
         .into_any_element()
 }

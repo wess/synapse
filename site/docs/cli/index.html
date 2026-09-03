@@ -791,7 +791,23 @@
       <h3>connect</h3>
       <code>synapse connect [tool]</code>
     </div>
-    <p>Wire a tool into memory and the vault: register the Synapse MCP server through that tool's own CLI, and point its global instruction file at SOUL.md. With no name it connects every tool this machine has. Synapse never edits a tool's configuration itself — it asks the tool to.</p>
+    <p>Wire a tool into memory and the vault: register the Synapse MCP server through that tool's own CLI, and point its global instruction file at SOUL.md. With no name it connects every tool this machine has. An existing registration that already points at Synapse is left alone. Synapse never edits a tool's configuration itself — it asks the tool to.</p>
+  </section>
+    
+  <section class="command" id="connect--refresh">
+    <div>
+      <h3>connect --refresh</h3>
+      <code>synapse connect &amp;lt;tool&amp;gt; --refresh</code>
+    </div>
+    <p>Apply this release's descriptor to a tool that is already connected, writing its registration again. Detection cannot tell a descriptor that moved from one that did not, so a tool set up under an older release keeps that release's answer until this is run. Nothing is removed and the tool stays connected throughout. <code>synapse doctor</code> reports <em>update available</em> when it is worth running.</p>
+  </section>
+    
+  <section class="command" id="connect--reset">
+    <div>
+      <h3>connect --reset</h3>
+      <code>synapse connect &amp;lt;tool&amp;gt; --reset</code>
+    </div>
+    <p>Disconnect the tool and connect it again. Costs more than <code>--refresh</code>: disconnecting takes back the skills Synapse installed for that tool, and this restores the connection rather than the library. For when what is on disk has to go before the new answer can land.</p>
   </section>
     
   <section class="command" id="disconnect">

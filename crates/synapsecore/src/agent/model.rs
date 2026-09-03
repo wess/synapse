@@ -78,6 +78,37 @@ pub struct Detection {
     pub hooks: crate::agent::HookState,
 }
 
+/// A tool and everything the dashboard needs to say about it: what it is, what
+/// this machine found, and whether the descriptor has moved since the
+/// connection was made.
+///
+/// One type for both surfaces. The window and the terminal draw this
+/// differently and read it identically, which is the only thing stopping them
+/// from disagreeing about the same machine.
+#[derive(Debug, Clone)]
+pub struct Connection {
+    pub agent: Agent,
+    pub detection: Detection,
+    /// This release would connect the tool differently than it is connected
+    /// now. False for a tool that is not connected, and false when there is no
+    /// record to compare against — see [`crate::agent::receipt`].
+    pub outdated: bool,
+}
+
+impl Connection {
+    /// Whether the tool is wired into Synapse right now. Registered *and*
+    /// configured: an entry naming some other binary is not a connection, it is
+    /// something to repair.
+    pub fn connected(&self) -> bool {
+        self.detection.registered && self.detection.configured
+    }
+
+    /// Whether the tool's binary is on this machine at all.
+    pub fn installed(&self) -> bool {
+        self.detection.executable.is_some()
+    }
+}
+
 impl Detection {
     pub fn missing() -> Self {
         Self {

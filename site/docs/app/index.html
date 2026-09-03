@@ -102,7 +102,8 @@
     <p>Success and error notices appear inside the active screen. The app does not require an account and does not send this state to a hosted service.</p>
 
     <h2 id="connections">Connections</h2>
-    <p>The Connections screen reports memory count, database size, and how many supported tools are connected. Each tool row has one of three states:</p>
+    <p>The Connections screen reports memory count, database size, and how many supported tools are connected. It draws two lists: <strong>Connected</strong>, the tools wired in right now, above <strong>Supported</strong>, everything else Synapse can connect on this machine. A tool appears in one or the other, never both, and moves between them as you connect and disconnect it.</p>
+    <p>Each tool row has one of four states:</p>
     <dl>
       <dt>Not installed</dt>
       <dd>The command was not found on <code>PATH</code>. Set up is disabled until the tool is installed.</dd>
@@ -110,10 +111,23 @@
       <dd>The tool executable is available but its exact <code>synapse</code> MCP entry is absent or stale. Choose <strong>Set up</strong>.</dd>
       <dt>Connected</dt>
       <dd>The stored executable and <code>["mcp"]</code> arguments match the expected Synapse server.</dd>
+      <dt>Update available</dt>
+      <dd>Connected, and this release would connect it differently — its descriptor changed after the connection was made. Nothing is broken; there is a newer answer to apply. Choose <strong>Update</strong>.</dd>
     </dl>
     <p>Set up registers the MCP server, creates <code>SOUL.md</code> when needed, and adds a marked pointer to that shared file in the tool's global instructions. For Claude Code it also installs the startup notice described below. Existing settings and text outside the managed block remain in place; changed files receive <code>.synapsebackup</code> siblings. If setup fails, Synapse restores the affected files.</p>
     <p>A connected <strong>Claude Code</strong> row also reports whether it announces Synapse at startup, with an <strong>Add</strong> or <strong>Remove</strong> control beside it. Adding it writes two hooks into that tool's own settings: a SessionStart hook, so the connection is stated beside its welcome message before the model has written anything, and a PreCompact hook that asks a long session to write down what it settled before its context is compacted away. It also claims the status line when nothing else has. A status line you configured yourself is never replaced — the row says <em>your status line kept</em> instead. Removing takes back only what Synapse wrote. Either way the change applies to the next session that tool starts, and it never requires disconnecting and reconnecting.</p>
-    <p><strong>Edit instructions</strong> and <strong>Edit config</strong> open the actual files in the built-in editor. Synapse does not currently provide a separate Disconnect button; remove the named <code>synapse</code> entry and managed instruction block through those files when you intentionally want to disconnect a tool. See <a href="../config/#tools">Tool integration files</a> for their exact paths.</p>
+    <h3 id="maintaining">Keeping a connection current</h3>
+    <p>A connected row carries three controls, in increasing order of what they cost you:</p>
+    <dl>
+      <dt>Update</dt>
+      <dd>Applies this release's descriptor to a tool that is already connected. The registration is written again rather than skipped, because detection cannot tell a descriptor that moved from one that did not — it only knows an entry is present and points at Synapse. Nothing is removed, your skills stay installed, and the tool is connected throughout. This is what the <em>Update available</em> badge is asking for.</dd>
+      <dt>Reset</dt>
+      <dd>Disconnects the tool and connects it again. The bigger hammer, and the one that costs something: disconnecting removes the skills Synapse installed for that tool, and a reset puts the connection back rather than the library. Reach for Update first; use Reset when what is on disk has to go before the new answer can land.</dd>
+      <dt>Remove</dt>
+      <dd>Disconnects and leaves it that way: the MCP registration, the managed instruction block, the Claude Code hooks and status line, and any skill Synapse installed for it. A skill you wrote, your own words in an instruction file, and a status line somebody else configured all stay where they are. The row moves down to <strong>Supported</strong>.</dd>
+    </dl>
+    <p>Synapse knows a descriptor moved because it records which one a connection was made from. A tool connected before this release has no such record, and reads as current rather than out of date — not knowing is not the same as knowing something is stale.</p>
+    <p><strong>Edit instructions</strong> and <strong>Edit config</strong> open the actual files in the built-in editor. See <a href="../config/#tools">Tool integration files</a> for their exact paths.</p>
 
     <h2 id="memory">Memory</h2>
     <p>The import panel previews Claude and Codex separately. <strong>Import safe</strong> stores recognized project memory, skips anything credential-shaped, leaves source files untouched, and records a reversible batch. <strong>Review source</strong> opens the provider folder. Undo requires confirmation and preserves imported records that were edited or linked from another source.</p>

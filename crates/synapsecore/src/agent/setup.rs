@@ -3,17 +3,53 @@ use crate::files;
 use anyhow::{Context, Result};
 use std::path::Path;
 
+/// Whether a registration that is already there is left alone or written
+/// again.
+///
+/// Detection can only see whether *a* registration points at this binary with
+/// the right arguments. It cannot see the rest of what a descriptor says, so a
+/// release that changes `connect.add` — a flag added, a name changed — reaches
+/// nobody who is already connected under [`Apply::IfNeeded`]. That is the whole
+/// reason [`Apply::Force`] exists, and why refreshing a connection is a
+/// deliberate act rather than something `connect` quietly does every time.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Apply {
+    /// Register the server only when it is not already registered correctly.
+    IfNeeded,
+    /// Register it again whatever detection found, running `connect.remove`
+    /// first so the tool's own CLI is never asked to add a name it already has.
+    Force,
+}
+
+/// Connect a tool, leaving an existing registration alone.
 pub fn setup(agent: &Agent, detection: &Detection, server: &Path, soul: &Path) -> Result<()> {
+    setupwith(agent, detection, server, soul, Apply::IfNeeded)
+}
+
+/// Connect a tool, writing the registration again even when one is already
+/// there — so a descriptor that moved in a release reaches a machine that is
+/// already set up.
+pub fn reapply(agent: &Agent, detection: &Detection, server: &Path, soul: &Path) -> Result<()> {
+    setupwith(agent, detection, server, soul, Apply::Force)
+}
+
+pub fn setupwith(
+    agent: &Agent,
+    detection: &Detection,
+    server: &Path,
+    soul: &Path,
+    apply: Apply,
+) -> Result<()> {
     let integration = files::Snapshot::capture(&agent.integration)?;
     let instructions = files::Snapshot::capture(&agent.instructions)?;
     let settings = files::Snapshot::capture(&agent.settings)?;
     let shared = files::Snapshot::capture(soul)?;
-    if !detection.configured {
+    if !detection.configured || apply == Apply::Force {
         integration.backup()?;
     }
     crate::instructions::ensure(soul)?;
 
-    if let Err(error) = runsetup(agent, detection, server, soul) {
+    if let Err(error) = runsetup(agent, detection, server, soul, apply) {
         if let Err(rollback) = settings
             .restore()
             .and_then(|_| instructions.restore())
@@ -27,27 +63,51 @@ pub fn setup(agent: &Agent, detection: &Detection, server: &Path, soul: &Path) -
     Ok(())
 }
 
-fn runsetup(agent: &Agent, detection: &Detection, server: &Path, soul: &Path) -> Result<()> {
+fn runsetup(
+    agent: &Agent,
+    detection: &Detection,
+    server: &Path,
+    soul: &Path,
+    apply: Apply,
+) -> Result<()> {
     let executable = detection
         .executable
         .as_deref()
         .context("the tool is not installed or is not on PATH")?;
 
-    if !detection.configured {
+    let forced = apply == Apply::Force;
+    if !detection.configured || forced {
         // A registration pointing at a binary that has moved has to come out
         // before the replacement goes in, or the tool's own CLI is asked to
-        // write a name it already has.
-        if agent.connect.replace && detection.registered {
+        // write a name it already has. A forced re-apply is the same problem
+        // whatever the descriptor says about `replace`: the entry is known to
+        // be there, and it is being written again on purpose.
+        if (agent.connect.replace || forced)
+            && detection.registered
+            && !agent.connect.remove.is_empty()
+        {
             let output = crate::agent::command(executable)
                 .args(argv(&agent.connect.remove, agent, server))
-                .output()
-                .with_context(|| format!("could not remove the stale {} connection", agent.name))?;
-            anyhow::ensure!(
-                output.status.success(),
-                "could not replace the stale {} connection: {}",
-                agent.name,
-                String::from_utf8_lossy(&output.stderr).trim()
-            );
+                .output();
+            // A descriptor that says `replace` is describing a tool that cannot
+            // overwrite its own entry, so a removal that fails there has to
+            // stop the run. A forced re-apply makes no such claim: most CLIs
+            // overwrite happily, and refusing to re-apply because the tool had
+            // nothing to remove would break the one path that exists to fix a
+            // connection.
+            let failure = match &output {
+                Ok(output) if output.status.success() => None,
+                Ok(output) => Some(String::from_utf8_lossy(&output.stderr).trim().to_owned()),
+                Err(error) => Some(error.to_string()),
+            };
+            if let Some(failure) = failure
+                && agent.connect.replace
+            {
+                anyhow::bail!(
+                    "could not replace the stale {} connection: {failure}",
+                    agent.name
+                );
+            }
         }
         anyhow::ensure!(
             !agent.connect.add.is_empty(),

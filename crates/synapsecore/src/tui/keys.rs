@@ -24,6 +24,11 @@ pub enum Action {
     RejectSkill(String, String),
     /// Wire the tool under the cursor into memory and the vault.
     Connect(String),
+    /// Apply this release's descriptor to a tool that is already connected, so
+    /// a change that shipped after it was set up actually reaches it.
+    Reapply(String),
+    /// Take the connection out and make it again.
+    Reset(String),
     /// Undo that.
     Disconnect(String),
     /// Open a tool's descriptor in `$EDITOR`, seeded from the existing one or
@@ -110,6 +115,7 @@ fn confirm(state: &mut State, key: KeyEvent, pending: Pending) -> Action {
         (KeyCode::Char('y'), Pending::RejectSkill(name, project)) => {
             Action::RejectSkill(name, project)
         }
+        (KeyCode::Char('y'), Pending::Reset(slug)) => Action::Reset(slug),
         _ => {
             state.notice = Notice::Ready;
             Action::None
@@ -207,6 +213,36 @@ fn browse(state: &mut State, key: KeyEvent) -> Action {
                 let slug = row.agent.slug.clone();
                 state.notice = Notice::Error(format!("disconnect {slug}? y to confirm"));
                 state.mode = Mode::Confirm(Pending::Disconnect(slug));
+                Action::None
+            }
+            None => Action::None,
+        },
+
+        // Re-applying writes the registration again and removes nothing, so it
+        // happens on one key. Resetting disconnects first, which takes the
+        // tool's installed skills with it, so it does not.
+        //
+        // `u` rather than `r`, which is the global reload and reaches this page
+        // first — and `update` is the word the row itself uses when a release
+        // has moved its descriptor.
+        KeyCode::Char('u') if state.page == Page::Connections => match state::selectedtool(state) {
+            Some(row) if row.connected() => Action::Reapply(row.agent.slug.clone()),
+            Some(_) => {
+                state.notice = Notice::Error("that tool is not connected yet".to_owned());
+                Action::None
+            }
+            None => Action::None,
+        },
+        KeyCode::Char('R') if state.page == Page::Connections => match state::selectedtool(state) {
+            Some(row) if row.connected() => {
+                let slug = row.agent.slug.clone();
+                state.notice =
+                    Notice::Error(format!("reset {slug}? it disconnects first · y to confirm"));
+                state.mode = Mode::Confirm(Pending::Reset(slug));
+                Action::None
+            }
+            Some(_) => {
+                state.notice = Notice::Error("that tool is not connected yet".to_owned());
                 Action::None
             }
             None => Action::None,

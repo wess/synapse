@@ -189,8 +189,26 @@ fn pump(
             Ok(())
         }
         Action::Connect(slug) => {
-            state.notice = match connect(&slug) {
+            state.notice = match runtime.block_on(connect(&slug, Wire::Connect)) {
                 Ok(name) => Notice::Success(format!("{name} is connected to Synapse")),
+                Err(error) => Notice::Error(format!("{error:#}")),
+            };
+            runtime.block_on(load::refresh(state));
+            Ok(())
+        }
+        Action::Reapply(slug) => {
+            state.notice = match runtime.block_on(connect(&slug, Wire::Reapply)) {
+                Ok(name) => {
+                    Notice::Success(format!("{name} re-applied from this release's descriptor"))
+                }
+                Err(error) => Notice::Error(format!("{error:#}")),
+            };
+            runtime.block_on(load::refresh(state));
+            Ok(())
+        }
+        Action::Reset(slug) => {
+            state.notice = match runtime.block_on(connect(&slug, Wire::Reset)) {
+                Ok(name) => Notice::Success(format!("{name} disconnected and connected again")),
                 Err(error) => Notice::Error(format!("{error:#}")),
             };
             runtime.block_on(load::refresh(state));
@@ -224,27 +242,56 @@ fn pump(
 }
 
 /// Wire one tool in, by the slug the dashboard row carries.
-fn connect(slug: &str) -> Result<String> {
+/// Which of the three ways of wiring a tool in the keypress asked for.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Wire {
+    Connect,
+    Reapply,
+    Reset,
+}
+
+async fn connect(slug: &str, wire: Wire) -> Result<String> {
     let home = crate::files::home()?;
     let server = crate::cli::destination()?;
     let soul = crate::files::soul()?;
+    let database = crate::files::database()?;
     let agent = crate::agent::agents(&home)
         .into_iter()
         .find(|agent| agent.slug == slug)
         .with_context(|| format!("no tool named `{slug}`"))?;
     let detection = crate::agent::detect(&agent, Some(&server));
-    crate::agent::setup(&agent, &detection, &server, &soul)?;
+    match wire {
+        Wire::Connect => {
+            crate::agent::connect(&agent, &detection, &server, &soul, &database).await?
+        }
+        Wire::Reapply => {
+            crate::agent::refresh(&agent, &detection, &server, &soul, &database).await?
+        }
+        Wire::Reset => {
+            let removed = crate::agent::reset(&agent, &server, &soul, &database).await?;
+            // A reset that could not take everything out still connected the
+            // tool, so this reports rather than fails — but silently leaving
+            // half of it behind is how somebody ends up debugging a stale hook.
+            anyhow::ensure!(
+                removed.problems.is_empty(),
+                "{} was connected again, but {}",
+                agent.name,
+                removed.problems.join("; ")
+            );
+        }
+    }
     Ok(agent.name)
 }
 
 async fn disconnect(slug: &str) -> Result<String> {
     let home = crate::files::home()?;
     let server = crate::cli::destination()?;
+    let database = crate::files::database()?;
     let agent = crate::agent::agents(&home)
         .into_iter()
         .find(|agent| agent.slug == slug)
         .with_context(|| format!("no tool named `{slug}`"))?;
-    let removed = crate::agent::disconnect(&agent, &server).await;
+    let removed = crate::agent::remove(&agent, &server, &database).await;
     anyhow::ensure!(
         removed.problems.is_empty(),
         "{}",
@@ -440,6 +487,7 @@ mod tests {
                 .unwrap()
                 .unwrap(),
             detection: crate::agent::Detection::missing(),
+            outdated: false,
         });
         keys::handle(
             &mut state,

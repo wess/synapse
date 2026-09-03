@@ -1660,6 +1660,162 @@ impl Dashboard {
         }
     }
 
+    /// One card of tool rows.
+    ///
+    /// Called twice with two slices of the same vector: what is connected, then
+    /// what could be. `offset` is where the slice starts, because the button
+    /// ids are keyed on the row's position and two cards each numbering from
+    /// zero would give the first row of each the same id.
+    ///
+    /// The row that adds a tool belongs to the lower card only — it is where
+    /// you go to gain a connection, not to manage one.
+    #[allow(clippy::too_many_arguments)]
+    fn toolcard(
+        &self,
+        rows: Vec<Row>,
+        offset: usize,
+        heading: &'static str,
+        border: gpui::Hsla,
+        surface: gpui::Hsla,
+        cx: &mut Context<Self>,
+    ) -> gpui::AnyElement {
+        let supported = offset > 0 || rows.iter().all(|row| !row.connected());
+        let count = rows.len();
+        div()
+            .min_w(px(0.0))
+            .flex()
+            .flex_col()
+            .gap(px(10.0))
+            .child(
+                div()
+                    .flex()
+                    .items_baseline()
+                    .gap(px(8.0))
+                    .px(px(4.0))
+                    .child(
+                        Text::new(heading)
+                            .size(Size::Sm)
+                            .weight(gpui::FontWeight::SEMIBOLD),
+                    )
+                    .child(Text::new(count.to_string()).size(Size::Xs).dimmed()),
+            )
+            .child(
+                div()
+                    .min_w(px(0.0))
+                    .flex()
+                    .flex_col()
+                    .rounded(px(14.0))
+                    .border_1()
+                    .border_color(border)
+                    .bg(surface)
+                    .overflow_hidden()
+                    .when(count == 0, |element| {
+                        element.child(
+                            div().px(px(22.0)).py(px(18.0)).child(
+                                Text::new(if supported {
+                                    "Every tool this machine has is connected."
+                                } else {
+                                    "Nothing is connected yet. Set one up below."
+                                })
+                                .size(Size::Xs)
+                                .dimmed(),
+                            ),
+                        )
+                    })
+                    .children(rows.into_iter().enumerate().flat_map(|(position, row)| {
+                        let index = offset + position;
+                        let slug = row.agent.slug.clone();
+                        let set = Box::new(cx.listener(move |this, _, _, cx| {
+                            this.setup(&slug, cx);
+                        }));
+                        let slug = row.agent.slug.clone();
+                        let update = Box::new(cx.listener(move |this, _, _, cx| {
+                            this.updatetool(&slug, cx);
+                        }));
+                        let slug = row.agent.slug.clone();
+                        let reset = Box::new(cx.listener(move |this, _, _, cx| {
+                            this.resettool(&slug, cx);
+                        }));
+                        let slug = row.agent.slug.clone();
+                        let remove = Box::new(cx.listener(move |this, _, _, cx| {
+                            this.removetool(&slug, cx);
+                        }));
+                        let slug = row.agent.slug.clone();
+                        let instructions = Box::new(cx.listener(move |this, _, window, cx| {
+                            this.openinstructions(&slug, window, cx);
+                        }));
+                        let slug = row.agent.slug.clone();
+                        let settings = Box::new(cx.listener(move |this, _, window, cx| {
+                            this.opensettings(&slug, window, cx);
+                        }));
+                        let slug = row.agent.slug.clone();
+                        let notice = Box::new(cx.listener(move |this, _, _, cx| {
+                            this.togglenotice(&slug, cx);
+                        }));
+                        let slug = row.agent.slug.clone();
+                        let descriptor = Box::new(cx.listener(move |this, _, window, cx| {
+                            this.opendescriptor(&slug, window, cx);
+                        }));
+                        let mut items = Vec::new();
+                        if position > 0 {
+                            items.push(div().h(px(1.0)).mx(px(22.0)).bg(border).into_any_element());
+                        }
+                        items.push(agentrow::render(
+                            index,
+                            row,
+                            agentrow::Actions {
+                                set,
+                                update,
+                                reset,
+                                remove,
+                                instructions,
+                                settings,
+                                notice,
+                                descriptor,
+                            },
+                        ));
+                        items
+                    }))
+                    // Past the end of the list. There will be more coding tools
+                    // than Synapse ships descriptors for, and this is where a
+                    // person says so.
+                    .when(supported, |element| {
+                        element
+                            .when(count > 0, |element| {
+                                element.child(div().h(px(1.0)).mx(px(22.0)).bg(border))
+                            })
+                            .child(
+                                div()
+                                    .flex()
+                                    .items_end()
+                                    .justify_between()
+                                    .gap(px(16.0))
+                                    .px(px(22.0))
+                                    .py(px(16.0))
+                                    .child(
+                                        div()
+                                            .flex_1()
+                                            .max_w(px(320.0))
+                                            .child(self.toolname.clone()),
+                                    )
+                                    .child(
+                                        Button::new("describetool", "Describe a tool")
+                                            .variant(Variant::Light)
+                                            .color(ColorName::Violet)
+                                            .size(Size::Xs)
+                                            .left_section(
+                                                Icon::new(IconName::FileText).size(Size::Xs),
+                                            )
+                                            .on_click(cx.listener(|this, _, window, cx| {
+                                                this.describetool(window, cx);
+                                            })),
+                                    ),
+                            )
+                    }),
+            )
+            .into_any_element()
+    }
+
     fn setup(&mut self, slug: &str, cx: &mut Context<Self>) {
         let Some(row) = self.rows.iter().find(|row| row.agent.slug == slug).cloned() else {
             return;
@@ -1668,11 +1824,116 @@ impl Dashboard {
             .ok_or_else(|| anyhow::anyhow!("could not locate the Synapse MCP executable"))
             .and_then(|server| {
                 let soul = files::soul()?;
-                agent::setup(&row.agent, &row.detection, &server, &soul)
+                let database = files::database()?;
+                block(async {
+                    agent::connect(&row.agent, &row.detection, &server, &soul, &database).await
+                })
             });
         self.notice = match result {
             Ok(()) => Notice::Success(format!("{} is connected to Synapse.", row.agent.name)),
             Err(error) => Notice::Error(format!("Could not connect {}: {error}", row.agent.name)),
+        };
+        self.rows = loadrows();
+        cx.notify();
+    }
+
+    /// Apply this release's descriptor to a tool that is already connected.
+    ///
+    /// The registration is written again rather than skipped: detection cannot
+    /// tell a descriptor that moved from one that did not, so a tool set up
+    /// under an older release would otherwise keep that release's answer for
+    /// good. Nothing is removed, and the tool stays connected throughout.
+    fn updatetool(&mut self, slug: &str, cx: &mut Context<Self>) {
+        let Some(row) = self.rows.iter().find(|row| row.agent.slug == slug).cloned() else {
+            return;
+        };
+        let result = connectionserver()
+            .ok_or_else(|| anyhow::anyhow!("could not locate the Synapse MCP executable"))
+            .and_then(|server| {
+                let soul = files::soul()?;
+                let database = files::database()?;
+                block(async {
+                    agent::refresh(&row.agent, &row.detection, &server, &soul, &database).await
+                })
+            });
+        self.notice = match result {
+            Ok(()) => Notice::Success(format!(
+                "{} is connected from this release's descriptor.",
+                row.agent.name
+            )),
+            Err(error) => Notice::Error(format!("Could not update {}: {error}", row.agent.name)),
+        };
+        self.rows = loadrows();
+        cx.notify();
+    }
+
+    /// Take a connection out and make it again.
+    ///
+    /// Costs more than updating it: disconnecting removes the skills Synapse
+    /// installed for this tool, and this puts the connection back rather than
+    /// the library. It is here for the case updating cannot reach — an entry
+    /// the tool's own CLI will not overwrite in place.
+    fn resettool(&mut self, slug: &str, cx: &mut Context<Self>) {
+        let Some(row) = self.rows.iter().find(|row| row.agent.slug == slug).cloned() else {
+            return;
+        };
+        let result = connectionserver()
+            .ok_or_else(|| anyhow::anyhow!("could not locate the Synapse MCP executable"))
+            .and_then(|server| {
+                let soul = files::soul()?;
+                let database = files::database()?;
+                block(async { agent::reset(&row.agent, &server, &soul, &database).await })
+            });
+        self.notice = match result {
+            // Connected again, but something would not come out on the way.
+            // Reporting the success alone is how somebody ends up debugging a
+            // hook nobody told them was left behind.
+            Ok(removed) if !removed.problems.is_empty() => Notice::Error(format!(
+                "{} was connected again, but {}",
+                row.agent.name,
+                removed.problems.join("; ")
+            )),
+            Ok(_) => Notice::Success(format!(
+                "{} was disconnected and connected again.",
+                row.agent.name
+            )),
+            Err(error) => Notice::Error(format!("Could not reset {}: {error}", row.agent.name)),
+        };
+        self.rows = loadrows();
+        cx.notify();
+    }
+
+    /// Take a tool back out: its registration, the managed guidance block, the
+    /// Claude Code notice, and the skills Synapse installed for it. A skill the
+    /// user wrote, and their own words in an instruction file, stay where they
+    /// are.
+    fn removetool(&mut self, slug: &str, cx: &mut Context<Self>) {
+        let Some(row) = self.rows.iter().find(|row| row.agent.slug == slug).cloned() else {
+            return;
+        };
+        let result = connectionserver()
+            .ok_or_else(|| anyhow::anyhow!("could not locate the Synapse MCP executable"))
+            .and_then(|server| {
+                let database = files::database()?;
+                block(async { Ok(agent::remove(&row.agent, &server, &database).await) })
+            });
+        self.notice = match result {
+            Ok(removed) if !removed.problems.is_empty() => Notice::Error(format!(
+                "Disconnected {} with problems: {}",
+                row.agent.name,
+                removed.problems.join("; ")
+            )),
+            Ok(removed) if removed.done.is_empty() => {
+                Notice::Success(format!("{} had nothing to disconnect.", row.agent.name))
+            }
+            Ok(removed) => Notice::Success(format!(
+                "Disconnected {} · {} thing(s) removed.",
+                row.agent.name,
+                removed.done.len()
+            )),
+            Err(error) => {
+                Notice::Error(format!("Could not disconnect {}: {error}", row.agent.name))
+            }
         };
         self.rows = loadrows();
         cx.notify();
@@ -1951,6 +2212,7 @@ impl Dashboard {
         let border = theme.border().hsla();
         let surface = theme.surface().hsla();
         let rows = self.rows.clone();
+        let connected = connectedcount(&rows);
 
         if let Some(document) = self.document.clone() {
             let save = Box::new(cx.listener(|this, _, _, cx| this.savedocument(cx)));
@@ -2458,104 +2720,22 @@ impl Dashboard {
                                 &self.notice,
                                 cx,
                             ))
-                            .child(
-                                div()
-                                    .min_w(px(0.0))
-                                    .flex()
-                                    .flex_col()
-                                    .rounded(px(14.0))
-                                    .border_1()
-                                    .border_color(border)
-                                    .bg(surface)
-                                    .overflow_hidden()
-                                    .children(rows.into_iter().enumerate().flat_map(
-                                        |(index, row)| {
-                                            let slug = row.agent.slug.clone();
-                                            let setup =
-                                                Box::new(cx.listener(move |this, _, _, cx| {
-                                                    this.setup(&slug, cx);
-                                                }));
-                                            let slug = row.agent.slug.clone();
-                                            let instructions = Box::new(cx.listener(
-                                                move |this, _, window, cx| {
-                                                    this.openinstructions(&slug, window, cx);
-                                                },
-                                            ));
-                                            let slug = row.agent.slug.clone();
-                                            let settings = Box::new(cx.listener(
-                                                move |this, _, window, cx| {
-                                                    this.opensettings(&slug, window, cx);
-                                                },
-                                            ));
-                                            let slug = row.agent.slug.clone();
-                                            let notice =
-                                                Box::new(cx.listener(move |this, _, _, cx| {
-                                                    this.togglenotice(&slug, cx);
-                                                }));
-                                            let slug = row.agent.slug.clone();
-                                            let descriptor = Box::new(cx.listener(
-                                                move |this, _, window, cx| {
-                                                    this.opendescriptor(&slug, window, cx);
-                                                },
-                                            ));
-                                            let mut items = Vec::new();
-                                            if index > 0 {
-                                                items.push(
-                                                    div()
-                                                        .h(px(1.0))
-                                                        .mx(px(22.0))
-                                                        .bg(border)
-                                                        .into_any_element(),
-                                                );
-                                            }
-                                            items.push(agentrow::render(
-                                                index,
-                                                row,
-                                                setup,
-                                                instructions,
-                                                settings,
-                                                notice,
-                                                descriptor,
-                                            ));
-                                            items
-                                        },
-                                    ))
-                                    // Past the end of the list. There will be
-                                    // more coding tools than Synapse ships
-                                    // descriptors for, and this is where a
-                                    // person says so.
-                                    .child(div().h(px(1.0)).mx(px(22.0)).bg(border))
-                                    .child(
-                                        div()
-                                            .flex()
-                                            .items_end()
-                                            .justify_between()
-                                            .gap(px(16.0))
-                                            .px(px(22.0))
-                                            .py(px(16.0))
-                                            .child(
-                                                div()
-                                                    .flex_1()
-                                                    .max_w(px(320.0))
-                                                    .child(self.toolname.clone()),
-                                            )
-                                            .child(
-                                                Button::new("describetool", "Describe a tool")
-                                                    .variant(Variant::Light)
-                                                    .color(ColorName::Violet)
-                                                    .size(Size::Xs)
-                                                    .left_section(
-                                                        Icon::new(IconName::FileText)
-                                                            .size(Size::Xs),
-                                                    )
-                                                    .on_click(cx.listener(
-                                                        |this, _, window, cx| {
-                                                            this.describetool(window, cx);
-                                                        },
-                                                    )),
-                                            ),
-                                    ),
-                            ),
+                            .child(self.toolcard(
+                                rows[..connected].to_vec(),
+                                0,
+                                "Connected",
+                                border,
+                                surface,
+                                cx,
+                            ))
+                            .child(self.toolcard(
+                                rows[connected..].to_vec(),
+                                connected,
+                                "Supported",
+                                border,
+                                surface,
+                                cx,
+                            )),
                     ),
             )
             .child(
@@ -2576,17 +2756,20 @@ impl Dashboard {
 
 fn loadrows() -> Vec<Row> {
     let server = connectionserver();
-    files::home()
-        .map(|home| {
-            agent::agents(&home)
-                .into_iter()
-                .map(|agent| Row {
-                    detection: agent::detect(&agent, server.as_deref()),
-                    agent,
-                })
-                .collect()
-        })
+    let Ok(home) = files::home() else {
+        return Vec::new();
+    };
+    let Ok(database) = files::database() else {
+        return Vec::new();
+    };
+    block(async { Ok(agent::connections(&home, server.as_deref(), &database).await) })
         .unwrap_or_default()
+}
+
+/// Where the connected half of the list ends. The rows arrive sorted with
+/// connected tools first, so this is the only number the two cards need.
+fn connectedcount(rows: &[Row]) -> usize {
+    rows.iter().filter(|row| row.connected()).count()
 }
 
 fn connectionserver() -> Option<PathBuf> {
