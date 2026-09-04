@@ -13,6 +13,7 @@ mod remove;
 mod session;
 mod shell;
 mod skills;
+pub(crate) mod tokens;
 mod wrap;
 
 pub use install::{InstallStatus, destination, install, status};

@@ -114,6 +114,7 @@ Commands:
   connect <tool> --reset           Disconnect it and connect it again
   disconnect [tool]                Undo one tool's connection, or every tool's
   uninstall [--data] [--confirm]   Remove everything Synapse installed
+  tokens [--json]                  What Synapse costs a session in context
   path                             Print the local data and CLI paths
   version                          Print the version
   help                             Show this help
@@ -160,6 +161,7 @@ pub fn run(arguments: Vec<OsString>) -> Result<Outcome> {
         "doctor" => super::doctor::doctor(rest),
         "settings" => settings(rest),
         "install" => install(),
+        "tokens" => super::tokens::tokens(rest),
         "connect" => super::connect::connect(rest),
         "disconnect" => super::remove::disconnect(rest),
         "uninstall" => super::remove::uninstall(rest),

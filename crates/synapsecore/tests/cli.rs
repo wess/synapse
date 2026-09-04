@@ -1769,6 +1769,55 @@ fn a_descriptor_that_moves_reaches_a_tool_that_is_already_connected() {
     );
 }
 
+/// What Synapse costs a session, counted rather than guessed at.
+///
+/// The point of the command is that the surfaces with no budget — the guidance,
+/// the tool schemas, every skill description — are the ones nobody was watching,
+/// so the test's job is that they are all present and that the settings which
+/// move them are reflected.
+#[test]
+fn the_context_cost_is_reported_and_moves_with_the_settings() {
+    let root = tempfile::tempdir().unwrap();
+
+    let report = success(run(root.path(), &["tokens"], None));
+    for section in [
+        "Guidance",
+        "Tool schemas",
+        "Skill library",
+        "Startup recall",
+    ] {
+        assert!(report.contains(section), "missing {section}: {report}");
+    }
+    // The estimate says it is one, every time it is shown.
+    assert!(report.contains("not a tokenizer"), "got {report}");
+    // Mesh off is the default, and the report says what that is worth rather
+    // than leaving the setting as a preference with no number on it.
+    assert!(report.contains("mesh off, saving"), "got {report}");
+
+    let quiet: serde_json::Value =
+        serde_json::from_str(&success(run(root.path(), &["tokens", "--json"], None))).unwrap();
+    let before = quiet["total"]["tokens"].as_u64().unwrap();
+    assert!(before > 0);
+    assert_eq!(quiet["estimated"], serde_json::json!(true));
+
+    // Turning the mesh on adds sixteen tool definitions to every session, which
+    // is the single largest lever there is and now has a number beside it.
+    success(run(root.path(), &["settings", "mesh", "on"], None));
+    let loud: serde_json::Value =
+        serde_json::from_str(&success(run(root.path(), &["tokens", "--json"], None))).unwrap();
+    let after = loud["total"]["tokens"].as_u64().unwrap();
+    assert!(
+        after > before,
+        "the mesh should cost something visible: {before} then {after}"
+    );
+
+    // And the same numbers reach the report somebody actually pastes into an
+    // issue, rather than living only in a command they would have to know about.
+    let doctor = success(run(root.path(), &["doctor"], None));
+    assert!(doctor.contains("Context cost per session"), "got {doctor}");
+    assert!(doctor.contains("synapse tokens"), "got {doctor}");
+}
+
 /// A skill about one repository belongs to that repository, and installs beside
 /// it rather than into every session on the machine.
 #[test]

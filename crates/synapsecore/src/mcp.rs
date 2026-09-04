@@ -3,6 +3,14 @@ mod mesh;
 mod model;
 mod server;
 
+/// What the tool definitions cost a session at these settings, per tool, in
+/// bytes of JSON. The mesh's sixteen and self-improvement's two are the whole
+/// reason those settings gate the router rather than the handler — this is how
+/// somebody sees what that saves them.
+pub fn toolcost(mesh: bool, learn: bool) -> Vec<(String, usize)> {
+    server::Server::definitions(mesh, learn)
+}
+
 pub async fn run() -> anyhow::Result<()> {
     let database = crate::files::database()?;
     let guidance = crate::instructions::ensure(&crate::files::soul()?)?;

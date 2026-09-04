@@ -22,10 +22,25 @@ pub struct Report {
     pub store: Store,
     pub tools: Vec<Tool>,
     pub skills: Skills,
+    /// What Synapse puts into a session before the first turn. Here because it
+    /// is the one cost a person pays on every session of every connected tool
+    /// and the one nothing else reports — a bug report that says "it feels
+    /// slow" is a different conversation once this number is in it.
+    pub context: Vec<Context>,
     pub mesh: Mesh,
     pub shell: String,
     pub cli: String,
     pub crashes: Vec<String>,
+}
+
+#[derive(Serialize)]
+pub struct Context {
+    pub label: String,
+    pub detail: String,
+    pub chars: usize,
+    /// Approximate — characters over four, not a tokenizer.
+    pub tokens: usize,
+    pub warning: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -110,6 +125,28 @@ fn print(report: &Report) {
     println!("  Backups        {}", report.store.backups);
     if let Some(optimization) = &report.store.optimization {
         println!("  Recall budget  {optimization}");
+    }
+
+    if !report.context.is_empty() {
+        println!();
+        println!("Context cost per session (approximate)");
+        for line in &report.context {
+            println!(
+                "  {:<14} ~{:>6} tokens  {}",
+                line.label, line.tokens, line.detail
+            );
+        }
+        println!(
+            "  {:<14} ~{:>6} tokens  before a single turn is taken",
+            "Total",
+            report.context.iter().map(|line| line.tokens).sum::<usize>()
+        );
+        for line in &report.context {
+            if let Some(warning) = &line.warning {
+                println!("  ! {warning}");
+            }
+        }
+        println!("  Run `synapse tokens` for the exact counts.");
     }
 
     println!();
@@ -206,6 +243,7 @@ fn collect() -> Report {
         },
         store: store(database.as_deref().ok()),
         tools: home.as_deref().map(tools).unwrap_or_default(),
+        context: context(),
         skills: home.as_deref().map(skills).unwrap_or_else(|_| Skills {
             library: 0,
             installed: 0,
@@ -281,6 +319,30 @@ fn store(database: Option<&Path>) -> Store {
             ..unknown(String::new())
         },
     }
+}
+
+/// The always-on surfaces, from the same measurement `synapse tokens` prints.
+/// Every check here reports rather than fails, so a store that will not open
+/// costs this section and nothing else.
+fn context() -> Vec<Context> {
+    let Some(runtime) = runtime().ok() else {
+        return Vec::new();
+    };
+    runtime
+        .block_on(crate::cli::tokens::measure())
+        .map(|lines| {
+            lines
+                .into_iter()
+                .map(|line| Context {
+                    label: line.label.to_owned(),
+                    detail: line.detail.clone(),
+                    chars: line.chars,
+                    tokens: line.tokens(),
+                    warning: line.warning,
+                })
+                .collect()
+        })
+        .unwrap_or_default()
 }
 
 fn tools(home: &Path) -> Vec<Tool> {

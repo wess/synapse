@@ -213,3 +213,38 @@ impl Server {
         }
     }
 }
+
+impl Server {
+    /// The tool definitions a client is sent at these settings, each with the
+    /// bytes of JSON it occupies.
+    ///
+    /// Built from the same three routers `new` composes, because a count taken
+    /// any other way is a count of what somebody believed the tool list was.
+    /// Nothing is opened and no server is started: this is the shape of the
+    /// context cost, not a session.
+    pub(super) fn definitions(mesh: bool, learn: bool) -> Vec<(String, usize)> {
+        let mut router = Self::memorytools();
+        if mesh {
+            router += Self::meshtools();
+        }
+        if learn {
+            router += Self::learntools();
+        }
+        let mut tools: Vec<(String, usize)> = router
+            .list_all()
+            .into_iter()
+            .map(|tool| {
+                // What crosses the wire is the serialized definition, so that is
+                // what it costs — the name and description alone would miss the
+                // input schema, which for a tool with several parameters is most
+                // of it.
+                let size = serde_json::to_string(&tool)
+                    .map(|json| json.len())
+                    .unwrap_or_default();
+                (tool.name.to_string(), size)
+            })
+            .collect();
+        tools.sort_by(|left, right| right.1.cmp(&left.1).then(left.0.cmp(&right.0)));
+        tools
+    }
+}
