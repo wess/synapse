@@ -29,7 +29,7 @@ synapse install
 recalled and handed to the model, and you get one line saying what was found.
 Asking a model to recall on its own is guidance it may or may not follow.
 
-**Every tool Synapse offers.** `remember`, `recall`, and `vaultstatus` always. The
+**Every tool Synapse offers.** `remember`, `recall`, `readmemory`, and `vaultstatus` always. The
 sixteen mesh tools — `register`, `send`, `post`, `broadcast`, `wait`, `spawn` and
 the rest — appear too, but only while the mesh is switched on:
 

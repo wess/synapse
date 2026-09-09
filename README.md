@@ -11,6 +11,7 @@ Apple silicon · macOS 13 or later · Developer ID signed and notarized
 ## What Synapse does
 
 - **Keeps the thread.** Save decisions, corrections, conventions, and preferences once. Pick them up in a later session or another connected tool.
+- **Reads the evidence.** Follow an abridged recall with `readmemory` to read the exact stored text in bounded pages, within the same project scope.
 - **Says so at startup.** Claude Code shows `Synapse connected · 128 memories` beside its welcome message, so you can see the link before the first reply.
 - **Asks before it forgets.** When a long session is about to be compacted, Synapse asks it to write down anything it worked out that is not stored yet — the one moment where not having written something down costs you immediately.
 - **Corrects without arguing.** When a convention changes, the new memory supersedes the old one instead of contradicting it. Recall returns the current version; the old text stays readable and comes back if you were wrong.

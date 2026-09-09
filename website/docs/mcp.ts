@@ -12,6 +12,7 @@ export const mcp: Page = {
     { label: "Before compaction", id: "compaction" },
     { label: "remember", id: "remember" },
     { label: "recall", id: "recall" },
+    { label: "readmemory", id: "readmemory" },
     { label: "vaultstatus", id: "vaultstatus" },
     { label: "teach and revise", id: "learning" },
     { label: "Mesh tools", id: "mesh" },
@@ -116,7 +117,43 @@ export const mcp: Page = {
     }
   ]
 }`)}
-    <p>Two fields appear only when they are true of the result. <code>abridged</code> marks a memory returned as its opening sentence alone, because the response budget could not carry the rest \u2014 recall it again with a narrower query or a larger budget before acting on the part you cannot see. <code>superseded</code> never appears here at all, because a replaced memory is not recalled.</p>
+    <p>Two fields appear only when they are true of the result. <code>abridged</code> marks a memory returned as its opening sentence alone, because the response budget could not carry the rest \u2014 use <code>readmemory</code> with its id and the same project before acting on the part you cannot see. <code>superseded</code> never appears here at all, because a replaced memory is not recalled.</p>
+
+    <h2 id="readmemory">readmemory</h2>
+    <p>Read one memory by id after recall identifies it. The body is an exact page of stored text, including code and whitespace. No model or additional index is involved.</p>
+${code("json", `{
+  "id": 24,
+  "project": "/Users/example/project",
+  "offset": 0,
+  "budget": "lean"
+}`)}
+    <table>
+      <thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr><td><code>id</code></td><td>positive integer</td><td>Yes</td><td>Memory id from recall.</td></tr>
+        <tr><td><code>project</code></td><td>string or null</td><td>No</td><td>The same absolute project root used for recall. Scope resolution is identical.</td></tr>
+        <tr><td><code>offset</code></td><td>nonnegative integer or null</td><td>No</td><td>UTF-8 byte offset, initially zero. Use the preceding page's <code>next</code> value to continue.</td></tr>
+        <tr><td><code>budget</code></td><td><code>full</code>, <code>balanced</code>, or <code>lean</code></td><td>No</td><td>Can reduce the configured ceiling. Lean pages contain at most 2,800 bytes; Balanced and Full pages at most 6,000 bytes.</td></tr>
+      </tbody>
+    </table>
+${code("json", `{
+  "optimization": "lean",
+  "memory": {
+    "id": 24,
+    "body": "Use small focused modules.",
+    "source": "synapse",
+    "sourceabridged": false,
+    "scope": "project",
+    "project": "/Users/example/project",
+    "created": 1785250000,
+    "offset": 0,
+    "next": null,
+    "total": 26
+  }
+}`)}
+    <p><code>next</code> is null at the end. Otherwise, pass it as <code>offset</code> with the same id and project. <code>total</code> is the stored body's UTF-8 byte length. Byte limits stay within the character ceiling and never split a character. An offset inside a character or beyond the body is an error.</p>
+    <p>The source label has a separate 240-byte allowance; <code>sourceabridged</code> says whether it was shortened. Scope, project, creation time, and id retain the memory's provenance. Metadata and JSON framing are additional to the body budget.</p>
+    <p>A missing, superseded, or out-of-scope id returns <code>{"optimization":"lean","memory":null}</code> under Lean. Each page reads the current stored memory. If the memory is edited while reading, restart at zero; pages do not hold a historical snapshot. Hidden history remains available to its owner through <code>synapse memory show</code> and <code>synapse memory restore</code>.</p>
 
     <h2 id="vaultstatus">vaultstatus</h2>
     <p>Lists active environment-variable names and scope trust state for a folder. It never returns secret values and cannot inject them into the connected tool.</p>

@@ -114,7 +114,7 @@ env  DEMO_TOKEN=<from the vault>`)}
       <li>
         <h3 id="launch">Launch for real</h3>
         ${code("shell", `synapse launch claude`)}
-        <p>The tool opens as it normally would. Ask it what Synapse tools it has; the answer should include <code>remember</code>, <code>recall</code>, and <code>vaultstatus</code>. Ask it to call <code>vaultstatus</code> and it will report <code>DEMO_TOKEN</code> as available — the name only, because that tool returns metadata and cannot read the value.</p>
+        <p>The tool opens as it normally would. Ask it what Synapse tools it has; the answer should include <code>remember</code>, <code>recall</code>, <code>readmemory</code>, and <code>vaultstatus</code>. Ask it to call <code>vaultstatus</code> and it will report <code>DEMO_TOKEN</code> as available — the name only, because that tool returns metadata and cannot read the value.</p>
         <p>If this is Claude Code and it is also connected, its first message will carry this project's memory; see <a href="../../docs/mcp/#sessionstart">Session start</a>. A launched tool that is <em>not</em> connected has the MCP tools but not the session hook, because the hook lives in that tool's own settings and launching writes nothing there.</p>
         <p>Exit the tool. Then confirm the machine is unchanged:</p>
         ${code("shell", `synapse status`)}

@@ -1,5 +1,6 @@
 use crate::brain::{
-    Brain, MemoryScope, RecallRequest, RecallResponse, RememberRequest, RememberResponse,
+    Brain, MemoryScope, ReadRequest, ReadResponse, RecallRequest, RecallResponse, RememberRequest,
+    RememberResponse,
 };
 use crate::relay::{Mesh, Supervisor};
 use crate::skill::Receipts;
@@ -87,7 +88,7 @@ impl Server {
     }
 
     #[tool(
-        description = "Recall durable context with a focused query and the smallest practical limit. Use the lean budget first to minimize token use; a per-call budget can only reduce the user-configured response size. A result marked `abridged` is that memory's opening line only, because the budget could not carry the rest — read the whole of it by recalling again with a narrower query or a larger budget."
+        description = "Recall durable context with a focused query and the smallest practical limit. Use the lean budget first; a per-call budget can only reduce the configured ceiling. For an `abridged` hit, use `readmemory` with its id and the same project to read the exact text in bounded pages."
     )]
     async fn recall(
         &self,
@@ -108,6 +109,26 @@ impl Server {
                     memories,
                 })
             })
+            .map_err(|error| error.to_string())
+    }
+
+    #[tool(
+        description = "Read exact stored text by memory id, using recall's project scope. Follow `next` as the next offset until null. Pages contain at most 6000 UTF-8 bytes, reduced by the configured budget. Missing, superseded, and out-of-scope ids return null. Pages reflect current stored text; restart at zero after an edit."
+    )]
+    async fn readmemory(
+        &self,
+        Parameters(request): Parameters<ReadRequest>,
+    ) -> Result<Json<ReadResponse>, String> {
+        let project = projectpath(request.project.as_deref());
+        self.brain
+            .readscoped(
+                request.id,
+                request.offset.unwrap_or(0),
+                request.budget,
+                project.as_deref(),
+            )
+            .await
+            .map(Json)
             .map_err(|error| error.to_string())
     }
 

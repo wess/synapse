@@ -1,6 +1,6 @@
 import { readdir } from "node:fs/promises";
 import { extname, join, relative } from "node:path";
-import { releasetag, repositoryurl, siteurl } from "./deploy";
+import { downloadurl, repositoryurl, siteurl } from "./deploy";
 
 const project = join(import.meta.dir, "..");
 const output = join(project, "site");
@@ -110,7 +110,7 @@ if (new RegExp(`${formerspelling}(?!e)`, "i").test(corpus)) {
 if (!corpus.includes(repositoryurl)) {
   fail("generated pages are missing the repository URL");
 }
-if (!corpus.includes(`/releases/download/${releasetag}/synapse.zip`)) {
+if (!corpus.includes(downloadurl)) {
   fail("generated pages are missing the current release download");
 }
 if (!corpus.includes('data-searchstatus role="status" aria-live="polite"')) {
@@ -218,12 +218,13 @@ for (const command of [
   if (!corpus.includes(command)) fail(`documentation is missing subcommand: ${command}`);
 }
 
-// The three always-present tools, the two self-improvement adds, then the
+// The four always-present tools, the two self-improvement adds, then the
 // sixteen the mesh adds. A tool that ships without documentation is one an
 // agent can call and a reader cannot look up.
 for (const tool of [
   "remember",
   "recall",
+  "readmemory",
   "vaultstatus",
   "teach",
   "revise",

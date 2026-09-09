@@ -31,7 +31,7 @@
       <a href="../../docs/" aria-current="page">Docs</a>
       <a href="../../tutorials/">Tutorials</a>
       <a href="https://github.com/wess/synapse">GitHub <span aria-hidden="true">↗</span></a>
-      <a class="navdownload" href="https://github.com/wess/synapse/releases/download/v1.0.0/synapse.zip">Download</a>
+      <a class="navdownload" href="https://github.com/wess/synapse/releases/latest/download/synapse.zip">Download</a>
     </nav>
   </header>
   
@@ -281,12 +281,14 @@ synapse memory restore 12</code></pre>
 synapse settings optimize lean
 synapse settings optimize balanced</code></pre>
   </div>
-    <p>A memory that will not fit in what is left of the budget is returned as its opening sentence, marked <code>abridged</code>, rather than cut off wherever the character count landed. Half a memory reads exactly like a whole one — <em>never deploy from main unless</em> is a rule with its condition amputated — and one long memory at the top of the results no longer costs you every result under it. A tool that receives an abridged memory is told to recall it again, more narrowly, before acting on the part it cannot see.</p>
+    <p>A memory that will not fit in what is left of the budget is returned as its opening sentence, marked <code>abridged</code>, rather than cut off wherever the character count landed. Half a memory reads exactly like a whole one — <em>never deploy from main unless</em> is a rule with its condition amputated — and one long memory at the top of the results no longer costs you every result under it. A tool that receives an abridged memory uses <a href="../mcp/#readmemory"><code>readmemory</code></a> with its id and the same project to read the exact body in bounded pages.</p>
     
   <aside class="note">
     <strong>Originals remain intact</strong>
     <p>Balanced and Lean transform only the MCP response. The database and memory-management views keep the complete stored body, abridged results included.</p>
   </aside>
+
+    <p>Similar wording is not enough to discard a memory: negation, numbers, and short identifiers can change the meaning. Distinct bodies remain eligible until explicitly superseded. Search keeps non-Latin terms instead of treating them as empty queries.</p>
 
     <h2 id="destructive">Destructive actions</h2>
     <p>Deleting one memory, undoing an import, and wiping every memory require explicit confirmation. The desktop app presents a separate confirmation. A wipe removes memory and import history but leaves guidance, vault labels, stored values, scope approvals, and settings intact.</p>

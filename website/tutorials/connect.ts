@@ -83,7 +83,7 @@ consolidated	false`)}
         <p>Claude Code will print a line beside its welcome box before the model has written anything:</p>
         ${code("text", `Synapse connected · no memories yet`)}
         <p>That line comes from the session hook, which is the only way to state the connection before the first reply. It also hands the session this project's memory directly, so a Claude Code session starts already holding what the project has decided rather than being asked to go and look. On an empty store there is nothing to hand over yet, which is what you are seeing.</p>
-        <p>Codex has no session hook, so it reports the connection in its first reply instead, following the guidance in <code>SOUL.md</code>. Either way, ask the tool what Synapse tools it has. The answer should include <code>remember</code>, <code>recall</code>, and <code>vaultstatus</code> — three, not more. The sixteen mesh tools appear only when you switch the mesh on.</p>
+        <p>Codex has no session hook, so it reports the connection in its first reply instead, following the guidance in <code>SOUL.md</code>. Either way, ask the tool what Synapse tools it has. The answer should include <code>remember</code>, <code>recall</code>, <code>readmemory</code>, and <code>vaultstatus</code> — four core tools. The sixteen mesh tools appear only when you switch the mesh on.</p>
       </li>
 
       <li>

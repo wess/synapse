@@ -31,7 +31,7 @@
       <a href="../../docs/" aria-current="page">Docs</a>
       <a href="../../tutorials/">Tutorials</a>
       <a href="https://github.com/wess/synapse">GitHub <span aria-hidden="true">↗</span></a>
-      <a class="navdownload" href="https://github.com/wess/synapse/releases/download/v1.0.0/synapse.zip">Download</a>
+      <a class="navdownload" href="https://github.com/wess/synapse/releases/latest/download/synapse.zip">Download</a>
     </nav>
   </header>
   
@@ -94,7 +94,7 @@
 
     <h2 id="app">Install the app</h2>
     <ol>
-      <li>Download <code>synapse.zip</code> from the <a href="https://github.com/wess/synapse/releases/tag/v1.0.0">latest release</a>.</li>
+      <li>Download <code>synapse.zip</code> from the <a href="https://github.com/wess/synapse/releases/latest">latest release</a>.</li>
       <li>Extract the archive and move <strong>synapse.app</strong> into <strong>Applications</strong>. Do not install the CLI while the app is still inside Downloads or a mounted disk image.</li>
       <li>Open Synapse. The app is Developer ID signed and notarized by Apple, so it opens under default Gatekeeper settings with no security override.</li>
     </ol>
@@ -189,7 +189,7 @@ claude mcp add --scope user synapse -- ~/.local/bin/synapse mcp</code></pre>
     <h2 id="verify">Verify the connection</h2>
     <ol>
       <li>Restart the connected tool so it reloads its MCP servers and instructions.</li>
-      <li>Inspect its available tools. Synapse should expose <code>remember</code>, <code>recall</code>, and <code>vaultstatus</code>.</li>
+      <li>Inspect its available tools. Synapse should expose <code>remember</code>, <code>recall</code>, <code>readmemory</code>, and <code>vaultstatus</code>.</li>
       <li>Ask it to remember one harmless confirmed convention, then recall it in a new session.</li>
       <li>Open the Synapse <strong>Memories</strong> screen and confirm the exact entry and source are visible.</li>
     </ol>

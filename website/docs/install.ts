@@ -90,7 +90,7 @@ claude mcp add --scope user synapse -- ~/.local/bin/synapse mcp`)}
     <h2 id="verify">Verify the connection</h2>
     <ol>
       <li>Restart the connected tool so it reloads its MCP servers and instructions.</li>
-      <li>Inspect its available tools. Synapse should expose <code>remember</code>, <code>recall</code>, and <code>vaultstatus</code>.</li>
+      <li>Inspect its available tools. Synapse should expose <code>remember</code>, <code>recall</code>, <code>readmemory</code>, and <code>vaultstatus</code>.</li>
       <li>Ask it to remember one harmless confirmed convention, then recall it in a new session.</li>
       <li>Open the Synapse <strong>Memories</strong> screen and confirm the exact entry and source are visible.</li>
     </ol>

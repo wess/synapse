@@ -617,7 +617,7 @@ struct Scored {
 fn stopword(term: &str) -> bool {
     let bare: String = term
         .chars()
-        .filter(char::is_ascii_alphanumeric)
+        .filter(|character| character.is_alphanumeric())
         .flat_map(char::to_lowercase)
         .collect();
     bare.is_empty() || STOPWORDS.contains(&bare.as_str())

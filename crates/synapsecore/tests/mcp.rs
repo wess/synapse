@@ -157,7 +157,10 @@ fn mcp_stdio_lists_and_calls_every_tool() {
         .iter()
         .map(|tool| tool["name"].as_str().unwrap())
         .collect::<Vec<_>>();
-    assert_eq!(names, vec!["recall", "remember", "vaultstatus"]);
+    assert_eq!(
+        names,
+        vec!["readmemory", "recall", "remember", "vaultstatus"]
+    );
     assert!(remembered.to_string().contains("stored"));
     assert_eq!(
         recalled["result"]["structuredContent"]["optimization"],
@@ -704,4 +707,89 @@ fn tool(session: &mut Session, id: i64, name: &str, arguments: Value) -> Value {
         "`{name}` failed: {response}"
     );
     response
+}
+
+#[test]
+fn exact_memory_reads_page_under_the_configured_budget_and_scope() {
+    let root = tempfile::tempdir().unwrap();
+    let home = root.path().join("home");
+    let data = root.path().join("data");
+    std::fs::create_dir_all(&home).unwrap();
+    let mut client = session(&home, &data);
+    run(&home, &data, &["settings", "optimize", "lean"]);
+    assert!(names(&mut client).iter().any(|name| name == "readmemory"));
+    assert!(client.instructions.contains("`readmemory`"));
+    let body = format!("Protocol evidence.\n{}", "東京🦀  detail\n".repeat(500));
+    let stored = tool(
+        &mut client,
+        10,
+        "remember",
+        json!({
+            "content": body, "scope": "project", "project": root.path(), "source": "protocol fixture"
+        }),
+    );
+    let id = stored["result"]["structuredContent"]["id"].clone();
+    let recalled = tool(
+        &mut client,
+        11,
+        "recall",
+        json!({
+            "query": "Protocol evidence", "project": root.path()
+        }),
+    );
+    assert_eq!(
+        recalled["result"]["structuredContent"]["memories"][0]["abridged"],
+        true
+    );
+    let mut offset = json!(0);
+    let mut assembled = String::new();
+    loop {
+        let response = tool(
+            &mut client,
+            12,
+            "readmemory",
+            json!({
+                "id": id, "project": root.path(), "offset": offset, "budget": "full"
+            }),
+        );
+        let result = &response["result"]["structuredContent"];
+        assert_eq!(result["optimization"], "lean");
+        let page = &result["memory"];
+        assert_eq!(page["offset"], offset);
+        assert_eq!(page["source"], "protocol fixture");
+        let text = page["body"].as_str().unwrap();
+        assert!(text.len() <= 2_800);
+        assert!(!text.is_empty());
+        assembled.push_str(text);
+        offset = page["next"].clone();
+        if offset.is_null() {
+            break;
+        }
+    }
+    assert_eq!(assembled, body.trim());
+    let other = tempfile::tempdir().unwrap();
+    let denied = tool(
+        &mut client,
+        13,
+        "readmemory",
+        json!({"id": id, "project": other.path()}),
+    );
+    assert!(denied["result"]["structuredContent"]["memory"].is_null());
+    tool(
+        &mut client,
+        14,
+        "remember",
+        json!({
+            "content": "Corrected protocol evidence.", "scope": "project", "project": root.path(),
+            "supersedes": [id]
+        }),
+    );
+    let hidden = tool(
+        &mut client,
+        15,
+        "readmemory",
+        json!({"id": id, "project": root.path()}),
+    );
+    assert!(hidden["result"]["structuredContent"]["memory"].is_null());
+    client.child.kill().ok();
 }

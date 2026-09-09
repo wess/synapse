@@ -344,7 +344,7 @@ mod tests {
         let withmesh = tooldefinitions(true, false);
         assert!(
             withmesh.chars > base.chars * 2,
-            "sixteen more tools should dominate three: {} vs {}",
+            "sixteen more tools should dominate four: {} vs {}",
             withmesh.chars,
             base.chars
         );
