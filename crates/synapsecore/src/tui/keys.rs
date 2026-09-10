@@ -13,6 +13,9 @@ pub enum Action {
     Refresh,
     /// The vault list moved; only that page's secrets need re-reading.
     Secrets,
+    /// Arriving at the map. It is laid out where it is read, so it is read when
+    /// somebody is going to look at it and not on every refresh of every page.
+    Map,
     DeleteMemory(i64),
     SetOptimization(Optimization),
     ToggleMesh,
@@ -311,15 +314,23 @@ fn turn(state: &mut State, delta: isize) -> Action {
     page(state)
 }
 
-/// Arriving at a page. Only the vault page has to fetch anything, because its
-/// second column belongs to whichever row the cursor happens to be on.
+/// Arriving at a page. Two of them fetch: the vault page, because its second
+/// column belongs to whichever row the cursor happens to be on, and the map,
+/// because laying it out costs more than reading a list and nothing else on
+/// screen needs it.
 fn page(state: &State) -> Action {
     match state.page {
         Page::Vaults => Action::Secrets,
+        Page::Map => Action::Map,
         _ => Action::None,
     }
 }
 
+/// Moving the cursor. The map is already loaded by the time it can be walked,
+/// so walking it reads nothing.
 fn moved(state: &State) -> Action {
-    page(state)
+    match state.page {
+        Page::Map => Action::None,
+        _ => page(state),
+    }
 }

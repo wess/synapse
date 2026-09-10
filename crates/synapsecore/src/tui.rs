@@ -96,6 +96,10 @@ fn pump(
             runtime.block_on(load::secrets(state));
             Ok(())
         }
+        Action::Map => {
+            runtime.block_on(load::graph(state));
+            Ok(())
+        }
         Action::DeleteMemory(id) => {
             runtime.block_on(async {
                 match deletememory(state, id).await {

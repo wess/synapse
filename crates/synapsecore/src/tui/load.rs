@@ -68,6 +68,30 @@ pub async fn refresh(state: &mut State) {
     mesh(state).await;
     skills(state).await;
     vaults(state).await;
+    // Only for whoever is looking at it. Laying out a map costs more than
+    // reading a list, and every other page on this screen is a list.
+    if state.page == Page::Map {
+        graph(state).await;
+    }
+}
+
+/// The map, read when somebody arrives at it.
+///
+/// It is the store rather than the search: what is in the memory list is
+/// whatever the search box asked for, and a map narrowed by a query would be a
+/// map of the answer rather than of the machine.
+pub async fn graph(state: &mut State) {
+    let brain = match Brain::glance(&state.database).await {
+        Ok(brain) => brain,
+        Err(error) => {
+            state.notice = Notice::Error(format!("could not open memory: {error}"));
+            return;
+        }
+    };
+    match crate::brain::map(&brain).await {
+        Ok(graph) => state.graph = graph,
+        Err(error) => state.notice = Notice::Error(format!("could not map memory: {error}")),
+    }
 }
 
 pub async fn memories(state: &mut State) {
@@ -81,12 +105,6 @@ pub async fn memories(state: &mut State) {
     match brain.search(&state.query, MEMORIES).await {
         Ok(found) => state.memories = found,
         Err(error) => state.notice = Notice::Error(format!("could not search memory: {error}")),
-    }
-    // The map is the store rather than the search, so it is read here on the
-    // handle already open and not narrowed by whatever is in the search box.
-    match crate::brain::map(&brain).await {
-        Ok(graph) => state.graph = graph,
-        Err(error) => state.notice = Notice::Error(format!("could not map memory: {error}")),
     }
     if let Ok(stats) = brain.stats().await {
         state.stats = stats;
