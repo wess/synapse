@@ -2015,24 +2015,37 @@ fn a_mistyped_secret_is_caught_where_it_is_typed_rather_than_where_it_is_used() 
     );
 }
 
-/// An empty `available` used to be the same answer whether nothing was stored
-/// or nothing was approved here, and finding out which meant dropping to
-/// `synapse secret list`. `warnings` was already in the shape and empty in
-/// exactly the case it exists for.
+/// A folder that resolves nothing is not the same as a machine that holds
+/// nothing, and `vaultstatus` used to answer both with four empty lists. It
+/// tells them apart now — but only with what the caller could already read.
+///
+/// A name is only reported when a `.synapse.yaml` on the way down to this
+/// folder asks for it: that file is in the caller's own project and they can
+/// open it, so saying the name back tells them nothing new. Every other secret
+/// on the machine is counted and never named. `vaultstatus` reaches every
+/// connected tool, and an agent working on one project has no business being
+/// handed the names of another project's credentials.
 #[test]
-fn a_secret_that_this_folder_cannot_reach_is_named_rather_than_hidden() {
+fn a_folder_is_told_what_it_asks_for_and_only_counted_the_rest() {
     let root = tempfile::tempdir().unwrap();
     let project = root.path().join("project");
+    let other = root.path().join("other");
     fs::create_dir_all(&project).unwrap();
+    fs::create_dir_all(&other).unwrap();
 
-    let quiet: Value = serde_json::from_str(&success(runfrom(
-        root.path(),
-        Some(&project),
-        &["status", "--json"],
-        None,
-    )))
-    .unwrap();
+    let status = |at: &std::path::Path| -> Value {
+        serde_json::from_str(&success(runfrom(
+            root.path(),
+            Some(at),
+            &["status", "--json"],
+            None,
+        )))
+        .unwrap()
+    };
+
+    let quiet = status(&project);
     assert_eq!(quiet["unavailable"], Value::Array(Vec::new()));
+    assert_eq!(quiet["elsewhere"], 0);
     assert_eq!(quiet["warnings"], Value::Array(Vec::new()));
 
     success(run(root.path(), &["vault", "create", "general"], None));
@@ -2041,36 +2054,52 @@ fn a_secret_that_this_folder_cannot_reach_is_named_rather_than_hidden() {
         &["secret", "set", "general", "AppPass", "APP_PASSWORD"],
         Some("hunter2\n"),
     ));
-
-    let hidden: Value = serde_json::from_str(&success(runfrom(
+    success(run(
         root.path(),
-        Some(&project),
-        &["status", "--json"],
-        None,
-    )))
-    .unwrap();
+        &["secret", "set", "general", "OtherKey", "OTHER_KEY"],
+        Some("hunter3\n"),
+    ));
+
+    // Nothing here asks for anything, so nothing is named. The count is what
+    // says the store is not empty, which is the whole reason to answer at all.
+    let hidden = status(&project);
     assert_eq!(hidden["available"], Value::Array(Vec::new()));
-    assert_eq!(hidden["unavailable"][0], "general.AppPass");
+    assert_eq!(hidden["unavailable"], Value::Array(Vec::new()));
+    assert_eq!(hidden["elsewhere"], 2);
     let warning = hidden["warnings"][0].as_str().unwrap();
-    assert!(warning.contains("1 secret is stored"), "{warning}");
+    assert!(warning.contains("2 secrets are stored"), "{warning}");
     assert!(warning.contains("synapse scope init"), "{warning}");
 
-    // Approved and named, it moves across — and stops being warned about.
+    // A scope file naming one, not approved yet. That name is written in this
+    // project, so it comes back — and the one it does not name does not.
     fs::write(
         project.join(".synapse.yaml"),
         "version: 1\nscope: project\nenv:\n  APP_PASSWORD: general.AppPass\ndeny: []\n",
     )
     .unwrap();
+    let asked = status(&project);
+    assert_eq!(asked["unavailable"][0], "general.AppPass");
+    assert_eq!(asked["unavailable"].as_array().unwrap().len(), 1);
+    assert_eq!(asked["elsewhere"], 1);
+    let printed = success(runfrom(root.path(), Some(&project), &["status"], None));
+    assert!(printed.contains("general.AppPass"), "{printed}");
+    assert!(printed.contains("Held for other folders: 1"), "{printed}");
+
+    // And a folder that asks for nothing is still told nothing, however many
+    // scope files its neighbours have.
+    let neighbour = status(&other);
+    assert_eq!(neighbour["unavailable"], Value::Array(Vec::new()));
+    assert_eq!(neighbour["elsewhere"], 2);
+    let printed = success(runfrom(root.path(), Some(&other), &["status"], None));
+    assert!(!printed.contains("AppPass"), "{printed}");
+    assert!(!printed.contains("OtherKey"), "{printed}");
+
+    // Approved and named, it moves across — and stops being warned about.
     success(runfrom(root.path(), Some(&project), &["allow"], None));
-    let reachable: Value = serde_json::from_str(&success(runfrom(
-        root.path(),
-        Some(&project),
-        &["status", "--json"],
-        None,
-    )))
-    .unwrap();
+    let reachable = status(&project);
     assert_eq!(reachable["available"][0], "APP_PASSWORD");
     assert_eq!(reachable["unavailable"], Value::Array(Vec::new()));
+    assert_eq!(reachable["elsewhere"], 1);
     assert_eq!(reachable["warnings"], Value::Array(Vec::new()));
 }
 

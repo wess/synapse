@@ -49,6 +49,11 @@ pub struct ScopeState {
     pub trusted: bool,
     pub changed: bool,
     pub env: Vec<String>,
+    /// The secrets this file asks for, as `vault.name`. They are the references
+    /// written in the file itself, so naming them back says nothing that
+    /// reading the file would not — which is what makes them safe to report
+    /// when they cannot be reached, and everything else on the machine not.
+    pub references: Vec<String>,
     pub denied: Vec<String>,
     pub error: Option<String>,
 }
@@ -73,11 +78,22 @@ pub struct VaultStatusResponse {
     /// `encrypted`. Names the store, never what is in it.
     pub backend: String,
     pub available: Vec<String>,
-    /// Secrets this machine holds that this folder cannot reach, as
-    /// `vault.name`. An empty `available` means one of two very different
-    /// things — nothing stored, or nothing approved here — and this is what
-    /// tells them apart. Names only; no value is read to produce it.
+    /// Secrets *this folder asks for* and cannot reach, as `vault.name`.
+    ///
+    /// Only ones named by a `.synapse.yaml` on the way down to this folder, so
+    /// every name here is already written in a file the caller can read. The
+    /// rest of the machine is counted by `elsewhere` and never named: an agent
+    /// working in one project has no business being handed the names of another
+    /// project's credentials, and a name is most of what somebody would need to
+    /// know what to go looking for.
     pub unavailable: Vec<String>,
+    /// How many other secrets this machine holds that this folder cannot reach.
+    ///
+    /// A number rather than a list, and it exists for one question: an empty
+    /// `available` means either nothing is stored or nothing is approved here,
+    /// and those have different fixes. The count tells them apart without
+    /// reporting anything about what they are.
+    pub elsewhere: usize,
     pub scopes: Vec<VaultScopeResponse>,
     pub warnings: Vec<String>,
     pub ambient: String,

@@ -274,6 +274,12 @@ fn status(arguments: &[OsString]) -> Result<Outcome> {
         if !response.unavailable.is_empty() {
             println!("Unavailable here: {}", response.unavailable.join(", "));
         }
+        if response.elsewhere > 0 {
+            println!(
+                "Held for other folders: {} (use `synapse secret list` to see your own)",
+                response.elsewhere
+            );
+        }
         println!(
             "Ambient: {}{}",
             response.ambient,
@@ -310,8 +316,8 @@ async fn statusresponse(path: &Path) -> Result<VaultStatusResponse> {
     } else {
         "blocked"
     };
-    let unavailable = crate::vault::unavailable(&store, &resolved).await?;
-    if let Some(advice) = crate::vault::advice(&resolved, &unavailable) {
+    let (unavailable, elsewhere) = crate::vault::unavailable(&store, &resolved).await?;
+    if let Some(advice) = crate::vault::advice(&resolved, &unavailable, elsewhere) {
         resolved.warnings.push(advice);
     }
     let backend = crate::vault::backend().await?;
@@ -320,6 +326,7 @@ async fn statusresponse(path: &Path) -> Result<VaultStatusResponse> {
         backend: backend.name().to_owned(),
         available: resolved.env.keys().cloned().collect(),
         unavailable,
+        elsewhere,
         scopes: resolved.scopes.into_iter().map(Into::into).collect(),
         warnings: resolved.warnings,
         ambient: ambient.to_owned(),

@@ -201,8 +201,13 @@ fn mcp_stdio_lists_and_calls_every_tool() {
 /// `vaultstatus` used to answer a folder with no approved scope with four empty
 /// lists, which is the same answer as a machine holding no secrets at all.
 /// Finding out the credential existed meant dropping to `synapse secret list`.
+///
+/// It says so with a count and not a name. This tool reaches every connected
+/// tool, and the folder being asked about has no scope file, so nothing here
+/// has asked for anything: naming what is stored would hand an agent working
+/// on one project the names of another project's credentials.
 #[test]
-fn vaultstatus_names_a_secret_this_folder_cannot_reach() {
+fn vaultstatus_counts_a_secret_this_folder_cannot_reach_without_naming_it() {
     let root = tempfile::tempdir().unwrap();
     let home = root.path().join("home");
     let data = root.path().join("data");
@@ -269,7 +274,12 @@ fn vaultstatus_names_a_secret_this_folder_cannot_reach() {
 
     let status = &vault["result"]["structuredContent"];
     assert_eq!(status["available"], json!([]));
-    assert_eq!(status["unavailable"], json!(["general.AppPass"]));
+    assert_eq!(status["unavailable"], json!([]));
+    assert_eq!(status["elsewhere"], 1);
+    // The whole response, in case a name reaches the client by some other
+    // field. Nothing here asked for this secret, so nothing should say it.
+    let whole = serde_json::to_string(&vault).unwrap();
+    assert!(!whole.contains("AppPass"), "{whole}");
     let warning = status["warnings"][0].as_str().unwrap();
     assert!(warning.contains("1 secret is stored"), "{warning}");
     assert!(warning.contains("synapse scope init"), "{warning}");
@@ -279,7 +289,7 @@ fn vaultstatus_names_a_secret_this_folder_cannot_reach() {
         status["note"]
             .as_str()
             .unwrap()
-            .contains("needs an approved `.synapse.yaml` naming it first"),
+            .contains("named by a scope file here"),
         "got {status}"
     );
 }

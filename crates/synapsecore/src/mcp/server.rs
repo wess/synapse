@@ -155,12 +155,12 @@ impl Server {
         } else {
             "blocked"
         };
-        let unavailable = crate::vault::unavailable(&self.vaults, &resolved)
+        let (unavailable, elsewhere) = crate::vault::unavailable(&self.vaults, &resolved)
             .await
             .map_err(|error| error.to_string())?;
         // Answering an unreachable secret with four empty lists is what sent
         // somebody to the CLI to find out it existed at all.
-        if let Some(advice) = crate::vault::advice(&resolved, &unavailable) {
+        if let Some(advice) = crate::vault::advice(&resolved, &unavailable, elsewhere) {
             resolved.warnings.push(advice);
         }
         let backend = crate::vault::backend()
@@ -171,11 +171,12 @@ impl Server {
             backend: backend.name().to_owned(),
             available: resolved.env.keys().cloned().collect(),
             unavailable,
+            elsewhere,
             scopes: resolved.scopes.into_iter().map(Into::into).collect(),
             warnings: resolved.warnings,
             ambient: ambient.to_owned(),
             shell: std::env::var("SYNAPSE_SHELL_ACTIVE").ok(),
-            note: "Values stay in the vault and never in a response. A name under `available` resolves for this folder; one under `unavailable` needs an approved `.synapse.yaml` naming it first. Use `synapse run -- <command>` for one child or an installed shell hook for an approved directory."
+            note: "Values stay in the vault and never in a response. A name under `available` resolves for this folder; one under `unavailable` is named by a scope file here and needs it approved first. `elsewhere` counts secrets held for other folders, which are never named. Use `synapse run -- <command>` for one child or an installed shell hook for an approved directory."
                 .to_owned(),
         }))
     }

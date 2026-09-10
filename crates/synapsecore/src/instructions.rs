@@ -59,20 +59,44 @@ fn ours(guidance: &str) -> String {
         })
 }
 
-/// Cut one `## ` section out, from its heading to the next heading at the same
-/// level or the end of the file.
+/// Cut every `## ` section with this heading out, from the heading to the next
+/// heading at the same level or above, or to the end of the file.
+///
+/// Line by line rather than by searching for the text, because this is
+/// somebody's own guidance file and the cost of getting it wrong is deleting
+/// their words on the way to the model. A mention in a sentence — *the
+/// `## Connection notice` section says* — is not a heading; a heading inside a
+/// fenced block is an example of one and not one; a longer heading that merely
+/// starts with these words is a different section. All three used to cut from
+/// wherever the words appeared to the next heading, silently, in the copy sent
+/// to every connected tool.
+///
+/// A `### ` subsection belongs to the section above it and goes with it. A
+/// `# ` heading is a level up and ends it.
 fn withoutsection(content: &str, heading: &str) -> String {
-    let Some(start) = content.find(heading) else {
-        return content.to_owned();
-    };
-    let rest = &content[start + heading.len()..];
-    let end = rest
-        .find("\n## ")
-        .map(|at| start + heading.len() + at + 1)
-        .unwrap_or(content.len());
-    let mut trimmed = content.to_owned();
-    trimmed.replace_range(start..end, "");
-    trimmed
+    let mut kept = String::with_capacity(content.len());
+    let mut dropping = false;
+    let mut fenced = false;
+    for line in content.split_inclusive('\n') {
+        let bare = line.trim_end_matches(['\n', '\r']);
+        // Toggled even while dropping: a section being removed may contain a
+        // fence of its own, and the fences inside it balance.
+        if bare.trim_start().starts_with("```") {
+            fenced = !fenced;
+        } else if !fenced {
+            if bare.trim_end() == heading {
+                dropping = true;
+                continue;
+            }
+            if dropping && (bare.starts_with("## ") || bare.starts_with("# ")) {
+                dropping = false;
+            }
+        }
+        if !dropping {
+            kept.push_str(line);
+        }
+    }
+    kept
 }
 
 pub fn ensure(path: &Path) -> Result<String> {
@@ -176,6 +200,63 @@ mod tests {
     fn the_notice_stands_down_for_a_tool_whose_hook_already_said_it() {
         assert!(CONNECTION.contains("session hook has already shown the user"));
         assert!(CONNECTION.contains("Say nothing."));
+    }
+
+    /// A heading is a line, not a run of characters. Mentioning one in a
+    /// sentence used to cut from the middle of that sentence to the next
+    /// heading — somebody's own words, deleted on the way to the model, with
+    /// nothing said about it.
+    #[test]
+    fn a_heading_named_in_a_sentence_is_not_a_section() {
+        let mine = "# Mine\n\nThe ## Agent mesh section explains delegation.\n\nKeep this too.\n";
+        let merged = modelfacing(mine, false, false);
+        assert!(merged.contains("explains delegation"), "{merged}");
+        assert!(merged.contains("Keep this too"), "{merged}");
+    }
+
+    /// A heading inside a fenced block is an example of one. Guidance files
+    /// quote guidance; that is most of what they are for.
+    #[test]
+    fn a_heading_inside_a_fence_is_left_alone() {
+        let mine = "# Mine\n\n```markdown\n## Agent mesh\n\nnot a real section\n```\n\nAfter.\n";
+        let merged = modelfacing(mine, false, false);
+        assert!(merged.contains("not a real section"), "{merged}");
+        assert!(merged.contains("After."), "{merged}");
+    }
+
+    /// A longer heading that happens to start with the same words is a
+    /// different section and stays.
+    #[test]
+    fn a_heading_that_merely_starts_the_same_is_a_different_section() {
+        let mine = "## Connection notices I like\n\nMine.\n";
+        let merged = modelfacing(mine, false, false);
+        assert!(merged.contains("Connection notices I like"), "{merged}");
+        assert!(merged.contains("Mine."), "{merged}");
+    }
+
+    /// Removing the first of two and leaving the second would put this
+    /// release's wording next to the wording it replaced.
+    #[test]
+    fn every_copy_of_a_managed_section_goes() {
+        let stale =
+            "## Connection notice\n\nold one\n\n# Elsewhere\n\n## Connection notice\n\nolder one\n";
+        let merged = modelfacing(stale, false, false);
+        assert!(!merged.contains("old one"), "{merged}");
+        assert!(!merged.contains("older one"), "{merged}");
+        assert_eq!(merged.matches("## Connection notice").count(), 1);
+        assert!(merged.contains("# Elsewhere"), "{merged}");
+    }
+
+    /// A subsection belongs to the section it is under and goes with it; a
+    /// heading a level up ends it and survives.
+    #[test]
+    fn a_subsection_goes_with_its_section_and_a_level_up_ends_it() {
+        let mine = "## Agent mesh\n\n### How I delegate\n\ndropped\n\n# Mine\n\nkept\n";
+        let merged = modelfacing(mine, false, false);
+        assert!(!merged.contains("How I delegate"), "{merged}");
+        assert!(!merged.contains("dropped"), "{merged}");
+        assert!(merged.contains("# Mine"), "{merged}");
+        assert!(merged.contains("kept"), "{merged}");
     }
 
     /// The sections belong to the binary, so applying it twice has to land on

@@ -330,6 +330,7 @@
   &quot;backend&quot;: &quot;encrypted&quot;,
   &quot;available&quot;: [&quot;DATABASE_URL&quot;],
   &quot;unavailable&quot;: [&quot;deploy.RegistryToken&quot;],
+  &quot;elsewhere&quot;: 4,
   &quot;ambient&quot;: &quot;ready&quot;,
   &quot;shell&quot;: &quot;zsh&quot;,
   &quot;scopes&quot;: [
@@ -344,15 +345,16 @@
     }
   ],
   &quot;warnings&quot;: [],
-  &quot;note&quot;: &quot;Values stay in the vault and never in a response. A name under available resolves for this folder; one under unavailable needs an approved .synapse.yaml naming it first.&quot;
+  &quot;note&quot;: &quot;Values stay in the vault and never in a response. A name under available resolves for this folder; one under unavailable is named by a scope file here and needs it approved first. elsewhere counts secrets held for other folders, which are never named.&quot;
 }</code></pre>
   </div>
     
   <aside class="note">
     <strong>Metadata, not a secret channel</strong>
-    <p>The names in available tell a tool what a scoped command or activated shell could receive. vaultstatus never reads the corresponding values and cannot change a connected tool’s environment. backend names the store this machine keeps them in, which is a fact about the machine and not a way to reach one.</p>
+    <p>The names in available tell a tool what a scoped command or activated shell could receive. vaultstatus never reads the corresponding values and cannot change a connected tool’s environment. backend names the store this machine keeps them in, which is a fact about the machine and not a way to reach one. Nothing here reports a credential belonging to a folder other than the one asked about.</p>
   </aside>
-    <p><code>unavailable</code> names the secrets this machine holds that the folder cannot reach, as <code>vault.name</code>. It exists because an empty <code>available</code> is otherwise the same answer whether nothing is stored or nothing is approved here, and those have different fixes. When a folder resolves nothing and the store is not empty, <code>warnings</code> says so and names the step that would change it — <code>synapse scope init</code>, then naming the secret in the <code>env:</code> block, then <code>synapse scope trust</code>.</p>
+    <p><code>unavailable</code> names the secrets <em>this folder asks for</em> and cannot reach, as <code>vault.name</code>. Only ones a <code>.synapse.yaml</code> on the way down to the folder names, so every name in it is already written in a file the caller can open; a long list is truncated and the remainder joins the count. Everything else this machine holds is counted by <code>elsewhere</code> and never named — this tool reaches every connected tool, and an agent working on one project has no business being handed the names of another project's credentials.</p>
+    <p>The pair exists because an empty <code>available</code> is otherwise the same answer whether nothing is stored or nothing is approved here, and those have different fixes. When a folder resolves nothing and the store is not empty, <code>warnings</code> says so and names the step that would change it — <code>synapse scope init</code>, then naming the secret in the <code>env:</code> block, then <code>synapse scope trust</code>.</p>
 
     <h2 id="learning">teach and revise</h2>
     <p>Two tools that appear only while <code>synapse settings learn on</code> is set. They are how a session writes down a procedure it worked out, and corrects one that turned out wrong. Both write to the Synapse skill library and to nothing else.</p>
