@@ -94,9 +94,11 @@ Commands:
   skill revert <name> [<id>]       Put an earlier version of a skill back
   tool list [--json]               List the tools Synapse can connect to
   tool show <name>                 Print one tool's descriptor
-  tool create <name>               Describe a tool Synapse does not ship
-  tool edit <name>                 Edit a tool descriptor in $EDITOR
-  tool delete <name>               Remove a descriptor you added
+  tool create <name> [--user]      Describe a tool Synapse does not ship
+  tool edit <name> [--user]        Edit a tool descriptor in $EDITOR
+  tool delete <name> [--user]      Remove a descriptor you added
+                                   --user saves beside the data directory
+                                   rather than in this project
   session [--json]                 Report this session's Synapse connection
   statusline                       Print one status line for a connected tool
   compact                          Answer a tool's pre-compaction hook
