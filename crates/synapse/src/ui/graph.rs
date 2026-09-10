@@ -55,6 +55,9 @@ const CLUSTERS: [(u8, u8, u8); 6] = [
     (150, 196, 120),
 ];
 
+/// How many memories a map can name before the labels are the map.
+const CROWDED: usize = 60;
+
 fn cluster(index: usize) -> Hsla {
     let (red, green, blue) = CLUSTERS[index % CLUSTERS.len()];
     guise::rgb(red, green, blue)
@@ -202,6 +205,11 @@ fn plot(
     let body = theme.body().hsla();
     let (text, dim) = (theme.text(), theme.dimmed());
 
+    // Past this many memories every label overlaps its neighbours and the map
+    // is a wall of text with circles behind it. The projects stay named, and so
+    // does whatever is open; the rest is what the rail is for.
+    let crowded = graph.shown > CROWDED;
+
     let links: Vec<([f32; 4], Tie)> = graph
         .links
         .iter()
@@ -211,10 +219,15 @@ fn plot(
         })
         .collect();
 
-    let nodes = graph
-        .nodes
-        .iter()
-        .enumerate()
+    // Memories first and hubs after, so a project's name is written over its
+    // own cluster rather than under it. The index each node keeps is its place
+    // in the graph, because that is what a click is reported against.
+    let mut order: Vec<(usize, &synapsecore::brain::Node)> =
+        graph.nodes.iter().enumerate().collect();
+    order.sort_by_key(|(_, node)| node.kind == NodeKind::Hub);
+
+    let nodes = order
+        .into_iter()
         .map(|(index, node)| {
             let size = diameter(node.weight, &node.kind);
             let colour = cluster(node.cluster);
@@ -228,7 +241,7 @@ fn plot(
             // rail beside it is showing a memory and nothing on the map says
             // which one.
             let chosen = node.memory.is_some() && node.memory == open;
-            let named = node.kind == NodeKind::Hub || node.weight >= 5 || chosen;
+            let named = node.kind == NodeKind::Hub || chosen || (!crowded && node.weight >= 5);
             // A label on a node near the right edge runs off the map, so the
             // ones over there are written on the other side. Anchoring by
             // `right` is what makes the row grow leftward rather than off it.
