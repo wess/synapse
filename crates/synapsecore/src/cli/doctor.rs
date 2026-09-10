@@ -375,7 +375,11 @@ fn tools(home: &Path) -> Vec<Tool> {
                 version: detection.version.clone(),
                 connected: detection.configured,
                 outdated: outdated(&agent.slug),
-                guidance: crate::agent::pointermatches(&agent.instructions, &soul),
+                guidance: crate::agent::pointermatches(
+                    &agent.instructions,
+                    &soul,
+                    crate::agent::needsnotice(&agent),
+                ),
                 notice: detection.hooks.notice,
                 compact: detection.hooks.compact,
                 statusline: if detection.hooks.statusline {

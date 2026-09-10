@@ -1,5 +1,6 @@
 mod cipher;
 mod clipboard;
+mod entry;
 mod key;
 mod keychain;
 mod model;
@@ -10,12 +11,15 @@ mod shell;
 mod store;
 mod values;
 
+pub use entry::{Entry, entered, shape};
 pub use model::{
     Resolved, ScopeConfig, ScopeKind, ScopeState, Secret, Vault, VaultStatusRequest,
     VaultStatusResponse,
 };
 pub use run::{environment, names, run};
-pub use scope::{CONFIG, discover, read as readscope, resolve, template, templatefor};
+pub use scope::{
+    CONFIG, advice, discover, read as readscope, resolve, template, templatefor, unavailable,
+};
 pub use shell::{
     Shell, changes as shellchanges, clear as shellclear, hook as shellhook,
     hookcommand as shellhookcommand,

@@ -150,7 +150,11 @@ fn preview(alsodata: bool) -> Result<Outcome> {
         if detection.configured {
             println!("  · the Synapse MCP server from {}", agent.name);
         }
-        if crate::agent::pointermatches(&agent.instructions, &soul) {
+        if crate::agent::pointermatches(
+            &agent.instructions,
+            &soul,
+            crate::agent::needsnotice(&agent),
+        ) {
             println!("  · the Synapse block in {}", agent.instructions.display());
         }
         if detection.hooks.notice || detection.hooks.compact || detection.hooks.statusline {

@@ -128,10 +128,12 @@ fn runsetup(
         );
     }
 
-    writeinstructions(&agent.instructions, soul)?;
+    writeinstructions(&agent.instructions, soul, crate::agent::needsnotice(agent))?;
 
-    // Only Claude Code can show the connection before the model has written
-    // anything. Everywhere else the notice rides on the guidance pointer.
+    // Claude Code and pi state the connection themselves at session start —
+    // the first from this hook, the second from its extension — which is why
+    // neither block carries the notice. A tool that does neither has only the
+    // guidance pointer to ride on.
     if agent.kind == Kind::Claude {
         crate::agent::hooks::apply(&agent.settings, server)
             .context("could not add the Synapse session notice to Claude Code")?;
@@ -139,8 +141,8 @@ fn runsetup(
     Ok(())
 }
 
-pub fn writeinstructions(path: &Path, soul: &Path) -> Result<()> {
-    crate::agent::guidance::writepointer(path, soul, false)
+pub fn writeinstructions(path: &Path, soul: &Path, announce: bool) -> Result<()> {
+    crate::agent::guidance::writepointer(path, soul, false, announce)
 }
 
 /// Fill a descriptor's argv template. `{server}` is this binary and `{package}`
@@ -171,7 +173,7 @@ mod tests {
         let file = directory.path().join("agents.md");
         let soul = directory.path().join("SOUL.md");
         fs::write(&file, "# My rules\n\nKeep this.").unwrap();
-        writeinstructions(&file, &soul).unwrap();
+        writeinstructions(&file, &soul, true).unwrap();
         let merged = fs::read_to_string(file).unwrap();
         assert!(merged.starts_with("# My rules\n\nKeep this."));
         assert!(merged.contains(soul.to_str().unwrap()));
@@ -185,7 +187,7 @@ mod tests {
         let soul = directory.path().join("SOUL.md");
         fs::write(&path, "# My rules\n").unwrap();
 
-        writeinstructions(&path, &soul).unwrap();
+        writeinstructions(&path, &soul, true).unwrap();
 
         assert_eq!(
             fs::read_to_string(directory.path().join("agents.md.synapsebackup")).unwrap(),

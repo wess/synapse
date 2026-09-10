@@ -39,7 +39,7 @@ fn mcp_stdio_lists_and_calls_every_tool() {
     assert!(instructions.contains("call `remember` without waiting to be asked"));
     assert!(instructions.contains("instead of ad hoc memory Markdown files"));
     assert!(instructions.contains("never returns secret values"));
-    assert!(instructions.contains("Synapse connected · <count> memories recalled"));
+    assert!(instructions.contains("Synapse connected"));
     assert!(instructions.contains("Synapse unavailable · <short reason>"));
     assert_eq!(instructions.matches("## Connection notice").count(), 1);
     writeln!(
@@ -189,6 +189,99 @@ fn mcp_stdio_lists_and_calls_every_tool() {
             .contains("Values stay in the vault and never in a response")
     );
     assert!(vault.to_string().contains("\"backend\""));
+    // Nothing is stored, so nothing is unreachable, and there is nothing to
+    // warn about. The next test is the case this field exists for.
+    assert_eq!(
+        vault["result"]["structuredContent"]["unavailable"],
+        json!([])
+    );
+    assert_eq!(vault["result"]["structuredContent"]["warnings"], json!([]));
+}
+
+/// `vaultstatus` used to answer a folder with no approved scope with four empty
+/// lists, which is the same answer as a machine holding no secrets at all.
+/// Finding out the credential existed meant dropping to `synapse secret list`.
+#[test]
+fn vaultstatus_names_a_secret_this_folder_cannot_reach() {
+    let root = tempfile::tempdir().unwrap();
+    let home = root.path().join("home");
+    let data = root.path().join("data");
+    let project = root.path().join("project");
+    std::fs::create_dir_all(&project).unwrap();
+
+    for arguments in [
+        vec!["vault", "create", "general"],
+        vec!["secret", "set", "general", "AppPass", "APP_PASSWORD"],
+    ] {
+        let mut child = Command::new(env!("CARGO_BIN_EXE_synapse-cli"))
+            .args(&arguments)
+            .env("SYNAPSE_HOME", &home)
+            .env("SYNAPSE_DATA", &data)
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .unwrap();
+        child.stdin.take().unwrap().write_all(b"hunter2\n").unwrap();
+        assert!(child.wait().unwrap().success(), "{arguments:?}");
+    }
+
+    let mut child = Command::new(env!("CARGO_BIN_EXE_synapse-cli"))
+        .arg("mcp")
+        .env("SYNAPSE_HOME", &home)
+        .env("SYNAPSE_DATA", &data)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+    let mut stdin = child.stdin.take().unwrap();
+    let mut stdout = BufReader::new(child.stdout.take().unwrap());
+    call(
+        &mut stdin,
+        &mut stdout,
+        json!({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "initialize",
+            "params": {
+                "protocolVersion": "2025-11-25",
+                "capabilities": {},
+                "clientInfo": {"name": "synapsetest", "version": "1"}
+            }
+        }),
+        1,
+    );
+    let vault = call(
+        &mut stdin,
+        &mut stdout,
+        json!({
+            "jsonrpc": "2.0",
+            "id": 2,
+            "method": "tools/call",
+            "params": {"name": "vaultstatus", "arguments": {"path": project}}
+        }),
+        2,
+    );
+    drop(stdin);
+    drop(stdout);
+    child.wait().unwrap();
+
+    let status = &vault["result"]["structuredContent"];
+    assert_eq!(status["available"], json!([]));
+    assert_eq!(status["unavailable"], json!(["general.AppPass"]));
+    let warning = status["warnings"][0].as_str().unwrap();
+    assert!(warning.contains("1 secret is stored"), "{warning}");
+    assert!(warning.contains("synapse scope init"), "{warning}");
+    // The note used to recommend `synapse run` without saying a scope has to
+    // exist first, which is a path that ends in an empty variable.
+    assert!(
+        status["note"]
+            .as_str()
+            .unwrap()
+            .contains("needs an approved `.synapse.yaml` naming it first"),
+        "got {status}"
+    );
 }
 
 #[test]
@@ -230,7 +323,19 @@ fn existing_guidance_still_announces_the_connection() {
 
     let instructions = initialized["result"]["instructions"].as_str().unwrap();
     assert!(instructions.starts_with("# Mine\n\nKeep this."));
-    assert!(instructions.contains("Synapse connected · <count> memories recalled"));
+    assert!(instructions.contains("Synapse connected"));
+    // No count. `recall` returns a query's hits, not the size of the store, so
+    // a line built from it announces an empty store whenever a query missed.
+    assert!(
+        !instructions.contains("memories recalled"),
+        "got {instructions}"
+    );
+    // And nothing at all for a tool whose hook already said it, with the count
+    // the hook actually has.
+    assert!(
+        instructions.contains("session hook has already shown the user"),
+        "got {instructions}"
+    );
     assert_eq!(
         std::fs::read_to_string(data.join("SOUL.md")).unwrap(),
         "# Mine\n\nKeep this.\n"
@@ -331,7 +436,7 @@ fn two_sessions_hand_work_to_each_other_across_the_mesh() {
         lead.instructions
     );
     assert!(
-        worker.instructions.contains("Synapse connected ·"),
+        worker.instructions.contains("Synapse connected"),
         "the connection notice survives alongside the mesh guidance"
     );
 

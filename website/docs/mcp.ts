@@ -165,6 +165,7 @@ ${code("json", `{
   "path": "/Users/example/project",
   "backend": "encrypted",
   "available": ["DATABASE_URL"],
+  "unavailable": ["deploy.RegistryToken"],
   "ambient": "ready",
   "shell": "zsh",
   "scopes": [
@@ -179,9 +180,10 @@ ${code("json", `{
     }
   ],
   "warnings": [],
-  "note": "Values stay in the vault and never in a response. Use synapse run for one child or install the shell hook for an approved directory."
+  "note": "Values stay in the vault and never in a response. A name under available resolves for this folder; one under unavailable needs an approved .synapse.yaml naming it first."
 }`)}
     ${note("Metadata, not a secret channel", "The names in available tell a tool what a scoped command or activated shell could receive. vaultstatus never reads the corresponding values and cannot change a connected tool’s environment. backend names the store this machine keeps them in, which is a fact about the machine and not a way to reach one.")}
+    <p><code>unavailable</code> names the secrets this machine holds that the folder cannot reach, as <code>vault.name</code>. It exists because an empty <code>available</code> is otherwise the same answer whether nothing is stored or nothing is approved here, and those have different fixes. When a folder resolves nothing and the store is not empty, <code>warnings</code> says so and names the step that would change it — <code>synapse scope init</code>, then naming the secret in the <code>env:</code> block, then <code>synapse scope trust</code>.</p>
 
     <h2 id="learning">teach and revise</h2>
     <p>Two tools that appear only while <code>synapse settings learn on</code> is set. They are how a session writes down a procedure it worked out, and corrects one that turned out wrong. Both write to the Synapse skill library and to nothing else.</p>

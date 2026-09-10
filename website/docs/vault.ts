@@ -50,7 +50,10 @@ synapse vault migrate encrypted --keep`)}
     ${code("shell", `synapse vault create work
 synapse secret set work database DATABASE_URL
 synapse secret list work`)}
-    <p>When stdin is a terminal, <code>secret set</code> reads the value with a hidden prompt and asks for confirmation. When stdin is piped, it reads the stream and trims its final line ending. The value is never accepted as a command argument.</p>
+    <p>When stdin is a terminal, <code>secret set</code> reads the value with a hidden prompt and asks for confirmation. When stdin is piped, it reads the stream. The value is never accepted as a command argument.</p>
+    <p>Surrounding whitespace is removed before storing, and <code>secret set</code> says so when it removed any: a pasted trailing space is invisible in a terminal and turns into an authentication failure indistinguishable from a wrong password. A value equal to the vault, the secret name, or the environment name is refused outright and nothing is stored — three name-shaped arguments stand in front of the one that is not a name, and this is what happens when the value lands one slot late. What was stored is then echoed back as a shape, never a value:</p>
+    ${code("text", `Saved work.database in the encrypted vault \u00b7 19 chars \u00b7 \u2022\u2022\u2022\u2022-\u2022\u2022\u2022\u2022-\u2022\u2022\u2022\u2022-\u2022\u2022\u2022\u2022`)}
+    <p>The length and the punctuation are enough to recognise the credential you meant to enter, or to see that it went in one character longer than what you copied. The desktop app applies the same guards and prints the same shape.</p>
     ${code("shell", `printf '%s' "$DATABASE_URL" | synapse secret set work database DATABASE_URL`)}
     ${note("Shell history boundary", "The safe prompt keeps the value out of history and process arguments. A piped command is only as safe as the command that produces its stdin; do not paste a value directly into a visible shell command.")}
     <p>Add <code>--global</code> to make the environment name available in every folder, or change an existing label later:</p>

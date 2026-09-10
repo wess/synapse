@@ -86,7 +86,7 @@
       </header>
       
     <h2 id="invocation">Invocation</h2>
-    <p>Run <code>synapse help</code> for the built-in summary. Commands print human-readable output unless a documented <code>--json</code> option is present. Errors go to stderr and return a non-zero exit status.</p>
+    <p>Run <code>synapse help</code> for the built-in summary. Every command answers <code>--help</code> and <code>-h</code> with its own entries — <code>synapse vault --help</code>, or <code>synapse secret set --help</code> for one line of it — and <code>synapse help &lt;command&gt;</code> is the same answer typed the other way round. After a <code>--</code> the flag belongs to the child, so <code>synapse run -- mytool --help</code> asks <code>mytool</code>. Commands print human-readable output unless a documented <code>--json</code> option is present. Errors go to stderr and return a non-zero exit status.</p>
     
   <aside class="note">
     <strong>Secret and memory input</strong>
@@ -837,9 +837,9 @@
   <section class="command" id="help">
     <div>
       <h3>help</h3>
-      <code>synapse help</code>
+      <code>synapse help [command]</code>
     </div>
-    <p>Print the command summary. <code>--help</code> and <code>-h</code> are aliases at the top level.</p>
+    <p>Print the command summary, or one command’s entries. <code>--help</code> and <code>-h</code> do the same thing wherever they appear before a <code>--</code>.</p>
   </section>
   
     </main>

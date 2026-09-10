@@ -1907,3 +1907,238 @@ fn self_improvement_is_off_until_it_is_switched_on() {
         String::from_utf8_lossy(&refused.stderr)
     );
 }
+
+/// Asking a subcommand for help used to reach whatever its dispatcher does with
+/// a word it does not know. `vault` and `secret` called it an unknown command,
+/// and `run` tried to execute `--help` as a program — `No such file or
+/// directory (os error 2)`, which reads like a broken machine rather than a
+/// question that was answered.
+#[test]
+fn every_subcommand_answers_help_instead_of_failing() {
+    let root = tempfile::tempdir().unwrap();
+
+    for (arguments, expected) in [
+        (vec!["run", "--help"], "run -- <command>"),
+        (vec!["vault", "--help"], "vault migrate"),
+        (vec!["secret", "--help"], "secret forget"),
+        (vec!["scope", "-h"], "scope trust"),
+        (vec!["memory", "--help"], "memory supersede"),
+        (vec!["relay", "--help"], "relay launch"),
+        (vec!["skill", "--help"], "skill approve"),
+        (vec!["settings", "--help"], "settings optimize"),
+        (vec!["connect", "--help"], "connect <tool> --reset"),
+    ] {
+        let printed = success(run(root.path(), &arguments, None));
+        assert!(
+            printed.contains(expected),
+            "`synapse {}` said: {printed}",
+            arguments.join(" ")
+        );
+        assert!(!printed.contains("unknown"), "{printed}");
+    }
+
+    // A named subcommand narrows to its own entry rather than the whole family.
+    let one = success(run(root.path(), &["secret", "set", "--help"], None));
+    assert!(one.contains("secret set <vault> <name> <env>"), "{one}");
+    assert!(!one.contains("secret forget"), "{one}");
+
+    // And `help <topic>` is the same answer typed the other way round.
+    assert_eq!(
+        success(run(root.path(), &["help", "vault"], None)),
+        success(run(root.path(), &["vault", "--help"], None))
+    );
+}
+
+/// `synapse run` hands everything after `--` to the child, and a child asking
+/// for its own help is not Synapse being asked for its.
+#[test]
+fn a_help_flag_meant_for_the_child_still_reaches_it() {
+    let root = tempfile::tempdir().unwrap();
+    let printed = success(run(root.path(), &["run", "--", "echo", "--help"], None));
+    assert_eq!(printed.trim(), "--help");
+}
+
+/// A secret is the one thing here nobody can read back, so an entry slip is
+/// found weeks later as an authentication failure that looks exactly like a
+/// wrong password. Both of these were real.
+#[test]
+fn a_mistyped_secret_is_caught_where_it_is_typed_rather_than_where_it_is_used() {
+    let root = tempfile::tempdir().unwrap();
+    success(run(root.path(), &["vault", "create", "general"], None));
+
+    // The environment variable's name, entered where its value belonged. The
+    // signature puts three name-shaped arguments before the one that is not.
+    let refused = run(
+        root.path(),
+        &["secret", "set", "general", "AppPass", "APP_PASSWORD"],
+        Some("APP_PASSWORD\n"),
+    );
+    assert!(!refused.status.success());
+    let complaint = String::from_utf8_lossy(&refused.stderr);
+    assert!(
+        complaint.contains("is a name and not a value"),
+        "{complaint}"
+    );
+    assert!(complaint.contains("nothing was stored"), "{complaint}");
+    assert!(
+        success(run(root.path(), &["secret", "list", "general"], None))
+            .trim()
+            .is_empty(),
+        "a refused value must not leave a label behind"
+    );
+
+    // A paste that carried a trailing space. Nineteen characters were entered
+    // and twenty used to be stored.
+    let saved = success(run(
+        root.path(),
+        &["secret", "set", "general", "AppPass", "APP_PASSWORD"],
+        Some("abcd-efgh-ijkl-mnop \n"),
+    ));
+    assert!(saved.contains("19 chars · ••••-••••-••••-••••"), "{saved}");
+    assert!(
+        saved.contains("Whitespace around the value was removed"),
+        "{saved}"
+    );
+    assert!(
+        !saved.contains("abcd"),
+        "the value itself never appears: {saved}"
+    );
+}
+
+/// An empty `available` used to be the same answer whether nothing was stored
+/// or nothing was approved here, and finding out which meant dropping to
+/// `synapse secret list`. `warnings` was already in the shape and empty in
+/// exactly the case it exists for.
+#[test]
+fn a_secret_that_this_folder_cannot_reach_is_named_rather_than_hidden() {
+    let root = tempfile::tempdir().unwrap();
+    let project = root.path().join("project");
+    fs::create_dir_all(&project).unwrap();
+
+    let quiet: Value = serde_json::from_str(&success(runfrom(
+        root.path(),
+        Some(&project),
+        &["status", "--json"],
+        None,
+    )))
+    .unwrap();
+    assert_eq!(quiet["unavailable"], Value::Array(Vec::new()));
+    assert_eq!(quiet["warnings"], Value::Array(Vec::new()));
+
+    success(run(root.path(), &["vault", "create", "general"], None));
+    success(run(
+        root.path(),
+        &["secret", "set", "general", "AppPass", "APP_PASSWORD"],
+        Some("hunter2\n"),
+    ));
+
+    let hidden: Value = serde_json::from_str(&success(runfrom(
+        root.path(),
+        Some(&project),
+        &["status", "--json"],
+        None,
+    )))
+    .unwrap();
+    assert_eq!(hidden["available"], Value::Array(Vec::new()));
+    assert_eq!(hidden["unavailable"][0], "general.AppPass");
+    let warning = hidden["warnings"][0].as_str().unwrap();
+    assert!(warning.contains("1 secret is stored"), "{warning}");
+    assert!(warning.contains("synapse scope init"), "{warning}");
+
+    // Approved and named, it moves across — and stops being warned about.
+    fs::write(
+        project.join(".synapse.yaml"),
+        "version: 1\nscope: project\nenv:\n  APP_PASSWORD: general.AppPass\ndeny: []\n",
+    )
+    .unwrap();
+    success(runfrom(root.path(), Some(&project), &["allow"], None));
+    let reachable: Value = serde_json::from_str(&success(runfrom(
+        root.path(),
+        Some(&project),
+        &["status", "--json"],
+        None,
+    )))
+    .unwrap();
+    assert_eq!(reachable["available"][0], "APP_PASSWORD");
+    assert_eq!(reachable["unavailable"], Value::Array(Vec::new()));
+    assert_eq!(reachable["warnings"], Value::Array(Vec::new()));
+}
+
+/// Two things used to say the same thing, and one of them guessed.
+///
+/// The session hook prints the connection with the real count before the model
+/// writes anything, and the block in CLAUDE.md asked the model to print it
+/// again from a count it took off `recall` — which is a query's hit count, not
+/// the store's size. So the user got the line twice, and the second one said
+/// "no memories yet" for a store that was not empty. The hook owns it now.
+#[test]
+fn only_one_thing_announces_the_connection_to_a_tool_that_has_a_hook() {
+    let root = tempfile::tempdir().unwrap();
+    let home = root.path().join("home");
+
+    success(run(root.path(), &["guidance", "sync"], None));
+
+    let claude = fs::read_to_string(home.join(".claude/CLAUDE.md")).unwrap();
+    assert!(claude.contains("synapse:begin"), "{claude}");
+    assert!(
+        !claude.contains("Synapse connected"),
+        "the hook says this, with the real count: {claude}"
+    );
+    assert!(
+        !claude.contains("first reply"),
+        "a compaction, a resume, and a subagent all look like a first reply: {claude}"
+    );
+
+    // Codex has no hook and no extension, so it keeps the line — and that copy
+    // asks for no count either, because it has no way to know one.
+    let codex = fs::read_to_string(home.join(".codex/AGENTS.md")).unwrap();
+    assert!(codex.contains("Synapse connected"), "{codex}");
+    assert!(!codex.contains("memories recalled"), "{codex}");
+
+    // A second sync is not a second block.
+    success(run(root.path(), &["guidance", "sync"], None));
+    assert_eq!(
+        fs::read_to_string(home.join(".claude/CLAUDE.md")).unwrap(),
+        claude
+    );
+}
+
+/// A machine connected under the release that asked Claude Code for the line
+/// has the old block on disk. It has to read as out of date, or the duplicate
+/// survives every upgrade.
+#[test]
+fn a_block_that_still_asks_for_the_line_reads_as_stale_and_is_replaced() {
+    let root = tempfile::tempdir().unwrap();
+    let claude = root.path().join("home/.claude");
+    fs::create_dir_all(&claude).unwrap();
+    let soul = root.path().join("data/SOUL.md");
+    fs::write(
+        claude.join("CLAUDE.md"),
+        format!(
+            "# Mine\n\n<!-- synapse:begin -->\nRead and follow `{}` before starting work.\n\n\
+             Begin the first reply of every session with one line of its own:\n\n\
+             - write `Synapse connected · <count> memories recalled`\n<!-- synapse:end -->\n",
+            soul.display()
+        ),
+    )
+    .unwrap();
+
+    let before: Value = serde_json::from_str(&success(run(
+        root.path(),
+        &["guidance", "show", "--json"],
+        None,
+    )))
+    .unwrap();
+    assert_eq!(before["synced"], 0, "the old block is not the current one");
+    assert!(before["stale"].as_i64().unwrap() >= 1, "{before}");
+
+    success(run(root.path(), &["guidance", "sync"], None));
+
+    let after = fs::read_to_string(claude.join("CLAUDE.md")).unwrap();
+    assert!(
+        after.contains("# Mine"),
+        "the user's own words survive: {after}"
+    );
+    assert!(!after.contains("memories recalled"), "{after}");
+    assert_eq!(after.matches("synapse:begin").count(), 1, "{after}");
+}

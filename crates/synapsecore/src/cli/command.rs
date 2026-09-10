@@ -127,9 +127,15 @@ pub fn run(arguments: Vec<OsString>) -> Result<Outcome> {
         return Ok(Outcome::App);
     };
     let rest = &arguments[1..];
+    if let Some(topic) = asked(command, rest) {
+        return output(&topic);
+    }
     match command {
         "app" => Ok(Outcome::App),
-        "help" | "--help" | "-h" => output(HELP),
+        "help" | "--help" | "-h" => match rest.first().and_then(|value| value.to_str()) {
+            Some(topic) => output(&usage(&words(topic, rest)).unwrap_or_else(|| HELP.to_owned())),
+            None => output(HELP),
+        },
         "version" | "--version" | "-V" => output(&format!("synapse {}", env!("CARGO_PKG_VERSION"))),
         "mcp" => {
             runtime()?.block_on(crate::mcp::run())?;
@@ -170,6 +176,83 @@ pub fn run(arguments: Vec<OsString>) -> Result<Outcome> {
     }
 }
 
+/// The help a subcommand was asked for, if it was asked for one.
+///
+/// Every subcommand dispatches on its own first word, so `--help` used to reach
+/// whatever that dispatcher does with a word it does not know: `vault` and
+/// `secret` called it an unknown command, and `run` tried to execute it as a
+/// program and reported `No such file or directory`. Asking for help is not an
+/// error, and it must not read like the machine is broken.
+///
+/// Only words before a `--` count. `synapse run -- something --help` is asking
+/// the child for its help, and the child is the one that should answer.
+fn asked(command: &str, rest: &[OsString]) -> Option<String> {
+    let before = rest.iter().take_while(|value| *value != "--");
+    let wanted = before
+        .clone()
+        .any(|value| value == "--help" || value == "-h");
+    if !wanted {
+        return None;
+    }
+    let named = before
+        .filter(|value| !value.to_string_lossy().starts_with('-'))
+        .filter_map(|value| value.to_str())
+        .collect::<Vec<_>>();
+    // Narrow to the exact entry when one was named — `secret set --help` is a
+    // question about `secret set` — and widen to the whole family otherwise.
+    named
+        .iter()
+        .rev()
+        .find_map(|word| usage(&format!("{command} {word}")))
+        .or_else(|| usage(command))
+        .or_else(|| Some(HELP.to_owned()))
+}
+
+/// The subcommand word `synapse help <topic>` was given, joined to the topic so
+/// `help secret set` narrows the same way `secret set --help` does.
+fn words(topic: &str, rest: &[OsString]) -> String {
+    match rest.get(1).and_then(|value| value.to_str()) {
+        Some(second) if usage(&format!("{topic} {second}")).is_some() => {
+            format!("{topic} {second}")
+        }
+        _ => topic.to_owned(),
+    }
+}
+
+/// The lines of [`HELP`] describing one command, with the continuation lines
+/// that belong to them.
+///
+/// Read out of the single help text rather than written again beside it: two
+/// copies of the same usage is how one of them ends up describing a flag that
+/// was renamed a year ago.
+fn usage(prefix: &str) -> Option<String> {
+    let wanted = prefix.split_whitespace().collect::<Vec<_>>();
+    let mut lines = Vec::new();
+    let mut taking = false;
+    for line in HELP.lines() {
+        // An entry starts at column two; anything indented further is the
+        // continuation of the entry above it.
+        if let Some(entry) = line
+            .strip_prefix("  ")
+            .filter(|rest| !rest.starts_with(' '))
+        {
+            taking = entry
+                .split_whitespace()
+                .collect::<Vec<_>>()
+                .starts_with(&wanted);
+        } else if !line.is_empty() && !line.starts_with(' ') {
+            taking = false;
+        }
+        if taking {
+            lines.push(line);
+        }
+    }
+    match lines.is_empty() {
+        true => None,
+        false => Some(format!("Usage: synapse {prefix}\n\n{}", lines.join("\n"))),
+    }
+}
+
 fn status(arguments: &[OsString]) -> Result<Outcome> {
     let json = arguments.iter().any(|value| value == "--json");
     let path = arguments
@@ -187,6 +270,9 @@ fn status(arguments: &[OsString]) -> Result<Outcome> {
             println!("Available: none");
         } else {
             println!("Available: {}", response.available.join(", "));
+        }
+        if !response.unavailable.is_empty() {
+            println!("Unavailable here: {}", response.unavailable.join(", "));
         }
         println!(
             "Ambient: {}{}",
@@ -216,7 +302,7 @@ fn status(arguments: &[OsString]) -> Result<Outcome> {
 
 async fn statusresponse(path: &Path) -> Result<VaultStatusResponse> {
     let store = VaultStore::open(crate::files::database()?).await?;
-    let resolved = crate::vault::resolve(&store, path).await?;
+    let mut resolved = crate::vault::resolve(&store, path).await?;
     let ambient = if resolved.scopes.is_empty() {
         "inactive"
     } else if resolved.warnings.is_empty() {
@@ -224,11 +310,16 @@ async fn statusresponse(path: &Path) -> Result<VaultStatusResponse> {
     } else {
         "blocked"
     };
+    let unavailable = crate::vault::unavailable(&store, &resolved).await?;
+    if let Some(advice) = crate::vault::advice(&resolved, &unavailable) {
+        resolved.warnings.push(advice);
+    }
     let backend = crate::vault::backend().await?;
     Ok(VaultStatusResponse {
         path: path.display().to_string(),
         backend: backend.name().to_owned(),
         available: resolved.env.keys().cloned().collect(),
+        unavailable,
         scopes: resolved.scopes.into_iter().map(Into::into).collect(),
         warnings: resolved.warnings,
         ambient: ambient.to_owned(),
@@ -438,7 +529,11 @@ fn setsecret(
         .find(|vault| vault.name == vaultname)
         .context("vault not found")?;
     let reference = format!("{vaultname}.{name}");
-    let value = readsecret()?;
+    // Three name-shaped arguments stand between the command and the one thing
+    // that is not a name, so the value is checked against all three before it
+    // can become a credential that fails somewhere else weeks from now.
+    let entry = crate::vault::entered(&readsecret()?, &[&vaultname, &name, &env])?;
+    let value = entry.value;
     if let Some(secret) = runtime.block_on(store.findsecret(&reference))? {
         anyhow::ensure!(
             secret.env == env.to_ascii_uppercase(),
@@ -456,10 +551,17 @@ fn setsecret(
             return Err(error);
         }
     }
+    // The shape, not the value: length and punctuation are enough to see a
+    // paste that came with an extra character, and are not worth reading over
+    // somebody's shoulder.
     println!(
-        "Saved {reference} in the {} vault",
-        runtime.block_on(crate::vault::backend())?.name()
+        "Saved {reference} in the {} vault · {}",
+        runtime.block_on(crate::vault::backend())?.name(),
+        crate::vault::shape(&value)
     );
+    if entry.trimmed {
+        println!("Whitespace around the value was removed before storing.");
+    }
     Ok(())
 }
 
@@ -677,21 +779,14 @@ fn paths() -> Result<Outcome> {
     Ok(Outcome::Exit(0))
 }
 
+/// The value as it was entered, off a secure prompt or a pipe. What it is
+/// allowed to be is [`crate::vault::entered`]'s question, not this one's.
 fn readsecret() -> Result<String> {
     if std::io::stdin().is_terminal() {
-        let value = rpassword::prompt_password("Secret value: ")?;
-        anyhow::ensure!(!value.is_empty(), "secret value cannot be empty");
-        return Ok(value);
+        return Ok(rpassword::prompt_password("Secret value: ")?);
     }
     let mut value = String::new();
     std::io::stdin().read_to_string(&mut value)?;
-    if value.ends_with('\n') {
-        value.pop();
-        if value.ends_with('\r') {
-            value.pop();
-        }
-    }
-    anyhow::ensure!(!value.is_empty(), "secret value cannot be empty");
     Ok(value)
 }
 

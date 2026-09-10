@@ -73,6 +73,11 @@ pub struct VaultStatusResponse {
     /// `encrypted`. Names the store, never what is in it.
     pub backend: String,
     pub available: Vec<String>,
+    /// Secrets this machine holds that this folder cannot reach, as
+    /// `vault.name`. An empty `available` means one of two very different
+    /// things — nothing stored, or nothing approved here — and this is what
+    /// tells them apart. Names only; no value is read to produce it.
+    pub unavailable: Vec<String>,
     pub scopes: Vec<VaultScopeResponse>,
     pub warnings: Vec<String>,
     pub ambient: String,

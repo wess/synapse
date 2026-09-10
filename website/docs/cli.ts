@@ -19,7 +19,7 @@ export const cli: Page = {
   ],
   body: `
     <h2 id="invocation">Invocation</h2>
-    <p>Run <code>synapse help</code> for the built-in summary. Commands print human-readable output unless a documented <code>--json</code> option is present. Errors go to stderr and return a non-zero exit status.</p>
+    <p>Run <code>synapse help</code> for the built-in summary. Every command answers <code>--help</code> and <code>-h</code> with its own entries — <code>synapse vault --help</code>, or <code>synapse secret set --help</code> for one line of it — and <code>synapse help &lt;command&gt;</code> is the same answer typed the other way round. After a <code>--</code> the flag belongs to the child, so <code>synapse run -- mytool --help</code> asks <code>mytool</code>. Commands print human-readable output unless a documented <code>--json</code> option is present. Errors go to stderr and return a non-zero exit status.</p>
     ${note("Secret and memory input", "Secret values are never accepted as arguments. Secret set uses a hidden prompt or stdin. Memory add and edit always read their body from stdin.")}
 
     <h2 id="application">Application and server</h2>
@@ -142,6 +142,6 @@ ${command("guidance adopt", "synapse guidance adopt --confirm", "Move unmanaged 
     ${command("disconnect", "synapse disconnect [tool]", "Undo one tool's connection, or every tool's when no name is given: the MCP registration or installed package, the managed block in its instruction file, the Claude Code hooks and status line, and any skill Synapse installed for it. A skill you wrote, or a status line somebody else configured, is left alone.")}
     ${command("uninstall", "synapse uninstall [--data] [--confirm]", "Remove everything Synapse installed: every tool connection, the shell hook, and the command line tool. Without <code>--confirm</code> it prints what it would remove and stops. Your memory is left alone unless you also pass <code>--data</code>, which cannot be undone.")}
     ${command("version", "synapse version", "Print the application version. <code>--version</code> and <code>-V</code> are aliases.")}
-    ${command("help", "synapse help", "Print the command summary. <code>--help</code> and <code>-h</code> are aliases at the top level.")}
+    ${command("help", "synapse help [command]", "Print the command summary, or one command\u2019s entries. <code>--help</code> and <code>-h</code> do the same thing wherever they appear before a <code>--</code>.")}
   `,
 };

@@ -136,7 +136,17 @@ synapse vault migrate encrypted --keep</code></pre>
 synapse secret set work database DATABASE_URL
 synapse secret list work</code></pre>
   </div>
-    <p>When stdin is a terminal, <code>secret set</code> reads the value with a hidden prompt and asks for confirmation. When stdin is piped, it reads the stream and trims its final line ending. The value is never accepted as a command argument.</p>
+    <p>When stdin is a terminal, <code>secret set</code> reads the value with a hidden prompt and asks for confirmation. When stdin is piped, it reads the stream. The value is never accepted as a command argument.</p>
+    <p>Surrounding whitespace is removed before storing, and <code>secret set</code> says so when it removed any: a pasted trailing space is invisible in a terminal and turns into an authentication failure indistinguishable from a wrong password. A value equal to the vault, the secret name, or the environment name is refused outright and nothing is stored — three name-shaped arguments stand in front of the one that is not a name, and this is what happens when the value lands one slot late. What was stored is then echoed back as a shape, never a value:</p>
+    
+  <div class="codeblock">
+    <div class="codebar">
+      <span>text</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>Saved work.database in the encrypted vault · 19 chars · ••••-••••-••••-••••</code></pre>
+  </div>
+    <p>The length and the punctuation are enough to recognise the credential you meant to enter, or to see that it went in one character longer than what you copied. The desktop app applies the same guards and prints the same shape.</p>
     
   <div class="codeblock">
     <div class="codebar">

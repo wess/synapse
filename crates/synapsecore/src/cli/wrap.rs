@@ -176,7 +176,12 @@ fn notice(tool: &str, root: &std::path::Path, name: Option<&str>, secrets: usize
 
     if let (Ok(home), Ok(soul)) = (crate::files::home(), crate::files::soul()) {
         let stale = crate::agent::agents(&home).into_iter().any(|agent| {
-            agent.command == tool && !crate::agent::pointermatches(&agent.instructions, &soul)
+            agent.command == tool
+                && !crate::agent::pointermatches(
+                    &agent.instructions,
+                    &soul,
+                    crate::agent::needsnotice(&agent),
+                )
         });
         if stale {
             eprintln!(

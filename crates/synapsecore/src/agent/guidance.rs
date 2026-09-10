@@ -35,11 +35,11 @@ pub fn state(home: &Path, soul: &Path) -> GuidanceState {
     let agents = agent::agents(home);
     let synced = agents
         .iter()
-        .filter(|agent| pointermatches(&agent.instructions, soul))
+        .filter(|agent| pointermatches(&agent.instructions, soul, needsnotice(agent)))
         .count();
     let stale = agents
         .iter()
-        .filter(|agent| pointerstale(&agent.instructions, soul))
+        .filter(|agent| pointerstale(&agent.instructions, soul, needsnotice(agent)))
         .count();
     let consolidated = synced == agents.len()
         && agents.iter().all(|agent| {
@@ -61,7 +61,7 @@ pub fn sync(home: &Path, soul: &Path) -> Result<GuidanceReport> {
     crate::instructions::ensure(soul)?;
     let agents = agent::agents(home);
     for agent in &agents {
-        writepointer(&agent.instructions, soul, false)?;
+        writepointer(&agent.instructions, soul, false, needsnotice(agent))?;
     }
     Ok(GuidanceReport {
         path: soul.to_path_buf(),
@@ -88,7 +88,7 @@ pub fn adopt(home: &Path, soul: &Path) -> Result<GuidanceReport> {
         let (merged, moved) = mergeguidance(&existing, &guidance);
         files::write(soul, &merged)?;
         for agent in &agents {
-            writepointer(&agent.instructions, soul, true)?;
+            writepointer(&agent.instructions, soul, true, needsnotice(agent))?;
         }
         Ok(GuidanceReport {
             path: soul.to_path_buf(),
@@ -110,7 +110,7 @@ pub fn adopt(home: &Path, soul: &Path) -> Result<GuidanceReport> {
     result
 }
 
-pub fn writepointer(path: &Path, soul: &Path, pointeronly: bool) -> Result<()> {
+pub fn writepointer(path: &Path, soul: &Path, pointeronly: bool, announce: bool) -> Result<()> {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)
             .with_context(|| format!("could not create {}", parent.display()))?;
@@ -125,7 +125,7 @@ pub fn writepointer(path: &Path, soul: &Path, pointeronly: bool) -> Result<()> {
     } else {
         stripmanaged(&current).trim().to_owned()
     };
-    let block = pointerblock(soul);
+    let block = pointerblock(soul, announce);
     let merged = if unmanaged.is_empty() {
         format!("{block}\n")
     } else {
@@ -158,23 +158,32 @@ pub fn removepointer(path: &Path) -> Result<bool> {
     Ok(true)
 }
 
-fn pointerblock(soul: &Path) -> String {
-    format!("{START}\n{}\n{END}", crate::instructions::managed(soul))
+/// Whether this tool's block has to carry the session-start notice, or whether
+/// the tool says it for itself. See [`crate::agent::Kind::announces`].
+pub fn needsnotice(agent: &agent::Agent) -> bool {
+    !agent.kind.announces()
+}
+
+fn pointerblock(soul: &Path, announce: bool) -> String {
+    format!(
+        "{START}\n{}\n{END}",
+        crate::instructions::managed(soul, announce)
+    )
 }
 
 /// Whether one tool's instruction file carries a current pointer, so a
 /// report can say which tool is set up rather than only how many are.
-pub fn pointermatches(path: &Path, soul: &Path) -> bool {
+pub fn pointermatches(path: &Path, soul: &Path, announce: bool) -> bool {
     fs::read_to_string(path)
-        .map(|content| content.contains(&pointerblock(soul)))
+        .map(|content| content.contains(&pointerblock(soul, announce)))
         .unwrap_or(false)
 }
 
-fn pointerstale(path: &Path, soul: &Path) -> bool {
+fn pointerstale(path: &Path, soul: &Path, announce: bool) -> bool {
     fs::read_to_string(path)
         .map(|content| {
             (content.contains(START) || content.contains(OLDSTART))
-                && !content.contains(&pointerblock(soul))
+                && !content.contains(&pointerblock(soul, announce))
         })
         .unwrap_or(false)
 }
@@ -264,7 +273,7 @@ mod tests {
         )
         .unwrap();
 
-        writepointer(&file, &soul, false).unwrap();
+        writepointer(&file, &soul, false, true).unwrap();
 
         let content = fs::read_to_string(file).unwrap();
         assert!(content.contains("# Keep this"));
@@ -285,20 +294,78 @@ mod tests {
         assert!(merged.contains("# Avoid secrets"));
     }
 
+    /// For a tool with nothing else to say it with. The block is the only thing
+    /// loaded before the first reply, so an announcement placed behind the
+    /// pointer arrives too late to be printed.
     #[test]
     fn the_managed_block_carries_the_notice_so_it_loads_without_a_read() {
+        let directory = tempfile::tempdir().unwrap();
+        let file = directory.path().join("AGENTS.md");
+        let soul = directory.path().join("SOUL.md");
+
+        writepointer(&file, &soul, false, true).unwrap();
+
+        let content = fs::read_to_string(&file).unwrap();
+        assert!(content.contains(soul.to_str().unwrap()));
+        assert!(content.contains("Synapse connected"));
+        assert!(content.contains("Synapse unavailable"));
+        assert!(pointermatches(&file, &soul, true));
+        assert!(!pointerstale(&file, &soul, true));
+    }
+
+    /// Claude Code's session hook prints the notice itself, with the real
+    /// count, before the model has written anything. A block that asks for the
+    /// line as well is how the user gets it twice — and the model's half is the
+    /// guessed one, because `recall` counts query hits and not the store.
+    #[test]
+    fn a_tool_that_announces_itself_gets_a_block_that_does_not_ask_for_the_line() {
         let directory = tempfile::tempdir().unwrap();
         let file = directory.path().join("CLAUDE.md");
         let soul = directory.path().join("SOUL.md");
 
-        writepointer(&file, &soul, false).unwrap();
+        writepointer(&file, &soul, false, false).unwrap();
 
         let content = fs::read_to_string(&file).unwrap();
         assert!(content.contains(soul.to_str().unwrap()));
-        assert!(content.contains("Synapse connected ·"));
-        assert!(content.contains("Synapse unavailable"));
-        assert!(pointermatches(&file, &soul));
-        assert!(!pointerstale(&file, &soul));
+        assert!(!content.contains("Synapse connected"), "got {content}");
+        assert!(!content.contains("first reply"), "got {content}");
+        assert!(pointermatches(&file, &soul, false));
+        assert!(!pointerstale(&file, &soul, false));
+    }
+
+    /// The two blocks are different text, so a machine connected under the
+    /// release that asked Claude Code for the line reads as stale and gets the
+    /// quiet block on the next sync rather than keeping the old one forever.
+    #[test]
+    fn a_notice_carrying_block_reads_as_stale_for_a_tool_that_announces_itself() {
+        let directory = tempfile::tempdir().unwrap();
+        let file = directory.path().join("CLAUDE.md");
+        let soul = directory.path().join("SOUL.md");
+
+        writepointer(&file, &soul, false, true).unwrap();
+
+        assert!(pointerstale(&file, &soul, false));
+        assert!(!pointermatches(&file, &soul, false));
+
+        writepointer(&file, &soul, false, false).unwrap();
+
+        assert!(pointermatches(&file, &soul, false));
+        assert!(!pointerstale(&file, &soul, false));
+        assert_eq!(fs::read_to_string(&file).unwrap().matches(START).count(), 1);
+    }
+
+    /// Claude Code and pi say it themselves; anything else has only the block.
+    #[test]
+    fn only_a_tool_without_its_own_notice_needs_one_in_its_block() {
+        let home = tempfile::tempdir().unwrap();
+        for agent in agent::agents(home.path()) {
+            assert_eq!(
+                needsnotice(&agent),
+                !matches!(agent.kind, agent::Kind::Claude | agent::Kind::Pi),
+                "{}",
+                agent.slug
+            );
+        }
     }
 
     #[test]
@@ -313,13 +380,13 @@ mod tests {
         )
         .unwrap();
 
-        assert!(!pointermatches(&file, &soul));
-        assert!(pointerstale(&file, &soul));
+        assert!(!pointermatches(&file, &soul, true));
+        assert!(pointerstale(&file, &soul, true));
 
-        writepointer(&file, &soul, false).unwrap();
+        writepointer(&file, &soul, false, true).unwrap();
 
-        assert!(pointermatches(&file, &soul));
-        assert!(!pointerstale(&file, &soul));
+        assert!(pointermatches(&file, &soul, true));
+        assert!(!pointerstale(&file, &soul, true));
         assert_eq!(fs::read_to_string(&file).unwrap().matches(START).count(), 1);
     }
 

@@ -94,6 +94,56 @@ pub async fn resolve(store: &VaultStore, folder: &Path) -> Result<Resolved> {
     Ok(resolved)
 }
 
+/// The secrets this machine holds that this folder cannot reach, named the way
+/// a person would ask for them.
+///
+/// The empty `available` list is the same answer whether nothing is stored or
+/// nothing is *approved here*, and those are different problems with different
+/// fixes. Reporting the names is what tells them apart. It is metadata — the
+/// names are already in `secret list` — and no value is read to produce it.
+pub async fn unavailable(store: &VaultStore, resolved: &Resolved) -> Result<Vec<String>> {
+    let reachable = resolved
+        .env
+        .values()
+        .map(|secret| secret.id)
+        .collect::<BTreeSet<_>>();
+    Ok(store
+        .allsecrets()
+        .await?
+        .into_iter()
+        .filter(|secret| !reachable.contains(&secret.id))
+        .map(|secret| format!("{}.{}", secret.vault, secret.name))
+        .collect())
+}
+
+/// What to say when a folder resolves nothing and the store is not empty.
+///
+/// `vaultstatus` used to answer with four empty lists in exactly this case, and
+/// the only way to find out the secret existed was to drop to the CLI. The
+/// `warnings` field was already in the shape; this is what it exists for.
+pub fn advice(resolved: &Resolved, unavailable: &[String]) -> Option<String> {
+    if !resolved.env.is_empty() || unavailable.is_empty() {
+        return None;
+    }
+    let held = match unavailable.len() {
+        1 => "1 secret is".to_owned(),
+        count => format!("{count} secrets are"),
+    };
+    // A scope that exists and was not approved already says so, once per file.
+    // Repeating it here would bury the one thing this adds.
+    if resolved.scopes.is_empty() {
+        return Some(format!(
+            "{held} stored but no scope covers this folder: run `synapse scope init` here, name \
+             them in its `env:` block, then `synapse scope trust`. Until then `synapse run` \
+             resolves nothing."
+        ));
+    }
+    Some(format!(
+        "{held} stored but unreachable from this folder: no approved scope names them, so \
+         `synapse run` resolves nothing."
+    ))
+}
+
 async fn apply(
     store: &VaultStore,
     references: &BTreeMap<String, String>,

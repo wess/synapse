@@ -1422,12 +1422,27 @@ impl Dashboard {
         };
         let name = self.secretname.read(cx).text();
         let env = self.secretenv.read(cx).text();
-        let value = self.secretvalue.read(cx).text();
-        if value.is_empty() {
-            self.notice = Notice::Error("Secret value cannot be empty.".to_owned());
-            cx.notify();
-            return;
-        }
+        let vaultname = self
+            .vaults
+            .iter()
+            .find(|vault| vault.id == vaultid)
+            .map(|vault| vault.name.clone())
+            .unwrap_or_default();
+        // The same guards the CLI applies: a pasted space comes off, and a
+        // value equal to one of the names beside it is the field that got
+        // filled one box late.
+        let entry = match synapsecore::vault::entered(
+            &self.secretvalue.read(cx).text(),
+            &[&vaultname, &name, &env],
+        ) {
+            Ok(entry) => entry,
+            Err(error) => {
+                self.notice = Notice::Error(format!("{error}"));
+                cx.notify();
+                return;
+            }
+        };
+        let value = entry.value.clone();
         let global = self.addglobal;
         match block(async move {
             let secret = store.createsecret(vaultid, &name, &env, global).await?;
@@ -1445,8 +1460,10 @@ impl Dashboard {
                 self.secretvalue
                     .update(cx, |input, cx| input.set_text("", cx));
                 self.notice = Notice::Success(format!(
-                    "Saved {}.{} in Keychain.",
-                    secret.vault, secret.name
+                    "Saved {}.{} · {}",
+                    secret.vault,
+                    secret.name,
+                    synapsecore::vault::shape(&entry.value)
                 ));
                 self.refreshvaults(cx);
             }
@@ -1537,27 +1554,34 @@ impl Dashboard {
     }
 
     fn replacesecret(&mut self, id: i64, cx: &mut Context<Self>) {
-        let value = self.secretvalue.read(cx).text();
+        let raw = self.secretvalue.read(cx).text();
         let Some(secret) = self.secrets.iter().find(|secret| secret.id == id) else {
             return;
         };
-        if value.is_empty() {
-            self.notice = Notice::Error(
-                "Enter the replacement in Secret value, then choose Replace.".to_owned(),
-            );
-        } else {
-            self.notice = match block(synapsecore::vault::setsecret(&secret.account, &value)) {
-                Ok(()) => {
-                    self.secretvalue
-                        .update(cx, |input, cx| input.set_text("", cx));
-                    Notice::Success(format!(
-                        "Replaced {}.{} in Keychain.",
-                        secret.vault, secret.name
-                    ))
+        let names = [
+            secret.vault.as_str(),
+            secret.name.as_str(),
+            secret.env.as_str(),
+        ];
+        self.notice = match synapsecore::vault::entered(&raw, &names) {
+            Err(error) if raw.trim().is_empty() => Notice::Error(format!(
+                "Enter the replacement in Secret value, then choose Replace. ({error})"
+            )),
+            Err(error) => Notice::Error(format!("{error}")),
+            Ok(entry) => {
+                match block(synapsecore::vault::setsecret(&secret.account, &entry.value)) {
+                    Ok(()) => {
+                        let shape = synapsecore::vault::shape(&entry.value);
+                        let replaced =
+                            format!("Replaced {}.{} · {shape}", secret.vault, secret.name);
+                        self.secretvalue
+                            .update(cx, |input, cx| input.set_text("", cx));
+                        Notice::Success(replaced)
+                    }
+                    Err(error) => Notice::Error(format!("Could not replace secret: {error}")),
                 }
-                Err(error) => Notice::Error(format!("Could not replace secret: {error}")),
-            };
-        }
+            }
+        };
         cx.notify();
     }
 

@@ -22,6 +22,20 @@ pub enum Kind {
     Custom,
 }
 
+impl Kind {
+    /// Whether the tool states the connection itself at session start.
+    ///
+    /// Claude Code does it from the `SessionStart` hook and pi from its
+    /// extension, both by running `synapse session` — which knows the real
+    /// memory count and prints before the model has written a word. For those
+    /// two the guidance block carries no notice at all: asking the model for a
+    /// line as well is how the user gets the same fact twice, and the model's
+    /// half is the guessed one.
+    pub fn announces(self) -> bool {
+        matches!(self, Kind::Claude | Kind::Pi)
+    }
+}
+
 /// A connectable tool: where it keeps its files, what to run to connect it, how
 /// to read that back, and how to start it. Built from a descriptor — see
 /// [`crate::agent::tool`] — including for the tools Synapse ships.

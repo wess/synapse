@@ -13,7 +13,9 @@ pub mod tool;
 pub use apply::{connect, refresh, remove, reset};
 pub use catalog::{agents, connections};
 pub use detect::{command, detect, searchpath};
-pub use guidance::{GuidanceState, adopt, pointermatches, state as guidancestate, sync};
+pub use guidance::{
+    GuidanceState, adopt, needsnotice, pointermatches, state as guidancestate, sync,
+};
 pub use hooks::{State as HookState, apply as applynotice, remove as removenotice};
 pub use model::{Agent, Connection, Detection, Kind};
 pub use setup::{Apply, reapply, setup};

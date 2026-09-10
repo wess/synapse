@@ -145,7 +145,7 @@ impl Server {
             .or_else(|| std::env::var_os("SYNAPSE_PROJECT_DIR").map(Into::into))
             .or_else(|| std::env::current_dir().ok())
             .ok_or_else(|| "could not determine the project folder".to_owned())?;
-        let resolved = crate::vault::resolve(&self.vaults, &path)
+        let mut resolved = crate::vault::resolve(&self.vaults, &path)
             .await
             .map_err(|error| error.to_string())?;
         let ambient = if resolved.scopes.is_empty() {
@@ -155,6 +155,14 @@ impl Server {
         } else {
             "blocked"
         };
+        let unavailable = crate::vault::unavailable(&self.vaults, &resolved)
+            .await
+            .map_err(|error| error.to_string())?;
+        // Answering an unreachable secret with four empty lists is what sent
+        // somebody to the CLI to find out it existed at all.
+        if let Some(advice) = crate::vault::advice(&resolved, &unavailable) {
+            resolved.warnings.push(advice);
+        }
         let backend = crate::vault::backend()
             .await
             .map_err(|error| error.to_string())?;
@@ -162,11 +170,12 @@ impl Server {
             path: path.display().to_string(),
             backend: backend.name().to_owned(),
             available: resolved.env.keys().cloned().collect(),
+            unavailable,
             scopes: resolved.scopes.into_iter().map(Into::into).collect(),
             warnings: resolved.warnings,
             ambient: ambient.to_owned(),
             shell: std::env::var("SYNAPSE_SHELL_ACTIVE").ok(),
-            note: "Values stay in the vault and never in a response. Use `synapse run -- <command>` for one child or an installed shell hook for an approved directory."
+            note: "Values stay in the vault and never in a response. A name under `available` resolves for this folder; one under `unavailable` needs an approved `.synapse.yaml` naming it first. Use `synapse run -- <command>` for one child or an installed shell hook for an approved directory."
                 .to_owned(),
         }))
     }
