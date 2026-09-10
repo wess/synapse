@@ -92,10 +92,10 @@
 }
 
 .herocopy h1 {
-  max-width: 8ch;
+  max-width: 12ch;
   margin: 0;
   font-family: var(--display);
-  font-size: var(--herosize);
+  font-size: clamp(3.5rem, 5.5vw, 5rem);
   font-weight: 600;
   letter-spacing: -0.04em;
   line-height: 0.88;
@@ -140,13 +140,13 @@
 
 .matchcut {
   position: relative;
-  min-height: 36rem;
+  min-height: 40rem;
 }
 
 .terminal {
   position: absolute;
   width: 58%;
-  min-height: 20rem;
+  min-height: 15rem;
   overflow: hidden;
   border: 1px solid var(--inksoft);
   background: var(--night);
@@ -155,14 +155,14 @@
 }
 
 .terminal.codex {
-  top: 2rem;
+  top: 0;
   left: 0;
   transform: rotate(-1.6deg);
 }
 
 .terminal.claude {
   right: 0;
-  bottom: 1.5rem;
+  bottom: 0;
   transform: rotate(1.2deg);
 }
 

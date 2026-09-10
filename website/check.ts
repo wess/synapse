@@ -78,11 +78,11 @@ for (const file of htmlfiles) {
 const home = await Bun.file(join(output, "index.html")).text();
 if (!home.startsWith("<!--\nTHESIS:")) fail("landing page is missing its direction contract");
 for (const phrase of [
-  "Your tools forget. Synapse remembers.",
+  "Stop repeating yourself to coding agents.",
   "Download for macOS",
-  "Remember decisions",
-  "Scope credentials",
-  "Stay in control",
+  "Switch agents",
+  "Share skills",
+  "Keep memory local",
 ]) {
   if (!home.includes(phrase)) fail(`landing page is missing: ${phrase}`);
 }

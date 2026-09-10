@@ -56,6 +56,7 @@ SYNAPSE_BIN="$HOME/bin/synapse" synapse install`)}
     <p>Overrides affect only the process that receives them. Keep the desktop app, CLI, and connected MCP server on the same <code>SYNAPSE_DATA</code> value if they should share one store.</p>
 
     <h2 id="tools">Tool integration files</h2>
+    <p>Custom harness definitions live in <code>.synapse/tools/&lt;name&gt;.toml</code> for a project, or <code>tools/</code> in the Synapse data directory for a user. Create one with <code>synapse tool create &lt;name&gt;</code>, adding <code>--user</code> for the user layer. Project definitions override user definitions, which override built-ins. See the <a href="../harnesses/">custom harness guide</a> for the schema and a working example. <code>.synapse.yaml</code> remains the credential-scope configuration.</p>
     <table>
       <thead><tr><th>Tool</th><th>Integration</th><th>Instructions</th><th>Settings shortcut</th></tr></thead>
       <tbody>

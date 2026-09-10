@@ -3,6 +3,7 @@ import { app } from "./docs/app";
 import { cli } from "./docs/cli";
 import { config } from "./docs/config";
 import { data } from "./docs/data";
+import { harnesses } from "./docs/harnesses";
 import { install } from "./docs/install";
 import { overview } from "./docs/index";
 import { mcp } from "./docs/mcp";
@@ -30,6 +31,7 @@ export const pages: Page[] = [
   home,
   overview,
   install,
+  harnesses,
   app,
   memory,
   mcp,

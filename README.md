@@ -1,44 +1,107 @@
 # Synapse
 
-Your tools forget. Synapse remembers.
+**Shared memory and skills for Claude Code, Codex, pi, and Ainz.**
 
-Synapse keeps project decisions and credentials on your Mac, ready for the tools and terminal sessions that need them. There is no account to create and no cloud memory to manage.
+Stop repeating the same project conventions to each coding agent. With Synapse, you can save a correction in one tool and recall it in another, in the same project. Keep your memory on your machine and manage reusable skills in one library.
 
-[Download for macOS](https://github.com/wess/synapse/releases/latest/download/synapse.zip) · [Read the guide](https://wess.io/synapse/docs/)
+[Download for macOS](https://github.com/wess/synapse/releases/latest/download/synapse.zip) · [Linux setup](https://wess.io/synapse/docs/install/#linux) · [Try a handoff](https://wess.io/synapse/tutorials/continuity/) · [Documentation](https://wess.io/synapse/docs/)
 
-Apple silicon · macOS 13 or later · Developer ID signed and notarized
+macOS desktop (Apple silicon, macOS 13+, signed and notarized) · Linux terminal dashboard, CLI, and MCP server · MIT license · No account required
 
-## What Synapse does
+## Supported harnesses
 
-- **Keeps the thread.** Save decisions, corrections, conventions, and preferences once. Pick them up in a later session or another connected tool.
-- **Reads the evidence.** Follow an abridged recall with `readmemory` to read the exact stored text in bounded pages, within the same project scope.
-- **Says so at startup.** Claude Code shows `Synapse connected · 128 memories` beside its welcome message, so you can see the link before the first reply.
-- **Asks before it forgets.** When a long session is about to be compacted, Synapse asks it to write down anything it worked out that is not stored yet — the one moment where not having written something down costs you immediately.
-- **Draws the store.** The Map is every memory as a graph in three dimensions — projects as clusters, a correction as a line to what it replaced, and a memory nothing else touches looking like one. Drag to turn it, scroll to move closer, click a point to read it.
-- **Corrects without arguing.** When a convention changes, the new memory supersedes the old one instead of contradicting it. Recall returns the current version; the old text stays readable and comes back if you were wrong.
-- **Brings history with you.** Preview and import existing Claude and Codex memory into project-scoped Synapse records without changing the originals.
-- **Shares one playbook.** Keep global working guidance in one editable `SOUL.md`, with every connected tool pointed at it.
-- **Writes a skill once.** Keep your Agent Skills in one library and install them into Claude Code, Codex, pi, and Ainz together, instead of copying folders by hand and watching the copies drift apart. A skill about one repository belongs to that repository.
-- **Learns a procedure.** Let a session write down something it worked out as a skill, and correct one that turned out wrong. What an agent writes waits for you to approve it and reaches no tool until you do. Off by default.
-- **Lets agents work together.** Turn on the mesh and your connected tools can message each other, split up a job, and wait for free between tasks. Off by default.
-- **Gives you a seat at the table.** The Console puts you on the mesh under your own name, so an agent that hits a decision it should not make alone has somebody to ask — and every worker stays directly addressable rather than reachable only through a lead.
-- **Scopes credentials.** Keep secret values in an encrypted store this machine owns — or in macOS Keychain, whichever you choose — and pick which approved folders may receive which environment variables. A value never reaches a project file, a log, or a response, and comes back out only onto your clipboard.
-- **Leaves you in control.** Search, edit, export, restore, or delete what Synapse stores. Nothing is hidden behind an account or remote service.
+A harness is the coding agent you run. Synapse ships these connectors:
 
-## A simple workflow
+| Harness | Command | Connection | Extra integration |
+| --- | --- | --- | --- |
+| Claude Code | `claude` | MCP | Session hooks and status line |
+| Codex | `codex` | MCP | Respects `CODEX_HOME` |
+| pi | `pi` | `synapse-pi` extension | Session integration; no native MCP client needed |
+| Ainz | `ainz` | MCP | Registers Synapse as a required server |
 
-1. Install Synapse and connect the tools you use.
-2. Import useful existing memory, then let Synapse remember confirmed context that will matter later.
-3. Return to the project with its decisions already available.
-4. Run commands with only the credentials that project is allowed to use.
+All four have descriptors for shared guidance, skill locations, and launch arguments. Run `synapse tool list` to see built-in and custom harnesses, then `synapse connect <name>` to connect one installed on your machine.
 
-Use a scoped environment for one command:
+### Add your own harness
+
+You can add a harness without rebuilding Synapse or waiting for a release. From your repository root:
 
 ```sh
-synapse run -- your-command
+synapse tool create mytool
+synapse tool show mytool
+synapse connect mytool
 ```
 
-Or enable shell integration in Settings to load approved project environments when you enter their folders.
+The first command opens a commented TOML template in your editor and validates it before saving **`.synapse/tools/mytool.toml`**. Fill in your harness's executable, configuration and instruction paths, MCP registration commands, and launch flags. Restart the harness after connecting, then ask it to save and recall a project convention.
+
+Use `synapse tool create mytool --user` for a personal connector available across projects. Project descriptors override user descriptors, which override built-ins. Run project commands from the repository root. `.synapse.yaml` remains the project credential-scope configuration; harness definitions live in `.synapse/tools/`.
+
+[Custom harness guide and example](https://wess.io/synapse/docs/harnesses/). Support for hooks or a non-MCP protocol may require an adapter in addition to a descriptor.
+
+### Contribute a harness
+
+**PRs for additional harnesses are welcome.** Start with a working custom descriptor, then add it to [`crates/synapsecore/assets/tools/`](crates/synapsecore/assets/tools/) and register it in `BUILTINS` in [`agent/tool.rs`](crates/synapsecore/src/agent/tool.rs). Include the harness version and platforms you tested, coverage for connection detection and cleanup, and an update to this table. See the [contribution checklist](https://wess.io/synapse/docs/harnesses/#contribute).
+
+## Save a correction. Recall it in another agent.
+
+An example with two connected tools in the same repository:
+
+```text
+You → Codex
+  Use Bun for JavaScript tasks in this repo.
+  Remember that convention for this project.
+
+Synapse
+  Stores the confirmed convention in local project memory.
+
+You → Claude Code, in a new session
+  Recall this project's tooling convention.
+  How do I install dependencies?
+
+Claude Code, using the recalled convention
+  bun install
+```
+
+You choose which decisions to keep. Connected agents can recall those decisions across sessions; project-scoped recall includes global guidance and that project's memory. Synapse shares saved context, not the full conversation. An agent still needs to consult memory and follow it.
+
+[Walk through this example](https://wess.io/synapse/tutorials/continuity/), including how to inspect the saved record, correct it, and check its project scope.
+
+## Try it with your tools
+
+On macOS:
+
+1. Download the app, extract it, and move **synapse.app** into **Applications**.
+2. Open Synapse and choose **Connect** for the tools you use: Claude Code, Codex, pi, or Ainz.
+3. Restart those tools so they load the connection and shared guidance.
+4. Ask one tool to remember a confirmed project convention. Open another in the same folder and ask it to recall that convention.
+5. Inspect the record in Synapse's **Memories** screen.
+
+On Linux, build the terminal version from the repository root with a current stable Rust toolchain and a C compiler/linker:
+
+```sh
+cargo build --release --locked --manifest-path crates/synapsecore/Cargo.toml
+./crates/synapsecore/target/release/synapse-cli install
+export PATH="$HOME/.local/bin:$PATH"
+synapse connect
+synapse
+```
+
+`synapse connect` connects installed tools. Restart them afterward. Running `synapse` in a terminal opens the dashboard; the same binary provides the CLI and MCP server. The Linux build has no desktop UI dependency and uses the encrypted vault instead of macOS Keychain. Current release downloads contain the macOS app; Linux users build from source.
+
+See the [installation guide](https://wess.io/synapse/docs/install/) for CLI setup and connection troubleshooting.
+
+## What you can share
+
+| Capability | How you use it |
+| --- | --- |
+| Project memory | Save decisions, corrections, and conventions. Recall them in a later session or another connected agent. |
+| Existing memory | Preview and import Claude and Codex memory without changing the originals. Undo an import batch when needed. |
+| Shared guidance | Edit one `SOUL.md` and point your connected tools at it. |
+| Agent Skills | Maintain one library, install skills into connected tools, and check which copies have drifted. |
+| Agent coordination | Enable the optional mesh to let agents message each other and work together. Join them through the Console. |
+| Scoped credentials | Approve which project folders may receive which environment variables, using the local encrypted vault or macOS Keychain. |
+| The Map | See every memory as a graph in three dimensions — projects as clusters, a correction as a line to what it replaced, and a memory nothing else touches looking like one. |
+
+Search, edit, export, restore, or delete stored memory from the app. Supersede a decision when it changes: future recall returns the current version, and you can still inspect or restore the old one.
 
 ## One skill library
 

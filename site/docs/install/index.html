@@ -4,10 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Install and connect — Synapse</title>
-  <meta name="description" content="Install the signed macOS build, add the CLI, and connect Codex, Claude Code, pi, or Ainz without replacing your configuration.">
+  <meta name="description" content="Install the macOS desktop app or build the Linux terminal version, then connect your coding tools.">
   <meta name="theme-color" content="#0a43c8">
-  <meta property="og:title" content="Install and connect">
-  <meta property="og:description" content="Install the signed macOS build, add the CLI, and connect Codex, Claude Code, pi, or Ainz without replacing your configuration.">
+  <meta property="og:title" content="Install and connect — Synapse">
+  <meta property="og:description" content="Install the macOS desktop app or build the Linux terminal version, then connect your coding tools.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://wess.io/synapse/docs/install/">
   <link rel="canonical" href="https://wess.io/synapse/docs/install/">
@@ -51,6 +51,7 @@
         <ul>
         <li><a href="../../docs/">Start here</a></li>
         <li><a href="../../docs/install/" aria-current="page">Install and connect</a></li>
+        <li><a href="../../docs/harnesses/">Supported and custom harnesses</a></li>
         <li><a href="../../docs/app/">Desktop app reference</a></li>
         <li><a href="../../docs/memory/">Memory and recall</a></li>
         <li><a href="../../docs/mcp/">MCP tool reference</a></li>
@@ -82,17 +83,36 @@
     <main class="article" id="content">
       <header class="articlehead">
         <h1>Install and connect</h1>
-        <span>Install the signed macOS build, add the CLI, and connect Codex, Claude Code, pi, or Ainz without replacing your configuration.</span>
+        <span>Install the macOS desktop app or build the Linux terminal version, then connect your coding tools.</span>
       </header>
       
     <h2 id="requirements">Requirements</h2>
     <ul>
-      <li>Apple-silicon Mac running macOS 13 or later.</li>
+      <li>macOS desktop: Apple-silicon Mac running macOS 13 or later.</li>
+      <li>Linux terminal, CLI, and MCP server: a current stable Rust toolchain and a C compiler/linker to build from source.</li>
       <li>At least one supported tool on <code>PATH</code>: Codex, Claude Code, pi, or Ainz.</li>
       <li>A writable <code>~/.local/bin</code>, or a custom path supplied through <code>SYNAPSE_BIN</code>.</li>
     </ul>
 
-    <h2 id="app">Install the app</h2>
+    <h2 id="linux">Install on Linux</h2>
+    <p>Linux supports the terminal dashboard, CLI, and MCP server through <code>synapsecore</code>. This build does not depend on the desktop UI. Current release downloads contain the macOS app; build the Linux version from the <a href="https://github.com/wess/synapse">source repository</a>.</p>
+    <p>From the repository root, run:</p>
+    
+  <div class="codeblock">
+    <div class="codebar">
+      <span>shell</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>cargo build --release --locked --manifest-path crates/synapsecore/Cargo.toml
+./crates/synapsecore/target/release/synapse-cli install
+export PATH=&quot;$HOME/.local/bin:$PATH&quot;
+synapse connect
+synapse</code></pre>
+  </div>
+    <p>The install command copies the binary to <code>~/.local/bin/synapse</code>. Keep that directory on your shell's <code>PATH</code>. <code>synapse connect</code> connects tools installed on this machine; restart them to load the connection. Running <code>synapse</code> in an interactive terminal opens the dashboard. Use <code>synapse status</code> for text status or <code>synapse mcp</code> to run the MCP server.</p>
+    <p>On Linux, credentials use Synapse's encrypted vault. The Keychain backend and the native desktop app are macOS-specific. Continue with <a href="#verify">Verify the connection</a>; the app and app-based setup steps below apply to macOS.</p>
+
+    <h2 id="app">Install the macOS app</h2>
     <ol>
       <li>Download <code>synapse.zip</code> from the <a href="https://github.com/wess/synapse/releases/latest">latest release</a>.</li>
       <li>Extract the archive and move <strong>synapse.app</strong> into <strong>Applications</strong>. Do not install the CLI while the app is still inside Downloads or a mounted disk image.</li>
@@ -140,7 +160,8 @@ synapse version</code></pre>
     <p>The app shows <strong>Needs repair</strong> if the managed block changes. Repair replaces only that block. Remove deletes only that block; already-running terminals retain the loaded hook until they close. Every changed existing startup file receives a <code>.synapsebackup</code> sibling and an atomic replacement.</p>
 
     <h2 id="tools">Connect tools</h2>
-    <p>On the Synapse dashboard, each detected tool shows its installation and connection state. Choose <strong>Connect</strong> for Codex, Claude Code, pi, or Ainz.</p>
+    <p>See <a href="../harnesses/">supported and custom harnesses</a> to add a connector with a TOML descriptor or contribute one through a PR.</p>
+    <p>On the macOS Synapse dashboard, each detected tool shows its installation and connection state. Choose <strong>Connect</strong> for Codex, Claude Code, pi, or Ainz.</p>
     <p>Setup performs two changes as one rollback-protected operation:</p>
     <ol>
       <li>It registers the installed Synapse executable as a user-level MCP stdio server with the single argument <code>mcp</code>. pi has no MCP client, so its step is <code>pi install npm:synapse-pi</code> instead: one package that starts the same server and offers the same tools.</li>
@@ -191,21 +212,21 @@ claude mcp add --scope user synapse -- ~/.local/bin/synapse mcp</code></pre>
       <li>Restart the connected tool so it reloads its MCP servers and instructions.</li>
       <li>Inspect its available tools. Synapse should expose <code>remember</code>, <code>recall</code>, <code>readmemory</code>, and <code>vaultstatus</code>.</li>
       <li>Ask it to remember one harmless confirmed convention, then recall it in a new session.</li>
-      <li>Open the Synapse <strong>Memories</strong> screen and confirm the exact entry and source are visible.</li>
+      <li>Inspect the entry and its source in the macOS <strong>Memories</strong> screen, or use <code>synapse memory list</code> and <code>synapse memory show &lt;id&gt;</code> on Linux.</li>
     </ol>
     <p>If the dashboard shows a registered but disconnected state, the stored path is stale or its arguments differ from <code>["mcp"]</code>. Choose <strong>Repair</strong> in the app or remove and re-add the manual entry.</p>
   
     </main>
     <aside class="ontoc" aria-label="On this page">
         <span>On this page</span>
-        <ol><li><a href="#requirements">Requirements</a></li><li><a href="#app">Install the app</a></li><li><a href="#cli">Install the CLI</a></li><li><a href="#shell">Shell integration</a></li><li><a href="#tools">Connect tools</a></li><li><a href="#guidance">Shared guidance</a></li><li><a href="#manual">Manual connection</a></li><li><a href="#verify">Verify</a></li></ol>
+        <ol><li><a href="#requirements">Requirements</a></li><li><a href="#linux">Linux setup</a></li><li><a href="#app">macOS app</a></li><li><a href="#cli">Install the CLI</a></li><li><a href="#shell">Shell integration</a></li><li><a href="#tools">Connect tools</a></li><li><a href="#guidance">Shared guidance</a></li><li><a href="#manual">Manual connection</a></li><li><a href="#verify">Verify</a></li></ol>
       </aside>
   </div>
   
   <footer class="footer">
     <div>
       <a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">Synapse</a>
-      <p>Project memory and scoped credentials, kept on your Mac.</p>
+      <p>Shared memory and skills for coding agents, kept on your machine.</p>
     </div>
     <nav aria-label="Footer">
       <a href="../../docs/">Documentation</a>
@@ -213,7 +234,7 @@ claude mcp add --scope user synapse -- ~/.local/bin/synapse mcp</code></pre>
       <a href="https://github.com/wess/synapse">Source</a>
       <a href="https://github.com/wess/synapse/releases">Releases</a>
     </nav>
-    <p class="footerfine">No account required. Apple silicon · macOS 13+.</p>
+    <p class="footerfine">No account required. macOS desktop · Linux terminal, CLI &amp; MCP.</p>
   </footer>
 </body>
 </html>

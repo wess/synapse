@@ -5,11 +5,12 @@ import { releaseurl } from "../deploy";
 export const install: Page = {
   path: "docs/install/index.html",
   title: "Install and connect",
-  description: "Install the signed macOS build, add the CLI, and connect Codex, Claude Code, pi, or Ainz without replacing your configuration.",
+  description: "Install the macOS desktop app or build the Linux terminal version, then connect your coding tools.",
   kind: "docs",
   toc: [
     { label: "Requirements", id: "requirements" },
-    { label: "Install the app", id: "app" },
+    { label: "Linux setup", id: "linux" },
+    { label: "macOS app", id: "app" },
     { label: "Install the CLI", id: "cli" },
     { label: "Shell integration", id: "shell" },
     { label: "Connect tools", id: "tools" },
@@ -20,12 +21,24 @@ export const install: Page = {
   body: `
     <h2 id="requirements">Requirements</h2>
     <ul>
-      <li>Apple-silicon Mac running macOS 13 or later.</li>
+      <li>macOS desktop: Apple-silicon Mac running macOS 13 or later.</li>
+      <li>Linux terminal, CLI, and MCP server: a current stable Rust toolchain and a C compiler/linker to build from source.</li>
       <li>At least one supported tool on <code>PATH</code>: Codex, Claude Code, pi, or Ainz.</li>
       <li>A writable <code>~/.local/bin</code>, or a custom path supplied through <code>SYNAPSE_BIN</code>.</li>
     </ul>
 
-    <h2 id="app">Install the app</h2>
+    <h2 id="linux">Install on Linux</h2>
+    <p>Linux supports the terminal dashboard, CLI, and MCP server through <code>synapsecore</code>. This build does not depend on the desktop UI. Current release downloads contain the macOS app; build the Linux version from the <a href="https://github.com/wess/synapse">source repository</a>.</p>
+    <p>From the repository root, run:</p>
+    ${code("shell", `cargo build --release --locked --manifest-path crates/synapsecore/Cargo.toml
+./crates/synapsecore/target/release/synapse-cli install
+export PATH="$HOME/.local/bin:$PATH"
+synapse connect
+synapse`)}
+    <p>The install command copies the binary to <code>~/.local/bin/synapse</code>. Keep that directory on your shell's <code>PATH</code>. <code>synapse connect</code> connects tools installed on this machine; restart them to load the connection. Running <code>synapse</code> in an interactive terminal opens the dashboard. Use <code>synapse status</code> for text status or <code>synapse mcp</code> to run the MCP server.</p>
+    <p>On Linux, credentials use Synapse's encrypted vault. The Keychain backend and the native desktop app are macOS-specific. Continue with <a href="#verify">Verify the connection</a>; the app and app-based setup steps below apply to macOS.</p>
+
+    <h2 id="app">Install the macOS app</h2>
     <ol>
       <li>Download <code>synapse.zip</code> from the <a href="${releaseurl}">latest release</a>.</li>
       <li>Extract the archive and move <strong>synapse.app</strong> into <strong>Applications</strong>. Do not install the CLI while the app is still inside Downloads or a mounted disk image.</li>
@@ -55,7 +68,8 @@ synapse version`)}
     <p>The app shows <strong>Needs repair</strong> if the managed block changes. Repair replaces only that block. Remove deletes only that block; already-running terminals retain the loaded hook until they close. Every changed existing startup file receives a <code>.synapsebackup</code> sibling and an atomic replacement.</p>
 
     <h2 id="tools">Connect tools</h2>
-    <p>On the Synapse dashboard, each detected tool shows its installation and connection state. Choose <strong>Connect</strong> for Codex, Claude Code, pi, or Ainz.</p>
+    <p>See <a href="../harnesses/">supported and custom harnesses</a> to add a connector with a TOML descriptor or contribute one through a PR.</p>
+    <p>On the macOS Synapse dashboard, each detected tool shows its installation and connection state. Choose <strong>Connect</strong> for Codex, Claude Code, pi, or Ainz.</p>
     <p>Setup performs two changes as one rollback-protected operation:</p>
     <ol>
       <li>It registers the installed Synapse executable as a user-level MCP stdio server with the single argument <code>mcp</code>. pi has no MCP client, so its step is <code>pi install npm:synapse-pi</code> instead: one package that starts the same server and offers the same tools.</li>
@@ -92,7 +106,7 @@ claude mcp add --scope user synapse -- ~/.local/bin/synapse mcp`)}
       <li>Restart the connected tool so it reloads its MCP servers and instructions.</li>
       <li>Inspect its available tools. Synapse should expose <code>remember</code>, <code>recall</code>, <code>readmemory</code>, and <code>vaultstatus</code>.</li>
       <li>Ask it to remember one harmless confirmed convention, then recall it in a new session.</li>
-      <li>Open the Synapse <strong>Memories</strong> screen and confirm the exact entry and source are visible.</li>
+      <li>Inspect the entry and its source in the macOS <strong>Memories</strong> screen, or use <code>synapse memory list</code> and <code>synapse memory show &lt;id&gt;</code> on Linux.</li>
     </ol>
     <p>If the dashboard shows a registered but disconnected state, the stored path is stale or its arguments differ from <code>["mcp"]</code>. Choose <strong>Repair</strong> in the app or remove and re-add the manual entry.</p>
   `,

@@ -63,7 +63,7 @@
   }
 
   .matchcut {
-    min-height: 32rem;
+    min-height: 40rem;
   }
 
   .proofbar,
@@ -169,7 +169,7 @@
   }
 
   .herocopy h1 {
-    font-size: min(20vw, var(--herosize));
+    font-size: min(16vw, 4rem);
   }
 
   .heroactions {

@@ -22,7 +22,7 @@ export const connect: Page = {
     <h2 id="outcome">Outcome and prerequisites</h2>
     <p>You will install Synapse, install its command-line tool, connect at least one coding tool, store one harmless memory, and see that same record through three separate surfaces. By the end you will also know exactly which files were touched and how to take every one of them back.</p>
     <ul>
-      <li>Apple-silicon Mac running macOS 13 or later.</li>
+      <li>For this desktop walkthrough: an Apple-silicon Mac running macOS 13 or later. Linux users can follow <a href="../../docs/install/#linux">the terminal setup guide</a>, then <a href="../continuity/">try a memory handoff</a>.</li>
       <li>Codex, Claude Code, or both installed and on <code>PATH</code>.</li>
       <li>The latest <code>synapse.zip</code> release archive.</li>
       <li>About twenty minutes.</li>

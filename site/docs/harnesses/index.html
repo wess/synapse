@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Supported and custom harnesses — Synapse</title>
+  <meta name="description" content="Connect a supported coding agent, describe your own with one TOML file, or contribute a connector.">
+  <meta name="theme-color" content="#0a43c8">
+  <meta property="og:title" content="Supported and custom harnesses — Synapse">
+  <meta property="og:description" content="Connect a supported coding agent, describe your own with one TOML file, or contribute a connector.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://wess.io/synapse/docs/harnesses/">
+  <link rel="canonical" href="https://wess.io/synapse/docs/harnesses/">
+  <link rel="icon" href="../../icon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Fragment+Mono&family=Manrope:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="../../style.css">
+  <script type="module" src="../../site.js"></script>
+</head>
+<body class="docs" data-root="../../">
+  
+  <a class="skip" href="#content">Skip to content</a>
+  <header class="topbar">
+    <a class="wordmark" href="../../" aria-label="Synapse home">
+      <img src="../../icon.svg" width="30" height="30" alt="">
+      <span>Synapse</span>
+    </a>
+    <button class="navtoggle" type="button" aria-expanded="false" aria-controls="topnav">Menu</button>
+    <nav id="topnav" aria-label="Primary">
+      <a href="../../docs/" aria-current="page">Docs</a>
+      <a href="../../tutorials/">Tutorials</a>
+      <a href="https://github.com/wess/synapse">GitHub <span aria-hidden="true">↗</span></a>
+      <a class="navdownload" href="https://github.com/wess/synapse/releases/latest/download/synapse.zip">Download</a>
+    </nav>
+  </header>
+  
+  <div class="doclayout">
+    
+  <aside class="docsrail" aria-label="Documentation navigation">
+    <div class="searchbox">
+      <label for="search">Search the guide</label>
+      <input id="search" type="search" placeholder="Memory, vaults, restore…" autocomplete="off">
+      <div class="searchresults" data-results hidden></div>
+      <span class="searchstatus" data-searchstatus role="status" aria-live="polite"></span>
+    </div>
+    <details class="railnav" open>
+      <summary>Browse all guides</summary>
+      <nav aria-label="All guides">
+        <h2>Documentation</h2>
+        <ul>
+        <li><a href="../../docs/">Start here</a></li>
+        <li><a href="../../docs/install/">Install and connect</a></li>
+        <li><a href="../../docs/harnesses/" aria-current="page">Supported and custom harnesses</a></li>
+        <li><a href="../../docs/app/">Desktop app reference</a></li>
+        <li><a href="../../docs/memory/">Memory and recall</a></li>
+        <li><a href="../../docs/mcp/">MCP tool reference</a></li>
+        <li><a href="../../docs/mesh/">Agent mesh</a></li>
+        <li><a href="../../docs/skills/">Skills</a></li>
+        <li><a href="../../docs/vault/">Vaults and scopes</a></li>
+        <li><a href="../../docs/data/">Data lifecycle</a></li>
+        <li><a href="../../docs/config/">Configuration and paths</a></li>
+        <li><a href="../../docs/security/">Security model</a></li>
+        <li><a href="../../docs/cli/">CLI reference</a></li>
+        <li><a href="../../docs/troubleshoot/">Troubleshooting</a></li></ul>
+        <h2>Tutorials</h2>
+        <ul>
+        <li><a href="../../tutorials/">Tutorials</a></li>
+        <li><a href="../../tutorials/connect/">Install and connect your first tools</a></li>
+        <li><a href="../../tutorials/continuity/">Carry one decision between tools</a></li>
+        <li><a href="../../tutorials/curate/">Curate and optimize memory</a></li>
+        <li><a href="../../tutorials/secrets/">Use a scoped secret in either shell mode</a></li>
+        <li><a href="../../tutorials/skills/">Keep one skill library across every tool</a></li>
+        <li><a href="../../tutorials/learn/">Let your agents write skills</a></li>
+        <li><a href="../../tutorials/launch/">Start a tool with everything in place</a></li>
+        <li><a href="../../tutorials/mesh/">Run a team of agents and drive it yourself</a></li>
+        <li><a href="../../tutorials/overseer/">Hand a job to one agent and watch it grow a team</a></li>
+        <li><a href="../../tutorials/recovery/">Export and restore safely</a></li>
+        <li><a href="../../tutorials/lifecycle/">Check, migrate, and remove Synapse</a></li></ul>
+      </nav>
+    </details>
+  </aside>
+    <main class="article" id="content">
+      <header class="articlehead">
+        <h1>Supported and custom harnesses</h1>
+        <span>Connect a supported coding agent, describe your own with one TOML file, or contribute a connector.</span>
+      </header>
+      
+    <h2 id="supported">Supported harnesses</h2>
+    <p>A harness is the coding agent you run. Synapse ships connectors for Claude Code (<code>claude</code>), Codex (<code>codex</code>), pi (<code>pi</code>), and Ainz (<code>ainz</code>). Claude Code, Codex, and Ainz connect through MCP. pi uses the <code>synapse-pi</code> extension.</p>
+    <p>Each connector declares shared guidance and skill locations, connection detection, and launch arguments. Claude Code and pi also have dedicated session integration. A custom descriptor does not acquire those hooks by declaring the same paths.</p>
+    
+  <div class="codeblock">
+    <div class="codebar">
+      <span>shell</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>synapse tool list
+synapse tool show codex
+synapse connect codex</code></pre>
+  </div>
+
+    <h2 id="create">Create a connector</h2>
+    <p>Install your harness and make its executable available on <code>PATH</code>. From your repository root, run:</p>
+    
+  <div class="codeblock">
+    <div class="codebar">
+      <span>shell</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>synapse tool create mytool</code></pre>
+  </div>
+    <p>Synapse opens a commented template using <code>VISUAL</code>, then <code>EDITOR</code>, or <code>vi</code> if neither is set. Use an editor executable that waits until you finish editing. Replace the sample paths and arguments with your harness's actual settings. Synapse checks the descriptor before saving it to <code>.synapse/tools/mytool.toml</code>; an invalid draft does not replace the saved file. Validation checks the descriptor structure, not whether your harness accepts its commands.</p>
+    <p>Use <code>synapse tool create mytool --user</code> to save under the <code>tools/</code> folder in Synapse's data directory. Run <code>synapse path</code> to locate that directory. A project descriptor overrides a user descriptor with the same name, and a user descriptor overrides a built-in. Use a lowercase name such as <code>mytool</code>; it becomes the filename and the name passed to connection commands.</p>
+    <p>You can share a project descriptor in your repository. Run the commands here from that repository's root so creation, inspection, and connection use the same project layer. Harness descriptors live in <code>.synapse/tools/</code>; <code>.synapse.yaml</code> configures project credential scopes.</p>
+
+    <h2 id="example">Descriptor example</h2>
+    <p>This example assumes a fictional harness named <code>mytool</code> with an <code>mcp add</code> command and a JSON MCP registry. Adapt it to your harness before connecting.</p>
+    
+  <div class="codeblock">
+    <div class="codebar">
+      <span>toml</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>name = &quot;My Tool&quot;
+command = &quot;mytool&quot;
+
+[home]
+default = &quot;.mytool&quot;
+
+[paths]
+instructions = &quot;{home}/AGENTS.md&quot;
+settings = &quot;{home}/settings.json&quot;
+integration = &quot;{home}/settings.json&quot;
+skills = &quot;{home}/skills&quot;
+projectskills = &quot;.mytool/skills&quot;
+
+[connect]
+add = [&quot;mcp&quot;, &quot;add&quot;, &quot;synapse&quot;, &quot;--&quot;, &quot;{server}&quot;, &quot;mcp&quot;]
+remove = [&quot;mcp&quot;, &quot;remove&quot;, &quot;synapse&quot;]
+
+[detect]
+format = &quot;json&quot;
+at = [&quot;mcpServers&quot;, &quot;synapse&quot;]
+args = [&quot;mcp&quot;]
+
+[launch]
+prompt = [&quot;{prompt}&quot;]</code></pre>
+  </div>
+    <ul>
+      <li><code>command</code> names the executable. Connection arguments are separate array entries passed to that executable.</li>
+      <li><code>home.default</code> is relative to the user's home. Use <code>{configdir}/mytool</code> for the platform configuration directory, or set <code>home.env</code> if the harness supports a home-directory environment override.</li>
+      <li><code>{home}</code> in paths refers to that resolved harness directory. <code>projectskills</code> is relative to the project root.</li>
+      <li><code>{server}</code> expands to the Synapse executable. The harness must support the registration and removal commands you supply.</li>
+      <li><code>detect.format</code> accepts <code>json</code> or <code>toml</code>. <code>detect.at</code> names the key path to the Synapse server entry, whose command and arguments Synapse checks.</li>
+      <li>Launch slots such as <code>prompt</code>, <code>headless</code>, <code>config</code>, and <code>model</code> are optional. Declare only flags your harness supports. A descriptor with an interactive prompt alone does not establish unattended mesh support.</li>
+    </ul>
+    <p>Use <code>synapse tool show &lt;name&gt;</code> to inspect a built-in example. A harness with a different transport, configuration schema, or lifecycle hook may need a code adapter; a descriptor cannot implement a protocol.</p>
+
+    <h2 id="verify">Verify and update</h2>
+    
+  <div class="codeblock">
+    <div class="codebar">
+      <span>shell</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>synapse tool show mytool
+synapse connect mytool
+synapse status
+synapse launch mytool --print</code></pre>
+  </div>
+    <p>Restart the harness. Confirm it exposes Synapse's memory tools, then save and recall a harmless project convention. Inspect its instruction file for the shared guidance pointer. If it supports Agent Skills, test installing a skill with <code>synapse skill install &lt;skill&gt; --tool mytool</code>.</p>
+    <p>To revise the descriptor, run <code>synapse tool edit mytool</code>, followed by <code>synapse connect mytool --refresh</code>. Add <code>--user</code> to the edit command for a personal descriptor. The show command reports the winning layer, which helps identify a project override.</p>
+    <p>Test cleanup with <code>synapse disconnect mytool</code> and check that unrelated configuration remains intact. Deleting a descriptor with <code>synapse tool delete mytool</code> does not disconnect the harness; disconnect first if you are removing the integration.</p>
+
+    <h2 id="contribute">Contribute a harness</h2>
+    <p>PRs for additional harnesses are welcome at <a href="https://github.com/wess/synapse">wess/synapse</a>. You can use your custom connector while the PR is under review.</p>
+    <ol>
+      <li>Add the tested descriptor to <code>crates/synapsecore/assets/tools/&lt;name&gt;.toml</code> and add its embedded entry to <code>BUILTINS</code> in <code>crates/synapsecore/src/agent/tool.rs</code>.</li>
+      <li>Include tests for the resolved paths, connection detection, registration and removal. Cover launch arguments and skill installation for the features you declare. The custom-harness integration test in <code>crates/synapsecore/tests/cli.rs</code> demonstrates the full connection lifecycle with a fake executable.</li>
+      <li>State the harness version and operating systems tested. Check that setup and disconnect preserve unrelated settings and instructions.</li>
+      <li>Update the README support table and this guide. Document limitations or any adapter code needed for special behavior.</li>
+    </ol>
+    
+  <div class="codeblock">
+    <div class="codebar">
+      <span>shell</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>cargo test --locked --manifest-path crates/synapsecore/Cargo.toml
+bun run site
+bun run sitecheck</code></pre>
+  </div>
+  
+    </main>
+    <aside class="ontoc" aria-label="On this page">
+        <span>On this page</span>
+        <ol><li><a href="#supported">Supported harnesses</a></li><li><a href="#create">Create a connector</a></li><li><a href="#example">Descriptor example</a></li><li><a href="#verify">Verify and update</a></li><li><a href="#contribute">Contribute a harness</a></li></ol>
+      </aside>
+  </div>
+  
+  <footer class="footer">
+    <div>
+      <a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">Synapse</a>
+      <p>Shared memory and skills for coding agents, kept on your machine.</p>
+    </div>
+    <nav aria-label="Footer">
+      <a href="../../docs/">Documentation</a>
+      <a href="../../tutorials/">Tutorials</a>
+      <a href="https://github.com/wess/synapse">Source</a>
+      <a href="https://github.com/wess/synapse/releases">Releases</a>
+    </nav>
+    <p class="footerfine">No account required. macOS desktop · Linux terminal, CLI &amp; MCP.</p>
+  </footer>
+</body>
+</html>

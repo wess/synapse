@@ -11,11 +11,11 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Synapse — one memory, every tool</title>
-  <meta name="description" content="Local project memory and scoped credentials, ready for the tools that need them.">
+  <title>Synapse — shared memory for coding agents</title>
+  <meta name="description" content="Share local project memory and skills between Claude Code, Codex, pi, and Ainz. Recall saved decisions across coding agents. Open source for macOS and Linux.">
   <meta name="theme-color" content="#0a43c8">
-  <meta property="og:title" content="Synapse">
-  <meta property="og:description" content="Local project memory and scoped credentials, ready for the tools that need them.">
+  <meta property="og:title" content="Synapse — shared memory for coding agents">
+  <meta property="og:description" content="Share local project memory and skills between Claude Code, Codex, pi, and Ainz. Recall saved decisions across coding agents. Open source for macOS and Linux.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://wess.io/synapse/">
   <link rel="canonical" href="https://wess.io/synapse/">
@@ -49,44 +49,40 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     <div class="heroindex" aria-hidden="true">
       <span>Roll S-001</span>
       <span data-scene>Scene 01</span>
-      <span>On this Mac</span>
+      <span>On this machine</span>
     </div>
     <div class="herogrid">
       <div class="herocopy">
-        <h1>Your tools forget. Synapse remembers.</h1>
-        <p>Keep project decisions and credentials on your Mac, ready for the tools and terminal sessions that need them.</p>
+        <h1>Stop repeating yourself to coding agents.</h1>
+        <p>Carry project memory and skills between Claude Code, Codex, pi, and Ainz. Save a correction once, then recall it from another connected tool. Your memory stays on your machine.</p>
         <div class="heroactions">
           <a class="button" href="https://github.com/wess/synapse/releases/latest/download/synapse.zip">Download for macOS <span aria-hidden="true">↓</span></a>
-          <a class="button secondary" href="docs/">See how it works</a>
+          <a class="button secondary" href="tutorials/continuity/">Try a handoff</a>
         </div>
-        <span class="heronote">Apple silicon · macOS 13+ · Developer ID signed prerelease</span>
+        <span class="heronote">macOS desktop · Linux terminal, CLI &amp; MCP · <a href="docs/install/#linux">Linux setup</a></span>
       </div>
-      <div class="matchcut" aria-label="A confirmed project decision moves from one work session to the next through Synapse">
+      <div class="matchcut" aria-label="Illustrative example: save a convention in Codex and recall it in Claude Code in the same project">
         <div class="terminal codex">
-          <div class="terminalbar"><span>Earlier session</span><span>10:42:11</span></div>
-          <pre><span class="prompt">›</span> We settled the file structure.
-
-Keep files small and focused.
-Each file should have one clear job.
+          <div class="terminalbar"><span>Codex</span><span>Example · save</span></div>
+          <pre><span class="prompt">›</span> Use Bun in this repo.
+Remember that for this project.
 
 <span class="result">✓ remembered by Synapse</span></pre>
         </div>
         <div class="terminal claude">
-          <div class="terminalbar"><span>Next session</span><span>10:47:03</span></div>
-          <pre><span class="prompt">›</span> Continue where we left off.
+          <div class="terminalbar"><span>Claude Code</span><span>Example · recall</span></div>
+          <pre><span class="prompt">›</span> Recall this project’s tooling.
+How do I install dependencies?
 
-<span class="result">Confirmed project decision</span>
-Keep files small and focused.
-Each file should have one clear job.
-
-<span class="result">Context recovered before work begins.</span></pre>
+<span class="result">Recalled: use Bun in this repo.</span>
+bun install</pre>
         </div>
         <div class="thread" aria-hidden="true"></div>
         <div class="memorystrip">
           <div class="stripcell"><span>Memory</span><strong>#24</strong></div>
-          <div class="stripcell"><span>Confirmed decision</span><strong>Keep files small and focused.</strong></div>
+          <div class="stripcell"><span>Confirmed decision</span><strong>Use Bun in this repo.</strong></div>
           <div class="stripcell striparrow" aria-hidden="true">→</div>
-          <div class="stripcell"><span>Available next time</span><strong>Automatically</strong></div>
+          <div class="stripcell"><span>Recall from</span><strong>Connected tools</strong></div>
           <div class="stripcell"><span>Stored</span><strong>Locally</strong></div>
         </div>
       </div>
@@ -94,36 +90,36 @@ Each file should have one clear job.
   </section>
 
   <section class="proofbar" aria-label="What Synapse does">
-    <div><strong>Remember decisions</strong><span>Carry useful context between sessions.</span></div>
-    <div><strong>Scope credentials</strong><span>Give each project only what it needs.</span></div>
-    <div><strong>Stay in control</strong><span>Review, change, export, or delete anything.</span></div>
+    <div><strong>Switch agents</strong><span>Recall the decisions you already made.</span></div>
+    <div><strong>Share skills</strong><span>Install one library into your connected tools.</span></div>
+    <div><strong>Keep memory local</strong><span>Inspect, correct, export, or delete it.</span></div>
   </section>
 
   <section class="sequence" data-take="Scene 02">
     <div class="sectionhead">
-      <h2>Set it once. Keep moving.</h2>
-      <p>Synapse quietly carries the parts of a project that should survive the next session.</p>
+      <h2>Use another agent. Keep your decisions.</h2>
+      <p>Keep your conventions, corrections, and reusable skills available when you start a new session or change coding tools.</p>
     </div>
     <div class="takes">
       <article class="take">
         <span>Connect</span>
-        <h3>Bring your tools together.</h3>
-        <p>Connect every tool you use to one local memory and one shared guidance file. Your existing setup stays yours.</p>
+        <h3>Connect the agents you use.</h3>
+        <p>Connect Claude Code, Codex, pi, or Ainz from the app or CLI. Use another harness? <a href="docs/harnesses/">Add it with a TOML descriptor</a>. PRs for additional harnesses are welcome.</p>
       </article>
       <article class="take">
         <span>Import</span>
         <h3>Bring useful history with you.</h3>
-        <p>Preview existing memory from either tool, leave suspicious content untouched, and undo any import batch.</p>
+        <p>Preview and import existing Claude and Codex memory. Choose what to keep, inspect the source, and undo an import batch if needed.</p>
       </article>
       <article class="take">
         <span>Continue</span>
-        <h3>Pick up with the context intact.</h3>
-        <p>Start another session or switch tools without reconstructing the same decisions again.</p>
+        <h3>Recall before you start.</h3>
+        <p>Open another connected agent in the same project and recall its saved conventions. Update a decision when it changes so future recall returns the current version.</p>
       </article>
       <article class="take">
-        <span>Control</span>
-        <h3>Keep the final say.</h3>
-        <p>Search, correct, export, or delete any memory from the app whenever you want.</p>
+        <span>Skills</span>
+        <h3>Maintain one skill library.</h3>
+        <p>Write a reusable procedure once, install it into your connected tools, and check which copies need an update. <a href="tutorials/skills/">Set up shared skills</a>.</p>
       </article>
     </div>
   </section>
@@ -151,13 +147,13 @@ Settings → Shell integration → Enable</pre>
 
   <section class="controlscene" data-take="Scene 04">
     <div class="memoryledger" aria-label="Example project memory">
-      <div class="memoryrow"><span>#24</span><div><strong>Keep files small and focused.</strong><small>project convention</small></div><time>10:42</time></div>
+      <div class="memoryrow"><span>#24</span><div><strong>Use Bun in this repo.</strong><small>project convention</small></div><time>10:42</time></div>
       <div class="memoryrow"><span>#23</span><div><strong>Use one date format throughout the product.</strong><small>product decision</small></div><time>09:18</time></div>
       <div class="memoryrow"><span>#22</span><div><strong>Never expose production credentials locally.</strong><small>security boundary</small></div><time>Yesterday</time></div>
     </div>
     <div class="controlcopy">
       <h2>Nothing hidden.</h2>
-      <p>Your memory stays on your Mac and remains visible in the app. Read the exact text, fix what changed, make a backup, or remove what no longer belongs.</p>
+      <p>Your memory stays on your machine and remains visible in the app. Read the exact text, fix what changed, make a backup, or remove what no longer belongs.</p>
       <a class="button secondary" href="docs/data/">Read about your data</a>
     </div>
   </section>
@@ -165,19 +161,20 @@ Settings → Shell integration → Enable</pre>
   <section class="guidegate">
     <div>
       <h2>Start in minutes. Go deeper when you need to.</h2>
-      <p>Follow the setup guide, learn how memory works, or add approved credentials to a project.</p>
+      <p>Connect two tools, save a project convention, and recall it from the second tool. Follow the walkthrough to check the result yourself.</p>
     </div>
     <div class="guidelist">
-      <a href="docs/install/"><span><strong>Install and connect</strong><span>Download the app and connect your first tool.</span></span><b aria-hidden="true">→</b></a>
-      <a href="docs/memory/"><span><strong>Memory and recall</strong><span>Choose what lasts and stay in control of it.</span></span><b aria-hidden="true">→</b></a>
-      <a href="tutorials/secrets/"><span><strong>Scope project credentials</strong><span>Approve only the environment a project needs.</span></span><b aria-hidden="true">→</b></a>
+      <a href="docs/harnesses/"><span><strong>Supported and custom harnesses</strong><span>See the support list, add your harness, or contribute a connector.</span></span><b aria-hidden="true">→</b></a>
+      <a href="docs/install/"><span><strong>Install and connect</strong><span>Set up the macOS app or Linux CLI and connect a tool.</span></span><b aria-hidden="true">→</b></a>
+      <a href="tutorials/continuity/"><span><strong>Try your first handoff</strong><span>Save a decision in one agent. Recall it in another.</span></span><b aria-hidden="true">→</b></a>
+      <a href="tutorials/skills/"><span><strong>Share your skills</strong><span>Install one skill library across your coding tools.</span></span><b aria-hidden="true">→</b></a>
     </div>
   </section>
 
   <section class="closing">
     <div>
-      <h2>Keep the thread.</h2>
-      <p>Download Synapse, connect your tools, and let confirmed context survive the next handoff.</p>
+      <h2>Give your next session a head start.</h2>
+      <p>Download Synapse and try a handoff with one project decision. No account required. Open source under the MIT license.</p>
       <div class="heroactions">
         <a class="button" href="https://github.com/wess/synapse/releases/latest/download/synapse.zip">Download for macOS</a>
         <a class="button secondary" href="tutorials/connect/">Follow the setup guide</a>
@@ -189,7 +186,7 @@ Settings → Shell integration → Enable</pre>
   <footer class="footer">
     <div>
       <a class="wordmark" href=""><img src="icon.svg" width="26" height="26" alt="">Synapse</a>
-      <p>Project memory and scoped credentials, kept on your Mac.</p>
+      <p>Shared memory and skills for coding agents, kept on your machine.</p>
     </div>
     <nav aria-label="Footer">
       <a href="docs/">Documentation</a>
@@ -197,7 +194,7 @@ Settings → Shell integration → Enable</pre>
       <a href="https://github.com/wess/synapse">Source</a>
       <a href="https://github.com/wess/synapse/releases">Releases</a>
     </nav>
-    <p class="footerfine">No account required. Apple silicon · macOS 13+.</p>
+    <p class="footerfine">No account required. macOS desktop · Linux terminal, CLI &amp; MCP.</p>
   </footer>
 </body>
 </html>

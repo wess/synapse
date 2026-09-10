@@ -68,7 +68,7 @@ const footer = (root: string) => `
   <footer class="footer">
     <div>
       <a class="wordmark" href="${root}"><img src="${root}icon.svg" width="26" height="26" alt="">Synapse</a>
-      <p>Project memory and scoped credentials, kept on your Mac.</p>
+      <p>Shared memory and skills for coding agents, kept on your machine.</p>
     </div>
     <nav aria-label="Footer">
       <a href="${root}docs/">Documentation</a>
@@ -76,7 +76,7 @@ const footer = (root: string) => `
       <a href="${repositoryurl}">Source</a>
       <a href="${repositoryurl}/releases">Releases</a>
     </nav>
-    <p class="footerfine">No account required. Apple silicon · macOS 13+.</p>
+    <p class="footerfine">No account required. macOS desktop · Linux terminal, CLI &amp; MCP.</p>
   </footer>`;
 
 const article = (page: Page, pages: Page[], root: string) => `
@@ -95,16 +95,17 @@ const article = (page: Page, pages: Page[], root: string) => `
 export const render = (page: Page, pages: Page[]) => {
   const root = rootfor(page.path);
   const canonical = `${siteurl}${route(page)}`;
+  const title = page.kind === "home" ? "Synapse — shared memory for coding agents" : `${page.title} — Synapse`;
   const contract = page.contract ? `${page.contract}\n` : "";
   return `${contract}<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>${page.title === "Synapse" ? "Synapse — one memory, every tool" : `${page.title} — Synapse`}</title>
+  <title>${title}</title>
   <meta name="description" content="${page.description}">
   <meta name="theme-color" content="#0a43c8">
-  <meta property="og:title" content="${page.title}">
+  <meta property="og:title" content="${title}">
   <meta property="og:description" content="${page.description}">
   <meta property="og:type" content="website">
   <meta property="og:url" content="${canonical}">

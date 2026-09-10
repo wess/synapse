@@ -126,6 +126,7 @@ ${command("guidance adopt", "synapse guidance adopt --confirm", "Move unmanaged 
       release. A described tool gets everything a built-in gets: connection,
       shared guidance, the skill library, and the mesh.
     </p>
+    <p>Follow the <a href="../harnesses/">custom harness guide</a> for a descriptor example, setup verification, and contribution instructions.</p>
     ${command("tool list", "synapse tool list [--json]", "Every tool this machine can connect to, with the layer each one resolves from.")}
     ${command("tool show", "synapse tool show &lt;name&gt;", "Print one descriptor and where it came from.")}
     ${command("tool create", "synapse tool create &lt;name&gt;", "Describe a tool Synapse does not ship. Opens a commented template in your editor and refuses to save a file that would not load. The name becomes the descriptor's file name and what you pass to <code>--tool</code>.")}
