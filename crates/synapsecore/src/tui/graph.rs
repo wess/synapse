@@ -5,6 +5,11 @@
 //! cannot hover, so the cursor keys walk the nodes and whatever it lands on is
 //! spelled out underneath: on a map, the thing you are pointing at is the one
 //! thing a picture cannot tell you.
+//!
+//! The layout is a volume and this is the front of it, which is where the
+//! window's camera starts: the same picture, before anybody turned it. Depth
+//! decides only what is drawn over what — a terminal cell is one character, so
+//! the nearer node wins it.
 
 use crate::brain::{NodeKind, Tie};
 use crate::tui::state::{self, State};
@@ -28,6 +33,10 @@ fn map(frame: &mut Frame, area: Rect, state: &State) {
     let title = match graph.shown as i64 == graph.held {
         true => format!("Map · {} memories", graph.held),
         false => format!("Map · {} of {} memories", graph.shown, graph.held),
+    };
+    let title = match graph.shown > BUSY {
+        true => format!("{title} · recorded links only"),
+        false => title,
     };
     if graph.isempty() {
         frame.render_widget(
@@ -54,9 +63,24 @@ fn map(frame: &mut Frame, area: Rect, state: &State) {
     frame.render_widget(canvas, area);
 }
 
+/// Past this many memories the inferred links are left out.
+///
+/// The window draws them at a tenth of the opacity of a recorded one, which is
+/// how it says *this is a resemblance, not a fact*. A braille cell has no
+/// tenth: it is on or it is off, so drawing them here states them as firmly as
+/// the ones somebody wrote down — and at this size there are three of them for
+/// every memory, which fills the screen with the least reliable thing on it.
+/// Below the threshold there are few enough that they are still a shape rather
+/// than a fog.
+const BUSY: usize = 60;
+
 fn paint(context: &mut Context<'_>, state: &State, cursor: usize) {
     let graph = &state.graph;
+    let inferred = graph.shown <= BUSY;
     for link in &graph.links {
+        if link.tie == Tie::Shared && !inferred {
+            continue;
+        }
         let (from, to) = (&graph.nodes[link.from], &graph.nodes[link.to]);
         // What the store recorded is drawn in the accent; what the map inferred
         // from shared words is drawn in the border colour, because it is the
@@ -77,7 +101,7 @@ fn paint(context: &mut Context<'_>, state: &State, cursor: usize) {
     // A layer of its own, so a node is never drawn under a line that happens to
     // pass through it.
     context.layer();
-    for (index, node) in graph.nodes.iter().enumerate() {
+    for (index, node) in depthorder(state) {
         let colour = theme::CLUSTERS[node.cluster % theme::CLUSTERS.len()];
         let mark = match (index == cursor, &node.kind, node.superseded) {
             (true, _, _) => "◉",
@@ -109,6 +133,21 @@ fn paint(context: &mut Context<'_>, state: &State, cursor: usize) {
             Span::styled(format!("  {}", shorten(&node.label, 28)), style),
         );
     }
+}
+
+/// Nodes from the back of the cloud forward, so the one nearest the front takes
+/// the cell when two land on it. The cursor's node is last whatever its depth:
+/// a selection nothing can be seen through is not a selection.
+fn depthorder(state: &State) -> Vec<(usize, &crate::brain::Node)> {
+    let cursor = state::cursor(state);
+    let mut order: Vec<(usize, &crate::brain::Node)> =
+        state.graph.nodes.iter().enumerate().collect();
+    order.sort_by(|(left, one), (right, two)| {
+        (*left == cursor)
+            .cmp(&(*right == cursor))
+            .then_with(|| one.z.total_cmp(&two.z))
+    });
+    order
 }
 
 /// The graph counts y downward, the way a screen does. A canvas counts it

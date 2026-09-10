@@ -7,10 +7,17 @@
 //! know: which projects this machine holds anything about, where the weight
 //! is, and what a decision made last week sits next to.
 //!
-//! So: nodes and links, laid out here rather than in either dashboard. The
-//! window and the terminal draw the same map because they are handed the same
-//! coordinates — a layout computed twice is two layouts that disagree about the
-//! same machine by next year, and neither one is drawing.
+//! So: nodes and links, laid out here rather than in either dashboard, and laid
+//! out in three dimensions. A graph is not a flat thing: on a plane a cluster
+//! with more neighbours than the plane has room for either overlaps itself or
+//! shoves everything else off the map, and both of those are the layout lying
+//! about the store. In a volume it uses the third direction instead.
+//!
+//! The window and the terminal draw the same map because they are handed the
+//! same coordinates — a layout computed twice is two layouts that disagree
+//! about the same machine by next year, and neither one is drawing. The window
+//! turns the cloud; the terminal draws the front of it, which is where the
+//! window's camera starts.
 //!
 //! Three kinds of link, and only one of them is inferred:
 //!
@@ -65,10 +72,13 @@ pub struct Node {
     /// Replaced by a newer memory, and so out of recall. Drawn hollow rather
     /// than hidden — it is still in the store, and still restorable.
     pub superseded: bool,
-    /// Position in the unit square, `0.0..=1.0`, y downward. A surface scales
-    /// it into whatever box it has.
+    /// Position in the unit cube, `0.0..=1.0`, y downward and z toward the
+    /// viewer. A surface scales it into whatever box it has; one that draws
+    /// flat uses `x` and `y` and reads `z` as depth, which is the same map
+    /// seen from the front.
     pub x: f32,
     pub y: f32,
+    pub z: f32,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -160,6 +170,7 @@ pub fn build(memories: &[Memory], held: i64) -> Graph {
             superseded: false,
             x: 0.0,
             y: 0.0,
+            z: 0.0,
         })
         .collect();
 
@@ -177,6 +188,7 @@ pub fn build(memories: &[Memory], held: i64) -> Graph {
             superseded: memory.superseded != 0,
             x: 0.0,
             y: 0.0,
+            z: 0.0,
         });
     }
 
@@ -351,7 +363,7 @@ fn label(body: &str) -> String {
 /// maps.
 const PASSES: usize = 90;
 
-/// How far a node may move on the first pass, as a fraction of the square. It
+/// How far a node may move on the first pass, as a fraction of the cube. It
 /// falls off by [`COOLING`] each pass, which is what turns a scramble into a
 /// layout instead of a permanent wobble.
 const HEAT: f32 = 0.10;
@@ -359,7 +371,7 @@ const COOLING: f32 = 0.955;
 
 /// The pull toward the middle. Without it a memory that shares nothing with
 /// anything is pushed off the map by everything else, and the map is mostly
-/// empty square.
+/// empty space.
 const GRAVITY: f32 = 0.012;
 
 /// A hub is what its memories hang off, so it is heavier than they are and
@@ -367,8 +379,14 @@ const GRAVITY: f32 = 0.012;
 /// reads as one cloud rather than several.
 const ANCHOR: f32 = 0.45;
 
-/// Force-directed placement, seeded deterministically and run for a fixed
-/// number of passes.
+/// Force-directed placement in three dimensions, seeded deterministically and
+/// run for a fixed number of passes.
+///
+/// Three rather than two because a graph is not a flat thing. On a plane, a
+/// cluster with more neighbours than the plane has room for either overlaps
+/// itself or pushes everything else off the map; in a volume it simply uses
+/// the third direction, which is why the same store reads as separate
+/// projects here and as one smear when it was flattened.
 ///
 /// A random seed would put the same store in a different place every time it
 /// was opened, and a map somebody has learned the shape of is worth more than
@@ -378,47 +396,55 @@ fn place(nodes: &mut [Node], links: &[Link]) {
     if count == 1 {
         nodes[0].x = 0.5;
         nodes[0].y = 0.5;
+        nodes[0].z = 0.5;
         return;
     }
 
-    // The golden angle: successive points land in the gaps left by the ones
-    // before, so the starting scatter is even without being a ring.
+    // A Fibonacci spiral over the sphere, pulled inward by a cube root so the
+    // scatter fills the volume rather than coating its shell. Successive points
+    // land in the gaps left by the ones before, which is an even start without
+    // being a pattern anybody can see in the result.
     const GOLDEN: f32 = 2.399_963_2;
     for (index, node) in nodes.iter_mut().enumerate() {
-        let angle = index as f32 * GOLDEN;
-        let radius = ((index as f32 + 0.5) / count as f32).sqrt();
-        node.x = radius * angle.cos();
-        node.y = radius * angle.sin();
+        let fraction = (index as f32 + 0.5) / count as f32;
+        let polar = (1.0 - 2.0 * fraction).clamp(-1.0, 1.0).acos();
+        let azimuth = index as f32 * GOLDEN;
+        let radius = fraction.cbrt();
+        node.x = radius * polar.sin() * azimuth.cos();
+        node.y = radius * polar.sin() * azimuth.sin();
+        node.z = radius * polar.cos();
     }
 
-    let ideal = (1.0 / count as f32).sqrt();
+    let ideal = (1.0 / count as f32).cbrt();
     let mut heat = HEAT;
-    let mut shift = vec![(0.0f32, 0.0f32); count];
+    let mut shift = vec![[0.0f32; 3]; count];
     for _ in 0..PASSES {
-        shift.iter_mut().for_each(|value| *value = (0.0, 0.0));
+        shift.iter_mut().for_each(|value| *value = [0.0; 3]);
 
         for left in 0..count {
             for right in (left + 1)..count {
-                let (dx, dy) = (
+                let delta = [
                     nodes[left].x - nodes[right].x,
                     nodes[left].y - nodes[right].y,
-                );
-                let distance = (dx * dx + dy * dy).sqrt().max(1e-4);
+                    nodes[left].z - nodes[right].z,
+                ];
+                let distance = length(delta).max(1e-4);
                 let force = ideal * ideal / distance;
-                let (ux, uy) = (dx / distance, dy / distance);
-                shift[left].0 += ux * force;
-                shift[left].1 += uy * force;
-                shift[right].0 -= ux * force;
-                shift[right].1 -= uy * force;
+                for axis in 0..3 {
+                    let push = delta[axis] / distance * force;
+                    shift[left][axis] += push;
+                    shift[right][axis] -= push;
+                }
             }
         }
 
         for link in links {
-            let (dx, dy) = (
+            let delta = [
                 nodes[link.from].x - nodes[link.to].x,
                 nodes[link.from].y - nodes[link.to].y,
-            );
-            let distance = (dx * dx + dy * dy).sqrt().max(1e-4);
+                nodes[link.from].z - nodes[link.to].z,
+            ];
+            let distance = length(delta).max(1e-4);
             // A recorded link pulls harder than an inferred one, so what the
             // store actually knows decides the shape and the resemblances only
             // decorate it.
@@ -428,25 +454,26 @@ fn place(nodes: &mut [Node], links: &[Link]) {
                 Tie::Shared => 0.45,
             };
             let force = distance * distance / ideal * strength;
-            let (ux, uy) = (dx / distance, dy / distance);
-            shift[link.from].0 -= ux * force;
-            shift[link.from].1 -= uy * force;
-            shift[link.to].0 += ux * force;
-            shift[link.to].1 += uy * force;
+            for axis in 0..3 {
+                let pull = delta[axis] / distance * force;
+                shift[link.from][axis] -= pull;
+                shift[link.to][axis] += pull;
+            }
         }
 
         for (index, node) in nodes.iter_mut().enumerate() {
-            shift[index].0 -= node.x * GRAVITY / ideal;
-            shift[index].1 -= node.y * GRAVITY / ideal;
-            let (dx, dy) = shift[index];
-            let distance = (dx * dx + dy * dy).sqrt().max(1e-4);
+            shift[index][0] -= node.x * GRAVITY / ideal;
+            shift[index][1] -= node.y * GRAVITY / ideal;
+            shift[index][2] -= node.z * GRAVITY / ideal;
+            let distance = length(shift[index]).max(1e-4);
             let step = distance.min(heat) / distance;
             let weight = match node.kind {
                 Kind::Hub => ANCHOR,
                 Kind::Memory => 1.0,
             };
-            node.x += dx * step * weight;
-            node.y += dy * step * weight;
+            node.x += shift[index][0] * step * weight;
+            node.y += shift[index][1] * step * weight;
+            node.z += shift[index][2] * step * weight;
         }
         heat *= COOLING;
     }
@@ -454,31 +481,38 @@ fn place(nodes: &mut [Node], links: &[Link]) {
     normalise(nodes);
 }
 
+fn length(vector: [f32; 3]) -> f32 {
+    (vector[0] * vector[0] + vector[1] * vector[1] + vector[2] * vector[2]).sqrt()
+}
+
 /// The margin left around the map, so a node on the edge is not half a node.
 const MARGIN: f32 = 0.06;
 
-/// Fit the layout into the unit square, one scale for both axes.
+/// Fit the layout into the unit cube, one scale for all three axes.
 ///
-/// Scaling each axis to fill would stretch a map that came out tall into a
-/// square one, which moves every node relative to every other. What the layout
+/// Scaling each axis to fill would stretch a cloud that came out tall into a
+/// cube, which moves every node relative to every other. What the layout
 /// decided is a shape; this only moves and sizes it.
 fn normalise(nodes: &mut [Node]) {
-    let (mut minx, mut maxx) = (f32::MAX, f32::MIN);
-    let (mut miny, mut maxy) = (f32::MAX, f32::MIN);
+    let mut low = [f32::MAX; 3];
+    let mut high = [f32::MIN; 3];
     for node in nodes.iter() {
-        minx = minx.min(node.x);
-        maxx = maxx.max(node.x);
-        miny = miny.min(node.y);
-        maxy = maxy.max(node.y);
+        for (axis, value) in [node.x, node.y, node.z].into_iter().enumerate() {
+            low[axis] = low[axis].min(value);
+            high[axis] = high[axis].max(value);
+        }
     }
-    let span = (maxx - minx).max(maxy - miny).max(1e-4);
+    let span = (0..3)
+        .map(|axis| high[axis] - low[axis])
+        .fold(1e-4f32, f32::max);
     let scale = (1.0 - 2.0 * MARGIN) / span;
-    // Centre the shorter axis rather than pinning it to the margin.
-    let padx = (1.0 - (maxx - minx) * scale) / 2.0;
-    let pady = (1.0 - (maxy - miny) * scale) / 2.0;
+    // Centre the shorter axes rather than pinning them to the margin.
+    let pad = |axis: usize| (1.0 - (high[axis] - low[axis]) * scale) / 2.0;
+    let (padx, pady, padz) = (pad(0), pad(1), pad(2));
     for node in nodes.iter_mut() {
-        node.x = ((node.x - minx) * scale + padx).clamp(0.0, 1.0);
-        node.y = ((node.y - miny) * scale + pady).clamp(0.0, 1.0);
+        node.x = ((node.x - low[0]) * scale + padx).clamp(0.0, 1.0);
+        node.y = ((node.y - low[1]) * scale + pady).clamp(0.0, 1.0);
+        node.z = ((node.z - low[2]) * scale + padz).clamp(0.0, 1.0);
     }
 }
 
@@ -664,10 +698,10 @@ mod tests {
         assert_eq!(graph.held, NODES as i64 + 40);
     }
 
-    /// Every node lands inside the square, or a surface draws half of one off
+    /// Every node lands inside the cube, or a surface draws half of one off
     /// the edge of its own box.
     #[test]
-    fn every_node_lands_inside_the_unit_square() {
+    fn every_node_lands_inside_the_unit_cube() {
         let memories: Vec<Memory> = (1..=60)
             .map(|id| {
                 memory(
@@ -685,7 +719,21 @@ mod tests {
         for node in &graph.nodes {
             assert!((0.0..=1.0).contains(&node.x), "{} x {}", node.label, node.x);
             assert!((0.0..=1.0).contains(&node.y), "{} y {}", node.label, node.y);
+            assert!((0.0..=1.0).contains(&node.z), "{} z {}", node.label, node.z);
         }
+        // A layout that collapsed onto a plane would be a 2D map with a third
+        // number attached, and turning it would show nothing.
+        let (low, high) = graph
+            .nodes
+            .iter()
+            .fold((f32::MAX, f32::MIN), |(low, high), node| {
+                (low.min(node.z), high.max(node.z))
+            });
+        assert!(
+            high - low > 0.5,
+            "the cloud is flat: z spans {}",
+            high - low
+        );
     }
 
     /// The same store opens onto the same map. A layout seeded from a clock or
@@ -701,6 +749,7 @@ mod tests {
         for (left, right) in once.nodes.iter().zip(again.nodes.iter()) {
             assert_eq!(left.x.to_bits(), right.x.to_bits(), "{}", left.label);
             assert_eq!(left.y.to_bits(), right.y.to_bits(), "{}", left.label);
+            assert_eq!(left.z.to_bits(), right.z.to_bits(), "{}", left.label);
         }
     }
 
@@ -715,11 +764,11 @@ mod tests {
         let mut closest = f32::MAX;
         for left in 0..graph.nodes.len() {
             for right in (left + 1)..graph.nodes.len() {
-                let (dx, dy) = (
+                closest = closest.min(length([
                     graph.nodes[left].x - graph.nodes[right].x,
                     graph.nodes[left].y - graph.nodes[right].y,
-                );
-                closest = closest.min((dx * dx + dy * dy).sqrt());
+                    graph.nodes[left].z - graph.nodes[right].z,
+                ]));
             }
         }
         assert!(closest > 0.01, "two nodes {closest} apart");

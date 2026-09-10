@@ -34,6 +34,17 @@ pub struct Dashboard {
     /// whatever the search box asked for and the map is the whole store.
     graph: Graph,
     mapmemory: Option<Memory>,
+    /// Where the map is being looked at from, and the drag in progress.
+    camera: graph::Camera,
+    /// Where the pointer went down and how far it has moved since. A click and
+    /// a turn arrive on the same button, and the distance is what tells them
+    /// apart — without it, letting go after turning would also open whatever
+    /// node the pointer happened to stop on.
+    mapdrag: Option<(gpui::Point<gpui::Pixels>, f32)>,
+    /// The box the map was last painted into, filled in by the paint itself.
+    /// A click arrives in window coordinates and nothing else here knows the
+    /// box the projection used.
+    mapviewport: std::rc::Rc<std::cell::Cell<Option<gpui::Bounds<gpui::Pixels>>>>,
     memoryquery: Entity<TextInput>,
     memorybody: Entity<guise::markdown::MarkdownEditor>,
     memorysource: Entity<TextInput>,
@@ -268,6 +279,9 @@ impl Dashboard {
             selectedmemory,
             graph,
             mapmemory: None,
+            camera: graph::Camera::default(),
+            mapdrag: None,
+            mapviewport: std::rc::Rc::new(std::cell::Cell::new(None)),
             memoryquery,
             memorybody,
             memorysource,
@@ -402,6 +416,64 @@ impl Dashboard {
             }
             Err(error) => self.notice = Notice::Error(format!("could not map memory: {error:#}")),
         }
+        cx.notify();
+    }
+
+    /// The pointer went down on the map. Everything after this is either a
+    /// turn or a click, and which one is not known yet.
+    fn mappress(&mut self, at: gpui::Point<gpui::Pixels>) {
+        self.mapdrag = Some((at, 0.0));
+    }
+
+    /// The pointer moved. With the button down that turns the cloud, or slides
+    /// it when shift is held; with the button up it is somebody moving the
+    /// mouse across the page and means nothing.
+    fn mapmove(&mut self, event: &gpui::MouseMoveEvent, cx: &mut Context<Self>) {
+        let Some((last, travelled)) = self.mapdrag else {
+            return;
+        };
+        if event.pressed_button != Some(gpui::MouseButton::Left) {
+            self.mapdrag = None;
+            return;
+        }
+        let (dx, dy) = (
+            f32::from(event.position.x - last.x),
+            f32::from(event.position.y - last.y),
+        );
+        match event.modifiers.shift {
+            true => {
+                let span = self.mapviewport.get().map(graph::span).unwrap_or(600.0);
+                self.camera.shift(dx, dy, span);
+            }
+            false => self.camera.turn(dx, dy),
+        }
+        self.mapdrag = Some((event.position, travelled + (dx * dx + dy * dy).sqrt()));
+        cx.notify();
+    }
+
+    /// Let go. Whether that was a click is [`Dashboard::mapturned`]'s question.
+    fn maprelease(&mut self) {
+        self.mapdrag = None;
+    }
+
+    /// Whether the pointer moved far enough for the gesture to have been a
+    /// turn. A few pixels of travel is a hand resting on a mouse, not a drag.
+    fn mapturned(&self) -> bool {
+        self.mapdrag.is_some_and(|(_, travelled)| travelled > 4.0)
+    }
+
+    fn mapzoom(&mut self, event: &gpui::ScrollWheelEvent, cx: &mut Context<Self>) {
+        let toward = self
+            .mapviewport
+            .get()
+            .map(|bounds| graph::offset(bounds, event.position))
+            .unwrap_or_default();
+        self.camera.scale(graph::notch(event.delta), toward);
+        cx.notify();
+    }
+
+    fn maphome(&mut self, cx: &mut Context<Self>) {
+        self.camera = graph::Camera::default();
         cx.notify();
     }
 
@@ -2346,7 +2418,15 @@ impl Dashboard {
             let select = move |id: i64| -> graph::Click {
                 let host = host.clone();
                 Box::new(move |_, _, cx| {
-                    host.update(cx, |this, cx| this.selectnode(id, cx)).ok();
+                    // A drag that ends on a node is not a click on it. The
+                    // gesture is only over once the button comes up, so this
+                    // asks after the fact rather than before.
+                    host.update(cx, |this, cx| {
+                        if !this.mapturned() {
+                            this.selectnode(id, cx);
+                        }
+                    })
+                    .ok();
                 })
             };
             let shown = self.graph.shown;
@@ -2355,9 +2435,24 @@ impl Dashboard {
                     graph::View {
                         graph: self.graph.clone(),
                         selected: self.mapmemory.clone(),
+                        camera: self.camera,
+                        viewport: self.mapviewport.clone(),
                     },
                     graph::Actions {
                         select: Box::new(select),
+                        press: Box::new(cx.listener(|this, event: &gpui::MouseDownEvent, _, _| {
+                            this.mappress(event.position)
+                        })),
+                        drag: Box::new(cx.listener(|this, event: &gpui::MouseMoveEvent, _, cx| {
+                            this.mapmove(event, cx)
+                        })),
+                        release: Box::new(
+                            cx.listener(|this, _: &gpui::MouseUpEvent, _, _| this.maprelease()),
+                        ),
+                        zoom: Box::new(cx.listener(
+                            |this, event: &gpui::ScrollWheelEvent, _, cx| this.mapzoom(event, cx),
+                        )),
+                        home: Box::new(cx.listener(|this, _, _, cx| this.maphome(cx))),
                         refresh: Box::new(cx.listener(|this, _, _, cx| this.refreshmap(cx))),
                         open: Box::new(cx.listener(|this, _, _, cx| this.showconnections(cx))),
                     },
@@ -2376,7 +2471,10 @@ impl Dashboard {
                             ))
                             .size(Size::Xs),
                         )
-                        .right(Text::new("Click a node to read it").size(Size::Xs)),
+                        .right(
+                            Text::new("Drag to turn · scroll to zoom · click a point to read it")
+                                .size(Size::Xs),
+                        ),
                 )
                 .into_any_element();
         }

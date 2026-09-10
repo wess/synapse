@@ -104,7 +104,20 @@
 
     <h2 id="map">Map</h2>
     <p>Every other screen is a list, and a list answers what is stored rather than what it is about. The Map draws the store as a graph: one circle per memory, one larger circle per project, and lines between them. Projects come out as clusters, a correction comes out as a line to the thing it corrected, and a memory nothing else touches comes out looking like one — usually either the most interesting memory on the map or the one that should not be there.</p>
-    <p>A circle is sized by how much is tied to it and coloured by the project it belongs to. Click one to read that memory beside the map, with its scope, source, and date. A hollow circle is a superseded memory: out of recall, still in the store, still restorable.</p>
+    <p>A point is sized by how much is tied to it and coloured by the project it belongs to. Click one to read that memory beside the map, with its scope, source, and date. A hollow point is a superseded memory: out of recall, still in the store, still restorable.</p>
+    <p>The map is laid out in three dimensions, and the window lets you move around inside it:</p>
+    <table>
+      <thead><tr><th>Do this</th><th>Get this</th></tr></thead>
+      <tbody>
+        <tr><td>Drag</td><td>Turn the cloud. Nearer points are drawn larger and brighter.</td></tr>
+        <tr><td>Scroll</td><td>Closer or further out, toward whatever the pointer is over.</td></tr>
+        <tr><td>Shift-drag</td><td>Slide the cloud within the frame.</td></tr>
+        <tr><td>Click a point</td><td>Read that memory beside the map.</td></tr>
+        <tr><td>Reset view</td><td>Put the camera back where it started. It appears once you have moved it.</td></tr>
+      </tbody>
+    </table>
+    <p>A plane is the wrong shape for a graph: a cluster with more neighbours than the plane has room for either overlaps itself or pushes everything else off the map, and both of those are the picture lying about the store. Turning it re-draws, never re-lays-out, so the shape you learned stays the shape it is.</p>
+    <p>The plot is dark whatever theme you use. A glow is light added to what is behind it, and on a light background there is nothing to add to; the rest of the window stays in your theme.</p>
     <p>Three kinds of line, and only one of them is inferred:</p>
     <dl>
       <dt>A memory and its project</dt>
@@ -114,7 +127,7 @@
       <dt>Two memories using the same uncommon words</dt>
       <dd>Inferred, and drawn faintest. It uses the same word list recall uses, so a search and a map cannot disagree about which words mean nothing. It is a resemblance, never a claim that two memories say the same thing.</dd>
     </dl>
-    <p>The map is bounded on purpose: it draws the newest 160 memories and says so whenever the store is larger. The layout is the same every time you open it, because a map is worth having when you have learned its shape. The terminal dashboard draws the same map from the same coordinates, in braille, and walks its nodes with the cursor keys.</p>
+    <p>The map is bounded on purpose: it draws the newest 160 memories and says so whenever the store is larger. The layout is the same every time you open it, because a map is worth having when you have learned its shape. The terminal dashboard draws the front of the same cloud from the same coordinates, in braille, and walks its nodes with the cursor keys; past sixty memories it leaves the inferred links out and says so, because a braille cell is on or off and cannot draw a resemblance more faintly than a fact.</p>
     
   <aside class="note">
     <strong>The map only reads</strong>
