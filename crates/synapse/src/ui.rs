@@ -4,6 +4,7 @@ mod clibanner;
 mod console;
 mod dashboard;
 mod document;
+mod graph;
 mod index;
 mod memories;
 mod menu;

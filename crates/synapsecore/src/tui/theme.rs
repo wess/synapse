@@ -18,6 +18,20 @@ pub const DANGER: Color = Color::Rgb(235, 113, 128);
 pub const DIM: Color = Color::Rgb(140, 136, 152);
 pub const BORDER: Color = Color::Rgb(90, 86, 102);
 
+/// One colour per project on the map.
+///
+/// Six, and taken around again past that: past half a dozen, colour stops
+/// telling two projects apart and the label is doing the work anyway. They are
+/// the desktop's, so the same project is the same colour in either surface.
+pub const CLUSTERS: [Color; 6] = [
+    ACCENT,
+    SUCCESS,
+    Color::Rgb(226, 168, 96),
+    Color::Rgb(118, 178, 232),
+    Color::Rgb(214, 134, 196),
+    Color::Rgb(150, 196, 120),
+];
+
 /// Body text. Deliberately the terminal's own foreground rather than a colour:
 /// the one thing every terminal is already right about is what plain text
 /// should look like.

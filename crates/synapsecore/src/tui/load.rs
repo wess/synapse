@@ -11,9 +11,9 @@
 //! and the dashboard for it should still draw.
 
 use crate::agent;
-use crate::brain::Brain;
+use crate::brain::{Brain, Graph};
 use crate::relay::Mesh;
-use crate::tui::state::{Mode, Notice, PAGES, State};
+use crate::tui::state::{Mode, Notice, PAGES, Page, State};
 use crate::vault::VaultStore;
 use crate::{cli, files, shellsetup, skill, vault};
 use anyhow::Result;
@@ -25,7 +25,10 @@ const MEMORIES: u32 = 500;
 pub async fn initial() -> Result<State> {
     let database = files::database()?;
     let mut state = State {
-        page: PAGES[0],
+        // The map is first in the column and not where the dashboard opens: a
+        // machine with nothing connected has nothing to map and everything to
+        // wire in, and that is what a first launch is.
+        page: Page::Connections,
         mode: Mode::Browse,
         notice: Notice::Ready,
         quit: false,
@@ -39,6 +42,7 @@ pub async fn initial() -> Result<State> {
         shell: None,
         guidance: None,
         memories: Vec::new(),
+        graph: Graph::default(),
         query: String::new(),
         input: String::new(),
         agents: Vec::new(),
@@ -77,6 +81,12 @@ pub async fn memories(state: &mut State) {
     match brain.search(&state.query, MEMORIES).await {
         Ok(found) => state.memories = found,
         Err(error) => state.notice = Notice::Error(format!("could not search memory: {error}")),
+    }
+    // The map is the store rather than the search, so it is read here on the
+    // handle already open and not narrowed by whatever is in the search box.
+    match crate::brain::map(&brain).await {
+        Ok(graph) => state.graph = graph,
+        Err(error) => state.notice = Notice::Error(format!("could not map memory: {error}")),
     }
     if let Ok(stats) = brain.stats().await {
         state.stats = stats;

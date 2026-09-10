@@ -10,7 +10,7 @@
 //! still reach every page — so what goes is the list, not the way there.
 
 use crate::tui::state::{self, Mode, Notice, PAGES, Page, State};
-use crate::tui::{connections, memories, mesh, settings, skills, theme, vaults};
+use crate::tui::{connections, graph, memories, mesh, settings, skills, theme, vaults};
 use ratatui::Frame;
 use ratatui::layout::{Constraint, Layout, Rect};
 use ratatui::text::{Line, Span};
@@ -108,6 +108,7 @@ fn kilobytes(bytes: u64) -> String {
 
 fn body(frame: &mut Frame, area: Rect, state: &State) {
     match state.page {
+        Page::Map => graph::draw(frame, area, state),
         Page::Connections => connections::draw(frame, area, state),
         Page::Memories => memories::draw(frame, area, state),
         Page::Mesh => mesh::draw(frame, area, state),
@@ -142,6 +143,14 @@ fn keys(frame: &mut Frame, area: Rect, state: &State) {
         Mode::Confirm(_) => &[("y", "confirm"), ("any", "cancel")],
         Mode::Help => &[("any", "close")],
         Mode::Browse => match state.page {
+            Page::Map => &[
+                ("↹", "page"),
+                ("jk", "walk the map"),
+                ("gG", "ends"),
+                ("r", "refresh"),
+                ("?", "help"),
+                ("q", "quit"),
+            ],
             Page::Memories => &[
                 ("↹", "page"),
                 ("jk", "move"),
@@ -210,7 +219,7 @@ fn help(frame: &mut Frame, area: Rect) {
         Line::from(Span::styled("  Keys", theme::heading())),
         Line::raw(""),
         Line::from(vec![
-            Span::styled("  1-6, tab, ←→   ", theme::accent()),
+            Span::styled("  1-7, tab, ←→   ", theme::accent()),
             Span::raw("move between pages"),
         ]),
         Line::from(vec![

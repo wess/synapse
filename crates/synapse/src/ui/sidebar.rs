@@ -18,9 +18,10 @@ type Click = Box<dyn Fn(&ClickEvent, &mut Window, &mut App) + 'static>;
 const WIDTH: f32 = 212.0;
 
 /// Where each navigation button goes. Named rather than passed in a row,
-/// because seven handlers of one type in sequence is seven chances to wire a
+/// because eight handlers of one type in sequence is eight chances to wire a
 /// button to the wrong page and have nothing about it look wrong.
 pub struct Navigation {
+    pub map: Click,
     pub connections: Click,
     pub memories: Click,
     pub skills: Click,
@@ -37,6 +38,7 @@ pub fn render(
     cx: &App,
 ) -> impl IntoElement {
     let Navigation {
+        map,
         connections,
         memories,
         skills,
@@ -67,6 +69,16 @@ pub fn render(
         // Grouped because the three answer different questions: what is Synapse
         // wired into, what is it holding, and what is running right now.
         .child(group("Workspace"))
+        // First, because it is the only page that answers "what is in here"
+        // rather than "what is in here that I searched for".
+        .child(entry(
+            "navmap",
+            "Map",
+            IconName::ChartNetwork,
+            page == Page::Map,
+            &colours,
+            map,
+        ))
         .child(entry(
             "navconnections",
             "Connections",
@@ -165,7 +177,7 @@ fn group(label: &'static str) -> impl IntoElement {
 ///
 /// Built by hand rather than from a `Button`, because a button fills its width
 /// by centring what is in it, and a centred row in a column of rows reads as a
-/// heading. Left-aligned with the icon in a fixed gutter is what makes seven of
+/// heading. Left-aligned with the icon in a fixed gutter is what makes eight of
 /// these scan as a list.
 struct Colours {
     text: Hsla,

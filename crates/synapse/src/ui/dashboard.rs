@@ -1,7 +1,7 @@
 use crate::ui::buffer::{self, Buffer, Format};
 use crate::ui::{
-    Document, Notice, Page, Row, SaveDocument, agentrow, clibanner, console, document, memories,
-    mesh, settings, sidebar, skills, summary, vaults,
+    Document, Notice, Page, Row, SaveDocument, agentrow, clibanner, console, document, graph,
+    memories, mesh, settings, sidebar, skills, summary, vaults,
 };
 use gpui::prelude::*;
 use gpui::{Context, Entity, IntoElement, Window, div, px};
@@ -11,7 +11,7 @@ use guise::markdown::MarkdownEditorEvent;
 use guise::prelude::*;
 use std::path::PathBuf;
 use synapsecore::agent::{self, GuidanceState};
-use synapsecore::brain::{Brain, Memory, MemoryScope, Optimization, Stats};
+use synapsecore::brain::{Brain, Graph, Memory, MemoryScope, Optimization, Stats};
 use synapsecore::files;
 use synapsecore::imports::{ImportBatch, ImportProvider, ImportSummary};
 use synapsecore::vault::{Backend, ScopeState, Secret, Vault, VaultStore};
@@ -29,6 +29,11 @@ pub struct Dashboard {
     brain: Option<Brain>,
     memories: Vec<Memory>,
     selectedmemory: Option<i64>,
+    /// The store as a map, and whichever node was last clicked on it. The
+    /// memory is read by id rather than taken from `memories`: that list is
+    /// whatever the search box asked for and the map is the whole store.
+    graph: Graph,
+    mapmemory: Option<Memory>,
     memoryquery: Entity<TextInput>,
     memorybody: Entity<guise::markdown::MarkdownEditor>,
     memorysource: Entity<TextInput>,
@@ -145,6 +150,12 @@ impl Dashboard {
             Err(error) => (None, Vec::new(), Vec::new(), Vec::new(), Some(error)),
         };
         let selectedmemory = memories.first().map(|memory| memory.id);
+        // A page opened directly arrives with its data; anywhere else the map
+        // is read when it is navigated to, and never held stale.
+        let graph = match page {
+            Page::Map => graphdata(&database),
+            _ => Graph::default(),
+        };
         let selected = selectedmemory.and_then(|id| memories.iter().find(|item| item.id == id));
         let memoryquery = cx.new(|cx| {
             TextInput::new(cx)
@@ -255,6 +266,8 @@ impl Dashboard {
             brain,
             memories,
             selectedmemory,
+            graph,
+            mapmemory: None,
             memoryquery,
             memorybody,
             memorysource,
@@ -348,6 +361,7 @@ impl Dashboard {
     /// that draw the header cannot drift apart.
     fn navigation(&self, cx: &mut Context<Self>) -> sidebar::Navigation {
         sidebar::Navigation {
+            map: Box::new(cx.listener(|this, _, _, cx| this.showmap(cx))),
             connections: Box::new(cx.listener(|this, _, _, cx| this.showconnections(cx))),
             memories: Box::new(cx.listener(|this, _, _, cx| this.showmemories(cx))),
             mesh: Box::new(cx.listener(|this, _, _, cx| this.showmesh(cx))),
@@ -360,6 +374,47 @@ impl Dashboard {
 
     fn showconnections(&mut self, cx: &mut Context<Self>) {
         self.page = Page::Connections;
+        cx.notify();
+    }
+
+    fn showmap(&mut self, cx: &mut Context<Self>) {
+        self.page = Page::Map;
+        self.refreshmap(cx);
+    }
+
+    /// Read the map. Bounded and laid out in `synapsecore`, so this is one
+    /// query and no arithmetic — and it is read on arrival rather than held,
+    /// because a map of the store as it was two hours ago is a wrong map.
+    fn refreshmap(&mut self, cx: &mut Context<Self>) {
+        let Some(brain) = self.brain.clone() else {
+            return;
+        };
+        match block(synapsecore::brain::map(&brain)) {
+            Ok(graph) => {
+                // A node that is no longer on the map cannot stay open beside
+                // it: the memory it stood for may have been deleted.
+                if let Some(memory) = &self.mapmemory
+                    && graph.find(memory.id).is_none()
+                {
+                    self.mapmemory = None;
+                }
+                self.graph = graph;
+            }
+            Err(error) => self.notice = Notice::Error(format!("could not map memory: {error:#}")),
+        }
+        cx.notify();
+    }
+
+    /// Open one node. The memory is read by id, because the map covers the
+    /// whole store and the list on the memories page covers one search.
+    fn selectnode(&mut self, id: i64, cx: &mut Context<Self>) {
+        let Some(brain) = self.brain.clone() else {
+            return;
+        };
+        match block(brain.memory(id)) {
+            Ok(memory) => self.mapmemory = memory,
+            Err(error) => self.notice = Notice::Error(format!("could not read memory: {error:#}")),
+        }
         cx.notify();
     }
 
@@ -2286,6 +2341,46 @@ impl Dashboard {
             .flex_col()
             .children(banner);
 
+        if self.page == Page::Map {
+            let host = cx.entity().downgrade();
+            let select = move |id: i64| -> graph::Click {
+                let host = host.clone();
+                Box::new(move |_, _, cx| {
+                    host.update(cx, |this, cx| this.selectnode(id, cx)).ok();
+                })
+            };
+            let shown = self.graph.shown;
+            return shell
+                .child(graph::render(
+                    graph::View {
+                        graph: self.graph.clone(),
+                        selected: self.mapmemory.clone(),
+                    },
+                    graph::Actions {
+                        select: Box::new(select),
+                        refresh: Box::new(cx.listener(|this, _, _, cx| this.refreshmap(cx))),
+                        open: Box::new(cx.listener(|this, _, _, cx| this.showconnections(cx))),
+                    },
+                    cx,
+                ))
+                .child(
+                    StatusBar::new()
+                        .height(36.0)
+                        .left(
+                            Text::new(format!(
+                                "{shown} {} on the map",
+                                match shown {
+                                    1 => "memory",
+                                    _ => "memories",
+                                }
+                            ))
+                            .size(Size::Xs),
+                        )
+                        .right(Text::new("Click a node to read it").size(Size::Xs)),
+                )
+                .into_any_element();
+        }
+
         if self.page == Page::Memories {
             let selecthost = cx.entity().downgrade();
             let selectmemory = move |id| -> memories::Click {
@@ -2823,6 +2918,7 @@ fn connectionserver() -> Option<PathBuf> {
 
 fn initialpage() -> Page {
     match std::env::var("SYNAPSE_PAGE").as_deref() {
+        Ok("map") => Page::Map,
         Ok("memory") => Page::Memories,
         Ok("mesh") => Page::Mesh,
         Ok("console") => Page::Console,
@@ -3035,6 +3131,17 @@ fn loadvaults(database: &std::path::Path) -> anyhow::Result<VaultData> {
             backend: synapsecore::vault::backend().await?,
         })
     })
+}
+
+/// The map, for a window opening straight onto it. Everywhere else the page
+/// reads it on arrival; a failure here draws an empty map with the notice the
+/// page already has for one.
+fn graphdata(database: &std::path::Path) -> Graph {
+    block(async {
+        let brain = Brain::open(database).await?;
+        synapsecore::brain::map(&brain).await
+    })
+    .unwrap_or_default()
 }
 
 fn loadmemories(database: &std::path::Path) -> anyhow::Result<MemoryData> {

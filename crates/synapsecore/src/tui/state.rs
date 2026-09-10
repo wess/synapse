@@ -1,14 +1,14 @@
 //! Everything on screen, as data.
 //!
-//! The same six pages the desktop has, in the same order, so a person who knows
-//! one knows the other. Plain fields and free functions rather than a widget
+//! The same seven pages the desktop has, in the same order, so a person who
+//! knows one knows the other. Plain fields and free functions rather than a widget
 //! tree: the terminal redraws the whole frame every tick anyway, so there is
 //! nothing here to keep in step but the numbers themselves.
 
 pub use crate::agent::Connection;
 
 use crate::agent::GuidanceState;
-use crate::brain::{Memory, Optimization, Stats};
+use crate::brain::{Graph, Memory, Optimization, Stats};
 use crate::cli::InstallStatus;
 use crate::relay::{AgentView, WorkerView};
 use crate::shellsetup::Integration;
@@ -18,6 +18,7 @@ use std::path::PathBuf;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Page {
+    Map,
     Connections,
     Memories,
     Mesh,
@@ -31,7 +32,8 @@ pub enum Page {
 /// Grouped rather than historical: the sidebar draws a heading whenever the
 /// group changes, so a page filed out of order would print its group twice. It
 /// matches the desktop's column for the same reason the pages themselves do.
-pub const PAGES: [Page; 6] = [
+pub const PAGES: [Page; 7] = [
+    Page::Map,
     Page::Connections,
     Page::Memories,
     Page::Skills,
@@ -42,6 +44,7 @@ pub const PAGES: [Page; 6] = [
 
 pub fn title(page: Page) -> &'static str {
     match page {
+        Page::Map => "Map",
         Page::Connections => "Connections",
         Page::Memories => "Memories",
         Page::Mesh => "Mesh",
@@ -55,7 +58,7 @@ pub fn title(page: Page) -> &'static str {
 /// person moving between the two finds the same things under the same heading.
 pub fn section(page: Page) -> &'static str {
     match page {
-        Page::Connections | Page::Memories | Page::Skills => "Workspace",
+        Page::Map | Page::Connections | Page::Memories | Page::Skills => "Workspace",
         Page::Mesh => "Agents",
         Page::Vaults | Page::Settings => "System",
     }
@@ -128,6 +131,9 @@ pub struct State {
     pub guidance: Option<GuidanceState>,
 
     pub memories: Vec<Memory>,
+    /// The store as a map. Laid out where it is read rather than where it is
+    /// drawn, so this and the window's page are the same picture.
+    pub graph: Graph,
     pub query: String,
     /// What is being typed outside the memory search: the name of a new tool.
     pub input: String,
@@ -157,6 +163,9 @@ pub fn slot(page: Page) -> usize {
 /// have none, and the cursor keys are simply inert there.
 pub fn rows(state: &State) -> usize {
     match state.page {
+        // Every node, hubs included: a terminal cannot hover, so walking them
+        // is the only way to point at one.
+        Page::Map => state.graph.nodes.len(),
         // One past the tools, for the row that adds another.
         Page::Connections => state.connections.len() + 1,
         Page::Memories => state.memories.len(),

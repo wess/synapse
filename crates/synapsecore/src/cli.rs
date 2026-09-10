@@ -17,6 +17,10 @@ pub(crate) mod tokens;
 mod wrap;
 
 pub use install::{InstallStatus, destination, install, status};
+// The terminal dashboard is the only caller, and it is behind a feature. An
+// embedder taking the library without a screen would otherwise be told about an
+// unused import in somebody else's crate.
+#[cfg(feature = "tui")]
 pub(crate) use layers::describetool;
 
 pub enum Outcome {

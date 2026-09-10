@@ -12,6 +12,7 @@ export const memory: Page = {
     { label: "Import existing memory", id: "import" },
     { label: "Search and recall", id: "recall" },
     { label: "Inspect and correct", id: "control" },
+    { label: "See the whole store", id: "map" },
     { label: "Correcting a memory", id: "supersede" },
     { label: "Response budgets", id: "budgets" },
     { label: "Destructive actions", id: "destructive" },
@@ -82,6 +83,10 @@ Matches:    1
 
 synapse memory show 24`)}
     <p>Editing changes the stored original. Recall optimization does not.</p>
+
+    <h2 id="map">See the whole store at once</h2>
+    <p>Search answers a question you already have. The <a href="../app/#map">Map</a> answers the one you do not: what is in here. It draws every memory as a circle, clustered by project, with a line to whatever replaced it and a fainter line between memories that use the same uncommon words. Click one to read it.</p>
+    <p>It is the first screen in the app and the first page of the terminal dashboard, which draws the same map in braille. Both read the newest 160 memories and say so when the store is larger, and neither changes anything.</p>
 
     <h2 id="supersede">Correcting a memory</h2>
     <p>A convention changes. Something you stored last month is now wrong. Adding the new version on its own leaves two memories contradicting each other, both are recalled, and the ranking decides which one a tool acts on \u2014 possibly the one you had already retracted.</p>

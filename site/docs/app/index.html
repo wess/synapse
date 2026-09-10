@@ -86,10 +86,11 @@
       </header>
       
     <h2 id="navigation">Navigation and shared state</h2>
-    <p>The desktop app is a local control surface over the same SQLite database, vault, scope files, and tool configuration used by the CLI and MCP server. A column down the left moves between seven screens, grouped by what they answer: what Synapse is wired into, what is running, and what it is holding for you.</p>
+    <p>The desktop app is a local control surface over the same SQLite database, vault, scope files, and tool configuration used by the CLI and MCP server. A column down the left moves between eight screens, grouped by what they answer: what Synapse is wired into, what is running, and what it is holding for you.</p>
     <table>
       <thead><tr><th>Screen</th><th>Use it for</th><th>Material it can change</th></tr></thead>
       <tbody>
+        <tr><td>Map</td><td>See the whole store at once: which projects it holds anything about, where the weight is, and what a memory sits next to.</td><td>Nothing. The map reads.</td></tr>
         <tr><td>Connections</td><td>Detect and connect supported developer tools.</td><td>Tool MCP configuration and managed instruction blocks.</td></tr>
         <tr><td>Memory</td><td>Import, scope, search, inspect, correct, or remove durable context.</td><td>Memory rows, scope metadata, and reversible import batches.</td></tr>
         <tr><td>Console</td><td>Talk to the agents. Opening it puts you on the roster under your login name.</td><td>Messages you send, and one roster row that is you.</td></tr>
@@ -100,6 +101,25 @@
       </tbody>
     </table>
     <p>Success and error notices appear inside the active screen. The app does not require an account and does not send this state to a hosted service.</p>
+
+    <h2 id="map">Map</h2>
+    <p>Every other screen is a list, and a list answers what is stored rather than what it is about. The Map draws the store as a graph: one circle per memory, one larger circle per project, and lines between them. Projects come out as clusters, a correction comes out as a line to the thing it corrected, and a memory nothing else touches comes out looking like one — usually either the most interesting memory on the map or the one that should not be there.</p>
+    <p>A circle is sized by how much is tied to it and coloured by the project it belongs to. Click one to read that memory beside the map, with its scope, source, and date. A hollow circle is a superseded memory: out of recall, still in the store, still restorable.</p>
+    <p>Three kinds of line, and only one of them is inferred:</p>
+    <dl>
+      <dt>A memory and its project</dt>
+      <dd>Recorded. Every memory hangs off the project it was stored for, or off global memory.</dd>
+      <dt>A memory and the one that replaced it</dt>
+      <dd>Recorded, and drawn in red. This is what supersession looks like from above.</dd>
+      <dt>Two memories using the same uncommon words</dt>
+      <dd>Inferred, and drawn faintest. It uses the same word list recall uses, so a search and a map cannot disagree about which words mean nothing. It is a resemblance, never a claim that two memories say the same thing.</dd>
+    </dl>
+    <p>The map is bounded on purpose: it draws the newest 160 memories and says so whenever the store is larger. The layout is the same every time you open it, because a map is worth having when you have learned its shape. The terminal dashboard draws the same map from the same coordinates, in braille, and walks its nodes with the cursor keys.</p>
+    
+  <aside class="note">
+    <strong>The map only reads</strong>
+    <p>Nothing on this screen changes anything. It opens the store when you arrive and when you press Refresh, and holds nothing between them.</p>
+  </aside>
 
     <h2 id="connections">Connections</h2>
     <p>The Connections screen reports memory count, database size, and how many supported tools are connected. It draws two lists: <strong>Connected</strong>, the tools wired in right now, above <strong>Supported</strong>, everything else Synapse can connect on this machine. A tool appears in one or the other, never both, and moves between them as you connect and disconnect it.</p>
@@ -218,7 +238,7 @@
     </main>
     <aside class="ontoc" aria-label="On this page">
         <span>On this page</span>
-        <ol><li><a href="#navigation">Navigation</a></li><li><a href="#connections">Connections</a></li><li><a href="#memory">Memory</a></li><li><a href="#console">Console</a></li><li><a href="#mesh">Mesh</a></li><li><a href="#skills">Skills</a></li><li><a href="#vaults">Vaults</a></li><li><a href="#settings">Settings</a></li><li><a href="#editors">Editors and data</a></li></ol>
+        <ol><li><a href="#navigation">Navigation</a></li><li><a href="#map">Map</a></li><li><a href="#connections">Connections</a></li><li><a href="#memory">Memory</a></li><li><a href="#console">Console</a></li><li><a href="#mesh">Mesh</a></li><li><a href="#skills">Skills</a></li><li><a href="#vaults">Vaults</a></li><li><a href="#settings">Settings</a></li><li><a href="#editors">Editors and data</a></li></ol>
       </aside>
   </div>
   

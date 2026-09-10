@@ -143,9 +143,15 @@ fn browse(state: &mut State, key: KeyEvent) -> Action {
 
         KeyCode::Tab | KeyCode::Right | KeyCode::Char('l') => turn(state, 1),
         KeyCode::BackTab | KeyCode::Left | KeyCode::Char('h') => turn(state, -1),
-        KeyCode::Char(digit @ '1'..='6') => {
+        // Every page has a number, and a number past the last page is a key
+        // nobody pressed on purpose. Reaching into `PAGES` with it would be a
+        // panic inside `draw`, with the terminal already in raw mode.
+        KeyCode::Char(digit @ '1'..='9') => {
             let index = digit as usize - '1' as usize;
-            state.page = PAGES[index];
+            match PAGES.get(index) {
+                Some(page) => state.page = *page,
+                None => return Action::None,
+            }
             page(state)
         }
 

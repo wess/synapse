@@ -59,6 +59,7 @@ pub fn tool(arguments: &[OsString]) -> Result<Outcome> {
 /// descriptor has four sections and a person editing one wants their own editor,
 /// not a field at a time. It saves into the user layer, which is the one that
 /// travels with the person rather than the checkout.
+#[cfg(feature = "tui")]
 pub(crate) fn describetool(slug: &str) -> Result<PathBuf> {
     let kind = toolkind();
     let root = std::env::current_dir()?;

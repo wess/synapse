@@ -6,6 +6,7 @@ pub use synapsecore::agent::Connection as Row;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Page {
+    Map,
     Connections,
     Memories,
     Mesh,

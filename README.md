@@ -14,6 +14,7 @@ Apple silicon · macOS 13 or later · Developer ID signed and notarized
 - **Reads the evidence.** Follow an abridged recall with `readmemory` to read the exact stored text in bounded pages, within the same project scope.
 - **Says so at startup.** Claude Code shows `Synapse connected · 128 memories` beside its welcome message, so you can see the link before the first reply.
 - **Asks before it forgets.** When a long session is about to be compacted, Synapse asks it to write down anything it worked out that is not stored yet — the one moment where not having written something down costs you immediately.
+- **Draws the store.** The Map is every memory as a graph — projects as clusters, a correction as a line to what it replaced, and a memory nothing else touches looking like one. Click a node to read it.
 - **Corrects without arguing.** When a convention changes, the new memory supersedes the old one instead of contradicting it. Recall returns the current version; the old text stays readable and comes back if you were wrong.
 - **Brings history with you.** Preview and import existing Claude and Codex memory into project-scoped Synapse records without changing the originals.
 - **Shares one playbook.** Keep global working guidance in one editable `SOUL.md`, with every connected tool pointed at it.

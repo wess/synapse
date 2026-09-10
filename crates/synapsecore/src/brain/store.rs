@@ -551,7 +551,12 @@ impl Brain {
 ///
 /// Only function words are here. Anything a developer might mean — `not`, `no`,
 /// `use`, `never`, `always` — carries signal in a stored preference and stays.
-const STOPWORDS: &[&str] = &[
+///
+/// [`crate::brain::graph`] reads the same list to decide which words are
+/// evidence that two memories are about the same thing. One stoplist, because
+/// a search and a map that disagreed about which words mean nothing would
+/// disagree about which memories are related.
+pub(super) const STOPWORDS: &[&str] = &[
     "a", "an", "and", "any", "are", "as", "at", "be", "been", "but", "by", "can", "could", "did",
     "do", "does", "for", "from", "had", "has", "have", "how", "i", "if", "in", "into", "is", "it",
     "its", "me", "my", "of", "on", "or", "our", "should", "so", "than", "that", "the", "their",

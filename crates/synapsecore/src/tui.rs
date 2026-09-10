@@ -1,6 +1,6 @@
 //! The dashboard, in a terminal.
 //!
-//! The same six pages the desktop draws, reading the same store through the
+//! The same seven pages the desktop draws, reading the same store through the
 //! same functions. It exists because a machine with no display still has
 //! memory, connected tools, and a mesh worth looking at, and `synapse status`
 //! answers three lines of that.
@@ -12,6 +12,7 @@
 
 mod connections;
 mod draw;
+mod graph;
 mod keys;
 mod load;
 mod memories;
@@ -375,6 +376,19 @@ mod tests {
                 superseded: 0,
                 abridged: false,
             }],
+            graph: crate::brain::buildmap(
+                &[Memory {
+                    id: 1,
+                    body: "the first line\nand a second".to_owned(),
+                    source: "review".to_owned(),
+                    scope: MemoryScope::Global,
+                    project: String::new(),
+                    created: 1_700_000_000,
+                    superseded: 0,
+                    abridged: false,
+                }],
+                1,
+            ),
             query: String::new(),
             input: String::new(),
             agents: Vec::new(),
@@ -601,6 +615,48 @@ mod tests {
             }
         }
         assert!(seen.len() > 1, "the grouping does nothing with one group");
+    }
+
+    /// The map is the one page that is a picture, so the assertion is that the
+    /// picture is on the screen: the project it hangs off is named, and the
+    /// node under the cursor is spelled out underneath where a terminal that
+    /// cannot hover can read it.
+    #[test]
+    fn the_map_draws_its_nodes_and_names_what_the_cursor_is_on() {
+        let mut state = sample();
+        state.page = Page::Map;
+        let drawn = render(&state, 100, 30);
+        assert!(drawn.contains("Global"), "no hub on the map");
+        assert!(drawn.contains('◆') || drawn.contains('●'), "no nodes drawn");
+        assert!(drawn.contains("Map · 1 memor"), "no count: {drawn}");
+
+        // Down one from the hub is the memory, and its body is readable.
+        keys::handle(
+            &mut state,
+            KeyEvent::new(KeyCode::Char('j'), KeyModifiers::NONE),
+        );
+        let drawn = render(&state, 100, 30);
+        assert!(drawn.contains("Memory #1"), "the cursor names nothing");
+        assert!(drawn.contains("the first line"), "no body under the map");
+    }
+
+    /// A page whose number nobody assigned is a keypress that must do nothing,
+    /// not an index into `PAGES` — a panic here happens with the terminal
+    /// already in raw mode.
+    #[test]
+    fn a_number_past_the_last_page_moves_nowhere() {
+        let mut state = sample();
+        state.page = Page::Memories;
+        keys::handle(
+            &mut state,
+            KeyEvent::new(KeyCode::Char('9'), KeyModifiers::NONE),
+        );
+        assert_eq!(state.page, Page::Memories);
+        keys::handle(
+            &mut state,
+            KeyEvent::new(KeyCode::Char('1'), KeyModifiers::NONE),
+        );
+        assert_eq!(state.page, PAGES[0]);
     }
 
     #[test]
