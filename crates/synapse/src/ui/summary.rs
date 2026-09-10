@@ -8,6 +8,7 @@ pub fn render(
     stats: &Stats,
     connected: usize,
     total: usize,
+    probed: bool,
     notice: &Notice,
     cx: &App,
 ) -> impl IntoElement {
@@ -50,7 +51,17 @@ pub fn render(
                         .gap(px(18.0))
                         .child(metric("Memories", stats.entries.to_string()))
                         .child(metric("Database", formatsize(stats.bytes)))
-                        .child(metric("Connected", format!("{connected}/{total}"))),
+                        // A dash rather than `0/0` until the machine has been
+                        // looked at. Nought of nought is an answer, and it is
+                        // the wrong one for the frame before the question was
+                        // asked.
+                        .child(metric(
+                            "Connected",
+                            match probed {
+                                true => format!("{connected}/{total}"),
+                                false => "—".to_owned(),
+                            },
+                        )),
                 ),
         )
         .child(

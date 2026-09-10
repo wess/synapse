@@ -10,6 +10,7 @@ mod memories;
 mod menu;
 mod mesh;
 mod model;
+mod runtime;
 mod settings;
 mod sidebar;
 mod skills;

@@ -80,9 +80,11 @@ fn darktheme() -> Theme {
 }
 
 fn load() -> anyhow::Result<Mode> {
-    let runtime = tokio::runtime::Runtime::new()?;
-    runtime.block_on(async {
-        let brain = synapsecore::brain::Brain::open(synapsecore::files::database()?).await?;
+    crate::ui::runtime::block(async {
+        // `glance` rather than `open`: this runs before the window exists and
+        // reads one preference, and a whole-page integrity scan on the way to
+        // finding out whether somebody prefers dark mode is the wrong trade.
+        let brain = synapsecore::brain::Brain::glance(synapsecore::files::database()?).await?;
         Ok(match brain.preference("appearance").await?.as_deref() {
             Some("light") => Mode::Light,
             Some("dark") => Mode::Dark,
@@ -97,8 +99,7 @@ fn save(mode: Mode) -> anyhow::Result<()> {
         Mode::Light => "light",
         Mode::Dark => "dark",
     };
-    let runtime = tokio::runtime::Runtime::new()?;
-    runtime.block_on(async {
+    crate::ui::runtime::block(async {
         let brain = synapsecore::brain::Brain::open(synapsecore::files::database()?).await?;
         brain.setpreference("appearance", value).await
     })

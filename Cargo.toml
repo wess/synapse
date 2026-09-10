@@ -40,3 +40,17 @@ tokio = { version = "1.0", features = [
     "sync",
     "time",
 ] }
+
+# The shipped build. A launch is mostly the loader and the GPU pipeline coming
+# up, and a 22MB binary is a real part of the first of those: cross-crate
+# inlining and one code generation unit take a few megabytes off it, and the
+# symbol table is dead weight in a signed app — a panic still reports its own
+# message and source location, which is all the crash log ever recorded.
+#
+# Unwinding stays. `panic = "abort"` would be smaller again and would take the
+# crash log with it, and a window with nowhere to print is the one place that
+# log has to work.
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = "symbols"

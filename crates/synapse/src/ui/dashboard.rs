@@ -110,6 +110,13 @@ pub struct Dashboard {
     pendingguidance: bool,
     clistatus: synapsecore::cli::InstallStatus,
     showclibanner: bool,
+    /// Whether the tools on this machine have been looked for yet.
+    ///
+    /// They are looked for on the frame after the first one, so for exactly one
+    /// frame the row list is empty — and an empty list on this page reads as
+    /// *no tools found*, which is a different and much worse statement than
+    /// *not looked yet*.
+    probed: bool,
 }
 
 struct VaultData {
@@ -120,46 +127,53 @@ struct VaultData {
     backend: Backend,
 }
 
-struct MemoryData {
-    brain: Brain,
-    memories: Vec<Memory>,
-    imports: Vec<ImportSummary>,
-    batches: Vec<ImportBatch>,
-}
-
 impl Dashboard {
+    /// Everything the window needs before it can be drawn, and nothing else.
+    ///
+    /// What is *not* here is the point. Asking four coding agents for their
+    /// `--version`, scanning two other tools' memory folders for importable
+    /// entries, and surveying the skill library are all reads of somebody
+    /// else's disk, and none of them decides anything about the first frame.
+    /// They used to run before the window existed, so how long Synapse took to
+    /// appear was set by how long a Node process takes to start. They run in
+    /// [`Dashboard::opened`] now, after there is something on screen.
     pub fn new(cx: &mut Context<Self>) -> Self {
         let database = files::database().unwrap_or_else(|_| PathBuf::from("brain.db"));
-        let stats = loadstats(&database).unwrap_or_default();
-        let optimization = loadoptimization(&database).unwrap_or_default();
         let page = initialpage();
+        // One handle for every setting the first frame reads. Six separate
+        // opens is six file locks, six integrity checks, and six round trips
+        // for what is one table.
+        let opening = openbrain(&database);
+        let settings = readsettings(opening.as_ref().ok());
+        let stats = settings.stats;
+        let optimization = settings.optimization;
         // A page opened directly has to arrive with its data, not fill in only
         // once the user navigates away and back.
         let meshdata = match page {
             Page::Mesh => loadmeshdata(&database),
             _ => MeshData {
-                enabled: loadmesh(&database).unwrap_or(false),
+                enabled: settings.mesh,
                 ..MeshData::default()
             },
         };
-        let skilldata = match page {
-            Page::Skills => loadskills(),
-            _ => SkillData {
-                rows: Vec::new(),
-                unmanaged: Vec::new(),
-                problems: Vec::new(),
-            },
+        // The skill library is a walk of every skill folder of every connected
+        // tool. Its page fetches it on arrival, and so does `opened` when that
+        // is where the window is opening.
+        let skilldata = SkillData {
+            rows: Vec::new(),
+            unmanaged: Vec::new(),
+            problems: Vec::new(),
         };
-        let (brain, memories, imports, importbatches, memoryerror) = match loadmemories(&database) {
-            Ok(data) => (
-                Some(data.brain),
-                data.memories,
-                data.imports,
-                data.batches,
-                None,
-            ),
-            Err(error) => (None, Vec::new(), Vec::new(), Vec::new(), Some(error)),
+        let (brain, memories, memoryerror) = match opening {
+            Ok(brain) => {
+                let memories = loadmemorylist(&brain).unwrap_or_default();
+                (Some(brain), memories, None)
+            }
+            Err(error) => (None, Vec::new(), Some(error)),
         };
+        // Import candidates are read from Claude's and Codex's own folders.
+        // The Memory page is the only thing that shows them.
+        let (imports, importbatches) = (Vec::new(), Vec::new());
         let selectedmemory = memories.first().map(|memory| memory.id);
         // A page opened directly arrives with its data; anywhere else the map
         // is read when it is navigated to, and never held stale.
@@ -264,11 +278,12 @@ impl Dashboard {
         if let Some(error) = soulerror {
             notice = Notice::Error(format!("Could not create SOUL.md: {error}"));
         }
-        let learnenabled = loadlearn(&database).unwrap_or(false);
-        let consolelimit = loadworkers(&database).unwrap_or(synapsecore::relay::DEFAULTWORKERS);
-        let reactorwanted = loadreactor(&database).unwrap_or(true);
+        let learnenabled = settings.learn;
+        let consolelimit = settings.workers;
+        let reactorwanted = settings.reactor;
         Self {
-            rows: loadrows(),
+            // Filled by `opened`, once there is a window to fill.
+            rows: Vec::new(),
             stats,
             database,
             notice,
@@ -336,6 +351,7 @@ impl Dashboard {
             pendingguidance: false,
             clistatus,
             showclibanner,
+            probed: false,
         }
     }
 
@@ -493,6 +509,7 @@ impl Dashboard {
     fn showmemories(&mut self, cx: &mut Context<Self>) {
         self.page = Page::Memories;
         self.refreshmemories(cx);
+        self.refreshimports(cx);
     }
 
     fn refreshmemories(&mut self, cx: &mut Context<Self>) {
@@ -641,6 +658,11 @@ impl Dashboard {
         }
     }
 
+    /// Read what Claude and Codex are holding that could be imported.
+    ///
+    /// Two other tools' memory folders, walked and previewed against this
+    /// store. Only the Memory page shows the result, so only arriving there
+    /// pays for it — it used to happen on the way to the first frame.
     fn refreshimports(&mut self, cx: &mut Context<Self>) {
         let Some(brain) = self.brain.clone() else {
             return;
@@ -884,10 +906,35 @@ impl Dashboard {
     /// handle to an entity that does not exist until it has returned. Without
     /// this, `SYNAPSE_PAGE=console` drew a console that had never joined —
     /// every column correct and empty, and nothing saying why.
+    /// Everything that was left out of the first frame, done once there is a
+    /// frame.
+    ///
+    /// This runs immediately after the window is created, so the reads are the
+    /// same reads in the same order — what changed is that the user is looking
+    /// at a window while they happen instead of at nothing. The slow one is
+    /// tool detection, which asks every installed coding agent for its
+    /// `--version`, and how long that takes is a fact about somebody else's
+    /// CLI rather than about Synapse.
+    ///
+    /// A page opened directly with `SYNAPSE_PAGE` fills itself here too, for
+    /// the reason it always did: arriving on a screen that reports an empty
+    /// library is worse than arriving on one that is still filling.
     pub fn opened(&mut self, cx: &mut Context<Self>) {
-        if self.page == Page::Console {
-            self.showconsole(cx);
+        self.rows = loadrows();
+        self.probed = true;
+        // The integrity check `glance` skipped on the way in. Once per process
+        // and after the window is up, which is where it belongs: a store worth
+        // checking is worth checking, and not at the cost of the launch.
+        if let Ok(brain) = block(async { Brain::open(&self.database).await }) {
+            self.brain = Some(brain);
         }
+        match self.page {
+            Page::Console => self.showconsole(cx),
+            Page::Skills => self.refreshskills(cx),
+            Page::Memories => self.refreshimports(cx),
+            _ => {}
+        }
+        cx.notify();
     }
 
     /// Open the console, which means joining the mesh as yourself.
@@ -2937,25 +2984,44 @@ impl Dashboard {
                                 &self.stats,
                                 self.connected(),
                                 self.rows.len(),
+                                self.probed,
                                 &self.notice,
                                 cx,
                             ))
-                            .child(self.toolcard(
-                                rows[..connected].to_vec(),
-                                0,
-                                "Connected",
-                                border,
-                                surface,
-                                cx,
-                            ))
-                            .child(self.toolcard(
-                                rows[connected..].to_vec(),
-                                connected,
-                                "Supported",
-                                border,
-                                surface,
-                                cx,
-                            )),
+                            .when(!self.probed, |element| {
+                                element.child(
+                                    div()
+                                        .rounded(px(14.0))
+                                        .border_1()
+                                        .border_color(border)
+                                        .bg(surface)
+                                        .p(px(18.0))
+                                        .child(
+                                            Text::new("Looking for your tools…")
+                                                .size(Size::Sm)
+                                                .dimmed(),
+                                        ),
+                                )
+                            })
+                            .when(self.probed, |element| {
+                                element
+                                    .child(self.toolcard(
+                                        rows[..connected].to_vec(),
+                                        0,
+                                        "Connected",
+                                        border,
+                                        surface,
+                                        cx,
+                                    ))
+                                    .child(self.toolcard(
+                                        rows[connected..].to_vec(),
+                                        connected,
+                                        "Supported",
+                                        border,
+                                        surface,
+                                        cx,
+                                    ))
+                            }),
                     ),
             )
             .child(
@@ -3051,13 +3117,6 @@ fn changedocument(
     document.current = content.to_owned();
     document.error = None;
     cx.notify();
-}
-
-fn loadstats(database: &std::path::Path) -> anyhow::Result<Stats> {
-    tokio::runtime::Runtime::new()?.block_on(async {
-        let brain = synapsecore::brain::Brain::open(database).await?;
-        brain.stats().await
-    })
 }
 
 /// Everything the Skills screen shows. Opening the app straight onto a page has
@@ -3184,34 +3243,6 @@ fn loadmesh(database: &std::path::Path) -> anyhow::Result<bool> {
     })
 }
 
-fn loadreactor(database: &std::path::Path) -> anyhow::Result<bool> {
-    block(async {
-        let brain = synapsecore::brain::Brain::open(database).await?;
-        brain.reactor().await
-    })
-}
-
-fn loadworkers(database: &std::path::Path) -> anyhow::Result<usize> {
-    block(async {
-        let brain = synapsecore::brain::Brain::open(database).await?;
-        brain.maxworkers().await
-    })
-}
-
-fn loadlearn(database: &std::path::Path) -> anyhow::Result<bool> {
-    block(async {
-        let brain = synapsecore::brain::Brain::open(database).await?;
-        brain.learn().await
-    })
-}
-
-fn loadoptimization(database: &std::path::Path) -> anyhow::Result<Optimization> {
-    block(async {
-        let brain = synapsecore::brain::Brain::open(database).await?;
-        Ok(brain.settings().await?.optimization)
-    })
-}
-
 fn loadvaults(database: &std::path::Path) -> anyhow::Result<VaultData> {
     block(async {
         let store = VaultStore::open(database).await?;
@@ -3231,6 +3262,65 @@ fn loadvaults(database: &std::path::Path) -> anyhow::Result<VaultData> {
     })
 }
 
+/// Everything the first frame reads out of the store, in one open.
+struct Startup {
+    stats: Stats,
+    optimization: Optimization,
+    mesh: bool,
+    learn: bool,
+    reactor: bool,
+    workers: usize,
+}
+
+impl Default for Startup {
+    /// What a window shows when the store could not be opened at all. The
+    /// screen still draws: the notice says what happened, and every one of
+    /// these is the same answer a machine with nothing stored would give.
+    fn default() -> Self {
+        Self {
+            stats: Stats::default(),
+            optimization: Optimization::default(),
+            mesh: false,
+            learn: false,
+            reactor: true,
+            workers: synapsecore::relay::DEFAULTWORKERS,
+        }
+    }
+}
+
+/// `glance` rather than `open`: this is the launch path, and `open` reads every
+/// page of the file to check it. That check is worth its cost once a session —
+/// [`Dashboard::opened`] pays it — and not before the window exists.
+fn openbrain(database: &std::path::Path) -> anyhow::Result<Brain> {
+    block(async { Brain::glance(database).await })
+}
+
+fn readsettings(brain: Option<&Brain>) -> Startup {
+    let Some(brain) = brain else {
+        return Startup::default();
+    };
+    block(async {
+        let settings = brain.settings().await?;
+        Ok(Startup {
+            stats: brain.stats().await.unwrap_or_default(),
+            optimization: settings.optimization,
+            mesh: brain.mesh().await.unwrap_or(false),
+            learn: brain.learn().await.unwrap_or(false),
+            reactor: brain.reactor().await.unwrap_or(true),
+            workers: brain
+                .maxworkers()
+                .await
+                .unwrap_or(synapsecore::relay::DEFAULTWORKERS),
+        })
+    })
+    .unwrap_or_default()
+}
+
+/// The memory list, off a handle that is already open.
+fn loadmemorylist(brain: &Brain) -> anyhow::Result<Vec<Memory>> {
+    block(async { brain.search("", 100).await })
+}
+
 /// The map, for a window opening straight onto it. Everywhere else the page
 /// reads it on arrival; a failure here draws an empty map with the notice the
 /// page already has for one.
@@ -3240,21 +3330,6 @@ fn graphdata(database: &std::path::Path) -> Graph {
         synapsecore::brain::map(&brain).await
     })
     .unwrap_or_default()
-}
-
-fn loadmemories(database: &std::path::Path) -> anyhow::Result<MemoryData> {
-    block(async {
-        let brain = Brain::open(database).await?;
-        let memories = brain.search("", 100).await?;
-        let home = files::home()?;
-        let (imports, batches) = importdata(&brain, &home).await?;
-        Ok(MemoryData {
-            brain,
-            memories,
-            imports,
-            batches,
-        })
-    })
 }
 
 fn loadimports(
@@ -3301,9 +3376,7 @@ fn clidismissed(brain: Option<&Brain>) -> bool {
         == Some("dismissed")
 }
 
-fn block<T>(future: impl std::future::Future<Output = anyhow::Result<T>>) -> anyhow::Result<T> {
-    tokio::runtime::Runtime::new()?.block_on(future)
-}
+use crate::ui::runtime::block;
 
 #[cfg(test)]
 mod tests {

@@ -29,10 +29,29 @@ pub fn agents(home: &Path) -> Vec<Agent> {
 pub async fn connections(home: &Path, server: Option<&Path>, database: &Path) -> Vec<Connection> {
     let root = projectroot();
     let recorded = super::receipt::recorded(database).await.unwrap_or_default();
-    let mut rows: Vec<Connection> = agents(home)
+    let agents = agents(home);
+
+    // Detection is mostly waiting: every installed tool is asked for its
+    // `--version`, and how long that takes belongs to somebody else's CLI —
+    // several of them start a Node or Bun process to answer. Asking them one
+    // after another adds those up, and this runs on the way to a dashboard.
+    // One thread each, joined before anything is read, because the answer is
+    // the same either way and only the waiting overlaps.
+    let detections: Vec<super::Detection> = std::thread::scope(|scope| {
+        let probes: Vec<_> = agents
+            .iter()
+            .map(|agent| scope.spawn(|| super::detect(agent, server)))
+            .collect();
+        probes
+            .into_iter()
+            .map(|probe| probe.join().unwrap_or_else(|_| super::Detection::missing()))
+            .collect()
+    });
+
+    let mut rows: Vec<Connection> = agents
         .into_iter()
-        .map(|agent| {
-            let detection = super::detect(&agent, server);
+        .zip(detections)
+        .map(|(agent, detection)| {
             let outdated = detection.registered
                 && detection.configured
                 && recorded

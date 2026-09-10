@@ -31,7 +31,16 @@ pub fn run() {
                         false
                     });
                     let dashboard = cx.new(Dashboard::new);
-                    dashboard.update(cx, |dashboard, cx| dashboard.opened(cx));
+                    // Everything slow the window does not need in order to
+                    // exist happens on the frame after the first one. Doing it
+                    // here would be doing it before the window is on screen,
+                    // which is where it used to be — the reads are the same
+                    // reads, and the difference is whether somebody is looking
+                    // at a window while they run.
+                    let filling = dashboard.clone();
+                    window.on_next_frame(move |_window, cx| {
+                        filling.update(cx, |dashboard, cx| dashboard.opened(cx));
+                    });
                     dashboard
                 },
             )
