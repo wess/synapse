@@ -70,6 +70,23 @@ pub fn sync(home: &Path, soul: &Path) -> Result<GuidanceReport> {
     })
 }
 
+/// Rewrite the blocks an older release left behind, and nothing else.
+///
+/// An upgrade changes what a block should say without touching the files that
+/// carry the old one, so a machine keeps handing its tools wording already
+/// found wrong until somebody opens the connections view. A file with no block
+/// was never Synapse's and stays as it is; text around a block stays put.
+pub fn refreshstale(home: &Path, soul: &Path) -> Result<usize> {
+    let stale = agent::agents(home)
+        .into_iter()
+        .filter(|agent| pointerstale(&agent.instructions, soul, needsnotice(agent)))
+        .collect::<Vec<_>>();
+    for agent in &stale {
+        writepointer(&agent.instructions, soul, false, needsnotice(agent))?;
+    }
+    Ok(stale.len())
+}
+
 pub fn adopt(home: &Path, soul: &Path) -> Result<GuidanceReport> {
     let agents = agent::agents(home);
     let mut snapshots = Vec::with_capacity(agents.len() + 1);
@@ -388,6 +405,48 @@ mod tests {
         assert!(pointermatches(&file, &soul, true));
         assert!(!pointerstale(&file, &soul, true));
         assert_eq!(fs::read_to_string(&file).unwrap().matches(START).count(), 1);
+    }
+
+    /// The block every release before 1.8 wrote into CLAUDE.md, asking the
+    /// model for a count it could not know.
+    #[test]
+    fn refreshing_rewrites_an_older_block_and_leaves_files_without_one_alone() {
+        let home = tempfile::tempdir().unwrap();
+        let soul = home.path().join("SOUL.md");
+        let agents = agent::agents(home.path());
+        let claude = agents
+            .iter()
+            .find(|agent| matches!(agent.kind, agent::Kind::Claude))
+            .unwrap();
+        let other = agents
+            .iter()
+            .find(|agent| agent.instructions != claude.instructions)
+            .unwrap();
+        for path in [&claude.instructions, &other.instructions] {
+            fs::create_dir_all(path.parent().unwrap()).unwrap();
+        }
+        fs::write(
+            &claude.instructions,
+            format!(
+                "# Mine\n\n{START}\n{}\n\nBegin the first reply of every session with \
+                 `Synapse connected · <count> memories recalled`.\n{END}\n",
+                crate::instructions::pointer(&soul)
+            ),
+        )
+        .unwrap();
+        fs::write(&other.instructions, "# Theirs\n").unwrap();
+
+        assert_eq!(refreshstale(home.path(), &soul).unwrap(), 1);
+
+        let content = fs::read_to_string(&claude.instructions).unwrap();
+        assert!(content.starts_with("# Mine\n\n"), "{content}");
+        assert!(!content.contains("first reply"), "{content}");
+        assert!(pointermatches(&claude.instructions, &soul, false));
+        assert_eq!(
+            fs::read_to_string(&other.instructions).unwrap(),
+            "# Theirs\n"
+        );
+        assert_eq!(refreshstale(home.path(), &soul).unwrap(), 0);
     }
 
     #[test]

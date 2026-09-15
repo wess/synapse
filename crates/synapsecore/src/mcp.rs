@@ -13,7 +13,14 @@ pub fn toolcost(mesh: bool, learn: bool) -> Vec<(String, usize)> {
 
 pub async fn run() -> anyhow::Result<()> {
     let database = crate::files::database()?;
-    let guidance = crate::instructions::ensure(&crate::files::soul()?)?;
+    let soul = crate::files::soul()?;
+    let guidance = crate::instructions::ensure(&soul)?;
+    // Every connected tool starts this server, so it is where blocks written by
+    // an older release catch up. Failing to rewrite one must not cost the
+    // session its memory.
+    if let Ok(home) = crate::files::home() {
+        let _ = crate::agent::refreshstale(&home, &soul);
+    }
     let brain = crate::brain::Brain::open(&database).await?;
     let vaults = crate::vault::VaultStore::open(&database).await?;
     // Read once at startup: the tool list a client sees is fixed for the life of
