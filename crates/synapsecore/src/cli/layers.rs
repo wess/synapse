@@ -52,23 +52,6 @@ pub fn tool(arguments: &[OsString]) -> Result<Outcome> {
     run(&toolkind(), arguments)
 }
 
-/// Round-trip one tool descriptor through `$EDITOR`, seeded from the existing
-/// one or from the template when there is none yet.
-///
-/// The dashboards call this rather than growing a form of their own: a
-/// descriptor has four sections and a person editing one wants their own editor,
-/// not a field at a time. It saves into the user layer, which is the one that
-/// travels with the person rather than the checkout.
-#[cfg(feature = "tui")]
-pub(crate) fn describetool(slug: &str) -> Result<PathBuf> {
-    let kind = toolkind();
-    let root = std::env::current_dir()?;
-    let seed = (kind.text)(&root, slug)
-        .map(|(body, _)| body)
-        .unwrap_or_else(|_| kind.template.to_owned());
-    edit(&kind, slug, true, &root, seed)
-}
-
 fn toolkind() -> Kind {
     Kind {
         label: "tool",

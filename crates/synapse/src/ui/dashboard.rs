@@ -90,14 +90,7 @@ pub struct Dashboard {
     consoleinput: Entity<TextInput>,
     /// Most workers one session may run, read with the rest of the mesh.
     consolelimit: usize,
-    /// Whether the console draws its reactor, as the settings have it.
-    reactorwanted: bool,
-    /// Dictation into the composer, when the build has a microphone.
-    #[cfg(all(feature = "voice", target_os = "macos"))]
-    dictation: crate::voice::Dictation,
-    /// Monotonic seconds since the console opened. The one value the reactor
-    /// draws from that is not measured off the mesh — it turns the sweep.
-    consoleclock: Option<std::time::Instant>,
+    /// Whether the console refresh loop is running.
     /// The poll. A conversation nobody refreshed is a conversation that looks
     /// finished, so this is the one page that reloads on its own — and it only
     /// exists while that page is open.
@@ -280,7 +273,6 @@ impl Dashboard {
         }
         let learnenabled = settings.learn;
         let consolelimit = settings.workers;
-        let reactorwanted = settings.reactor;
         Self {
             // Filled by `opened`, once there is a window to fill.
             rows: Vec::new(),
@@ -338,10 +330,6 @@ impl Dashboard {
             consolefocus: None,
             consoleinput,
             consolelimit,
-            reactorwanted,
-            #[cfg(all(feature = "voice", target_os = "macos"))]
-            dictation: crate::voice::Dictation::default(),
-            consoleclock: None,
             consoletick: None,
             mesherror: meshdata.error,
             skillrows: skilldata.rows,
@@ -946,55 +934,18 @@ impl Dashboard {
         self.page = Page::Console;
         self.consoleidentity = self.joinmesh();
         self.refreshconsole(cx);
-        // One loop while the page is open, and none while it is not. It runs at
-        // a frame rate rather than a poll rate because the reactor turns on it,
-        // but it only goes back to the database every `RELOAD` frames — reading
-        // the mesh ten times a second to animate a ring would be paying for the
-        // wrong thing. `touch` rides along with the reload, so this window's
-        // roster row goes quietly offline on its own if the app is closed
-        // without leaving the page.
-        // With a reactor there is something to animate, so the loop runs at a
-        // frame rate and only reaches the database every `RELOAD` frames. With
-        // none, there is nothing between reloads worth waking up for, so the
-        // frame *is* the reload.
-        const FRAME: std::time::Duration = match cfg!(feature = "reactor") {
-            true => std::time::Duration::from_millis(100),
-            false => std::time::Duration::from_millis(1200),
-        };
-        const RELOAD: u32 = match cfg!(feature = "reactor") {
-            true => 12,
-            false => 1,
-        };
+        const FRAME: std::time::Duration = std::time::Duration::from_millis(1200);
         if self.consoletick.is_none() {
-            self.consoleclock = Some(std::time::Instant::now());
             self.consoletick = Some(cx.spawn(async move |this, cx| {
-                let mut frame = 0_u32;
                 loop {
                     cx.background_executor().timer(FRAME).await;
-                    frame = frame.wrapping_add(1);
                     let alive = this
                         .update(cx, |this, cx| {
                             if this.page != Page::Console {
-                                // The microphone belongs to this page. Walking
-                                // away from it closes the device rather than
-                                // leaving it open with nothing on screen to say
-                                // so.
-                                this.stopdictation();
                                 this.consoletick = None;
-                                this.consoleclock = None;
                                 return false;
                             }
-                            // A finished transcript is checked every frame:
-                            // it arrives when the recogniser is done, not on
-                            // the reload's schedule, and waiting a whole second
-                            // to paste what you just said feels like a fault.
-                            this.collectdictation(cx);
-                            match frame.is_multiple_of(RELOAD) {
-                                true => this.refreshconsole(cx),
-                                // Nothing was read, but the clock moved, so the
-                                // sweep does too.
-                                false => cx.notify(),
-                            }
+                            this.refreshconsole(cx);
                             true
                         })
                         .unwrap_or(false);
@@ -1047,171 +998,6 @@ impl Dashboard {
         .unwrap_or(synapsecore::relay::DEFAULTWORKERS);
         cx.notify();
     }
-
-    /// A frame of mesh, in the shape the reactor wants.
-    ///
-    /// Every field is measured: a ring for each message that has landed within
-    /// its own lifetime, a band per agent carrying what that agent is doing, and
-    /// a level that is the share of them working. Nothing is synthesised, so an
-    /// idle mesh draws an idle reactor rather than a screensaver.
-    fn consolemotion(&self) -> (console::Life, console::Pulse) {
-        let phase = self
-            .consoleclock
-            .map(|start| start.elapsed().as_secs_f32())
-            .unwrap_or_default();
-        let agents: Vec<&synapsecore::relay::AgentView> = self
-            .meshagents
-            .iter()
-            .filter(|agent| !agent.human)
-            .collect();
-        let working = agents
-            .iter()
-            .filter(|agent| agent.status == "working")
-            .count();
-        let bands: Vec<f32> = agents
-            .iter()
-            .map(|agent| match (agent.online, agent.status.as_str()) {
-                (false, _) => 0.0,
-                (true, "working") => 1.0,
-                (true, "blocked") => 0.65,
-                (true, _) => 0.3,
-            })
-            .collect();
-        let level = match agents.is_empty() {
-            true => 0.0,
-            false => working as f32 / agents.len() as f32,
-        };
-        // A ring per recent message, aged in the same seconds `PULSE_LIFE` uses.
-        // The age is the whole of the bookkeeping: a message rings while it is
-        // younger than a ring's life and then stops on its own, so nothing has
-        // to remember which ones have already been drawn. One that landed while
-        // the window was on another page is born too old to ring at all.
-        let now = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map(|since| since.as_secs() as i64)
-            .unwrap_or_default();
-        let rings: Vec<f32> = self
-            .meshfeed
-            .iter()
-            .map(|message| (now - message.created).max(0) as f32)
-            .filter(|age| *age < console::RINGLIFE)
-            .collect();
-        // What the mesh is doing, in the four states the reactor draws. Each has
-        // to be true of the mesh rather than of what the window would like:
-        // `Idle` is nobody but you here, and it looks like it.
-        let life = if agents.is_empty() {
-            console::Life::Idle
-        } else if !rings.is_empty() {
-            console::Life::Talking
-        } else if working > 0 {
-            console::Life::Working
-        } else if agents.iter().any(|agent| agent.online) {
-            console::Life::Waiting
-        } else {
-            console::Life::Idle
-        };
-        (
-            life,
-            console::Pulse {
-                phase,
-                level,
-                bands,
-                rings,
-            },
-        )
-    }
-
-    /// What the microphone button should say, which is the only place the
-    /// voice feature reaches the page.
-    #[cfg(all(feature = "voice", target_os = "macos"))]
-    fn micstate(&self) -> console::Mic {
-        use crate::voice::Access;
-
-        if !crate::voice::available() {
-            return console::Mic::Refused(
-                "This Mac cannot transcribe without sending audio to Apple, so Synapse will not."
-                    .to_owned(),
-            );
-        }
-        if self.dictation.transcribing() {
-            return console::Mic::Transcribing;
-        }
-        if self.dictation.listening() {
-            return console::Mic::Listening;
-        }
-        match crate::voice::access() {
-            Access::Allowed => console::Mic::Ready,
-            Access::Unknown => console::Mic::Ask,
-            Access::Refused => console::Mic::Refused(
-                "Synapse is not allowed to use the microphone. Turn it on in System Settings › Privacy & Security."
-                    .to_owned(),
-            ),
-        }
-    }
-
-    #[cfg(not(all(feature = "voice", target_os = "macos")))]
-    fn micstate(&self) -> console::Mic {
-        console::Mic::Absent
-    }
-
-    /// Start dictating, or stop and transcribe. One button, because at any
-    /// moment there is only one of these worth doing.
-    #[cfg(all(feature = "voice", target_os = "macos"))]
-    fn dictate(&mut self, cx: &mut Context<Self>) {
-        use crate::voice::Access;
-
-        if crate::voice::access() == Access::Unknown {
-            crate::voice::ask();
-            cx.notify();
-            return;
-        }
-        let outcome = match self.dictation.listening() {
-            true => self.dictation.stop(),
-            false => self.dictation.start(),
-        };
-        if let Err(error) = outcome {
-            self.notice = Notice::Error(format!("{error:#}"));
-        }
-        cx.notify();
-    }
-
-    #[cfg(not(all(feature = "voice", target_os = "macos")))]
-    fn dictate(&mut self, _cx: &mut Context<Self>) {}
-
-    /// Put a finished transcript into the composer, appended rather than
-    /// replacing: dictation is another way to type, so it should behave like
-    /// typing into whatever is already there.
-    #[cfg(all(feature = "voice", target_os = "macos"))]
-    fn collectdictation(&mut self, cx: &mut Context<Self>) {
-        let Some(outcome) = self.dictation.poll() else {
-            return;
-        };
-        match outcome {
-            Ok(text) => {
-                let existing = self.consoleinput.read(cx).text();
-                let joined = match existing.trim().is_empty() {
-                    true => text,
-                    false => format!("{} {text}", existing.trim_end()),
-                };
-                self.consoleinput
-                    .update(cx, |input, cx| input.set_text(&joined, cx));
-                self.notice = Notice::Ready;
-            }
-            Err(error) => self.notice = Notice::Error(format!("{error:#}")),
-        }
-        cx.notify();
-    }
-
-    #[cfg(not(all(feature = "voice", target_os = "macos")))]
-    fn collectdictation(&mut self, _cx: &mut Context<Self>) {}
-
-    #[cfg(all(feature = "voice", target_os = "macos"))]
-    fn stopdictation(&mut self) {
-        self.dictation.cancel();
-    }
-
-    #[cfg(not(all(feature = "voice", target_os = "macos")))]
-    fn stopdictation(&mut self) {}
 
     /// Aim a bare line at one agent. Nothing depends on it — `@name` always
     /// works — so this only ever saves typing.
@@ -1290,59 +1076,6 @@ impl Dashboard {
         self.meshworkers = loaded.workers;
         self.meshfeed = loaded.feed;
         self.mesherror = loaded.error;
-        cx.notify();
-    }
-
-    /// What the settings page says about speech. The console's `Mic` is about
-    /// what the button can do next; this is about what the build and the
-    /// machine allow at all, which is a different question with its own answers.
-    #[cfg(all(feature = "voice", target_os = "macos"))]
-    fn voicestate(&self) -> settings::Voice {
-        use crate::voice::Access;
-
-        if !crate::voice::available() {
-            return settings::Voice::Unsupported;
-        }
-        match crate::voice::access() {
-            Access::Allowed => settings::Voice::Allowed,
-            Access::Unknown => settings::Voice::Ask,
-            Access::Refused => settings::Voice::Refused,
-        }
-    }
-
-    #[cfg(not(all(feature = "voice", target_os = "macos")))]
-    fn voicestate(&self) -> settings::Voice {
-        settings::Voice::Absent
-    }
-
-    #[cfg(all(feature = "voice", target_os = "macos"))]
-    fn askvoice(&mut self, cx: &mut Context<Self>) {
-        crate::voice::ask();
-        self.notice = Notice::Success(
-            "macOS will ask. The answer shows here once you have given it.".to_owned(),
-        );
-        cx.notify();
-    }
-
-    #[cfg(not(all(feature = "voice", target_os = "macos")))]
-    fn askvoice(&mut self, _cx: &mut Context<Self>) {}
-
-    fn setreactor(&mut self, enabled: bool, cx: &mut Context<Self>) {
-        let database = self.database.clone();
-        let result = block(async {
-            let brain = synapsecore::brain::Brain::open(database).await?;
-            brain.setreactor(enabled).await
-        });
-        self.notice = match result {
-            Ok(()) => {
-                self.reactorwanted = enabled;
-                Notice::Success(match enabled {
-                    true => "The console draws its reactor.".to_owned(),
-                    false => "The console's reactor is off.".to_owned(),
-                })
-            }
-            Err(error) => Notice::Error(format!("Could not change the reactor: {error}")),
-        };
         cx.notify();
     }
 
@@ -1902,7 +1635,7 @@ impl Dashboard {
                     .min_w(px(0.0))
                     .flex()
                     .flex_col()
-                    .rounded(px(14.0))
+                    .rounded(px(6.0))
                     .border_1()
                     .border_color(border)
                     .bg(surface)
@@ -2627,7 +2360,6 @@ impl Dashboard {
         }
 
         if self.page == Page::Console {
-            let (life, pulse) = self.consolemotion();
             let aimhost = cx.entity().downgrade();
             let aim = move |name: String| -> console::Click {
                 let host = aimhost.clone();
@@ -2645,14 +2377,7 @@ impl Dashboard {
                         agents: self.meshagents.clone(),
                         workers: self.meshworkers.clone(),
                         limit: self.consolelimit,
-                        life,
-                        pulse,
-                        // A build with no reactor has none to draw whatever the
-                        // setting says, so the two are `and`ed rather than the
-                        // setting winning over a missing dependency.
-                        reactor: self.reactorwanted && cfg!(feature = "reactor"),
                         composer: self.consoleinput.clone(),
-                        mic: self.micstate(),
                         message: match &self.notice {
                             Notice::Ready => None,
                             Notice::Success(message) => Some((message.clone(), false)),
@@ -2662,7 +2387,6 @@ impl Dashboard {
                     console::Actions {
                         send: Box::new(cx.listener(|this, _, _, cx| this.sendconsole(cx))),
                         refresh: Box::new(cx.listener(|this, _, _, cx| this.refreshconsole(cx))),
-                        dictate: Box::new(cx.listener(|this, _, _, cx| this.dictate(cx))),
                         focus: Box::new(aim),
                     },
                     cx,
@@ -2777,9 +2501,6 @@ impl Dashboard {
                         mesh: self.meshenabled,
                         learn: self.learnenabled,
                         workers: self.consolelimit,
-                        reactor: self.reactorwanted,
-                        reactorbuilt: cfg!(feature = "reactor"),
-                        voice: self.voicestate(),
                         thememode: crate::ui::theme::mode(cx),
                         clistatus,
                         clipath,
@@ -2800,13 +2521,6 @@ impl Dashboard {
                     settings::Actions {
                         meshon: Box::new(cx.listener(|this, _, _, cx| this.setmesh(true, cx))),
                         meshoff: Box::new(cx.listener(|this, _, _, cx| this.setmesh(false, cx))),
-                        reactoron: Box::new(
-                            cx.listener(|this, _, _, cx| this.setreactor(true, cx)),
-                        ),
-                        reactoroff: Box::new(
-                            cx.listener(|this, _, _, cx| this.setreactor(false, cx)),
-                        ),
-                        askvoice: Box::new(cx.listener(|this, _, _, cx| this.askvoice(cx))),
                         setworkers: {
                             let host = cx.entity().downgrade();
                             Box::new(move |count: usize| {
@@ -2973,13 +2687,13 @@ impl Dashboard {
                         div()
                             .w_full()
                             .min_w(px(0.0))
-                            .max_w(px(980.0))
+                            .max_w(px(1100.0))
                             .mx_auto()
-                            .px(px(34.0))
-                            .py(px(30.0))
+                            .px(px(24.0))
+                            .py(px(20.0))
                             .flex()
                             .flex_col()
-                            .gap(px(24.0))
+                            .gap(px(16.0))
                             .child(summary::render(
                                 &self.stats,
                                 self.connected(),
@@ -2991,11 +2705,11 @@ impl Dashboard {
                             .when(!self.probed, |element| {
                                 element.child(
                                     div()
-                                        .rounded(px(14.0))
+                                        .rounded(px(6.0))
                                         .border_1()
                                         .border_color(border)
                                         .bg(surface)
-                                        .p(px(18.0))
+                                        .p(px(16.0))
                                         .child(
                                             Text::new("Looking for your tools…")
                                                 .size(Size::Sm)
@@ -3268,7 +2982,6 @@ struct Startup {
     optimization: Optimization,
     mesh: bool,
     learn: bool,
-    reactor: bool,
     workers: usize,
 }
 
@@ -3282,7 +2995,6 @@ impl Default for Startup {
             optimization: Optimization::default(),
             mesh: false,
             learn: false,
-            reactor: true,
             workers: synapsecore::relay::DEFAULTWORKERS,
         }
     }
@@ -3306,7 +3018,6 @@ fn readsettings(brain: Option<&Brain>) -> Startup {
             optimization: settings.optimization,
             mesh: brain.mesh().await.unwrap_or(false),
             learn: brain.learn().await.unwrap_or(false),
-            reactor: brain.reactor().await.unwrap_or(true),
             workers: brain
                 .maxworkers()
                 .await

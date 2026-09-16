@@ -28,7 +28,7 @@ pub fn render(path: String, actions: Actions, cx: &App) -> AnyElement {
                 .items_center()
                 .justify_between()
                 .gap(px(18.0))
-                .rounded(px(14.0))
+                .rounded(px(6.0))
                 .border_1()
                 .border_color(theme.border().hsla())
                 .bg(theme.surface().hsla())

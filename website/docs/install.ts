@@ -5,7 +5,7 @@ import { releaseurl } from "../deploy";
 export const install: Page = {
   path: "docs/install/index.html",
   title: "Install and connect",
-  description: "Install the macOS desktop app or build the Linux terminal version, then connect your coding tools.",
+  description: "Install the macOS desktop app or build the Linux CLI, then connect your coding tools.",
   kind: "docs",
   toc: [
     { label: "Requirements", id: "requirements" },
@@ -22,20 +22,20 @@ export const install: Page = {
     <h2 id="requirements">Requirements</h2>
     <ul>
       <li>macOS desktop: Apple-silicon Mac running macOS 13 or later.</li>
-      <li>Linux terminal, CLI, and MCP server: a current stable Rust toolchain and a C compiler/linker to build from source.</li>
+      <li>Linux CLI and MCP server: a current stable Rust toolchain and a C compiler/linker to build from source.</li>
       <li>At least one supported tool on <code>PATH</code>: Codex, Claude Code, pi, or Ainz.</li>
       <li>A writable <code>~/.local/bin</code>, or a custom path supplied through <code>SYNAPSE_BIN</code>.</li>
     </ul>
 
     <h2 id="linux">Install on Linux</h2>
-    <p>Linux supports the terminal dashboard, CLI, and MCP server through <code>synapsecore</code>. This build does not depend on the desktop UI. Current release downloads contain the macOS app; build the Linux version from the <a href="https://github.com/wess/synapse">source repository</a>.</p>
+    <p>Linux supports the CLI and MCP server through <code>synapsecore</code>. This build does not depend on the desktop UI. Current release downloads contain the macOS app; build the Linux version from the <a href="https://github.com/wess/synapse">source repository</a>.</p>
     <p>From the repository root, run:</p>
     ${code("shell", `cargo build --release --locked --manifest-path crates/synapsecore/Cargo.toml
 ./crates/synapsecore/target/release/synapse-cli install
 export PATH="$HOME/.local/bin:$PATH"
 synapse connect
-synapse`)}
-    <p>The install command copies the binary to <code>~/.local/bin/synapse</code>. Keep that directory on your shell's <code>PATH</code>. <code>synapse connect</code> connects tools installed on this machine; restart them to load the connection. Running <code>synapse</code> in an interactive terminal opens the dashboard. Use <code>synapse status</code> for text status or <code>synapse mcp</code> to run the MCP server.</p>
+synapse status`)}
+    <p>The install command copies the binary to <code>~/.local/bin/synapse</code>. Keep that directory on your shell's <code>PATH</code>. <code>synapse connect</code> connects tools installed on this machine; restart them to load the connection. Use <code>synapse status</code> for text status or <code>synapse mcp</code> to run the MCP server.</p>
     <p>On Linux, credentials use Synapse's encrypted vault. The Keychain backend and the native desktop app are macOS-specific. Continue with <a href="#verify">Verify the connection</a>; the app and app-based setup steps below apply to macOS.</p>
 
     <h2 id="app">Install the macOS app</h2>

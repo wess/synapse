@@ -20,7 +20,7 @@ name = "synapsecore"
 # Keep this in step with crates/synapse: `synapse version` reads the version of
 # the crate that holds the command, and the two ship as one product. Only the
 # desktop crate's version triggers the release workflow.
-version = "1.8.1"
+version = "1.8.2"
 edition = "2024"
 description = "Memory, credentials, and the command surface for Synapse, without a window"
 
@@ -66,20 +66,6 @@ tokio = { version = "1.0", features = [
     "time",
 ] }
 toml = "0.9"
-
-# The terminal dashboard. crossterm comes through ratatui's re-export rather
-# than as a dependency of its own, so the two can never drift to versions that
-# disagree about what a key event is.
-ratatui = { version = "0.30.2", default-features = false, features = [
-    "crossterm",
-], optional = true }
-
-# On by default because the binary is the reason this crate exists. An embedder
-# that wants the library and not a screen turns it off:
-#   synapsecore = { version = "*", default-features = false }
-[features]
-default = ["tui"]
-tui = ["dep:ratatui"]
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"

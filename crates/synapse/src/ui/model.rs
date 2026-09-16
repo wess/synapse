@@ -1,5 +1,5 @@
 /// A tool's row on the Connections page. The core type, not a copy of it: the
-/// terminal dashboard draws the same reading, and two structs that happen to
+/// shared core draws the same reading, and two structs that happen to
 /// agree today are two structs that stop agreeing the first time one of them
 /// learns something.
 pub use synapsecore::agent::Connection as Row;

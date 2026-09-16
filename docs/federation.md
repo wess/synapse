@@ -1153,11 +1153,18 @@ A peer being unreachable is not a degradation. It is the normal case.
 
 ### What exists today, and why it does not work
 
+> **Snapshot note (2026-09-11).** The survey below was taken while
+> `~/Desktop/Dev/engineering` was a live KB folder. It has since been retired to
+> `attic/` and each project's own `AGENTS.md` carries its conventions. The
+> `engineering` node is kept in this section as the worked example, because the
+> problem and the protocol are the same for any seat's KB — substitute `devops`
+> or `design` and nothing in the argument changes.
+
 Verified on disk:
 
 | Directory | Git | What `projectroot()` returns |
 |---|---|---|
-| `~/Desktop/Dev/engineering` | none | the folder itself |
+| `~/Desktop/Dev/engineering` *(retired 2026-09-11)* | none | the folder itself |
 | `~/Desktop/Dev/devops` | repo, no remote | the folder itself |
 | `~/Desktop/Dev/design` | none | the folder itself |
 | `~/Desktop/Dev/org` | none | the folder itself |
@@ -1166,7 +1173,7 @@ Verified on disk:
 Because none of the KB folders carry a `.synapse.yaml` and three carry no
 `.git`, `projectroot()` (`brain/scope.rs:13`) resolves each to itself and each
 becomes an ordinary project scope in one `brain.db`. Which means: a memory
-Devmon writes while working in `engineering/` is filtered *out* of every recall
+Devmon writes while working in a KB folder is filtered *out* of every recall
 in `guise/` or `synaps/` by the scope predicate in `store.rs:136` —
 `meta.scope = 'global' OR (meta.scope = 'project' AND meta.project = ?)`. The
 only escape hatch is global scope, which puts a KB fact into every project on

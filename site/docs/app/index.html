@@ -98,7 +98,7 @@
         <tr><td>Mesh</td><td>Turn the agent mesh on and watch who has joined, what they report, and what they send each other.</td><td>One local preference. The roster and messages are written by the agents themselves.</td></tr>
         <tr><td>Skills</td><td>Keep one Agent Skills library and install it into every connected tool.</td><td>The library in the Synapse data directory, and skill folders inside each tool.</td></tr>
         <tr><td>Vaults</td><td>Manage labels, stored values, mappings, the value store itself, and approved project scopes.</td><td>Vault metadata, stored values, and <code>.synapse.yaml</code>.</td></tr>
-        <tr><td>Settings</td><td>Manage shared guidance, recall, the mesh, self-improvement, the worker limit, the console reactor, dictation, appearance, CLI, and shell integration.</td><td><code>SOUL.md</code>, global pointers, local preferences, the CLI launcher, and one managed shell block.</td></tr>
+        <tr><td>Settings</td><td>Manage shared guidance, recall, the mesh, self-improvement, the worker limit, appearance, CLI, and shell integration.</td><td><code>SOUL.md</code>, global pointers, local preferences, the CLI launcher, and one managed shell block.</td></tr>
       </tbody>
     </table>
     <p>Success and error notices appear inside the active screen. The app does not require an account and does not send this state to a hosted service.</p>
@@ -128,7 +128,7 @@
       <dt>Two memories using the same uncommon words</dt>
       <dd>Inferred, and drawn faintest. It uses the same word list recall uses, so a search and a map cannot disagree about which words mean nothing. It is a resemblance, never a claim that two memories say the same thing.</dd>
     </dl>
-    <p>The map is bounded on purpose: it draws the newest 160 memories and says so whenever the store is larger. The layout is the same every time you open it, because a map is worth having when you have learned its shape. The terminal dashboard draws the front of the same cloud from the same coordinates, in braille, and walks its nodes with the cursor keys; past sixty memories it leaves the inferred links out and says so, because a braille cell is on or off and cannot draw a resemblance more faintly than a fact.</p>
+    <p>The map is bounded on purpose: it draws the newest 160 memories and says so whenever the store is larger. The layout is the same every time you open it, because a map is worth having when you have learned its shape.</p>
     
   <aside class="note">
     <strong>The map only reads</strong>
@@ -174,17 +174,6 @@
     <p>Opening it registers you on the roster under your login name, and closing the app takes you off again. That row is what lets a headless worker ask you something: it runs with its permission prompts bypassed, so without a person to address it has had to guess.</p>
     <p>Addressing is the same as <code>synapse mux</code>, because it is the same code: <code>@name</code> reaches one agent, <code>#channel</code> a channel, <code>!</code> everyone, and a bare line goes to whichever agent you picked in the roster. Nothing is interposed — you are a row like any other, and every worker stays directly addressable rather than reachable only through a lead.</p>
 
-    <h3>The reactor</h3>
-    <p>The dial in the middle column is driven by the mesh: a ring for each message that lands, a band for each agent, and a level that is the share of them working. A still reactor means a quiet mesh rather than a broken window. It can be turned off in Settings, which removes it — the numbers beside it say the same things.</p>
-
-    <h3>Dictation</h3>
-    <p>A build made with <code>--features voice</code> puts a microphone beside the composer. Push to talk: start, say something, stop, and what you said appears as text you read before sending. Speech is transcribed on your Mac by macOS's own recogniser — no vendor, no key, and nothing billed per minute — and Synapse refuses to transcribe at all rather than fall back to sending your voice to Apple.</p>
-    
-  <aside class="note">
-    <strong>Not in the download</strong>
-    <p>Dictation is off by default, and that is a decision about what Synapse is rather than about the feature. This is the program holding every secret you own, so the release build has no Speech framework in it and is signed with no microphone entitlement. You get both by building with the feature yourself.</p>
-  </aside>
-
     <h2 id="mesh">Mesh</h2>
     <p>The Mesh screen is off until you turn it on, here or in Settings. While it is off the screen explains the trade: the coordination tools are loaded by every connected tool, and that costs context in each session.</p>
     <p>Once on, it lists the agents that have joined with their role, project, and last reported work state; the background workers running under a Synapse session; and the recent messages between them. Nothing on this screen changes what agents do — it reports. <strong>Refresh</strong> re-reads the database, which is also what opening the screen does.</p>
@@ -218,10 +207,6 @@
     <p>Off and On decide whether connected sessions get <code>teach</code> and <code>revise</code>. Off is the default, for the same reason the mesh is: two more tool definitions cost context in every session that loads them. A skill an agent writes waits on the <a href="#skills">Skills</a> screen and reaches no tool until you approve it, so leaving this on never changes how a session behaves without you having read what changed it.</p>
     <h3>Background workers</h3>
     <p>The most agents one supervisor may run at once. Every worker is a separate session on the account you already pay for, so this is a spending limit as much as a performance one. Whatever you choose is clamped to a ceiling in code, so a mistyped number cannot buy an unbounded fleet, and <code>synapse settings workers &lt;count&gt;</code> takes any value up to it. A supervisor already running picks a change up on its next spawn.</p>
-    <h3>Console reactor</h3>
-    <p>Whether the <a href="#console">Console</a> draws the dial in its middle column. Off removes it rather than dimming it; nothing is lost, because the numbers beside it say the same things. A build made without the <code>reactor</code> feature has none to draw, and the panel says so instead of offering a switch that would do nothing.</p>
-    <h3>Dictation</h3>
-    <p>What the microphone can do here, which is four different situations with four different next steps: not in this build, unavailable on this Mac, not yet permitted, allowed, or refused. Only the third has a button — the rest are explanations, because a toggle cannot tell you that macOS has not asked you yet.</p>
     <h3>Appearance</h3>
     <p>System follows the current macOS appearance as it changes. Light and Dark pin the app to that mode. The preference is stored locally.</p>
     <h3>Command line</h3>
@@ -252,7 +237,7 @@
     </main>
     <aside class="ontoc" aria-label="On this page">
         <span>On this page</span>
-        <ol><li><a href="#navigation">Navigation</a></li><li><a href="#map">Map</a></li><li><a href="#connections">Connections</a></li><li><a href="#memory">Memory</a></li><li><a href="#console">Console</a></li><li><a href="#mesh">Mesh</a></li><li><a href="#skills">Skills</a></li><li><a href="#vaults">Vaults</a></li><li><a href="#settings">Settings</a></li><li><a href="#editors">Editors and data</a></li></ol>
+        <ol><li><a href="#navigation">Navigation</a></li><li><a href="#connections">Connections</a></li><li><a href="#memory">Memory</a></li><li><a href="#console">Console</a></li><li><a href="#mesh">Mesh</a></li><li><a href="#skills">Skills</a></li><li><a href="#vaults">Vaults</a></li><li><a href="#settings">Settings</a></li><li><a href="#editors">Editors and data</a></li></ol>
       </aside>
   </div>
   

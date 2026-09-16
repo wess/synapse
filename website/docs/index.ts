@@ -40,7 +40,7 @@ export const overview: Page = {
       <li>It cannot directly modify an already-running parent process. Use <code>synapse run -- &lt;command&gt;</code> for one child, or explicitly evaluate <code>synapse hook</code> so your shell applies quoted environment changes itself.</li>
       <li>It does not decide that every conversation detail deserves permanent memory. Connected tools receive instructions to keep stable, confirmed context.</li>
       <li>It does not continuously mirror native tool stores. Imports are explicit, previewed, and reversible; new shared memory belongs in Synapse.</li>
-      <li>Synapse provides a signed Apple-silicon desktop app for macOS 13 or later, plus a Linux terminal dashboard, CLI, and MCP server. See <a href="install/#linux">Linux setup</a> to build from source.</li>
+      <li>Synapse provides a signed Apple-silicon desktop app for macOS 13 or later, plus a Linux CLI and MCP server. See <a href="install/#linux">Linux setup</a> to build from source.</li>
     </ul>
 
     <h2 id="paths">Choose a path</h2>

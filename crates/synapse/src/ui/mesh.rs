@@ -93,7 +93,7 @@ pub fn render(view: View, actions: Actions, cx: &App) -> AnyElement {
 /// than presenting an empty table.
 fn off(enable: Click, border: gpui::Hsla, surface: gpui::Hsla) -> AnyElement {
     div()
-        .rounded(px(14.0))
+        .rounded(px(6.0))
         .border_1()
         .border_color(border)
         .bg(surface)
@@ -213,11 +213,11 @@ fn panel(
     body: AnyElement,
 ) -> AnyElement {
     div()
-        .rounded(px(14.0))
+        .rounded(px(6.0))
         .border_1()
         .border_color(border)
         .bg(surface)
-        .p(px(18.0))
+        .p(px(16.0))
         .flex()
         .flex_col()
         .gap(px(13.0))

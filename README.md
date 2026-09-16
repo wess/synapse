@@ -6,7 +6,7 @@ Stop repeating the same project conventions to each coding agent. With Synapse, 
 
 [Download for macOS](https://github.com/wess/synapse/releases/latest/download/synapse.zip) · [Linux setup](https://wess.io/synapse/docs/install/#linux) · [Try a handoff](https://wess.io/synapse/tutorials/continuity/) · [Documentation](https://wess.io/synapse/docs/)
 
-macOS desktop (Apple silicon, macOS 13+, signed and notarized) · Linux terminal dashboard, CLI, and MCP server · MIT license · No account required
+macOS desktop (Apple silicon, macOS 13+, signed and notarized) · CLI and MCP server · MIT license · No account required
 
 ## Supported harnesses
 
@@ -75,7 +75,7 @@ On macOS:
 4. Ask one tool to remember a confirmed project convention. Open another in the same folder and ask it to recall that convention.
 5. Inspect the record in Synapse's **Memories** screen.
 
-On Linux, build the terminal version from the repository root with a current stable Rust toolchain and a C compiler/linker:
+On Linux, build the CLI from the repository root with a current stable Rust toolchain and a C compiler/linker:
 
 ```sh
 cargo build --release --locked --manifest-path crates/synapsecore/Cargo.toml
@@ -85,7 +85,7 @@ synapse connect
 synapse
 ```
 
-`synapse connect` connects installed tools. Restart them afterward. Running `synapse` in a terminal opens the dashboard; the same binary provides the CLI and MCP server. The Linux build has no desktop UI dependency and uses the encrypted vault instead of macOS Keychain. Current release downloads contain the macOS app; Linux users build from source.
+`synapse connect` connects installed tools. Restart them afterward. Use `synapse status` for text status; the same binary provides the CLI and MCP server. The Linux build has no desktop UI dependency and uses the encrypted vault instead of macOS Keychain. Current release downloads contain the macOS app; Linux users build from source.
 
 See the [installation guide](https://wess.io/synapse/docs/install/) for CLI setup and connection troubleshooting.
 

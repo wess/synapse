@@ -209,7 +209,7 @@ pub fn render(view: View, actions: Actions, cx: &App) -> AnyElement {
 
 fn blank(border: gpui::Hsla, surface: gpui::Hsla) -> AnyElement {
     div()
-        .rounded(px(14.0))
+        .rounded(px(6.0))
         .border_1()
         .border_color(border)
         .bg(surface)
@@ -256,11 +256,11 @@ fn skill(
         _ => format!("Install ({pending})"),
     };
     div()
-        .rounded(px(14.0))
+        .rounded(px(6.0))
         .border_1()
         .border_color(border)
         .bg(surface)
-        .p(px(18.0))
+        .p(px(16.0))
         .flex()
         .flex_col()
         .gap(px(12.0))
@@ -383,11 +383,11 @@ fn unmanaged(
     surface: gpui::Hsla,
 ) -> AnyElement {
     div()
-        .rounded(px(14.0))
+        .rounded(px(6.0))
         .border_1()
         .border_color(border)
         .bg(surface)
-        .p(px(18.0))
+        .p(px(16.0))
         .flex()
         .flex_col()
         .gap(px(12.0))

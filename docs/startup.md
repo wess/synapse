@@ -33,7 +33,7 @@ scheduled by `window.on_next_frame`:
 
 Detection also runs one thread per descriptor. The work is waiting, not
 computing, so waiting in sequence adds the answers up; `synapse status` and the
-terminal dashboard get that too.
+the terminal fallback is now text-only.
 
 A page that has not looked yet has to say so. An empty tool list reads as *no
 tools found*, which is a different and much worse statement than *not looked

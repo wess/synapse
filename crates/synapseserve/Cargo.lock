@@ -1182,7 +1182,6 @@ dependencies = [
  "axum",
  "base64",
  "fs2",
- "serde",
  "serde_json",
  "sha2",
  "sqlx",

@@ -56,12 +56,12 @@ fn apply(appearance: WindowAppearance, cx: &mut App) {
 fn lighttheme() -> Theme {
     Theme::light()
         .with_primary(guise::rgb(103, 82, 176))
-        .with_body(guise::rgb(247, 246, 242))
-        .with_surface(guise::rgb(255, 255, 255))
-        .with_surface_hover(guise::rgb(247, 246, 250))
+        .with_body(guise::rgb(242, 243, 246))
+        .with_surface(guise::rgb(250, 250, 251))
+        .with_surface_hover(guise::rgb(232, 234, 240))
         .with_text(guise::rgb(31, 29, 36))
         .with_dimmed(guise::rgb(97, 93, 108))
-        .with_border(guise::rgb(226, 223, 232))
+        .with_border(guise::rgb(211, 214, 222))
         .with_success(guise::rgb(29, 126, 109))
         .with_danger(guise::rgb(187, 53, 69))
 }
@@ -69,12 +69,12 @@ fn lighttheme() -> Theme {
 fn darktheme() -> Theme {
     Theme::dark()
         .with_primary(guise::rgb(154, 132, 230))
-        .with_body(guise::rgb(24, 23, 29))
-        .with_surface(guise::rgb(32, 30, 38))
-        .with_surface_hover(guise::rgb(42, 39, 49))
+        .with_body(guise::rgb(25, 27, 32))
+        .with_surface(guise::rgb(31, 34, 40))
+        .with_surface_hover(guise::rgb(45, 49, 58))
         .with_text(guise::rgb(240, 238, 244))
         .with_dimmed(guise::rgb(175, 169, 187))
-        .with_border(guise::rgb(66, 62, 76))
+        .with_border(guise::rgb(61, 66, 77))
         .with_success(guise::rgb(83, 190, 162))
         .with_danger(guise::rgb(235, 113, 128))
 }

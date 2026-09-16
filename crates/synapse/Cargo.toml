@@ -2,7 +2,7 @@
 name = "synapse"
 # Bumping this on main is the release trigger. Keep it in step with
 # crates/synapsecore, which is where `synapse version` reads its number from.
-version = "1.8.1"
+version = "1.8.2"
 edition.workspace = true
 description = "Local memory and scoped credentials for developer tools"
 
@@ -14,38 +14,13 @@ description = "Local memory and scoped credentials for developer tools"
 anyhow.workspace = true
 chrono = { version = "0.4", default-features = false, features = ["clock"] }
 gpui = "0.2.2"
-# The reactor on the console. A drawing dependency, which is the only kind this
-# crate may carry: stateless components over the same gpui, driven by whatever
-# the host measured. Synapse hands it mesh activity where nora hands it audio.
-#
-# Optional, and the console is whole without it: the reactor says what the fact
-# strip beside it already says, in a form some people want and some do not.
-# Turning it off drops the dependency rather than hiding the element.
-nora-hud = { version = "0.1", optional = true }
-# Dictation into the console. Capture is `nora-voice`'s default features only —
-# no ONNX Runtime, no models, no vendor — and the transcription is macOS's own
-# on-device recogniser, so this adds a microphone and nothing that bills.
-nora-voice = { version = "0.1", optional = true }
 guise-ui.workspace = true
-synapsecore = { path = "../synapsecore" }
+synapsecore = { path = "../synapsecore", default-features = false }
 tokio = { version = "1.0", features = ["rt-multi-thread"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 async-channel = "2.5"
 cocoa = "0.26"
-objc2 = { version = "0.6", optional = true }
-block2 = { version = "0.6", optional = true }
-objc2-foundation = { version = "0.3", optional = true }
-objc2-speech = { version = "0.3", optional = true, default-features = false, features = [
-    "SFSpeechRecognizer",
-    "SFSpeechRecognitionRequest",
-    "SFSpeechRecognitionResult",
-    "SFSpeechRecognitionTask",
-    "SFTranscription",
-    "alloc",
-    "block2",
-    "std",
-] }
 tray-icon = { version = "0.24.2", default-features = false }
 
 [package.metadata.bundle]
@@ -57,21 +32,3 @@ short_description = "Local memory and scoped credentials for developer tools"
 long_description = "A quiet local memory service and Keychain-backed credential bridge for developer tools."
 osx_minimum_system_version = "13.0"
 osx_info_plist_exts = ["assets/info.plist"]
-
-[features]
-default = ["reactor"]
-# The console's reactor. Off means no `nora-hud` in the build at all.
-reactor = ["dep:nora-hud"]
-
-# Dictation into the console composer. Off by default and deliberately so: it
-# is the only thing here that wants a microphone, and Synapse is the app on the
-# machine holding a Keychain reference to every secret its user owns. A build
-# without this feature has no `Speech.framework`, no capture, and no reason to
-# carry the entitlement that would let it listen.
-voice = [
-    "dep:nora-voice",
-    "dep:block2",
-    "dep:objc2",
-    "dep:objc2-foundation",
-    "dep:objc2-speech",
-]

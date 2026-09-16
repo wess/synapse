@@ -1,6 +1,4 @@
 mod ui;
-#[cfg(all(feature = "voice", target_os = "macos"))]
-mod voice;
 
 use synapsecore::cli::{self, Outcome};
 
