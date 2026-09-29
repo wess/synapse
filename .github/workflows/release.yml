@@ -135,7 +135,10 @@ jobs:
           workspaces: synapse
 
       - name: Install cargo-bundle
-        run: cargo install cargo-bundle --locked
+        # Pinned: 0.12.0 (2026-09-20) renamed the [package.metadata.bundle]
+        # fields — `osx_info_plist_exts` is now an unknown field — and broke the
+        # 1.8.3 build. Move this and the manifest together.
+        run: cargo install cargo-bundle --version 0.11.0 --locked
 
       - name: Import signing certificate
         if: env.APPLE_SIGNING_IDENTITY != ''
