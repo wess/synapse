@@ -210,7 +210,7 @@ consolidated	false</code></pre>
         <h3 id="store">Store one memory</h3>
         <p>Tell the connected tool:</p>
         <blockquote>Remember this confirmed tutorial convention: documentation examples use the source label synapsetutorial.</blockquote>
-        <p>It should call <code>remember</code> with the current project root and report a numeric ID. Use an ordinary convention for this — memory is plain text readable by every connected tool, so never put a token, password, or private key in it.</p>
+        <p>It should call <code>remember</code> with the current project root and report a numeric ID. Use an ordinary convention for this — memory is plain text readable by every connected tool, so never put a token, password, or private key in it. Synapse removes the ones it recognizes before storing and replaces them with <code>[redacted]</code>, but that is a backstop, not a reason to try.</p>
       </li>
 
       <li>

@@ -71,7 +71,7 @@ export const continuity: Page = {
         <h3 id="correct">Inspect the source of truth and correct it</h3>
         <p>What the tool reported is a rendering. Go and look at the record itself:</p>
         ${code("shell", `synapse memory list "Bun JavaScript"`)}
-        ${code("text", `4	project:/Users/example/project	synapsetutorial	We confirmed together that this repository uses Bun for JavaScript tasks rather than npm, after discussing…`)}
+        ${code("text", `4	project:github.com/example/project	synapsetutorial	We confirmed together that this repository uses Bun for JavaScript tasks rather than npm, after discussing…`)}
         ${code("shell", `synapse memory show 4`)}
         <p>If the body is a paragraph of conversation rather than a durable statement, replace it. Editing keeps the same ID, so nothing else has to change and no contradicting second record is created:</p>
         ${code("shell", `printf '%s\\n' 'Use Bun for JavaScript tasks in this repository.' \\
@@ -89,9 +89,10 @@ export const continuity: Page = {
         ${code("shell", `synapse memory show 4`)}
         ${code("text", `Memory #4
 Scope: project
-Project: /Users/example/project
+Project: github.com/example/project
 Source: synapsetutorial`)}
         <p>Recall from any project returns everything global plus everything stored for <em>that</em> project. Another project's memory never enters the response. The project root is resolved by walking up for a <code>.git</code> directory or a <code>.synapse.yaml</code>, so a session opened in a subdirectory still resolves to the same root — which is why the same memory is found whether you start at the repository top or three folders down.</p>
+        <p>The project is then named by the repository's <code>origin</code> remote, which is why it reads <code>github.com/example/project</code> rather than a folder. Clone the repository somewhere else, or open a worktree of it, and a session there recalls the same memory. A folder with no remote is named by its path instead, and memory filed under it stays with that path.</p>
       </li>
 
       <li>

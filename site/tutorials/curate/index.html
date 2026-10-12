@@ -198,7 +198,17 @@ Tutorial commands use Bun.</code></pre>
 
       <li>
         <h3 id="behavior">Understand how search behaves</h3>
-        <p>Recall is full-text search with two behaviors worth knowing, because both explain results that otherwise look wrong.</p>
+        <p>Recall is full-text search with a few behaviors worth knowing, because each explains results that otherwise look wrong.</p>
+        <p><strong>Words match in other forms, and so do fragments.</strong> The query is searched twice: once by word, stemmed, so <em>deploying</em> finds a memory that says <em>deploys</em>; and once by three-character pieces, so <em>hashpw</em> finds <code>scripts/hashpw.sh</code>. A memory that matches both ways ranks above one that matches only one. Its source is searched too, at a lower weight, so the label you file a memory under helps find it.</p>
+        
+  <div class="codeblock">
+    <div class="codebar">
+      <span>shell</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>synapse memory list deploying
+synapse memory list synapsetutorial</code></pre>
+  </div>
         <p><strong>Common words are dropped.</strong> A query is stripped of words that carry no meaning on their own. Try it:</p>
         
   <div class="codeblock">
@@ -237,6 +247,7 @@ Tutorial commands use Bun.</code></pre>
     <pre><code>Query:      what are the credentials
 Mode:       search
 Expression: &quot;credentials&quot;
+Fragments:  &quot;credentials&quot;
 Searched:   credentials
 Dropped:    what, are, the (matches nearly every memory)
 Matches:    0</code></pre>
@@ -251,6 +262,27 @@ Matches:    0</code></pre>
     </div>
     <pre><code>synapse memory grep -- --no-verify</code></pre>
   </div>
+        <p><strong>And you can measure it.</strong> Once a project has memory worth keeping, write down a few questions you expect it to answer, with text the right answer contains, and score recall against them. Run it again after a cleanup and the numbers say whether the store got easier to search or harder:</p>
+        
+  <div class="codeblock">
+    <div class="codebar">
+      <span>toml</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>[[case]]
+query = &quot;which javascript runtime&quot;
+project = &quot;/Users/example/project&quot;
+expect = [&quot;bun&quot;]</code></pre>
+  </div>
+        
+  <div class="codeblock">
+    <div class="codebar">
+      <span>shell</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>synapse memory eval cases.toml</code></pre>
+  </div>
+        <p><a href="../../docs/memory/#eval">Measuring recall</a> explains each number, including how often the answer survived the response budget.</p>
         
   <aside class="note">
     <strong>Scope is applied in the query, not after it</strong>
@@ -428,6 +460,7 @@ Preview only. Add --confirm to import safe entries.</code></pre>
     <pre><code>Import batch #1: 1 stored, 0 linked, 0 already imported, 0 flagged and left untouched
 Undo with: synapse memory undo 1 --confirm</code></pre>
   </div>
+        <p>The entries that are imported are redacted on the way in, like every memory Synapse stores: a credential that slipped past the flag becomes <code>[redacted]</code> rather than being written to the database.</p>
         <p>Imports are idempotent. Running the same file again reports the entries as already imported rather than creating duplicates, so a repeated import is harmless. Claude and Codex memory stores import the same way with <code>synapse memory import claude</code> and <code>synapse memory import codex</code>.</p>
       </li>
 

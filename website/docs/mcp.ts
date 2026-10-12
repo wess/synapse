@@ -31,7 +31,7 @@ export const mcp: Page = {
   "systemMessage": "Synapse connected · 128 memories",
   "hookSpecificOutput": {
     "hookEventName": "SessionStart",
-    "additionalContext": "Synapse is connected and holds 128 memories for /Users/example/project. …"
+    "additionalContext": "Synapse is connected and holds 128 memories for github.com/example/project. …"
   }
 }`)}
     <p><code>additionalContext</code> carries the memories themselves, most recent first, under the same scope rule <code>recall</code> uses: everything global, plus everything stored for this project, and nothing from any other project. A session therefore opens already holding what the project has decided, rather than being asked to go and look.</p>
@@ -44,6 +44,7 @@ export const mcp: Page = {
         <tr><td>Empty store</td><td>No block is injected. The context asks the tool to call <code>remember</code> once something durable is settled.</td></tr>
         <tr><td>Failure</td><td>Reports <code>Synapse unavailable</code> with a short reason and tells the model not to claim a connection that is not there. The hook never exits non-zero, because a failing hook is noise in your terminal.</td></tr>
         <tr><td>Trust</td><td>Recalled content is labelled as context, never as instruction. It does not override the current request, repository guidance, or what you say next.</td></tr>
+        <tr><td>After compaction</td><td>The hook runs again with <code>source</code> set to <code>compact</code>. It prints no notice and hands the memory back, since the compaction dropped it. See <a href="#compaction">Before compaction</a>.</td></tr>
       </tbody>
     </table>
     ${note("Codex has no equivalent hook", "Codex does not expose a session-start hook, so a Codex session still opens by calling recall itself as the shared guidance in SOUL.md asks. Everything else — the tools, the scope rule, the response budget — is identical.")}
@@ -74,10 +75,10 @@ export const mcp: Page = {
     <table>
       <thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Meaning</th></tr></thead>
       <tbody>
-        <tr><td><code>content</code></td><td>string</td><td>Yes</td><td>The durable text. Empty or whitespace-only content is rejected.</td></tr>
+        <tr><td><code>content</code></td><td>string</td><td>Yes</td><td>The durable text. Empty or whitespace-only content is rejected. Credentials and <code>&lt;private&gt;</code> sections are removed before it is stored; see <a href="../memory/#durable">What belongs in durable memory</a>.</td></tr>
         <tr><td><code>source</code></td><td>string or null</td><td>No</td><td>An origin such as a project path, repository name, or topic.</td></tr>
         <tr><td><code>scope</code></td><td><code>project</code> or <code>global</code></td><td>No</td><td>Defaults to project. Use global only for context that should appear everywhere.</td></tr>
-        <tr><td><code>project</code></td><td>string or null</td><td>For project scope</td><td>Absolute working-project path. Synapse normalizes nested paths to the project root.</td></tr>
+        <tr><td><code>project</code></td><td>string or null</td><td>For project scope</td><td>Absolute working-project path. Synapse resolves nested paths to the project root, then files the memory under that repository's <code>origin</code> remote (<code>host/owner/repo</code>) when it has one, and under the root's path when it does not.</td></tr>
         <tr><td><code>supersedes</code></td><td>array of integers or null</td><td>No</td><td>Ids of memories this one replaces \u2014 usually ids that came back from an earlier <code>recall</code>. Each stops being recalled. Nothing is deleted. An id that no longer resolves is skipped rather than failing the write.</td></tr>
       </tbody>
     </table>
@@ -86,10 +87,11 @@ export const mcp: Page = {
   "stored": true,
   "superseded": [18]
 }`)}
+    <p><code>redacted</code> appears only when something was taken out before storing, and says how many parts: a credential or a <code>&lt;private&gt;</code> section. The stored text is then not the text that was sent, so do not rely on the removed value being in memory.</p>
     <p>The store and the replacement happen in one transaction. Without <code>supersedes</code>, a correction is a second memory contradicting the first, both come back from the next recall, and the ranking decides which one an agent acts on \u2014 including the version its own author had already retracted.</p>
 
     <h2 id="recall">recall</h2>
-    <p>Returns durable context relevant to a query. An empty query returns recent memory.</p>
+    <p>Returns durable context relevant to a query. A word matches in any form, so <em>deploying</em> finds <em>deploys</em>; part of an identifier matches too, so <em>hashpw</em> finds <code>scripts/hashpw.sh</code>; and a memory's source is searched at a lower weight than its body. An empty query returns recent memory. <a href="../memory/#recall">Search and recall</a> has the details.</p>
     ${code("json", `{
   "query": "module structure",
   "limit": 8,
@@ -102,7 +104,7 @@ export const mcp: Page = {
         <tr><td><code>query</code></td><td>string</td><td>Yes</td><td>Words or a phrase describing the context needed. Use an empty string for recent entries.</td></tr>
         <tr><td><code>limit</code></td><td>integer or null</td><td>No</td><td>Requested result count. Defaults to 8. The active response budget may lower it.</td></tr>
         <tr><td><code>budget</code></td><td><code>full</code>, <code>balanced</code>, or <code>lean</code></td><td>No</td><td>May reduce the configured response ceiling but can never enlarge it.</td></tr>
-        <tr><td><code>project</code></td><td>string or null</td><td>No</td><td>Absolute working-project path. Results include global memory plus this project and exclude other projects.</td></tr>
+        <tr><td><code>project</code></td><td>string or null</td><td>No</td><td>Absolute working-project path. Results include global memory plus this project, in any checkout of the same repository, and exclude other projects.</td></tr>
       </tbody>
     </table>
     ${code("json", `{
@@ -113,12 +115,12 @@ export const mcp: Page = {
       "body": "Use small focused modules.",
       "source": "synapse",
       "scope": "project",
-      "project": "/Users/example/project",
+      "project": "github.com/example/project",
       "created": 1785250000
     }
   ]
 }`)}
-    <p>Two fields appear only when they are true of the result. <code>abridged</code> marks a memory returned as its opening sentence alone, because the response budget could not carry the rest \u2014 use <code>readmemory</code> with its id and the same project before acting on the part you cannot see. <code>superseded</code> never appears here at all, because a replaced memory is not recalled.</p>
+    <p>Two fields appear only when they are true of the result. <code>abridged</code> marks a memory returned in part, because the response budget could not carry the rest. The part is its opening sentence when that sentence holds a word the query matched, and otherwise the passage around the match, cut with <code>…</code> at both ends \u2014 use <code>readmemory</code> with its id and the same project before acting on the part you cannot see. <code>superseded</code> never appears here at all, because a replaced memory is not recalled.</p>
 
     <h2 id="readmemory">readmemory</h2>
     <p>Read one memory by id after recall identifies it. The body is an exact page of stored text, including code and whitespace. No model or additional index is involved.</p>
@@ -132,7 +134,7 @@ ${code("json", `{
       <thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Meaning</th></tr></thead>
       <tbody>
         <tr><td><code>id</code></td><td>positive integer</td><td>Yes</td><td>Memory id from recall.</td></tr>
-        <tr><td><code>project</code></td><td>string or null</td><td>No</td><td>The same absolute project root used for recall. Scope resolution is identical.</td></tr>
+        <tr><td><code>project</code></td><td>string or null</td><td>No</td><td>The same absolute project path used for recall. Scope resolution is identical.</td></tr>
         <tr><td><code>offset</code></td><td>nonnegative integer or null</td><td>No</td><td>UTF-8 byte offset, initially zero. Use the preceding page's <code>next</code> value to continue.</td></tr>
         <tr><td><code>budget</code></td><td><code>full</code>, <code>balanced</code>, or <code>lean</code></td><td>No</td><td>Can reduce the configured ceiling. Lean pages contain at most 2,800 bytes; Balanced and Full pages at most 6,000 bytes.</td></tr>
       </tbody>
@@ -145,7 +147,7 @@ ${code("json", `{
     "source": "synapse",
     "sourceabridged": false,
     "scope": "project",
-    "project": "/Users/example/project",
+    "project": "github.com/example/project",
     "created": 1785250000,
     "offset": 0,
     "next": null,

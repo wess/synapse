@@ -2,8 +2,16 @@
 
 Recall finds relevant memories within the configured budget. `readmemory` reads the
 exact stored body of one hit in bounded pages. Both apply the same global plus
-current-project scope and exclude superseded records. Neither requires a model,
-network service, or second index.
+current-project scope and exclude superseded records. Neither requires a model or
+network service.
+
+Recall searches two FTS5 indexes over the same rows: `memory`, stemmed with
+`porter unicode61` over body and source (source weighted 0.3), and `memorygram`, a
+contentless `trigram` index kept in step at every write. Each ranks the query on
+its own and the two lists are merged by reciprocal rank fusion (`K = 60`). When a
+hit has to be abridged, recall sends its opening line if that holds a matched word
+and the FTS5 snippet around the match otherwise. `readmemory` reads by id and uses
+neither index.
 
 ## Exact reading
 
@@ -78,6 +86,20 @@ Use release builds and record the machine alongside results. Compare the same
 fixture before and after a change. The fixture exposes scaling trends; it does
 not simulate cold disks, mixed-project query plans, long-duration memory growth,
 or semantic relevance on real user questions. Timing thresholds are deliberately
-absent from shared-runner correctness tests. Before changing ranking or adding
-inference, evaluate representative questions with expected relevant ids and measure
-both recall quality and resource cost.
+absent from shared-runner correctness tests.
+
+## Relevance
+
+Before changing ranking or adding inference, measure recall quality on
+representative questions:
+
+```sh
+synapse memory eval cases.toml --budget lean
+```
+
+Each `[[case]]` names a `query`, an optional `project` folder, and `expect`: text a
+useful memory contains, or nothing for a question no memory answers. The report
+gives the share ranked first, the share found, MRR, the share whose answer text
+survived the response budget, and noise on unanswerable cases. Run it on a copy of
+a real store (`SYNAPSE_DATA` pointed at the copy, never the live folder) before and
+after the change, and keep resource cost in view alongside it.

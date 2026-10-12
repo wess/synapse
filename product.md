@@ -19,14 +19,15 @@ Developers who move between multiple coding tools and want decisions, preference
 ## First release
 
 - A local SQLite memory store.
-- Search, inspection, editing, deletion, and guarded wipe controls for stored memory.
-- Enforced global and project memory scopes shared by every connected tool.
+- Search, inspection, editing, deletion, and guarded wipe controls for stored memory. Search ranks a stemmed word index and a trigram fragment index and fuses the two, and `synapse memory eval` scores it against labeled questions.
+- Enforced global and project memory scopes shared by every connected tool. A repository is one project wherever it is checked out, keyed by its `origin` remote.
+- Redaction of credentials and `<private>` sections before any memory is stored.
 - Previewed, idempotent, reversible imports from Claude, Codex, and selected Markdown.
 - An MCP stdio server exposing `remember`, `recall`, and value-free vault status.
 - An opt-in agent mesh over the same local database: register, direct messages, channels, broadcasts, free parking on `wait`, reported work state, and supervised background workers. Off by default, because its tools cost context in every session that loads them.
 - Reusable agent roles and team rosters as layered TOML, resolved project, then user, then built-in.
 - One Agent Skills library installed into every connected tool, so a skill is written once instead of copied by hand into each one and left to drift. Skills Synapse did not install are reported, never overwritten.
-- One-click user-level setup for Codex, Claude Code, pi, and Ainz, including a session notice and status line that state the connection before the model has written anything, and a pre-compaction hook that asks a long session to write down what it settled before its context goes. pi has no MCP client, so its connection is the `synapse-pi` package, which carries the tools, the notice, and the guidance together.
+- One-click user-level setup for Codex, Claude Code, pi, and Ainz, including a session notice and status line that state the connection before the model has written anything, and a pre-compaction hook that asks a long session to write down what it settled before its context goes, with the session hook handing memory back once the compaction is done. pi has no MCP client, so its connection is the `synapse-pi` package, which carries the tools, the notice, and the guidance together.
 - One editable `SOUL.md` for shared guidance, with managed pointers in each tool's global instruction file.
 - Safe pointer sync plus explicit, backed-up consolidation of existing global guidance.
 - Vaults managed from the dashboard, over one of two value stores: an encrypted `vault.db` sealed with a key only this account can read, or macOS Keychain. Encrypted is the default and the only one off macOS; `synapse vault migrate` moves every value between them without a gap.

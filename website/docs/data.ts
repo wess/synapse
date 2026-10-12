@@ -38,6 +38,7 @@ export const data: Page = {
       <li>Run <code>PRAGMA foreign_key_check</code>, and <code>PRAGMA quick_check</code> when this store has not already been read.</li>
       <li>Reject a database newer than the current application supports.</li>
       <li>Create a pre-migration snapshot when an existing database needs a numbered migration, then apply the migration transactionally.</li>
+      <li>Move project memory filed under a repository's folder path to that repository's <code>origin</code> key, when the folder is still a repository with a remote. A store with nothing to move costs one indexed read.</li>
       <li>Reapply owner-only file permissions.</li>
     </ol>
     ${note("<code>quick_check</code> reads every page, so its cost grows with everything you have stored. Synapse runs it once for a given file rather than once per handle, and reporting commands such as the status line skip it: they redraw constantly, and a whole-store scan there would cost far more than the number they print. <code>synapse data check</code> always runs the full check.")}
@@ -46,6 +47,7 @@ synapse data check --json`)}
 
     <h2 id="backups">Automatic backups</h2>
     <p>Before changing an existing schema, Synapse creates <code>backups/brain.&lt;timestamp&gt;.v&lt;version&gt;.db</code>. Before replacing an existing database during restore, it creates <code>backups/brain.&lt;timestamp&gt;.restore.db</code>.</p>
+    <p>Upgrading to schema 13 rebuilds the search index: memory is stemmed, sources become searchable, and a fragment index is added beside it. Like every migration it is one-way. An earlier Synapse refuses a store this release has opened, and says so. To go back, close Synapse and restore the <code>.v12.db</code> snapshot it took first.</p>
     <p>These are complete snapshots created through SQLite <code>VACUUM INTO</code>, not copies of a live database file. Synapse does not currently rotate them; include the folder in your normal local backup policy and remove old snapshots deliberately.</p>
 
     <h2 id="export">Export a portable snapshot</h2>

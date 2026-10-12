@@ -93,7 +93,7 @@ See the [installation guide](https://wess.io/synapse/docs/install/) for CLI setu
 
 | Capability | How you use it |
 | --- | --- |
-| Project memory | Save decisions, corrections, and conventions. Recall them in a later session or another connected agent. |
+| Project memory | Save decisions, corrections, and conventions. Recall them in a later session or another connected agent, from any clone or worktree of the same repository. Credentials are stripped before anything is stored. |
 | Existing memory | Preview and import Claude and Codex memory without changing the originals. Undo an import batch when needed. |
 | Shared guidance | Edit one `SOUL.md` and point your connected tools at it. |
 | Agent Skills | Maintain one library, install skills into connected tools, and check which copies have drifted. |
@@ -101,7 +101,7 @@ See the [installation guide](https://wess.io/synapse/docs/install/) for CLI setu
 | Scoped credentials | Approve which project folders may receive which environment variables, using the local encrypted vault or macOS Keychain. |
 | The Map | See every memory as a graph in three dimensions — projects as clusters, a correction as a line to what it replaced, and a memory nothing else touches looking like one. |
 
-Search, edit, export, restore, or delete stored memory from the app. Supersede a decision when it changes: future recall returns the current version, and you can still inspect or restore the old one.
+Search, edit, export, restore, or delete stored memory from the app. Search matches words in any form and fragments of identifiers, so `deploying` finds "deploys" and `hashpw` finds `scripts/hashpw.sh`. Supersede a decision when it changes: future recall returns the current version, and you can still inspect or restore the old one. `synapse memory eval` scores recall against questions you write down, so a change to what you store can be measured instead of guessed.
 
 ## One skill library
 

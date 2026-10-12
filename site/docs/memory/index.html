@@ -105,7 +105,16 @@
 
     <h2 id="scope">Global and project scope</h2>
     <p>Project memory is the default. Synapse resolves the supplied path to its repository or approved project root and returns that memory only alongside global memory for the same project. Unrelated project memory stays out of MCP recall.</p>
-    <p>A repository with an <code>origin</code> remote is filed under that remote, normalized to <code>host/owner/repo</code> with any credentials dropped, rather than under the folder it is checked out in. Every checkout of <code>github.com/you/app</code>, at any path on any machine, shares one project memory, and a memory synced from another machine is recalled here. A folder without a remote is keyed by its path, as before. Memory stored under a checkout's path by an earlier release moves to the remote's key the first time this release opens the store.</p>
+    <p>A repository with an <code>origin</code> remote is filed under that remote, normalized to <code>host/owner/repo</code> with any credentials dropped, rather than under the folder it is checked out in. Every checkout of <code>github.com/you/app</code> shares one project memory, wherever it is: a second clone, a worktree, or the same repository after you move or rename its folder. A folder without a remote is keyed by its path. Memory an earlier release stored under a checkout's path moves to the remote's key the first time this release opens the store; a path whose folder is gone stays as it was.</p>
+    
+  <div class="codeblock">
+    <div class="codebar">
+      <span>shell</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>synapse memory show 24
+# Project: github.com/you/app</code></pre>
+  </div>
     <p>Use global scope only for preferences and conventions that should follow you everywhere. The desktop editor can move a record between scopes. The CLI accepts an explicit scope when adding:</p>
 
   <div class="codeblock">
@@ -206,7 +215,7 @@ query = &quot;kubernetes autoscaling&quot;</code></pre>
 synapse memory eval cases.toml --budget lean --fail-under 0.8</code></pre>
   </div>
     <p>Each case runs through the same scoped recall a tool gets. The report gives the share of questions whose answer ranked first, the share whose answer came back at all, mean reciprocal rank, <em>shown</em> (the share whose answer text survived the response budget, which <code>--budget</code> sets for the run), and <em>noise</em>: how many memories came back for questions nothing answers, each of which an agent reads for nothing. <code>--fail-under</code> exits non-zero when the found share is below the floor, so a cases file can guard recall in CI. Matching is by text, case-insensitive, so one file keeps working across machines and corrections.</p>
-    <p>The CLI lists up to 100 matching memories across the local store for management. Each record contains an integer ID, exact body, source, global or project scope, project root, and Unix timestamp. JSON output is suitable for local automation.</p>
+    <p>The CLI lists up to 100 matching memories across the local store for management. Each record contains an integer ID, exact body, source, global or project scope, project key, and Unix timestamp. JSON output is suitable for local automation.</p>
     <p>Ranked search drops words that appear in nearly every memory — <em>the</em>, <em>are</em>, <em>where</em> — because a memory that matches only on one of those is a confident wrong answer, and an agent acts on it. Words that carry meaning in a preference, including <em>not</em>, <em>never</em>, and <em>use</em>, are kept. Two commands exist for when that is the wrong behaviour or the wrong result:</p>
     
   <div class="codeblock">
@@ -307,7 +316,7 @@ synapse memory restore 12</code></pre>
       <thead><tr><th>Mode</th><th>Result limit</th><th>Character budget</th><th>Transformation</th></tr></thead>
       <tbody>
         <tr><td>Full</td><td>25</td><td>Unlimited</td><td>Returns stored formatting without compaction.</td></tr>
-        <tr><td>Balanced</td><td>8</td><td>6,000</td><td>Compacts prose whitespace, preserves fenced and indented code, removes exact duplicate bodies, and replaces any memory too large for the remaining budget with its opening sentence.</td></tr>
+        <tr><td>Balanced</td><td>8</td><td>6,000</td><td>Compacts prose whitespace, preserves fenced and indented code, removes exact duplicate bodies, and replaces any memory too large for the remaining budget with its opening sentence, or with the passage its query matched.</td></tr>
         <tr><td>Lean</td><td>4</td><td>2,800</td><td>Uses the same non-destructive compaction with a smaller response.</td></tr>
       </tbody>
     </table>
@@ -322,7 +331,7 @@ synapse memory restore 12</code></pre>
 synapse settings optimize lean
 synapse settings optimize balanced</code></pre>
   </div>
-    <p>A memory that will not fit in what is left of the budget is returned as its opening sentence, marked <code>abridged</code>, rather than cut off wherever the character count landed. Half a memory reads exactly like a whole one — <em>never deploy from main unless</em> is a rule with its condition amputated — and one long memory at the top of the results no longer costs you every result under it. A tool that receives an abridged memory uses <a href="../mcp/#readmemory"><code>readmemory</code></a> with its id and the same project to read the exact body in bounded pages.</p>
+    <p>A memory that will not fit in what is left of the budget is returned as its opening sentence, marked <code>abridged</code>, rather than cut off wherever the character count landed. When a query found it by something its opening does not say, the passage around the match is returned instead, with <code>…</code> at both cut ends; see <a href="#recall">Search and recall</a>. Half a memory reads exactly like a whole one — <em>never deploy from main unless</em> is a rule with its condition amputated — and one long memory at the top of the results no longer costs you every result under it. A tool that receives an abridged memory uses <a href="../mcp/#readmemory"><code>readmemory</code></a> with its id and the same project to read the exact body in bounded pages.</p>
     
   <aside class="note">
     <strong>Originals remain intact</strong>

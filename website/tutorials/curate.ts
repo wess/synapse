@@ -71,7 +71,10 @@ Tutorial commands use Bun.`)}
 
       <li>
         <h3 id="behavior">Understand how search behaves</h3>
-        <p>Recall is full-text search with two behaviors worth knowing, because both explain results that otherwise look wrong.</p>
+        <p>Recall is full-text search with a few behaviors worth knowing, because each explains results that otherwise look wrong.</p>
+        <p><strong>Words match in other forms, and so do fragments.</strong> The query is searched twice: once by word, stemmed, so <em>deploying</em> finds a memory that says <em>deploys</em>; and once by three-character pieces, so <em>hashpw</em> finds <code>scripts/hashpw.sh</code>. A memory that matches both ways ranks above one that matches only one. Its source is searched too, at a lower weight, so the label you file a memory under helps find it.</p>
+        ${code("shell", `synapse memory list deploying
+synapse memory list synapsetutorial`)}
         <p><strong>Common words are dropped.</strong> A query is stripped of words that carry no meaning on their own. Try it:</p>
         ${code("shell", `synapse memory list "what are the"`)}
         <p>Nothing in that query survives, so instead of matching every memory containing <em>the</em>, Synapse answers the way it answers an empty query — with the most recent entries. That is deliberate. Matching on a common word is both wrong, because a memory that happens to contain <em>are</em> is not the answer to anything, and slow, because a common word makes the index rank most of the store.</p>
@@ -83,12 +86,20 @@ Tutorial commands use Bun.`)}
         ${code("text", `Query:      what are the credentials
 Mode:       search
 Expression: "credentials"
+Fragments:  "credentials"
 Searched:   credentials
 Dropped:    what, are, the (matches nearly every memory)
 Matches:    0`)}
         <p>That distinguishes the two things that look identical from the outside: a query that lost its only real word, and a store that genuinely holds nothing.</p>
         <p><strong>And you can skip the ranking entirely.</strong> When you want an exact string — a flag, an identifier, a path — the ranked search is the wrong tool, because the thing you are looking for may be a word it drops:</p>
         ${code("shell", `synapse memory grep -- --no-verify`)}
+        <p><strong>And you can measure it.</strong> Once a project has memory worth keeping, write down a few questions you expect it to answer, with text the right answer contains, and score recall against them. Run it again after a cleanup and the numbers say whether the store got easier to search or harder:</p>
+        ${code("toml", `[[case]]
+query = "which javascript runtime"
+project = "/Users/example/project"
+expect = ["bun"]`)}
+        ${code("shell", `synapse memory eval cases.toml`)}
+        <p><a href="../../docs/memory/#eval">Measuring recall</a> explains each number, including how often the answer survived the response budget.</p>
         ${note("Scope is applied in the query, not after it", "Every search returns everything global plus everything for the current project, and nothing from any other project. That is enforced where the rows are selected rather than filtered afterwards, so there is no path where another project's memory is read and then discarded.")}
       </li>
 
@@ -153,6 +164,7 @@ Preview only. Add --confirm to import safe entries.`)}
         ${code("shell", `synapse memory import markdown notes.md --confirm`)}
         ${code("text", `Import batch #1: 1 stored, 0 linked, 0 already imported, 0 flagged and left untouched
 Undo with: synapse memory undo 1 --confirm`)}
+        <p>The entries that are imported are redacted on the way in, like every memory Synapse stores: a credential that slipped past the flag becomes <code>[redacted]</code> rather than being written to the database.</p>
         <p>Imports are idempotent. Running the same file again reports the entries as already imported rather than creating duplicates, so a repeated import is harmless. Claude and Codex memory stores import the same way with <code>synapse memory import claude</code> and <code>synapse memory import codex</code>.</p>
       </li>
 

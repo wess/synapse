@@ -288,7 +288,7 @@
       <h3>memory list</h3>
       <code>synapse memory list [query] [--json] [--explain]</code>
     </div>
-    <p>Search the body with the joined query words or list recent memory when empty. Returns up to 100 entries. Text mode prints ID, scope, source, and a compact preview, and marks any memory that has been superseded. With <code>--explain</code>, print what the search actually did first: the full-text expression the query became, the words it searched for, the words it dropped for matching nearly everything, and the fused score behind each hit, higher being better.</p>
+    <p>Search the body and source with the joined query words, by word in any form and by fragment, or list recent memory when empty. Returns up to 100 entries. Text mode prints ID, scope, source, and a compact preview, and marks any memory that has been superseded. With <code>--explain</code>, print what the search actually did first: the full-text expression the query became, the words it searched for, the words it dropped for matching nearly everything, and the fused score behind each hit, higher being better.</p>
   </section>
     
   <section class="command" id="memorygrep">
@@ -312,7 +312,7 @@
       <h3>memory show</h3>
       <code>synapse memory show &lt;id&gt; [--json]</code>
     </div>
-    <p>Print one exact memory with scope, project root, source, and timestamp, or return structured JSON.</p>
+    <p>Print one exact memory with scope, project, source, and timestamp, or return structured JSON. The project is a repository key such as <code>github.com/owner/repo</code>, or a folder path for a project with no remote.</p>
   </section>
     
   <section class="command" id="memoryadd">
@@ -320,7 +320,7 @@
       <h3>memory add</h3>
       <code>synapse memory add [source] [--global|--project &lt;folder&gt;]</code>
     </div>
-    <p>Read a non-empty body from stdin. Project scope is the default and resolves from the current folder; use global only for context that belongs everywhere.</p>
+    <p>Read a non-empty body from stdin. Project scope is the default and resolves from the current folder; use global only for context that belongs everywhere. Credentials and <code>&lt;private&gt;</code> sections are removed before storing, and the command says how many were.</p>
   </section>
     
   <section class="command" id="memoryedit">
@@ -328,7 +328,7 @@
       <h3>memory edit</h3>
       <code>synapse memory edit &lt;id&gt; [source]</code>
     </div>
-    <p>Read the replacement body from stdin and replace one existing memory. The optional source replaces the source label.</p>
+    <p>Read the replacement body from stdin and replace one existing memory. The optional source replaces the source label. The memory keeps its project, and the new body is redacted the same way <code>memory add</code> redacts.</p>
   </section>
     
   <section class="command" id="memorysupersede">
