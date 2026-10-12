@@ -288,7 +288,7 @@
       <h3>memory list</h3>
       <code>synapse memory list [query] [--json] [--explain]</code>
     </div>
-    <p>Search the body with the joined query words or list recent memory when empty. Returns up to 100 entries. Text mode prints ID, scope, source, and a compact preview, and marks any memory that has been superseded. With <code>--explain</code>, print what the search actually did first: the full-text expression the query became, the words it searched for, the words it dropped for matching nearly everything, and the score behind each hit.</p>
+    <p>Search the body with the joined query words or list recent memory when empty. Returns up to 100 entries. Text mode prints ID, scope, source, and a compact preview, and marks any memory that has been superseded. With <code>--explain</code>, print what the search actually did first: the full-text expression the query became, the words it searched for, the words it dropped for matching nearly everything, and the fused score behind each hit, higher being better.</p>
   </section>
     
   <section class="command" id="memorygrep">
@@ -302,9 +302,9 @@
   <section class="command" id="memoryeval">
     <div>
       <h3>memory eval</h3>
-      <code>synapse memory eval &amp;lt;cases.toml&amp;gt; [--limit &amp;lt;n&amp;gt;] [--fail-under &amp;lt;0-1&amp;gt;] [--json]</code>
+      <code>synapse memory eval &amp;lt;cases.toml&amp;gt; [--limit &amp;lt;n&amp;gt;] [--budget &amp;lt;full|balanced|lean&amp;gt;] [--fail-under &amp;lt;0-1&amp;gt;] [--json]</code>
     </div>
-    <p>Score recall against a file of labeled questions. Each <code>[[case]]</code> has a <code>query</code>, an optional <code>project</code> folder, and <code>expect</code>: text a useful memory contains, matched case-insensitively, or nothing when no stored memory answers it. Reports how often the answer ranked first, how often it came back at all, mean reciprocal rank, and how many memories came back where none answer. <code>--limit</code> defaults to 5. <code>--fail-under</code> exits 1 when the found share is below the floor.</p>
+    <p>Score recall against a file of labeled questions. Each <code>[[case]]</code> has a <code>query</code>, an optional <code>project</code> folder, and <code>expect</code>: text a useful memory contains, matched case-insensitively, or nothing when no stored memory answers it. Reports how often the answer ranked first, how often it came back at all, mean reciprocal rank, how often the answer text survived the response budget, and how many memories came back where none answer. <code>--limit</code> defaults to 5; <code>--budget</code> sets the response budget for the run and defaults to the configured one. <code>--fail-under</code> exits 1 when the found share is below the floor.</p>
   </section>
     
   <section class="command" id="memoryshow">

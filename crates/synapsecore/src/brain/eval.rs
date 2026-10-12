@@ -12,7 +12,7 @@
 //! its id, so one file keeps working across machines, re-imports, and
 //! corrections that replace a memory with a new one.
 
-use crate::brain::Brain;
+use crate::brain::{Brain, Optimization};
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -49,6 +49,10 @@ pub struct Scored {
     pub answerable: bool,
     /// The 1-based position of the first useful memory, if any came back.
     pub rank: Option<usize>,
+    /// Whether the useful text itself was in what recall returned, after the
+    /// response budget shortened it. A memory ranked first whose answer was
+    /// cut away is a memory the agent has to read again to use.
+    pub shown: bool,
     /// How many memories came back.
     pub returned: usize,
 }
@@ -66,6 +70,8 @@ pub struct Evaluation {
     /// Mean reciprocal rank over answerable cases: 1.0 is always first, 0.5
     /// is always second, and a miss counts as zero.
     pub mrr: f64,
+    /// Answerable cases whose answer text was in the returned response.
+    pub shown: f64,
     /// Memories returned per unanswerable case. Every one is something an
     /// agent read for nothing, and might act on.
     pub noise: f64,
@@ -90,14 +96,20 @@ impl Brain {
     /// Ranks are judged on whole memories even when recall abridged one to
     /// fit its budget. Whether the right memory came back and how high is the
     /// question; how much of it fit is the budget's, and has its own setting.
-    pub async fn evaluate(&self, cases: &[Case], limit: u32) -> Result<Evaluation> {
+    pub async fn evaluate(
+        &self,
+        cases: &[Case],
+        limit: u32,
+        budget: Option<Optimization>,
+    ) -> Result<Evaluation> {
         let mut scored = Vec::with_capacity(cases.len());
         for case in cases {
             let (_, recalled) = self
-                .recallscoped(&case.query, limit, None, case.project.as_deref())
+                .recallscoped(&case.query, limit, budget, case.project.as_deref())
                 .await?;
             let expect: Vec<String> = case.expect.iter().map(|text| text.to_lowercase()).collect();
             let mut rank = None;
+            let mut shown = false;
             for (position, hit) in recalled.iter().enumerate() {
                 let body = match self.memory(hit.id).await? {
                     Some(memory) => memory.body,
@@ -106,6 +118,8 @@ impl Brain {
                 .to_lowercase();
                 if expect.iter().any(|text| body.contains(text.as_str())) {
                     rank = Some(position + 1);
+                    let returned = hit.body.to_lowercase();
+                    shown = expect.iter().any(|text| returned.contains(text.as_str()));
                     break;
                 }
             }
@@ -113,6 +127,7 @@ impl Brain {
                 query: case.query.clone(),
                 answerable: !expect.is_empty(),
                 rank,
+                shown,
                 returned: recalled.len(),
             });
         }
@@ -149,6 +164,10 @@ fn summarize(cases: Vec<Scored>, limit: u32) -> Evaluation {
                 / count as f64
         }
     };
+    let shown = share(
+        answerable.iter().filter(|case| case.shown).count(),
+        answerable.len(),
+    );
     let noise = match unanswerable.len() {
         0 => 0.0,
         count => unanswerable.iter().map(|case| case.returned).sum::<usize>() as f64 / count as f64,
@@ -159,6 +178,7 @@ fn summarize(cases: Vec<Scored>, limit: u32) -> Evaluation {
         top,
         found,
         mrr,
+        shown,
         noise,
     }
 }
@@ -194,6 +214,7 @@ mod tests {
             query: String::new(),
             answerable,
             rank,
+            shown: rank == Some(1),
             returned,
         };
         let evaluation = summarize(
@@ -210,6 +231,7 @@ mod tests {
         assert_eq!(evaluation.top, 0.25);
         assert_eq!(evaluation.found, 0.5);
         assert_eq!(evaluation.mrr, 1.5 / 4.0);
+        assert_eq!(evaluation.shown, 0.25);
         assert_eq!(evaluation.noise, 1.0);
     }
 
@@ -268,7 +290,7 @@ mod tests {
             },
         ];
 
-        let evaluation = brain.evaluate(&cases, 5).await.unwrap();
+        let evaluation = brain.evaluate(&cases, 5, None).await.unwrap();
 
         let ranks: Vec<Option<usize>> = evaluation.cases.iter().map(|case| case.rank).collect();
         assert_eq!(ranks, vec![Some(1), Some(1), None, None]);

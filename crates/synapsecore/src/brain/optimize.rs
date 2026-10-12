@@ -1,5 +1,6 @@
+use crate::brain::rank::{CLOSE, OPEN};
 use crate::brain::{Memory, Optimization, Settings};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 /// Below this, an abstract is not worth sending. A hundred and sixty characters
 /// is about a sentence; less than that is a fragment with no verb in it, and a
@@ -19,10 +20,28 @@ const LEAD: usize = 240;
 /// amputated, and an agent acts on it — and dropping the rest meant one long
 /// memory at the top could take the whole response with it.
 ///
-/// So a memory that does not fit is replaced by its opening line and marked
-/// `abridged`, which is a true, shorter statement rather than a truncated one,
+/// So a memory that does not fit is replaced by its opening line — or, for a
+/// query, the passage it matched on (see [`around`]) — and marked `abridged`, which is a true, shorter statement rather than a truncated one,
 /// and the walk carries on until even an abstract will not fit.
+#[cfg(test)]
 pub fn recall(memories: Vec<Memory>, settings: Settings) -> Vec<Memory> {
+    around(memories, settings, &HashMap::new())
+}
+
+/// [`recall`], for memories found by a query, with the passage around what
+/// each one matched.
+///
+/// The opening is still preferred when it holds a word the query matched: it
+/// is a whole sentence, where a passage is cut at both ends. When it holds
+/// none, it is the wrong part to send. A long memory found by something it
+/// says three paragraphs down would arrive as its first line, which does not
+/// say it, and the agent would have to read the whole memory again to see why
+/// it was returned.
+pub fn around(
+    memories: Vec<Memory>,
+    settings: Settings,
+    excerpts: &HashMap<i64, String>,
+) -> Vec<Memory> {
     if settings.optimization == Optimization::Full {
         return memories;
     }
@@ -35,7 +54,10 @@ pub fn recall(memories: Vec<Memory>, settings: Settings) -> Vec<Memory> {
             continue;
         }
         if memory.body.chars().count() > remaining {
-            let opening = lead(&memory.body);
+            let opening = match excerpts.get(&memory.id) {
+                Some(excerpt) => passage(&memory.body, excerpt),
+                None => lead(&memory.body),
+            };
             memory.body = if opening.chars().count() <= remaining {
                 opening
             } else if remaining >= FLOOR {
@@ -52,6 +74,34 @@ pub fn recall(memories: Vec<Memory>, settings: Settings) -> Vec<Memory> {
         optimized.push(memory);
     }
     optimized
+}
+
+/// What to send of a memory that does not fit, given the excerpt the search
+/// marked: its opening, if that holds a matched word, and the excerpt if not.
+fn passage(body: &str, excerpt: &str) -> String {
+    let opening = lead(body);
+    let matched = marked(excerpt);
+    let lowered = opening.to_lowercase();
+    if matched.is_empty() || matched.iter().any(|word| lowered.contains(word.as_str())) {
+        return opening;
+    }
+    let plain: String = excerpt
+        .chars()
+        .filter(|c| *c != OPEN && *c != CLOSE)
+        .collect();
+    let plain = plain.split_whitespace().collect::<Vec<_>>().join(" ");
+    truncate(&plain, LEAD * 2)
+}
+
+/// The words an excerpt marks as matched, lowercased.
+fn marked(excerpt: &str) -> Vec<String> {
+    excerpt
+        .split(OPEN)
+        .skip(1)
+        .filter_map(|piece| piece.split(CLOSE).next())
+        .map(|word| word.trim().to_lowercase())
+        .filter(|word| !word.is_empty())
+        .collect()
 }
 
 /// A memory's opening: its first real line, cut at the first sentence end if
@@ -183,6 +233,60 @@ mod tests {
             resultlimit: 25,
             characterbudget: Some(characters),
         }
+    }
+
+    fn excerpt(id: i64, text: &str) -> HashMap<i64, String> {
+        HashMap::from([(id, text.to_owned())])
+    }
+
+    const LONG: &str = "Solar desktop notes from the August review, covering the shell and \
+                        the dispatcher. The rest of this paragraph is padding about layout and \
+                        colour so the memory runs well past what any budget below will hold. \
+                        Much later: the command palette rendered completely off-screen because \
+                        an absolute element is positioned against its own parent.";
+
+    /// A memory found by something it says far below its first line arrives
+    /// as the part that says it.
+    #[test]
+    fn a_memory_that_matched_below_its_opening_sends_the_passage_that_matched() {
+        let recalled = around(
+            vec![memory(LONG)],
+            budget(200),
+            &excerpt(
+                1,
+                "…the command palette rendered completely \u{2}off-screen\u{3} because…",
+            ),
+        );
+        assert!(recalled[0].abridged);
+        assert_eq!(
+            recalled[0].body,
+            "…the command palette rendered completely off-screen because…"
+        );
+    }
+
+    /// The opening is a whole sentence, so it wins whenever it is relevant.
+    #[test]
+    fn an_opening_that_holds_a_matched_word_is_kept() {
+        let recalled = around(
+            vec![memory(LONG)],
+            budget(200),
+            &excerpt(1, "\u{2}Solar\u{3} desktop notes from the August review…"),
+        );
+        assert_eq!(
+            recalled[0].body,
+            "Solar desktop notes from the August review, covering the shell and the dispatcher."
+        );
+    }
+
+    #[test]
+    fn a_memory_that_fits_is_sent_whole_whatever_it_matched_on() {
+        let recalled = around(
+            vec![memory("Use bun.")],
+            budget(200),
+            &excerpt(1, "Use \u{2}bun\u{3}."),
+        );
+        assert_eq!(recalled[0].body, "Use bun.");
+        assert!(!recalled[0].abridged);
     }
 
     /// The expensive mistake is dropping something somebody wrote, so two notes

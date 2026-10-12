@@ -148,7 +148,8 @@ synapse memory undo &lt;batch&gt; --confirm</code></pre>
   </aside>
 
     <h2 id="recall">Search and recall</h2>
-    <p>Memory is stored in an SQLite FTS5 table using Unicode tokenization. A non-empty query searches the memory body; an empty query returns recent entries. Connected tools are instructed to begin with a focused query, the smallest useful result limit, and a Lean response.</p>
+    <p>Memory is stored in SQLite FTS5 and searched two ways at once. A word index, stemmed, finds a word in another form: <em>deploying</em> finds a memory that says <em>deploys</em>. A fragment index, by three-character pieces, finds part of an identifier or a word the stemmer does not know: <em>hashpw</em> finds <code>scripts/hashpw.sh</code>. Each ranks the query on its own and the two lists are merged by reciprocal rank, so a memory both like comes first. The body and the source are both searched, the source at under a third of the weight, so a memory filed under <em>tooling</em> is found by that word without outranking one that says it. An empty query returns recent entries. Connected tools are instructed to begin with a focused query, the smallest useful result limit, and a Lean response.</p>
+    <p>When a result has to be shortened to fit the response budget, it is cut to its opening line if that line contains a word the query matched. If it doesn't, the passage around the match is sent instead, marked with <code>…</code> at both cut ends. Either way the result is marked <code>abridged</code>, and <code>readmemory</code> returns the whole text.</p>
 
   <div class="codeblock">
     <div class="codebar">
@@ -202,9 +203,9 @@ query = &quot;kubernetes autoscaling&quot;</code></pre>
       <button type="button" data-copy aria-live="polite">Copy</button>
     </div>
     <pre><code>synapse memory eval cases.toml
-synapse memory eval cases.toml --limit 3 --fail-under 0.8</code></pre>
+synapse memory eval cases.toml --budget lean --fail-under 0.8</code></pre>
   </div>
-    <p>Each case runs through the same scoped recall a tool gets. The report gives the share of questions whose answer ranked first, the share whose answer came back at all, mean reciprocal rank, and <em>noise</em>: how many memories came back for questions nothing answers, each of which an agent reads for nothing. <code>--fail-under</code> exits non-zero when the found share is below the floor, so a cases file can guard recall in CI. Matching is by text, case-insensitive, so one file keeps working across machines and corrections.</p>
+    <p>Each case runs through the same scoped recall a tool gets. The report gives the share of questions whose answer ranked first, the share whose answer came back at all, mean reciprocal rank, <em>shown</em> (the share whose answer text survived the response budget, which <code>--budget</code> sets for the run), and <em>noise</em>: how many memories came back for questions nothing answers, each of which an agent reads for nothing. <code>--fail-under</code> exits non-zero when the found share is below the floor, so a cases file can guard recall in CI. Matching is by text, case-insensitive, so one file keeps working across machines and corrections.</p>
     <p>The CLI lists up to 100 matching memories across the local store for management. Each record contains an integer ID, exact body, source, global or project scope, project root, and Unix timestamp. JSON output is suitable for local automation.</p>
     <p>Ranked search drops words that appear in nearly every memory — <em>the</em>, <em>are</em>, <em>where</em> — because a memory that matches only on one of those is a confident wrong answer, and an agent acts on it. Words that carry meaning in a preference, including <em>not</em>, <em>never</em>, and <em>use</em>, are kept. Two commands exist for when that is the wrong behaviour or the wrong result:</p>
     
@@ -226,12 +227,14 @@ synapse memory list where are the credentials --explain</code></pre>
     <pre><code>Query:      where are the credentials
 Mode:       search
 Expression: &quot;credentials&quot;
+Fragments:  &quot;credentials&quot;
 Searched:   credentials
 Dropped:    where, are, the (matches nearly every memory)
 Matches:    1
 
--0.4596	31	global	vault	Credentials live in the vault, never in the repository.</code></pre>
+0.0328	31	global	vault	Credentials live in the vault, never in the repository.</code></pre>
   </div>
+    <p>The score is the fused rank, and higher is better. A memory ranked first by both indexes scores about 0.033; one ranked first by only one of them scores about half that.</p>
 
     <h2 id="control">Inspect and correct</h2>
     <p>The desktop <strong>Memories</strong> screen searches the same store and lets you inspect, edit, or delete individual entries. CLI edits replace the body and optionally the source:</p>

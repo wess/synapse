@@ -128,6 +128,7 @@ impl Brain {
                             .execute(&mut *transaction)
                             .await?
                             .last_insert_rowid();
+                    crate::brain::gram::index(&mut transaction, id).await?;
                     sqlx::query(
                         "INSERT INTO memorymeta(memoryid, scope, project, native, created) \
                          VALUES (?, ?, ?, 0, ?)",
@@ -237,6 +238,7 @@ impl Brain {
                     .bind(memoryid)
                     .execute(&mut *transaction)
                     .await?;
+                crate::brain::gram::unindex(&mut transaction, memoryid).await?;
                 deleted += sqlx::query("DELETE FROM memory WHERE rowid = ?")
                     .bind(memoryid)
                     .execute(&mut *transaction)

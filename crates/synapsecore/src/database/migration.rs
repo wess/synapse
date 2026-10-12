@@ -3,7 +3,7 @@ use anyhow::{Context, Result};
 use sqlx::SqlitePool;
 use std::path::Path;
 
-pub const LATEST: i64 = 12;
+pub const LATEST: i64 = 13;
 
 /// The vault's own schema, in its own file. One table today, with the numbered
 /// migration around it anyway: the day it grows a column is not the day to
@@ -284,6 +284,35 @@ const MIGRATIONS: &[Migration] = &[
             // never as out of date — inventing a stale connection for every
             // existing user would be a worse lie than saying nothing.
             "CREATE TABLE IF NOT EXISTS toolconnect(             slug TEXT PRIMARY KEY, descriptor TEXT NOT NULL, connected INTEGER NOT NULL)",
+        ],
+    },
+    Migration {
+        version: 13,
+        statements: &[
+            // Search used to match words only as written, so a question about
+            // "deploying" missed a memory that says "deploys", and a memory's
+            // source — the topic it was filed under — could not be searched at
+            // all. The table is rebuilt rather than altered because an FTS5
+            // tokenizer is fixed when the table is made. Rowids are copied
+            // across, because a memory's rowid is its id everywhere else.
+            //
+            // The old table is renamed out of the way first. Creating the new
+            // one under a temporary name and renaming it after the drop fails
+            // inside a transaction.
+            "ALTER TABLE memory RENAME TO memoryold",
+            "CREATE VIRTUAL TABLE memory USING fts5(\
+             body, source, created UNINDEXED, tokenize='porter unicode61')",
+            "INSERT INTO memory(rowid, body, source, created) \
+             SELECT rowid, body, source, created FROM memoryold",
+            "DROP TABLE memoryold",
+            // A second index over the same rows, by three-character pieces,
+            // which finds a fragment of an identifier or a word whose ending
+            // the stemmer does not know. It is contentless — the text lives in
+            // `memory` only — so every write to `memory` updates it too (see
+            // `brain::gram`). Search ranks both and fuses the two lists.
+            "CREATE VIRTUAL TABLE memorygram USING fts5(\
+             body, source, content='', contentless_delete=1, tokenize='trigram')",
+            "INSERT INTO memorygram(rowid, body, source) SELECT rowid, body, source FROM memory",
         ],
     },
 ];

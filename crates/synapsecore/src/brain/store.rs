@@ -1,3 +1,4 @@
+use crate::brain::rank::{self, Reach};
 use crate::brain::{Explanation, Memory, MemoryScope, Optimization, Ranked, Settings, Stats};
 use anyhow::{Context, Result};
 use sqlx::SqlitePool;
@@ -14,7 +15,7 @@ const COLUMNS: &str = "memory.rowid AS id, memory.body, memory.source, meta.scop
 
 /// Restricts a read to memory a session in `project` can see: everything
 /// global, plus that project's own, and nothing that has been replaced.
-const VISIBLE: &str = "(meta.scope = 'global' OR (meta.scope = 'project' AND meta.project = ?)) AND meta.superseded = 0";
+pub(super) const VISIBLE: &str = "(meta.scope = 'global' OR (meta.scope = 'project' AND meta.project = ?)) AND meta.superseded = 0";
 
 #[derive(Clone)]
 pub struct Brain {
@@ -92,6 +93,7 @@ impl Brain {
             .execute(&mut *transaction)
             .await?;
         let id = result.last_insert_rowid();
+        crate::brain::gram::index(&mut transaction, id).await?;
         sqlx::query(
             "INSERT INTO memorymeta(memoryid, scope, project, native, created) \
              VALUES (?, ?, ?, 1, ?)",
@@ -175,6 +177,7 @@ impl Brain {
             .execute(&mut *transaction)
             .await?;
         let id = result.last_insert_rowid();
+        crate::brain::gram::index(&mut transaction, id).await?;
         // `native` is 0: this memory was not made on this machine, which is
         // the same distinction an import already draws.
         sqlx::query(
@@ -210,10 +213,21 @@ impl Brain {
             .transpose()?
             .flatten()
             .unwrap_or_default();
-        let memories = self
+        let found = self
             .searchscoped(query, limit.clamp(1, settings.resultlimit), &project)
             .await?;
-        Ok((settings, crate::brain::optimize::recall(memories, settings)))
+        let excerpts = found
+            .iter()
+            .filter_map(|(memory, hit)| {
+                let excerpt = hit.as_ref()?.excerpt.clone()?;
+                Some((memory.id, excerpt))
+            })
+            .collect();
+        let memories = found.into_iter().map(|(memory, _)| memory).collect();
+        Ok((
+            settings,
+            crate::brain::optimize::around(memories, settings, &excerpts),
+        ))
     }
 
     /// Every memory matching `query`, superseded ones included.
@@ -222,31 +236,34 @@ impl Brain {
     /// does not, because it answers a person browsing their own store and a
     /// memory somebody has to be able to find in order to restore it.
     pub async fn search(&self, query: &str, limit: u32) -> Result<Vec<Memory>> {
-        let limit = limit.clamp(1, 200) as i64;
-        if let Some(expression) = search_expression(query.trim()) {
-            sqlx::query_as::<_, Memory>(&format!(
-                "SELECT {COLUMNS} \
-                 FROM memory JOIN memorymeta meta ON meta.memoryid = memory.rowid \
-                 WHERE memory MATCH ? ORDER BY rank LIMIT ?"
-            ))
-            .bind(expression)
-            .bind(limit)
-            .fetch_all(&self.pool)
-            .await
-            .context("could not search memories")
-        } else {
-            sqlx::query_as::<_, Memory>(&format!(
+        let limit = limit.clamp(1, 200);
+        let (kept, _) = terms(query.trim());
+        if kept.is_empty() {
+            return sqlx::query_as::<_, Memory>(&format!(
                 "SELECT {COLUMNS} \
                  FROM memorymeta meta JOIN memory ON memory.rowid = meta.memoryid \
                  WHERE meta.memoryid IN (\
                  SELECT memoryid FROM memorymeta ORDER BY created DESC, memoryid DESC LIMIT ?) \
                  ORDER BY meta.created DESC, meta.memoryid DESC"
             ))
-            .bind(limit)
+            .bind(i64::from(limit))
             .fetch_all(&self.pool)
             .await
-            .context("could not read recent memories")
+            .context("could not read recent memories");
         }
+        let hits = rank::rank(
+            &self.pool,
+            &rank::expressions(&kept),
+            limit as usize,
+            Reach::Everything,
+        )
+        .await?;
+        Ok(self
+            .fetch(&hits)
+            .await?
+            .into_iter()
+            .map(|(memory, _)| memory)
+            .collect())
     }
 
     /// Memories containing `pattern` exactly, most recent first.
@@ -276,61 +293,91 @@ impl Brain {
     /// What a query became and what it matched, with the score behind each hit.
     pub async fn explain(&self, query: &str, limit: u32) -> Result<Explanation> {
         let query = query.trim();
-        let limit = limit.clamp(1, 200) as i64;
+        let limit = limit.clamp(1, 200);
         let (kept, dropped) = terms(query);
-        let expression = search_expression(query);
-        let matches = match &expression {
-            Some(expression) => sqlx::query_as::<_, Scored>(&format!(
-                "SELECT {COLUMNS}, rank AS score \
-                 FROM memory JOIN memorymeta meta ON meta.memoryid = memory.rowid \
-                 WHERE memory MATCH ? ORDER BY rank LIMIT ?"
-            ))
-            .bind(expression)
-            .bind(limit)
-            .fetch_all(&self.pool)
-            .await
-            .context("could not search memories")?
-            .into_iter()
-            .map(|row| Ranked {
-                memory: row.memory,
-                rank: Some(row.score),
-            })
-            .collect(),
-            None => self
-                .search(query, limit as u32)
+        let expressions = rank::expressions(&kept);
+        let matches = if expressions.words.is_some() {
+            let hits =
+                rank::rank(&self.pool, &expressions, limit as usize, Reach::Everything).await?;
+            self.fetch(&hits)
+                .await?
+                .into_iter()
+                .map(|(memory, hit)| Ranked {
+                    memory,
+                    rank: Some(hit.score),
+                })
+                .collect()
+        } else {
+            self.search(query, limit)
                 .await?
                 .into_iter()
                 .map(|memory| Ranked { memory, rank: None })
-                .collect(),
+                .collect()
         };
         Ok(Explanation {
             query: query.to_owned(),
-            expression,
+            expression: expressions.words,
+            fragments: expressions.fragments,
             kept,
             dropped,
             matches,
         })
     }
 
-    async fn searchscoped(&self, query: &str, limit: u32, project: &str) -> Result<Vec<Memory>> {
-        let limit = limit.clamp(1, 200) as i64;
+    /// The memories behind `hits`, in the order the hits came in, each with
+    /// its hit.
+    async fn fetch(&self, hits: &[rank::Hit]) -> Result<Vec<(Memory, rank::Hit)>> {
+        if hits.is_empty() {
+            return Ok(Vec::new());
+        }
+        let placeholders = vec!["?"; hits.len()].join(", ");
+        let sql = format!(
+            "SELECT {COLUMNS} \
+             FROM memory JOIN memorymeta meta ON meta.memoryid = memory.rowid \
+             WHERE memory.rowid IN ({placeholders})"
+        );
+        let mut query = sqlx::query_as::<_, Memory>(&sql);
+        for hit in hits {
+            query = query.bind(hit.id);
+        }
+        let mut memories: std::collections::HashMap<i64, Memory> = query
+            .fetch_all(&self.pool)
+            .await
+            .context("could not read ranked memories")?
+            .into_iter()
+            .map(|memory| (memory.id, memory))
+            .collect();
+        Ok(hits
+            .iter()
+            .filter_map(|hit| memories.remove(&hit.id).map(|memory| (memory, hit.clone())))
+            .collect())
+    }
+
+    async fn searchscoped(
+        &self,
+        query: &str,
+        limit: u32,
+        project: &str,
+    ) -> Result<Vec<(Memory, Option<rank::Hit>)>> {
+        let limit = limit.clamp(1, 200);
         // A query of nothing but function words asks for nothing in particular,
         // so it is answered the way an empty one is — with what is most recent,
         // rather than with whatever happened to contain the word `the`.
-        let expression = search_expression(query.trim());
-        if let Some(expression) = expression {
-            sqlx::query_as::<_, Memory>(&format!(
-                "SELECT {COLUMNS} \
-                 FROM memory JOIN memorymeta meta ON meta.memoryid = memory.rowid \
-                 WHERE memory MATCH ? AND {VISIBLE} \
-                 ORDER BY rank LIMIT ?"
-            ))
-            .bind(expression)
-            .bind(project)
-            .bind(limit)
-            .fetch_all(&self.pool)
-            .await
-            .context("could not search scoped memories")
+        let (kept, _) = terms(query.trim());
+        if !kept.is_empty() {
+            let hits = rank::rank(
+                &self.pool,
+                &rank::expressions(&kept),
+                limit as usize,
+                Reach::Visible(project),
+            )
+            .await?;
+            Ok(self
+                .fetch(&hits)
+                .await?
+                .into_iter()
+                .map(|(memory, hit)| (memory, Some(hit)))
+                .collect())
         } else {
             // Choose the newest ids from the index first, then fetch only
             // those. Filtering and ordering in the outer join instead lets the
@@ -350,6 +397,7 @@ impl Brain {
             .fetch_all(&self.pool)
             .await
             .context("could not read scoped memories")
+            .map(|memories| memories.into_iter().map(|memory| (memory, None)).collect())
         }
     }
 
@@ -426,6 +474,7 @@ impl Brain {
         let body = stored(body)?;
         let body = body.as_str();
         let mut transaction = self.pool.begin().await?;
+        crate::brain::gram::unindex(&mut transaction, id).await?;
         let result =
             sqlx::query("UPDATE memory SET body = ?, source = COALESCE(?, source) WHERE rowid = ?")
                 .bind(body)
@@ -437,6 +486,7 @@ impl Brain {
         if result.rows_affected() == 0 {
             return Ok(None);
         }
+        crate::brain::gram::index(&mut transaction, id).await?;
         sqlx::query("UPDATE memorymeta SET scope = ?, project = ?, native = 1 WHERE memoryid = ?")
             .bind(scope.value())
             .bind(project)
@@ -467,6 +517,7 @@ impl Brain {
                 .bind(id)
                 .execute(&mut *transaction)
                 .await?;
+            crate::brain::gram::unindex(&mut transaction, id).await?;
             sqlx::query("DELETE FROM memory WHERE rowid = ?")
                 .bind(id)
                 .execute(&mut *transaction)
@@ -488,6 +539,7 @@ impl Brain {
         sqlx::query("DELETE FROM memorymeta")
             .execute(&mut *transaction)
             .await?;
+        crate::brain::gram::clear(&mut transaction).await?;
         let count = sqlx::query("DELETE FROM memory")
             .execute(&mut *transaction)
             .await
@@ -576,21 +628,13 @@ pub(super) const STOPWORDS: &[&str] = &[
 /// makes a confident wrong answer worse than none. It also meant asking SQLite
 /// to rank every memory containing a common word — at 200k memories that is a
 /// 437ms query where the same search without the noise takes 0.3ms.
+#[cfg(test)]
 fn search_expression(query: &str) -> Option<String> {
-    let (kept, _) = terms(query);
-    if kept.is_empty() {
-        return None;
-    }
-    Some(
-        kept.into_iter()
-            .map(|term| format!("\"{}\"", term.replace('"', "\"\"")))
-            .collect::<Vec<_>>()
-            .join(" OR "),
-    )
+    rank::expressions(&terms(query).0).words
 }
 
 /// A query split into the terms that were searched for and the ones dropped for
-/// matching nearly everything. `search_expression` is built from the first half,
+/// matching nearly everything. Both search expressions are built from the first half,
 /// so `--explain` and recall can never disagree about what happened.
 fn terms(query: &str) -> (Vec<String>, Vec<String>) {
     let (dropped, kept): (Vec<&str>, Vec<&str>) =
@@ -624,15 +668,6 @@ fn escaped(pattern: &str) -> String {
         .replace('\\', "\\\\")
         .replace('%', "\\%")
         .replace('_', "\\_")
-}
-
-/// One search hit with the score that put it there. Only `--explain` reads the
-/// score, so it stays out of `Memory` itself.
-#[derive(sqlx::FromRow)]
-struct Scored {
-    #[sqlx(flatten)]
-    memory: Memory,
-    score: f64,
 }
 
 /// Whether a term is one of the words that match nearly everything, ignoring

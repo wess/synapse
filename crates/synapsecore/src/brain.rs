@@ -1,9 +1,11 @@
 mod eval;
+mod gram;
 mod graph;
 mod ingest;
 mod model;
 mod optimize;
 mod origin;
+mod rank;
 mod read;
 mod redact;
 mod rekey;

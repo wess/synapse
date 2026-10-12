@@ -96,6 +96,9 @@ fn explain(
             "Expression: none — no term left to search for, so the newest memories answered instead"
         ),
     }
+    if let Some(fragments) = &explanation.fragments {
+        println!("Fragments:  {fragments}");
+    }
     if !explanation.kept.is_empty() {
         println!("Searched:   {}", explanation.kept.join(", "));
     }

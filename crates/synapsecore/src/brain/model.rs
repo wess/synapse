@@ -238,6 +238,10 @@ pub struct Explanation {
     /// The full-text expression the query became, or nothing when no term
     /// survived and the newest memories answered instead.
     pub expression: Option<String>,
+    /// The same terms as a fragment search, for the trigram index. Absent when
+    /// no term is long enough to have a fragment.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub fragments: Option<String>,
     /// The terms that were searched for.
     pub kept: Vec<String>,
     /// The terms dropped for matching nearly everything.
@@ -261,8 +265,9 @@ impl Explanation {
 pub struct Ranked {
     #[serde(flatten)]
     pub memory: Memory,
-    /// SQLite's own score, lower being a better match. Absent on the recent
-    /// list, which is ordered by age and not scored at all.
+    /// The fused score from the word and fragment rankings, higher being a
+    /// better match. Absent on the recent list, which is ordered by age and
+    /// not scored at all.
     pub rank: Option<f64>,
 }
 

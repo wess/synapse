@@ -10,8 +10,7 @@ use anyhow::{Context, Result};
 use std::ffi::OsString;
 use std::path::PathBuf;
 
-const USAGE: &str =
-    "usage: synapse memory eval <cases.toml> [--limit <n>] [--fail-under <0-1>] [--json]";
+const USAGE: &str = "usage: synapse memory eval <cases.toml> [--limit <n>] [--budget <full|balanced|lean>] [--fail-under <0-1>] [--json]";
 
 /// How many memories each question may bring back when `--limit` is not
 /// given: what a focused `recall` asks for.
@@ -31,11 +30,14 @@ pub fn run(
         Some(limit) => limit.parse().context(USAGE)?,
         None => LIMIT,
     };
+    let budget = value(arguments, "--budget")
+        .map(|budget| budget.parse().context(USAGE))
+        .transpose()?;
     let floor: Option<f64> = value(arguments, "--fail-under")
         .map(|floor| floor.parse().context(USAGE))
         .transpose()?;
 
-    let evaluation = runtime.block_on(brain.evaluate(&cases, limit))?;
+    let evaluation = runtime.block_on(brain.evaluate(&cases, limit, budget))?;
     if json {
         println!("{}", serde_json::to_string_pretty(&evaluation)?);
     } else {
@@ -71,10 +73,12 @@ fn report(evaluation: &Evaluation) -> String {
         text.push_str(&format!(
             "First:   {:.0}%  answer ranked first\n\
              Found:   {:.0}%  answer returned at all\n\
-             MRR:     {:.2}\n",
+             MRR:     {:.2}\n\
+             Shown:   {:.0}%  answer text inside what recall returned\n",
             evaluation.top * 100.0,
             evaluation.found * 100.0,
-            evaluation.mrr
+            evaluation.mrr,
+            evaluation.shown * 100.0
         ));
     }
     if unanswerable > 0 {
@@ -104,7 +108,7 @@ fn file(arguments: &[OsString]) -> Option<PathBuf> {
             continue;
         }
         let text = argument.to_str()?;
-        if text == "--limit" || text == "--fail-under" {
+        if text == "--limit" || text == "--fail-under" || text == "--budget" {
             skip = true;
             continue;
         }
@@ -149,18 +153,21 @@ mod tests {
                     query: "deploy branch".into(),
                     answerable: true,
                     rank: None,
+                    shown: false,
                     returned: 2,
                 },
                 Scored {
                     query: "wifi password".into(),
                     answerable: false,
                     rank: None,
+                    shown: false,
                     returned: 1,
                 },
             ],
             top: 0.0,
             found: 0.0,
             mrr: 0.0,
+            shown: 0.0,
             noise: 1.0,
         };
         let text = report(&evaluation);
