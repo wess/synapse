@@ -35,6 +35,7 @@ async fn main() -> Result<()> {
     for (name, query) in [
         ("selective", "zebra"),
         ("common", "database"),
+        ("fragment", "age"),
         ("recent", ""),
     ] {
         measurements.push(
@@ -105,6 +106,13 @@ async fn seed(brain: &Brain, count: usize) -> Result<()> {
     sqlx::query(
         "INSERT INTO memorymeta(memoryid, scope, project, native, created) \
          SELECT rowid, 'global', '', 1, CAST(created AS INTEGER) FROM memory",
+    )
+    .execute(&mut *transaction)
+    .await?;
+    // Search ranks the trigram index alongside the word index, so a fixture
+    // that fills only `memory` measures half a search.
+    sqlx::query(
+        "INSERT INTO memorygram(rowid, body, source) SELECT rowid, body, source FROM memory",
     )
     .execute(&mut *transaction)
     .await?;
