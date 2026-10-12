@@ -350,7 +350,6 @@ fn roster(
 }
 
 #[allow(clippy::too_many_arguments, reason = "one row of chrome, built once")]
-#[allow(clippy::too_many_arguments, reason = "one row of chrome, built once")]
 fn composer(
     input: Entity<TextInput>,
     focus: Option<String>,

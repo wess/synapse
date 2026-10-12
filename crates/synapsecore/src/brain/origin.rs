@@ -98,6 +98,9 @@ pub fn normalize(url: &str) -> Option<String> {
     };
     let host = authority.rsplit('@').next()?;
     let host = host.split(':').next()?.to_lowercase();
+    // A query or fragment is never part of a repository's name, and is where
+    // a provider's access token goes when it is not in the userinfo.
+    let path = path.split(['?', '#']).next().unwrap_or_default();
     let path = path.trim_matches('/');
     let path = path
         .strip_suffix(".git")
@@ -139,6 +142,10 @@ mod tests {
         assert_eq!(
             normalize("https://wess:ghp_abc123@github.com/wess/synapse.git").as_deref(),
             Some("github.com/wess/synapse")
+        );
+        assert_eq!(
+            normalize("https://gitlab.com/team/app.git?private_token=glpat-abc#main").as_deref(),
+            Some("gitlab.com/team/app")
         );
     }
 

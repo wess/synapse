@@ -164,17 +164,26 @@ fn assignment(word: &str) -> Option<String> {
         return None;
     }
     let quote: String = value.chars().take_while(|c| QUOTES.contains(c)).collect();
-    let close: String = value
+    let mut close: Vec<char> = value
         .chars()
         .rev()
         .take_while(|c| QUOTES.contains(c))
         .collect();
+    close.reverse();
+    let close: String = close.into_iter().collect();
     Some(format!("{name}={quote}{MARKER}{close}"))
 }
 
 /// Whether a variable name says it holds a credential.
+///
+/// `TOKENS` is a count — `MAX_TOKENS=128000` is a model setting, and memory
+/// about model tooling says it constantly — and a bare `PWD` is the shell's
+/// working directory, so neither is a reason to remove a value.
 fn sensitive(name: &str) -> bool {
-    let upper = name.to_ascii_uppercase().replace(['-', '.'], "_");
+    let upper = name
+        .to_ascii_uppercase()
+        .replace(['-', '.'], "_")
+        .replace("TOKENS", "");
     [
         "SECRET",
         "TOKEN",
@@ -189,7 +198,6 @@ fn sensitive(name: &str) -> bool {
         || upper.ends_with("_KEY")
         || upper == "KEY"
         || upper.ends_with("_PWD")
-        || upper == "PWD"
 }
 
 /// A value that only names where a secret comes from: a variable, a command,
@@ -302,6 +310,11 @@ mod tests {
             "export GITHUB_TOKEN=\"[redacted]\""
         );
         assert_eq!(clean("--password=hunter2hunter2"), "--password=[redacted]");
+        assert_eq!(
+            clean("TOKEN=\"abcdefgh12345\";"),
+            "TOKEN=\"[redacted]\";",
+            "closing punctuation keeps its order"
+        );
     }
 
     /// Saying where a value comes from is the memory worth keeping.
@@ -314,6 +327,9 @@ mod tests {
             "DB_PASSWORD=...",
             "DEBUG_TOKEN=false",
             "PRIMARY=postgres",
+            "MAX_TOKENS=128000",
+            "max_output_tokens=200000",
+            "PWD=/Users/wess/project",
         ] {
             assert_eq!(clean(body), body, "{body}");
         }
