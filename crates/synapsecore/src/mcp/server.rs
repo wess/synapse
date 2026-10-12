@@ -68,6 +68,7 @@ impl Server {
         Parameters(request): Parameters<RememberRequest>,
     ) -> Result<Json<RememberResponse>, String> {
         let project = projectpath(request.project.as_deref());
+        let redacted = crate::brain::redact(&request.content).count;
         self.brain
             .rememberreplacing(
                 &request.content,
@@ -82,6 +83,7 @@ impl Server {
                     id,
                     stored: true,
                     superseded,
+                    redacted,
                 })
             })
             .map_err(|error| error.to_string())

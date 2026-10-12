@@ -16,7 +16,9 @@ pub use detect::{command, detect, searchpath};
 pub use guidance::{
     GuidanceState, adopt, needsnotice, pointermatches, refreshstale, state as guidancestate, sync,
 };
-pub use hooks::{State as HookState, apply as applynotice, remove as removenotice};
+pub use hooks::{
+    State as HookState, apply as applynotice, refreshstale as refreshhooks, remove as removenotice,
+};
 pub use model::{Agent, Connection, Detection, Kind};
 pub use setup::{Apply, reapply, setup};
 pub use teardown::{Removed, disconnect};

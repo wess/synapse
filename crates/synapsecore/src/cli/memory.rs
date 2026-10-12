@@ -6,7 +6,7 @@ use std::ffi::OsString;
 use std::io::{IsTerminal, Read};
 use std::path::PathBuf;
 
-const USAGE: &str = "usage: synapse memory <list|grep|show|add|edit|supersede|restore|import|imports|undo|delete|wipe>";
+const USAGE: &str = "usage: synapse memory <list|grep|eval|show|add|edit|supersede|restore|import|imports|undo|delete|wipe>";
 
 pub fn run(arguments: &[OsString]) -> Result<Outcome> {
     let action = textarg(arguments, 0, USAGE)?;
@@ -16,6 +16,7 @@ pub fn run(arguments: &[OsString]) -> Result<Outcome> {
     match action.as_str() {
         "list" => list(&runtime, &brain, arguments, json)?,
         "grep" => grep(&runtime, &brain, arguments, json)?,
+        "eval" => return super::eval::run(&runtime, &brain, arguments, json),
         "show" => show(&runtime, &brain, arguments, json)?,
         "add" => add(&runtime, &brain, arguments)?,
         "edit" => edit(&runtime, &brain, arguments)?,
@@ -246,7 +247,10 @@ fn add(runtime: &tokio::runtime::Runtime, brain: &Brain, arguments: &[OsString])
         scope,
         project.as_deref(),
     ))?;
-    println!("Stored memory #{id}");
+    match crate::brain::redact(&body).count {
+        0 => println!("Stored memory #{id}"),
+        count => println!("Stored memory #{id} ({count} secret or private part(s) removed)"),
+    }
     Ok(())
 }
 

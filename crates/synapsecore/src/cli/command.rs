@@ -43,6 +43,8 @@ Commands:
   memory list [query] [--json] [--explain]
                                    Search or list recent memories
   memory grep <text> [--json]      Find memories containing an exact string
+  memory eval <cases.toml> [--limit <n>] [--fail-under <0-1>] [--json]
+                                   Score recall against labeled questions
   memory show <id> [--json]        Inspect one memory
   memory add [source] [--global|--project <folder>]
                                    Store content read from stdin

@@ -194,6 +194,7 @@ for (const command of [
   "synapse skill status",
   "synapse memory import",
   "synapse memory grep",
+  "synapse memory eval",
   "synapse memory supersede",
   "synapse memory restore",
   "synapse memory undo",

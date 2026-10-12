@@ -194,8 +194,8 @@ impl Dashboard {
         });
         let memoryproject = cx.new(|cx| {
             TextInput::new(cx)
-                .label("Project root")
-                .placeholder("/path/to/project")
+                .label("Project")
+                .placeholder("github.com/owner/repo or /path/to/project")
                 .value(selected.map(|memory| memory.project.as_str()).unwrap_or(""))
         });
         let memoryscope = selected.map(|memory| memory.scope).unwrap_or_default();

@@ -25,9 +25,11 @@ export const memory: Page = {
     ${code("shell", `printf '%s\n' 'Use Bun for JavaScript tasks in this repository.' \\
   | synapse memory add tooling`)}
     <p><code>memory add</code> and <code>memory edit</code> read the body from stdin. This keeps long content and shell metacharacters out of command arguments. Empty or whitespace-only memory is rejected.</p>
+    <p>Credentials are taken out before anything is stored, whether the memory comes from a tool, the CLI, the desktop editor, or an import. A value assigned to a secret-sounding name (<code>GITHUB_TOKEN=…</code>, <code>--password=…</code>), a password inside a URL, a <code>Bearer</code> token, a provider token with a known prefix (<code>sk-</code>, <code>ghp_</code>, <code>AKIA</code>, <code>xoxb-</code>, and others), and a PEM private key block are each replaced with <code>[redacted]</code>, and anything between <code>&lt;private&gt;</code> and <code>&lt;/private&gt;</code> is removed. The variable name stays, so the memory still says what to set. A reference such as <code>GITHUB_TOKEN=$(gh auth token)</code> is kept as written. <code>remember</code> reports how many parts it removed. Values belong in the <a href="../vault/">vault</a>.</p>
 
     <h2 id="scope">Global and project scope</h2>
     <p>Project memory is the default. Synapse resolves the supplied path to its repository or approved project root and returns that memory only alongside global memory for the same project. Unrelated project memory stays out of MCP recall.</p>
+    <p>A repository with an <code>origin</code> remote is filed under that remote, normalized to <code>host/owner/repo</code> with any credentials dropped, rather than under the folder it is checked out in. Every checkout of <code>github.com/you/app</code>, at any path on any machine, shares one project memory, and a memory synced from another machine is recalled here. A folder without a remote is keyed by its path, as before. Memory stored under a checkout's path by an earlier release moves to the remote's key the first time this release opens the store.</p>
     <p>Use global scope only for preferences and conventions that should follow you everywhere. The desktop editor can move a record between scopes. The CLI accepts an explicit scope when adding:</p>
 ${code("shell", `printf '%s\n' 'Use Bun in this repository.' | synapse memory add tooling --project .
 printf '%s\n' 'Prefer concise status updates.' | synapse memory add preferences --global`)}
@@ -62,6 +64,23 @@ ${code("json", `{
 synapse memory list --json
 synapse memory show 24
 synapse memory show 24 --json`)}
+    <h3 id="eval">Measuring recall</h3>
+    <p>Whether a change to how memory is written or searched made recall better is a question with an answer. Write down questions an agent asks, with text a useful answer contains, and score them against the store:</p>
+${code("toml", `[[case]]
+query = "which javascript runtime"
+project = "/Users/example/project"
+expect = ["bun"]
+
+[[case]]
+query = "where do credentials live"
+expect = ["vault", "keychain"]
+
+# Nothing stored answers this, so the best recall returns nothing.
+[[case]]
+query = "kubernetes autoscaling"`)}
+${code("shell", `synapse memory eval cases.toml
+synapse memory eval cases.toml --limit 3 --fail-under 0.8`)}
+    <p>Each case runs through the same scoped recall a tool gets. The report gives the share of questions whose answer ranked first, the share whose answer came back at all, mean reciprocal rank, and <em>noise</em>: how many memories came back for questions nothing answers, each of which an agent reads for nothing. <code>--fail-under</code> exits non-zero when the found share is below the floor, so a cases file can guard recall in CI. Matching is by text, case-insensitive, so one file keeps working across machines and corrections.</p>
     <p>The CLI lists up to 100 matching memories across the local store for management. Each record contains an integer ID, exact body, source, global or project scope, project root, and Unix timestamp. JSON output is suitable for local automation.</p>
     <p>Ranked search drops words that appear in nearly every memory \u2014 <em>the</em>, <em>are</em>, <em>where</em> \u2014 because a memory that matches only on one of those is a confident wrong answer, and an agent acts on it. Words that carry meaning in a preference, including <em>not</em>, <em>never</em>, and <em>use</em>, are kept. Two commands exist for when that is the wrong behaviour or the wrong result:</p>
     ${code("shell", `synapse memory grep -- --no-verify

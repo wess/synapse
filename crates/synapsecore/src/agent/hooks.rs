@@ -20,9 +20,11 @@ use anyhow::{Context, Result};
 use serde_json::{Value, json};
 use std::path::Path;
 
-/// Which session starts the notice is worth printing for. A compaction is not
-/// one of them: the user is mid-session and has already seen it.
-const MATCHER: &str = "startup|resume|clear";
+/// Which session starts the hook runs for. A compaction is one of them, though
+/// the user is mid-session and has already seen the notice: compaction drops the
+/// memory handed over at startup along with everything else, and this is the
+/// only hook that can hand it back. `synapse session` prints no notice for it.
+const MATCHER: &str = "startup|resume|clear|compact";
 
 /// A hook that has to finish before the welcome box is drawn cannot be allowed
 /// to hang the session on a slow disk.
@@ -194,6 +196,51 @@ pub fn remove(settings: &Path, binary: &Path) -> Result<()> {
         object.remove("statusLine");
     }
     write(settings, &value)
+}
+
+/// Brings the matchers on hooks an older release installed up to this one's,
+/// and returns whether anything changed.
+///
+/// Matchers are what an upgrade changes without touching the file, the same
+/// way it changes guidance wording, and a hook still matching the old triggers
+/// never runs for the new one. Only Synapse's own groups are touched, whatever
+/// binary they point at, and a file with none stays exactly as it was —
+/// installing a hook is a choice made on the connections view, not here.
+pub fn refreshstale(settings: &Path) -> Result<bool> {
+    if !settings.exists() {
+        return Ok(false);
+    }
+    let mut value = read(settings)?;
+    let mut changed = false;
+    for managed in &MANAGED {
+        let Some(groups) = value
+            .pointer_mut(&format!("/hooks/{}", managed.event))
+            .and_then(Value::as_array_mut)
+        else {
+            continue;
+        };
+        for group in groups.iter_mut() {
+            if !stale(group, managed.subcommand) {
+                continue;
+            }
+            let current = group.get("matcher").and_then(Value::as_str);
+            if current == managed.matcher {
+                continue;
+            }
+            let Some(object) = group.as_object_mut() else {
+                continue;
+            };
+            match managed.matcher {
+                Some(matcher) => object.insert("matcher".to_owned(), json!(matcher)),
+                None => object.remove("matcher"),
+            };
+            changed = true;
+        }
+    }
+    if changed {
+        write(settings, &value)?;
+    }
+    Ok(changed)
 }
 
 fn read(settings: &Path) -> Result<Value> {
@@ -377,6 +424,46 @@ mod tests {
         let groups = value["hooks"]["SessionStart"].as_array().unwrap();
         assert_eq!(groups.len(), 2, "the user's own hook must survive");
         assert_eq!(groups[0]["hooks"][0]["command"], "mine.sh");
+    }
+
+    /// A hook installed before compaction was a trigger has to start firing
+    /// for it after an upgrade, without the user reconnecting.
+    #[test]
+    fn an_older_matcher_is_brought_up_to_date_and_nothing_else_changes() {
+        let (_directory, settings, _binary) = setup();
+        crate::files::write(
+            &settings,
+            &serde_json::to_string_pretty(&json!({
+                "hooks": {"SessionStart": [
+                    {"matcher": "startup", "hooks": [{"type": "command", "command": "mine.sh"}]},
+                    {"matcher": "startup|resume|clear", "hooks": [
+                        {"type": "command", "command": "/Applications/synapse.app/Contents/MacOS/synapse session"}
+                    ]}
+                ]}
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+
+        assert!(refreshstale(&settings).unwrap());
+        assert!(
+            !refreshstale(&settings).unwrap(),
+            "a second pass has nothing to do"
+        );
+
+        let value = read(&settings).unwrap();
+        assert_eq!(value["hooks"]["SessionStart"][0]["matcher"], "startup");
+        assert_eq!(value["hooks"]["SessionStart"][1]["matcher"], MATCHER);
+    }
+
+    #[test]
+    fn a_settings_file_without_synapse_hooks_is_not_touched() {
+        let (_directory, settings, _binary) = setup();
+        let original = "{\n  \"model\": \"opus\"\n}\n";
+        std::fs::write(&settings, original).unwrap();
+
+        assert!(!refreshstale(&settings).unwrap());
+        assert_eq!(std::fs::read_to_string(&settings).unwrap(), original);
     }
 
     #[test]

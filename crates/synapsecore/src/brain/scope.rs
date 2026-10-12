@@ -29,6 +29,22 @@ pub fn projectroot(path: &Path) -> Result<Option<PathBuf>> {
     Ok(Some(root))
 }
 
+/// The key a project's memory is filed and recalled under: the repository's
+/// normalized `origin` when it has one, so every checkout of it on every
+/// machine shares one memory, and its root folder otherwise.
+///
+/// Every place that turns a path into the `project` column goes through here.
+/// One that called `projectroot` and kept the path would file memory where no
+/// recall looks for it.
+pub fn projectkey(path: &Path) -> Result<Option<String>> {
+    Ok(projectroot(path)?.map(|root| keyof(&root)))
+}
+
+/// The key for a folder already known to be a project root.
+pub(super) fn keyof(root: &Path) -> String {
+    super::origin::origin(root).unwrap_or_else(|| root.display().to_string())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -43,6 +59,43 @@ mod tests {
         assert_eq!(
             projectroot(&nested).unwrap(),
             Some(directory.path().canonicalize().unwrap())
+        );
+    }
+
+    #[test]
+    fn a_repository_with_an_origin_is_keyed_by_it_from_any_folder_inside() {
+        let directory = tempfile::tempdir().unwrap();
+        let git = directory.path().join(".git");
+        std::fs::create_dir(&git).unwrap();
+        std::fs::write(
+            git.join("config"),
+            "[remote \"origin\"]\n\turl = git@github.com:wess/app.git\n",
+        )
+        .unwrap();
+        let nested = directory.path().join("src");
+        std::fs::create_dir(&nested).unwrap();
+
+        assert_eq!(
+            projectkey(&nested).unwrap().as_deref(),
+            Some("github.com/wess/app")
+        );
+    }
+
+    #[test]
+    fn a_repository_without_an_origin_is_keyed_by_its_folder() {
+        let directory = tempfile::tempdir().unwrap();
+        std::fs::create_dir(directory.path().join(".git")).unwrap();
+
+        assert_eq!(
+            projectkey(directory.path()).unwrap(),
+            Some(
+                directory
+                    .path()
+                    .canonicalize()
+                    .unwrap()
+                    .display()
+                    .to_string()
+            )
         );
     }
 

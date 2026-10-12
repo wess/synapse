@@ -299,6 +299,14 @@
     <p>Find memories containing an exact string, most recent first. Nothing is tokenized, ranked, or dropped — the characters given have to appear, in that order — which is what makes it the right tool for an identifier, a flag, a path, or a word the ranked search treats as noise. Matching is case-insensitive for ASCII, and a pattern after a bare <code>--</code> is taken literally, so <code>memory grep -- --no-verify</code> searches for the flag.</p>
   </section>
     
+  <section class="command" id="memoryeval">
+    <div>
+      <h3>memory eval</h3>
+      <code>synapse memory eval &amp;lt;cases.toml&amp;gt; [--limit &amp;lt;n&amp;gt;] [--fail-under &amp;lt;0-1&amp;gt;] [--json]</code>
+    </div>
+    <p>Score recall against a file of labeled questions. Each <code>[[case]]</code> has a <code>query</code>, an optional <code>project</code> folder, and <code>expect</code>: text a useful memory contains, matched case-insensitively, or nothing when no stored memory answers it. Reports how often the answer ranked first, how often it came back at all, mean reciprocal rank, and how many memories came back where none answer. <code>--limit</code> defaults to 5. <code>--fail-under</code> exits 1 when the found share is below the floor.</p>
+  </section>
+    
   <section class="command" id="memoryshow">
     <div>
       <h3>memory show</h3>
@@ -475,7 +483,7 @@
       <h3>session</h3>
       <code>synapse session [--json]</code>
     </div>
-    <p>Report this session's Synapse connection as Claude Code session-hook output. Synapse installs this for you when you connect Claude Code; run it by hand to see exactly what a session will be told. Reads the calling tool's JSON on stdin.</p>
+    <p>Report this session's Synapse connection as Claude Code session-hook output. Synapse installs this for you when you connect Claude Code; run it by hand to see exactly what a session will be told. When the input's <code>source</code> is <code>compact</code>, it prints no notice and hands the session's memory back instead, because the compaction dropped it. Reads the calling tool's JSON on stdin.</p>
   </section>
     
   <section class="command" id="compact">

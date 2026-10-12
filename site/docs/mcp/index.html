@@ -169,6 +169,7 @@
 }</code></pre>
   </div>
     <p>It asks for an explicit list of what the session settled and is not already stored, and for a <code>remember</code> call for each one. It deliberately recalls <em>nothing</em>: the context window is being reclaimed, and spending it re-injecting memory the session already had is the opposite of what a compaction is for.</p>
+    <p>Afterwards, Claude Code starts the session hook again with <code>source</code> set to <code>compact</code>. That run prints no connection notice, since you saw it when the session began, and hands the memory back: the same recent memory the session started with, re-read, so anything it remembered before compacting comes back too. A hook installed by an earlier release is updated to fire on compaction the next time the MCP server starts.</p>
     <p>The compaction itself is never blocked, cancelled, or rewritten. A memory tool that traded a session's whole context for a reminder would be a worse bargain than forgetting.</p>
 
     <h2 id="remember">remember</h2>

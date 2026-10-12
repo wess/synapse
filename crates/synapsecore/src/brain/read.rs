@@ -70,10 +70,9 @@ impl Brain {
             .unwrap_or(PAGEBYTES)
             .min(PAGEBYTES);
         let project = project
-            .map(crate::brain::projectroot)
+            .map(crate::brain::projectkey)
             .transpose()?
             .flatten()
-            .map(|path| path.display().to_string())
             .unwrap_or_default();
         // slice in SQLite so a small read never loads the entire body into Rust.
         // blobs preserve embedded NULs; SQLite's text length stops at the first one.

@@ -52,7 +52,7 @@ pub async fn scan(home: &Path) -> Result<Vec<ImportCandidate>> {
         }
         let project = projects
             .get(&thread)
-            .and_then(|path| crate::brain::projectroot(path).ok().flatten());
+            .and_then(|path| crate::brain::projectkey(path).ok().flatten());
         let warning = crate::imports::warning(&raw).or_else(|| {
             project
                 .is_none()
@@ -71,10 +71,7 @@ pub async fn scan(home: &Path) -> Result<Vec<ImportCandidate>> {
                     .as_ref()
                     .map(|_| MemoryScope::Project)
                     .unwrap_or(MemoryScope::Global),
-                project: project
-                    .as_ref()
-                    .map(|path| path.display().to_string())
-                    .unwrap_or_default(),
+                project: project.clone().unwrap_or_default(),
                 path: memories.clone(),
                 created,
                 warning: warning.clone(),

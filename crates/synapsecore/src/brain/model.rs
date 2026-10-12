@@ -57,12 +57,23 @@ impl MemoryScope {
     pub fn project(self, path: Option<&Path>) -> anyhow::Result<String> {
         match self {
             Self::Global => Ok(String::new()),
-            Self::Project => path
-                .map(crate::brain::projectroot)
-                .transpose()?
-                .flatten()
-                .map(|path| path.display().to_string())
-                .ok_or_else(|| anyhow::anyhow!("project-scoped memory needs a project path")),
+            Self::Project => {
+                let path = path
+                    .ok_or_else(|| anyhow::anyhow!("project-scoped memory needs a project path"))?;
+                // A key handed back in — the desktop editor showing a memory's
+                // project, an update keeping it — is not a folder and never
+                // resolves as one, so it is taken as it stands.
+                match crate::brain::projectkey(path)? {
+                    Some(key) => Ok(key),
+                    None => path
+                        .to_str()
+                        .filter(|value| crate::brain::origin::stable(value))
+                        .map(ToOwned::to_owned)
+                        .ok_or_else(|| {
+                            anyhow::anyhow!("project-scoped memory needs a project path")
+                        }),
+                }
+            }
         }
     }
 }
@@ -185,6 +196,15 @@ pub struct RememberResponse {
     /// Which of the requested `supersedes` ids were actually replaced.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub superseded: Vec<i64>,
+    /// How many credentials or `<private>` sections were taken out before the
+    /// memory was stored. Reported so the agent knows the stored text is not
+    /// the text it sent, and does not go on believing a value was saved.
+    #[serde(skip_serializing_if = "iszerocount")]
+    pub redacted: usize,
+}
+
+fn iszerocount(value: &usize) -> bool {
+    *value == 0
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]

@@ -90,12 +90,21 @@ impl Brain {
                 ImportStatus::Ready | ImportStatus::Flagged => {}
             }
             let candidate = item.candidate;
+            // Imported files are the likeliest place for a credential to be
+            // sitting in plain text, so they go through the same redaction as
+            // anything remembered here.
+            let body = crate::brain::redact(&candidate.body).body;
+            let body = body.trim();
+            if body.is_empty() {
+                skipped += 1;
+                continue;
+            }
             let duplicate = sqlx::query_scalar::<_, i64>(
                 "SELECT memory.rowid FROM memory \
                  JOIN memorymeta meta ON meta.memoryid = memory.rowid \
                  WHERE memory.body = ? AND meta.scope = ? AND meta.project = ? LIMIT 1",
             )
-            .bind(candidate.body.trim())
+            .bind(body)
             .bind(candidate.scope.value())
             .bind(&candidate.project)
             .fetch_optional(&mut *transaction)
@@ -113,7 +122,7 @@ impl Brain {
                     };
                     let id =
                         sqlx::query("INSERT INTO memory(body, source, created) VALUES (?, ?, ?)")
-                            .bind(candidate.body.trim())
+                            .bind(body)
                             .bind(&candidate.source)
                             .bind(timestamp)
                             .execute(&mut *transaction)

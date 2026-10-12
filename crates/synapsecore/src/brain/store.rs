@@ -26,7 +26,9 @@ pub struct Brain {
 impl Brain {
     pub async fn open(path: impl AsRef<Path>) -> Result<Self> {
         let path = path.as_ref().to_path_buf();
-        Self::from(crate::database::open(&path).await?, path)
+        let brain = Self::from(crate::database::open(&path).await?, path)?;
+        brain.rekey().await?;
+        Ok(brain)
     }
 
     /// Open only to report on what is stored. See [`crate::database::glance`].
@@ -74,8 +76,8 @@ impl Brain {
         project: Option<&Path>,
         supersedes: &[i64],
     ) -> Result<(i64, Vec<i64>)> {
-        let body = body.trim();
-        anyhow::ensure!(!body.is_empty(), "memory content cannot be empty");
+        let body = stored(body)?;
+        let body = body.as_str();
         let project = scope.project(project)?;
 
         let created = SystemTime::now()
@@ -204,10 +206,9 @@ impl Brain {
         let configured = self.settings().await?;
         let settings = Settings::from(configured.optimization.constrained(budget));
         let project = project
-            .map(crate::brain::projectroot)
+            .map(crate::brain::projectkey)
             .transpose()?
             .flatten()
-            .map(|path| path.display().to_string())
             .unwrap_or_default();
         let memories = self
             .searchscoped(query, limit.clamp(1, settings.resultlimit), &project)
@@ -358,10 +359,9 @@ impl Brain {
     /// is the number it can see.
     pub async fn reach(&self, project: Option<&Path>) -> Result<i64> {
         let project = project
-            .map(crate::brain::projectroot)
+            .map(crate::brain::projectkey)
             .transpose()?
             .flatten()
-            .map(|path| path.display().to_string())
             .unwrap_or_default();
         sqlx::query_scalar::<_, i64>(
             "SELECT count(*) FROM memorymeta \
@@ -395,12 +395,10 @@ impl Brain {
         let Some(memory) = memory else {
             return Ok(None);
         };
-        let project = if memory.scope == MemoryScope::Project {
-            Some(Path::new(&memory.project))
-        } else {
-            None
-        };
-        self.updatememoryscoped(id, body, source, memory.scope, project)
+        // The project it already has, as stored. Resolving it again would fail
+        // for a key with no folder behind it and for a folder that has since
+        // gone, and neither is a reason an edit to the text should not save.
+        self.updatememorykeyed(id, body, source, memory.scope, memory.project)
             .await
     }
 
@@ -412,9 +410,21 @@ impl Brain {
         scope: MemoryScope,
         project: Option<&Path>,
     ) -> Result<Option<Memory>> {
-        let body = body.trim();
-        anyhow::ensure!(!body.is_empty(), "memory content cannot be empty");
         let project = scope.project(project)?;
+        self.updatememorykeyed(id, body, source, scope, project)
+            .await
+    }
+
+    async fn updatememorykeyed(
+        &self,
+        id: i64,
+        body: &str,
+        source: Option<&str>,
+        scope: MemoryScope,
+        project: String,
+    ) -> Result<Option<Memory>> {
+        let body = stored(body)?;
+        let body = body.as_str();
         let mut transaction = self.pool.begin().await?;
         let result =
             sqlx::query("UPDATE memory SET body = ?, source = COALESCE(?, source) WHERE rowid = ?")
@@ -589,6 +599,22 @@ fn terms(query: &str) -> (Vec<String>, Vec<String>) {
         kept.into_iter().map(ToOwned::to_owned).collect(),
         dropped.into_iter().map(ToOwned::to_owned).collect(),
     )
+}
+
+/// What a memory made or edited on this machine is stored as: trimmed, with
+/// credentials and `<private>` sections taken out.
+///
+/// Not applied to a memory arriving from sync. That one was redacted where it
+/// was written, and its identity is a digest of its exact text — changing a
+/// byte of it here would make it a different memory to every other machine.
+fn stored(body: &str) -> Result<String> {
+    anyhow::ensure!(!body.trim().is_empty(), "memory content cannot be empty");
+    let body = crate::brain::redact(body).body.trim().to_owned();
+    anyhow::ensure!(
+        !body.is_empty(),
+        "nothing is left to store once private and secret content is removed"
+    );
+    Ok(body)
 }
 
 /// A literal pattern, safe to hand to `LIKE`. Without this a memory containing

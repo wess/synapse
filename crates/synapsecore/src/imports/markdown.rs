@@ -54,9 +54,7 @@ pub(crate) fn read(
     let (scope, project) = match project {
         Some(project) => (
             MemoryScope::Project,
-            crate::brain::projectroot(project)?
-                .map(|path| path.display().to_string())
-                .unwrap_or_default(),
+            crate::brain::projectkey(project)?.unwrap_or_default(),
         ),
         None => (MemoryScope::Global, String::new()),
     };

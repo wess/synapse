@@ -20,6 +20,11 @@ pub async fn run() -> anyhow::Result<()> {
     // session its memory.
     if let Ok(home) = crate::files::home() {
         let _ = crate::agent::refreshstale(&home, &soul);
+        for agent in crate::agent::agents(&home) {
+            if agent.kind == crate::agent::Kind::Claude {
+                let _ = crate::agent::refreshhooks(&agent.settings);
+            }
+        }
     }
     let brain = crate::brain::Brain::open(&database).await?;
     let vaults = crate::vault::VaultStore::open(&database).await?;

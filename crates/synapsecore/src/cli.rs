@@ -2,6 +2,7 @@ mod command;
 mod connect;
 mod doctor;
 mod editor;
+mod eval;
 mod guidance;
 mod install;
 mod launch;
