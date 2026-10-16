@@ -5,7 +5,14 @@ use std::process::{Command, Stdio};
 /// What owns the pasteboard. Overridable so a test can prove a value arrived
 /// without taking over the clipboard of whoever is running it.
 fn program() -> String {
-    std::env::var("SYNAPSE_CLIPBOARD").unwrap_or_else(|_| "pbcopy".to_owned())
+    std::env::var("SYNAPSE_CLIPBOARD").unwrap_or_else(|_| {
+        if cfg!(windows) {
+            "powershell.exe"
+        } else {
+            "pbcopy"
+        }
+        .to_owned()
+    })
 }
 
 /// The value goes over stdin, never argv: an argument is readable in `ps` by
@@ -13,7 +20,13 @@ fn program() -> String {
 /// to take one.
 pub fn copy(value: &str) -> Result<()> {
     let program = program();
-    let mut child = Command::new(&program)
+    let mut command = Command::new(&program);
+    #[cfg(windows)]
+    if std::env::var_os("SYNAPSE_CLIPBOARD").is_none() {
+        command.args(["-NoProfile", "-NonInteractive", "-Command",
+            "[Console]::InputEncoding = New-Object System.Text.UTF8Encoding; Set-Clipboard -Value ([Console]::In.ReadToEnd())"]);
+    }
+    let mut child = command
         .stdin(Stdio::piped())
         .stdout(Stdio::null())
         .stderr(Stdio::null())

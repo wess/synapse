@@ -77,8 +77,25 @@ impl Agent {
         {
             return value;
         }
+        #[cfg(windows)]
+        if self.kind == Kind::Pi
+            && self.source == Source::Builtin
+            && let Some(package) = bundledpackage()
+        {
+            return package.display().to_string();
+        }
         self.detect.source.clone()
     }
+}
+
+#[cfg(windows)]
+fn bundledpackage() -> Option<PathBuf> {
+    let executable = std::env::current_exe().ok()?;
+    let folder = executable.parent()?;
+    std::iter::once(folder)
+        .chain(folder.parent())
+        .map(|directory| directory.join("pi"))
+        .find(|directory| directory.join("package.json").is_file())
 }
 
 #[derive(Debug, Clone)]

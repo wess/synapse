@@ -61,7 +61,16 @@ fn projectmap(home: &Path) -> HashMap<String, PathBuf> {
 }
 
 fn encode(path: &Path) -> String {
-    path.display().to_string().replace('/', "-")
+    path.to_string_lossy()
+        .chars()
+        .map(|character| {
+            if character.is_ascii_alphanumeric() {
+                character
+            } else {
+                '-'
+            }
+        })
+        .collect()
 }
 
 fn memoryfiles(root: &Path) -> Result<Vec<PathBuf>> {
@@ -90,6 +99,14 @@ fn memoryfiles(root: &Path) -> Result<Vec<PathBuf>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn windows_paths_encode_as_one_project_directory() {
+        assert_eq!(
+            encode(Path::new(r"C:\dev\my_project.v2")),
+            "C--dev-my-project-v2"
+        );
+    }
 
     #[test]
     fn imports_leaf_memories_and_skips_the_index() {

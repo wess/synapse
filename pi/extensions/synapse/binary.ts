@@ -11,7 +11,7 @@ import { accessSync, constants } from "node:fs";
 import { homedir } from "node:os";
 import { delimiter, isAbsolute, join } from "node:path";
 
-const COMMAND = "synapse";
+const COMMAND = process.platform === "win32" ? "synapse.exe" : "synapse";
 const PERSONAL = [".local/bin", ".cargo/bin", ".asdf/shims"];
 const SYSTEM = ["/opt/homebrew/bin", "/usr/local/bin"];
 
@@ -25,6 +25,11 @@ export function binary(): string | undefined {
   const directories = [
     ...(process.env.PATH ?? "").split(delimiter).filter((entry) => entry.length > 0),
     ...PERSONAL.map((entry) => join(home, entry)),
+    ...(process.platform === "win32"
+      ? ["Programs/Synapse/bin", "synapse/bin"].map((entry) =>
+          join(process.env.LOCALAPPDATA ?? join(home, "AppData/Local"), entry),
+        )
+      : []),
     ...SYSTEM,
   ];
   return directories.map((directory) => join(directory, COMMAND)).find(runnable);

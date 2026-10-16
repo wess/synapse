@@ -40,8 +40,17 @@ fn executable(command: &str) -> Option<PathBuf> {
     }
     directories()
         .into_iter()
-        .map(|directory| directory.join(command))
+        .flat_map(|directory| candidates(&directory, command))
         .find(|path| path.is_file())
+}
+
+fn candidates(directory: &Path, command: &str) -> Vec<PathBuf> {
+    let path = directory.join(command);
+    let mut paths = vec![path.clone()];
+    if cfg!(windows) && path.extension().is_none() {
+        paths.extend(["exe", "com", "cmd", "bat"].map(|extension| path.with_extension(extension)));
+    }
+    paths
 }
 
 /// Everywhere a tool's binary may live, inherited PATH first so a person's own
@@ -66,6 +75,11 @@ fn directories() -> Vec<PathBuf> {
             PathBuf::from("/opt/homebrew/bin"),
             PathBuf::from("/usr/local/bin"),
         ]);
+        #[cfg(windows)]
+        {
+            directories.push(home.join("AppData/Roaming/npm"));
+            directories.push(home.join(".bun/bin"));
+        }
     }
     let mut seen = HashSet::new();
     directories.retain(|directory| seen.insert(directory.clone()));
@@ -90,6 +104,11 @@ pub fn searchpath() -> Option<OsString> {
 /// Run a detected tool with a PATH wide enough for whatever it turns out to be.
 pub fn command(program: &Path) -> Command {
     let mut command = Command::new(program);
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        command.creation_flags(windows_sys::Win32::System::Threading::CREATE_NO_WINDOW);
+    }
     if let Some(path) = searchpath() {
         command.env("PATH", path);
     }

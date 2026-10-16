@@ -19,13 +19,43 @@ pub fn terminate(process: u32) {
     }
 }
 
-#[cfg(not(unix))]
-pub fn alive(_process: u32) -> bool {
-    false
+#[cfg(windows)]
+pub fn alive(process: u32) -> bool {
+    use windows_sys::Win32::{
+        Foundation::{CloseHandle, WAIT_TIMEOUT},
+        System::Threading::{OpenProcess, PROCESS_SYNCHRONIZE, WaitForSingleObject},
+    };
+    if process == 0 {
+        return false;
+    }
+    unsafe {
+        let handle = OpenProcess(PROCESS_SYNCHRONIZE, 0, process);
+        if handle.is_null() {
+            return false;
+        }
+        let running = WaitForSingleObject(handle, 0) == WAIT_TIMEOUT;
+        CloseHandle(handle);
+        running
+    }
 }
 
-#[cfg(not(unix))]
-pub fn terminate(_process: u32) {}
+#[cfg(windows)]
+pub fn terminate(process: u32) {
+    use windows_sys::Win32::{
+        Foundation::CloseHandle,
+        System::Threading::{OpenProcess, PROCESS_TERMINATE, TerminateProcess},
+    };
+    if process == 0 {
+        return;
+    }
+    unsafe {
+        let handle = OpenProcess(PROCESS_TERMINATE, 0, process);
+        if !handle.is_null() {
+            TerminateProcess(handle, 1);
+            CloseHandle(handle);
+        }
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -35,5 +65,18 @@ mod tests {
     fn this_process_is_alive_and_a_zero_id_is_never_one() {
         assert!(alive(std::process::id()));
         assert!(!alive(0));
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn terminating_a_child_changes_its_liveness() {
+        let mut child = std::process::Command::new("powershell.exe")
+            .args(["-NoProfile", "-Command", "Start-Sleep -Seconds 30"])
+            .spawn()
+            .unwrap();
+        assert!(alive(child.id()));
+        terminate(child.id());
+        child.wait().unwrap();
+        assert!(!alive(child.id()));
     }
 }

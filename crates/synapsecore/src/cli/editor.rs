@@ -11,7 +11,11 @@ pub fn editor() -> String {
             return value;
         }
     }
-    "vi".to_owned()
+    defaulteditor().to_owned()
+}
+
+fn defaulteditor() -> &'static str {
+    if cfg!(windows) { "notepad.exe" } else { "vi" }
 }
 
 #[cfg(test)]
@@ -25,7 +29,11 @@ mod tests {
             std::env::remove_var("VISUAL");
             std::env::set_var("EDITOR", "");
         }
-        assert_eq!(editor(), "vi", "an empty EDITOR is not a usable editor");
+        assert_eq!(
+            editor(),
+            defaulteditor(),
+            "an empty EDITOR is not a usable editor"
+        );
         unsafe { std::env::set_var("EDITOR", "nano") };
         assert_eq!(editor(), "nano");
         unsafe { std::env::set_var("VISUAL", "code -w") };

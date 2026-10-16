@@ -17,6 +17,14 @@ pub fn destination() -> Result<PathBuf> {
     }
     #[cfg(target_os = "windows")]
     {
+        let source = executable()?;
+        if source.file_name().is_some_and(|name| name == "synapse.exe")
+            && source
+                .parent()
+                .is_some_and(|parent| parent.file_name().is_some_and(|name| name == "bin"))
+        {
+            return Ok(source);
+        }
         return Ok(crate::files::data()?.join("bin").join("synapse.exe"));
     }
     #[cfg(not(target_os = "windows"))]
@@ -33,7 +41,7 @@ pub fn status() -> Result<InstallStatus> {
     if !target.exists() && fs::symlink_metadata(&target).is_err() {
         return Ok(InstallStatus::Missing);
     }
-    let executable = std::env::current_exe()?.canonicalize()?;
+    let executable = executable()?.canonicalize()?;
     let source = installedsource(&target)?;
     let samefile = source
         .as_ref()
@@ -76,7 +84,10 @@ pub fn install() -> Result<PathBuf> {
         .context("CLI destination has no parent folder")?;
     std::fs::create_dir_all(parent)
         .with_context(|| format!("could not create {}", parent.display()))?;
-    let executable = std::env::current_exe()?.canonicalize()?;
+    let executable = executable()?.canonicalize()?;
+    if target.canonicalize().ok().as_ref() == Some(&executable) {
+        return Ok(target);
+    }
     let targetstate = crate::files::Snapshot::capture(&target)?;
     let receipt = receiptpath(&target);
     let receiptstate = crate::files::Snapshot::capture(&receipt)?;
@@ -92,6 +103,22 @@ pub fn install() -> Result<PathBuf> {
         return Err(error);
     }
     Ok(target)
+}
+
+fn executable() -> Result<PathBuf> {
+    let executable = std::env::current_exe()?;
+    #[cfg(windows)]
+    if let Some(parent) = executable.parent() {
+        let companion = parent.join("bin").join("synapse.exe");
+        if executable
+            .file_name()
+            .is_some_and(|name| name == "synapsedesktop.exe")
+            && companion.is_file()
+        {
+            return Ok(companion);
+        }
+    }
+    Ok(executable)
 }
 
 fn installtarget(executable: &Path, target: &Path) -> Result<()> {

@@ -4,9 +4,9 @@
 
 Stop repeating the same project conventions to each coding agent. With Synapse, you can save a correction in one tool and recall it in another, in the same project. Keep your memory on your machine and manage reusable skills in one library.
 
-[Download for macOS](https://github.com/wess/synapse/releases/latest/download/synapse.zip) · [Linux setup](https://wess.io/synapse/docs/install/#linux) · [Try a handoff](https://wess.io/synapse/tutorials/continuity/) · [Documentation](https://wess.io/synapse/docs/)
+[Download for macOS](https://github.com/wess/synapse/releases/latest/download/synapse.zip) · [Windows installer](docs/windows.md) · [Linux setup](https://wess.io/synapse/docs/install/#linux) · [Try a handoff](https://wess.io/synapse/tutorials/continuity/) · [Documentation](https://wess.io/synapse/docs/)
 
-macOS desktop (Apple silicon, macOS 13+, signed and notarized) · CLI and MCP server · MIT license · No account required
+macOS desktop (Apple silicon, macOS 13+, signed and notarized) · Windows desktop (x64 installer) · CLI and MCP server · MIT license · No account required
 
 ## Supported harnesses
 
@@ -74,6 +74,8 @@ On macOS:
 3. Restart those tools so they load the connection and shared guidance.
 4. Ask one tool to remember a confirmed project convention. Open another in the same folder and ask it to recall that convention.
 5. Inspect the record in Synapse's **Memories** screen.
+
+On Windows, build and run the per-user installer with `packaging/windows/build.ps1`. It includes the desktop app and the CLI. See [Windows build and verification](docs/windows.md).
 
 On Linux, build the CLI from the repository root with a current stable Rust toolchain and a C compiler/linker:
 

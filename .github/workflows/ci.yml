@@ -45,6 +45,30 @@ jobs:
         run: cargo clippy --all-targets
         continue-on-error: true
 
+  windows:
+    name: windows desktop and core
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            .
+            crates/synapsecore
+      - name: Desktop tests
+        run: cargo test --locked
+      - name: Core tests
+        run: cargo test --locked --manifest-path crates/synapsecore/Cargo.toml
+      - uses: oven-sh/setup-bun@v2
+      - name: Windows pi bridge
+        run: bun test pi/tests
+        env:
+          SYNAPSE_TEST_COMMAND: ${{ github.workspace }}/crates/synapsecore/target/debug/synapse-cli.exe
+      - name: CLI smoke
+        shell: pwsh
+        run: ./packaging/windows/smoke.ps1 -Cli ./crates/synapsecore/target/debug/synapse-cli.exe
+
   # Advisory formatting check (does not block — run `cargo fmt` to apply).
   fmt:
     name: rustfmt (advisory)

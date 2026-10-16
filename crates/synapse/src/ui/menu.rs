@@ -1,4 +1,6 @@
 use crate::ui::{Dashboard, SaveDocument};
+#[cfg(not(target_os = "macos"))]
+use gpui::AppContext;
 use gpui::{App, Context, Entity, Global, KeyBinding, Keystroke, SharedString, WindowHandle};
 use guise::prelude::MenuBar;
 
@@ -70,7 +72,12 @@ fn forward(keystroke: &'static str, window: WindowHandle<Dashboard>, cx: &mut Ap
         cx.propagate();
         return;
     }
-    let Ok(stroke) = Keystroke::parse(keystroke) else {
+    let keystroke = if cfg!(target_os = "macos") {
+        keystroke.to_owned()
+    } else {
+        keystroke.replace("cmd-", "ctrl-")
+    };
+    let Ok(stroke) = Keystroke::parse(&keystroke) else {
         return;
     };
     cx.global_mut::<State>().forwarding = true;
@@ -97,6 +104,7 @@ pub fn configure(window: WindowHandle<Dashboard>, cx: &mut App) {
         KeyBinding::new("cmd-alt-h", HideOthers, None),
         KeyBinding::new("cmd-m", MinimizeWindow, None),
         KeyBinding::new("cmd-w", CloseWindow, None),
+        KeyBinding::new("ctrl-w", CloseWindow, None),
         KeyBinding::new("cmd-q", QuitSynapse, None),
         KeyBinding::new("cmd-z", Undo, None),
         KeyBinding::new("cmd-shift-z", Redo, None),
@@ -196,7 +204,12 @@ pub fn configure(window: WindowHandle<Dashboard>, cx: &mut App) {
     });
     // ⌘W is the red button, and the red button has always put Synapse away
     // rather than ending it: the window comes back from the menu bar item.
-    cx.on_action::<CloseWindow>(move |_, cx| dismiss(cx));
+    cx.on_action::<CloseWindow>(move |_, cx| {
+        #[cfg(target_os = "macos")]
+        dismiss(cx);
+        #[cfg(not(target_os = "macos"))]
+        quit(window, cx);
+    });
     cx.on_action::<Undo>(move |_, cx| forward("cmd-z", window, cx));
     cx.on_action::<Redo>(move |_, cx| forward("cmd-shift-z", window, cx));
     cx.on_action::<Cut>(move |_, cx| forward("cmd-x", window, cx));
@@ -220,6 +233,11 @@ pub fn show(window: WindowHandle<Dashboard>, cx: &mut App) {
 /// to an accessory: no Dock icon, and no menu bar belonging to a window that is
 /// not on screen.
 pub fn dismiss(cx: &mut App) {
+    #[cfg(not(target_os = "macos"))]
+    {
+        cx.quit();
+    }
+    #[cfg(target_os = "macos")]
     cx.hide();
     #[cfg(target_os = "macos")]
     crate::ui::statusbar::background();

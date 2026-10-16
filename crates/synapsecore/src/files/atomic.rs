@@ -78,8 +78,14 @@ fn permissions(_file: &File, _source: Option<&fs::Metadata>) -> Result<()> {
     Ok(())
 }
 
-fn sync(path: &Path) -> Result<()> {
+#[cfg(unix)]
+pub(crate) fn sync(path: &Path) -> Result<()> {
     File::open(path)
         .and_then(|directory| directory.sync_all())
         .with_context(|| format!("could not sync {}", path.display()))
+}
+
+#[cfg(not(unix))]
+pub(crate) fn sync(_path: &Path) -> Result<()> {
+    Ok(())
 }

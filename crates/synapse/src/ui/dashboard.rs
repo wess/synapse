@@ -2130,13 +2130,21 @@ impl Render for Dashboard {
         div()
             .size_full()
             .flex()
-            .flex_row()
+            .flex_col()
             .bg(theme.body().hsla())
             .text_color(theme.text().hsla())
-            .when(framed, |element| {
-                element.child(sidebar::render(page, appmenu, navigation, cx))
-            })
-            .child(body)
+            .children(appmenu)
+            .child(
+                div()
+                    .flex_1()
+                    .min_h(px(0.0))
+                    .flex()
+                    .flex_row()
+                    .when(framed, |element| {
+                        element.child(sidebar::render(page, navigation, cx))
+                    })
+                    .child(body),
+            )
     }
 }
 
@@ -2354,7 +2362,7 @@ impl Dashboard {
                     StatusBar::new()
                         .height(36.0)
                         .left(Text::new("Agent mesh · local SQLite bus").size(Size::Xs))
-                        .right(Text::new("Messages stay on this Mac").size(Size::Xs)),
+                        .right(Text::new("Messages stay on this computer").size(Size::Xs)),
                 )
                 .into_any_element();
         }

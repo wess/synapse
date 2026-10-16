@@ -92,6 +92,7 @@ pub fn uninstall(arguments: &[OsString]) -> Result<Outcome> {
             )),
             Err(error) => removed.problems.push(format!("shell hook: {error:#}")),
         },
+        Err(_) if cfg!(windows) && std::env::var_os("SHELL").is_none() => {}
         Err(error) => removed.problems.push(format!("shell hook: {error:#}")),
     }
 

@@ -8,7 +8,7 @@
 
 use crate::ui::Page;
 use gpui::prelude::*;
-use gpui::{App, ClickEvent, Entity, Hsla, IntoElement, SharedString, Window, div, px};
+use gpui::{App, ClickEvent, Hsla, IntoElement, SharedString, Window, div, px};
 use guise::prelude::*;
 
 type Click = Box<dyn Fn(&ClickEvent, &mut Window, &mut App) + 'static>;
@@ -31,12 +31,7 @@ pub struct Navigation {
     pub settings: Click,
 }
 
-pub fn render(
-    page: Page,
-    appmenu: Option<Entity<MenuBar>>,
-    go: Navigation,
-    cx: &App,
-) -> impl IntoElement {
+pub fn render(page: Page, go: Navigation, cx: &App) -> impl IntoElement {
     let Navigation {
         map,
         connections,
@@ -139,7 +134,6 @@ pub fn render(
         ))
         // Pushes whatever follows to the bottom of the column.
         .child(div().flex_1())
-        .when_some(appmenu, |element, menu| element.child(menu))
 }
 
 fn wordmark() -> impl IntoElement {

@@ -26,11 +26,18 @@ pub fn run() {
                     window
                         .observe_window_appearance(crate::ui::theme::sync)
                         .detach();
-                    window.on_window_should_close(cx, |_window, cx| {
+                    let dashboard = cx.new(Dashboard::new);
+                    #[cfg(not(target_os = "macos"))]
+                    let closing = dashboard.clone();
+                    window.on_window_should_close(cx, move |window, cx| {
+                        #[cfg(not(target_os = "macos"))]
+                        if !closing.update(cx, |view, cx| view.preparequit(window, cx)) {
+                            return false;
+                        }
+                        let _ = window;
                         crate::ui::menu::dismiss(cx);
                         false
                     });
-                    let dashboard = cx.new(Dashboard::new);
                     // Everything slow the window does not need in order to
                     // exist happens on the frame after the first one. Doing it
                     // here would be doing it before the window is on screen,

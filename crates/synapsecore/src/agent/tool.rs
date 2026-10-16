@@ -338,14 +338,15 @@ fn resolvepath(home: &Path, toolhome: &Path, declared: &str) -> PathBuf {
 }
 
 /// Where this platform keeps a program's configuration. A tool built on the
-/// usual directory crates has one home written two ways — `Library/Application
-/// Support/ainz` on a Mac and `.config/ainz` everywhere else — and a descriptor
-/// naming only the first reads a Linux connection as absent. Derived from the
+/// usual directory crates uses Application Support on macOS, AppData/Roaming
+/// on Windows, and .config on Linux. Derived from the
 /// home Synapse already resolved rather than asked of the system, so a test that
 /// redirects `SYNAPSE_HOME` redirects this with it.
 fn configdirectory(home: &Path) -> PathBuf {
     if cfg!(target_os = "macos") {
         home.join("Library/Application Support")
+    } else if cfg!(windows) {
+        home.join("AppData/Roaming")
     } else {
         home.join(".config")
     }
@@ -363,7 +364,8 @@ mod tests {
     use super::*;
 
     fn builtin(slug: &str, home: &Path) -> Agent {
-        resolve(home, None, slug).unwrap().unwrap()
+        let text = BUILTINS.iter().find(|(name, _)| *name == slug).unwrap().1;
+        parse(home, slug, text, Source::Builtin).unwrap()
     }
 
     /// The tools Synapse ships have to survive the move into data unchanged, or

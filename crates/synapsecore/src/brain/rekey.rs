@@ -25,7 +25,7 @@ impl Brain {
     pub(super) async fn rekey(&self) -> Result<usize> {
         let projects = sqlx::query_scalar::<_, String>(
             "SELECT DISTINCT project FROM memorymeta \
-             WHERE scope = 'project' AND project LIKE '/%'",
+             WHERE scope = 'project'",
         )
         .fetch_all(&self.pool)
         .await
@@ -33,7 +33,11 @@ impl Brain {
 
         let mut moved = 0;
         for project in projects {
-            let Some(key) = super::origin::origin(Path::new(&project)) else {
+            let path = Path::new(&project);
+            if !path.is_absolute() {
+                continue;
+            }
+            let Some(key) = super::origin::origin(path) else {
                 continue;
             };
             moved += self.move_project(&project, &key).await?;

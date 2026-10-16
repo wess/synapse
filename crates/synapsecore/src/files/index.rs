@@ -107,17 +107,26 @@ pub fn reveal(path: &Path) -> Result<()> {
     let status = Command::new("open").arg(path).status();
 
     #[cfg(target_os = "windows")]
-    let status = Command::new("explorer").arg(path).status();
+    {
+        Command::new("explorer.exe")
+            .arg(path)
+            .spawn()
+            .with_context(|| format!("could not reveal {}", path.display()))?;
+        return Ok(());
+    }
 
     #[cfg(all(unix, not(target_os = "macos")))]
     let status = Command::new("xdg-open").arg(path).status();
 
+    #[cfg(not(windows))]
     let status = status.with_context(|| format!("could not reveal {}", path.display()))?;
+    #[cfg(not(windows))]
     anyhow::ensure!(
         status.success(),
         "the operating system could not reveal {}",
         path.display()
     );
+    #[cfg(not(windows))]
     Ok(())
 }
 

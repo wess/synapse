@@ -4,6 +4,7 @@ mod rollback;
 mod validate;
 
 pub(crate) use atomic::copy as atomiccopy;
+pub(crate) use atomic::sync as syncdirectory;
 pub use index::{data, database, home, read, reveal, soul, write};
 // Public because the desktop crate rolls back a multi-file settings edit the
 // same way every command does. The rest of this module stays crate-private:

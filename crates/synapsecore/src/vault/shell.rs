@@ -270,6 +270,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(unix)]
     fn bash_roundtrip_restores_the_original_value() {
         let values = BTreeMap::from([("TOKEN".to_owned(), "scoped ' value".to_owned())]);
         let active = render(Shell::Bash, "", &values, "/project", "active");

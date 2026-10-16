@@ -361,7 +361,17 @@ fn cli_imports_claude_memory_safely_and_undoes_the_batch() {
     let project = root.path().join("project");
     fs::create_dir_all(&home).unwrap();
     fs::create_dir(&project).unwrap();
-    let encoded = project.display().to_string().replace('/', "-");
+    let encoded: String = project
+        .to_string_lossy()
+        .chars()
+        .map(|character| {
+            if character.is_ascii_alphanumeric() {
+                character
+            } else {
+                '-'
+            }
+        })
+        .collect();
     let memory = home.join(".claude/projects").join(encoded).join("memory");
     fs::create_dir_all(&memory).unwrap();
     fs::write(memory.join("choice.md"), "Use the imported durable choice.").unwrap();
@@ -643,11 +653,7 @@ fn the_encrypted_vault_holds_a_value_that_is_nowhere_on_disk_in_the_clear() {
     assert!(!saved.contains("sealedvalue"));
 
     // It reaches a child process, which is the whole point of holding it.
-    let launched = success(run(
-        root.path(),
-        &["run", "--", "printenv", "SYNAPSE_TEST_VALUE"],
-        None,
-    ));
+    let launched = success(run(root.path(), &printvalue(), None));
     assert_eq!(launched.trim(), "sealedvalue");
 
     let listed = success(run(root.path(), &["secret", "list", "work"], None));
@@ -675,17 +681,7 @@ fn the_encrypted_vault_holds_a_value_that_is_nowhere_on_disk_in_the_clear() {
     }
 
     let pasteboard = root.path().join("pasteboard");
-    let stub = root.path().join("clipboard.sh");
-    fs::write(
-        &stub,
-        format!("#!/bin/sh\ncat > \"{}\"\n", pasteboard.display()),
-    )
-    .unwrap();
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        fs::set_permissions(&stub, fs::Permissions::from_mode(0o755)).unwrap();
-    }
+    let stub = clipboardstub(root.path(), &pasteboard);
     let copied = success(
         command(root.path())
             .env("SYNAPSE_CLIPBOARD", &stub)
@@ -697,12 +693,10 @@ fn the_encrypted_vault_holds_a_value_that_is_nowhere_on_disk_in_the_clear() {
     assert_eq!(fs::read_to_string(&pasteboard).unwrap(), "sealedvalue");
 
     success(run(root.path(), &["secret", "forget", "work.token"], None));
-    let gone = run(
-        root.path(),
-        &["run", "--", "printenv", "SYNAPSE_TEST_VALUE"],
-        None,
+    let gone = run(root.path(), &printvalue(), None);
+    assert!(
+        !gone.status.success() || !String::from_utf8_lossy(&gone.stdout).contains("sealedvalue")
     );
-    assert!(!gone.status.success() || String::from_utf8_lossy(&gone.stdout).trim().is_empty());
 }
 
 #[cfg(unix)]
@@ -934,7 +928,7 @@ fn the_session_hook_reports_real_numbers_and_a_status_line_follows() {
         root.path(),
         Some(&project),
         &["session"],
-        Some(&format!("{{\"cwd\":\"{folder}\"}}")),
+        Some(&serde_json::json!({"cwd": folder}).to_string()),
     )))
     .unwrap();
     assert_eq!(
@@ -957,7 +951,7 @@ fn the_session_hook_reports_real_numbers_and_a_status_line_follows() {
         root.path(),
         Some(&project),
         &["session"],
-        Some(&format!("{{\"cwd\":\"{folder}\"}}")),
+        Some(&serde_json::json!({"cwd": folder}).to_string()),
     )))
     .unwrap();
     assert_eq!(stored["systemMessage"], "Synapse connected · 1 memory");
@@ -996,7 +990,7 @@ fn the_session_hook_reports_real_numbers_and_a_status_line_follows() {
         root.path(),
         Some(&project),
         &["session"],
-        Some(&format!("{{\"cwd\":\"{folder}\"}}")),
+        Some(&serde_json::json!({"cwd": folder}).to_string()),
     )))
     .unwrap();
     let scoped = scoped["hookSpecificOutput"]["additionalContext"]
@@ -1012,9 +1006,7 @@ fn the_session_hook_reports_real_numbers_and_a_status_line_follows() {
         root.path(),
         Some(&project),
         &["statusline"],
-        Some(&format!(
-            "{{\"model\":{{\"display_name\":\"Opus 5\"}},\"workspace\":{{\"current_dir\":\"{folder}\"}}}}"
-        )),
+        Some(&serde_json::json!({"model": {"display_name": "Opus 5"}, "workspace": {"current_dir": folder}}).to_string()),
     ));
     assert_eq!(line.trim(), "Opus 5 · project · ◆ Synapse 1");
 }
@@ -1327,7 +1319,14 @@ fn doctor_reports_a_damaged_store_instead_of_failing() {
 fn faketool(folder: &Path, name: &str) {
     fs::create_dir_all(folder).unwrap();
     let path = folder.join(name);
-    fs::write(&path, "#!/bin/sh\necho \"argv: $@\"\n").unwrap();
+    #[cfg(windows)]
+    let path = path.with_extension("cmd");
+    let content = if cfg!(windows) {
+        "@echo off\r\necho argv: %*\r\n"
+    } else {
+        "#!/bin/sh\necho \"argv: $@\"\n"
+    };
+    fs::write(&path, content).unwrap();
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
@@ -1346,7 +1345,13 @@ fn launch_hands_the_tool_its_own_flags_and_keeps_synapse_out_of_them() {
     let mut command = command(root.path());
     command
         .current_dir(&project)
-        .env("PATH", format!("{}:{}", tools.display(), env!("PATH")))
+        .env(
+            "PATH",
+            std::env::join_paths(std::iter::once(tools.clone()).chain(std::env::split_paths(
+                &std::env::var_os("PATH").unwrap_or_default(),
+            )))
+            .unwrap(),
+        )
         .args([
             "launch", "claude", "--print", "--", "--model", "opus", "--resume",
         ])
@@ -1381,7 +1386,13 @@ fn launching_pi_writes_the_extension_that_carries_the_tools() {
     let mut command = command(root.path());
     command
         .current_dir(&project)
-        .env("PATH", format!("{}:{}", tools.display(), env!("PATH")))
+        .env(
+            "PATH",
+            std::env::join_paths(std::iter::once(tools.clone()).chain(std::env::split_paths(
+                &std::env::var_os("PATH").unwrap_or_default(),
+            )))
+            .unwrap(),
+        )
         .args(["launch", "pi", "--print"])
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
@@ -1427,7 +1438,13 @@ fn launch_refuses_a_scope_that_has_not_been_approved() {
     let mut command = command(root.path());
     command
         .current_dir(&project)
-        .env("PATH", format!("{}:{}", tools.display(), env!("PATH")))
+        .env(
+            "PATH",
+            std::env::join_paths(std::iter::once(tools.clone()).chain(std::env::split_paths(
+                &std::env::var_os("PATH").unwrap_or_default(),
+            )))
+            .unwrap(),
+        )
         .args(["launch", "claude"])
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
@@ -1960,11 +1977,12 @@ fn every_subcommand_answers_help_instead_of_failing() {
 #[test]
 fn a_help_flag_meant_for_the_child_still_reaches_it() {
     let root = tempfile::tempdir().unwrap();
-    let printed = success(run(
-        root.path(),
-        &["run", "--", "printf", "%s", "--help"],
-        None,
-    ));
+    let arguments: &[&str] = if cfg!(windows) {
+        &["run", "--", "cmd.exe", "/D", "/C", "echo", "--help"]
+    } else {
+        &["run", "--", "printf", "%s", "--help"]
+    };
+    let printed = success(run(root.path(), arguments, None));
     assert_eq!(printed.trim(), "--help");
 }
 
@@ -2180,4 +2198,40 @@ fn a_block_that_still_asks_for_the_line_reads_as_stale_and_is_replaced() {
     );
     assert!(!after.contains("memories recalled"), "{after}");
     assert_eq!(after.matches("synapse:begin").count(), 1, "{after}");
+}
+
+fn printvalue() -> Vec<&'static str> {
+    if cfg!(windows) {
+        vec![
+            "run",
+            "--",
+            "cmd.exe",
+            "/D",
+            "/C",
+            "echo %SYNAPSE_TEST_VALUE%",
+        ]
+    } else {
+        vec!["run", "--", "printenv", "SYNAPSE_TEST_VALUE"]
+    }
+}
+
+fn clipboardstub(root: &Path, pasteboard: &Path) -> std::path::PathBuf {
+    #[cfg(windows)]
+    {
+        let stub = root.join("clipboard.cmd");
+        fs::write(&stub, format!("@echo off\r\npowershell.exe -NoProfile -Command \"[IO.File]::WriteAllText('{}', [Console]::In.ReadToEnd())\"\r\n", pasteboard.display())).unwrap();
+        stub
+    }
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let stub = root.join("clipboard.sh");
+        fs::write(
+            &stub,
+            format!("#!/bin/sh\ncat > \"{}\"\n", pasteboard.display()),
+        )
+        .unwrap();
+        fs::set_permissions(&stub, fs::Permissions::from_mode(0o755)).unwrap();
+        stub
+    }
 }

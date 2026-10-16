@@ -113,6 +113,8 @@ mod tests {
 
     #[test]
     fn user_mcp_stores_match_the_tool_clis() {
+        let data = tempfile::tempdir().unwrap();
+        let _guard = crate::files::scopeddata(data.path());
         let home = Path::new("/users/test");
         let agents = agents(home);
         let find = |slug: &str| {

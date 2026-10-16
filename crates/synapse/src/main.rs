@@ -1,3 +1,5 @@
+#![cfg_attr(windows, windows_subsystem = "windows")]
+
 mod ui;
 
 use synapsecore::cli::{self, Outcome};

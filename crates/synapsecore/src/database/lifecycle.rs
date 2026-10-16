@@ -1,7 +1,7 @@
 use crate::database::{backup, connect, integrity, migration, permission, readonly, version};
 use anyhow::{Context, Result};
 use serde::Serialize;
-use std::fs::{self, File};
+use std::fs::{self, OpenOptions};
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -73,7 +73,10 @@ pub async fn restore(database: &Path, source: &Path) -> Result<Option<PathBuf>> 
     backup::vacuum(&sourcepool, &temporary).await?;
     sourcepool.close().await;
     permission::securefile(&temporary)?;
-    File::open(&temporary)?.sync_all()?;
+    OpenOptions::new()
+        .write(true)
+        .open(&temporary)?
+        .sync_all()?;
 
     for sidecar in [
         permission::sidecar(database, "wal"),
@@ -86,7 +89,7 @@ pub async fn restore(database: &Path, source: &Path) -> Result<Option<PathBuf>> 
     }
     replace(&temporary, database)?;
     permission::securefiles(database)?;
-    File::open(parent)?.sync_all()?;
+    crate::files::syncdirectory(parent)?;
     Ok(backup)
 }
 
