@@ -2235,3 +2235,262 @@ fn clipboardstub(root: &Path, pasteboard: &Path) -> std::path::PathBuf {
         stub
     }
 }
+
+/// A stand-in for a tool's `mcp add`/`mcp remove`, writing the one entry it
+/// was given to its settings the way a real tool's CLI would.
+#[cfg(unix)]
+fn fakemcptool(root: &Path) -> (std::path::PathBuf, String) {
+    use std::os::unix::fs::PermissionsExt;
+
+    let home = root.join("home");
+    let bin = root.join("toolbin");
+    fs::create_dir_all(&bin).unwrap();
+    fs::create_dir_all(home.join(".hermes")).unwrap();
+    let settings = home.join(".hermes/settings.json");
+    let executable = bin.join("hermes");
+    fs::write(
+        &executable,
+        format!(
+            "#!/bin/sh\n\
+             if [ \"$1\" = --version ]; then echo 1.0; exit 0; fi\n\
+             if [ \"$1\" = mcp ] && [ \"$2\" = add ]; then\n\
+               printf '{{\"servers\":{{\"%s\":{{\"command\":\"%s\",\"args\":[\"%s\",\"%s\",\"%s\"]}}}}}}' \"$3\" \"$5\" \"$6\" \"$7\" \"$8\" > '{settings}'\n\
+             fi\n\
+             if [ \"$1\" = mcp ] && [ \"$2\" = remove ]; then printf '{{}}' > '{settings}'; fi\n\
+             exit 0\n",
+            settings = settings.display()
+        ),
+    )
+    .unwrap();
+    fs::set_permissions(&executable, fs::Permissions::from_mode(0o700)).unwrap();
+    let tools = root.join("data/tools");
+    fs::create_dir_all(&tools).unwrap();
+    fs::write(
+        tools.join("hermes.toml"),
+        "name = \"Hermes\"\ncommand = \"hermes\"\n\
+         [home]\ndefault = \".hermes\"\n\
+         [paths]\ninstructions = \"{home}/AGENTS.md\"\nsettings = \"{home}/settings.json\"\n\
+         integration = \"{home}/settings.json\"\nskills = \"{home}/skills\"\n\
+         [servers]\nadd = [\"mcp\", \"add\", \"{name}\", \"--\", \"{server}\", \"mcp\", \"run\", \"{name}\"]\n\
+         remove = [\"mcp\", \"remove\", \"{name}\"]\nat = [\"servers\", \"{name}\"]\n\
+         [detect]\nformat = \"json\"\nat = [\"servers\", \"synapse\"]\nargs = [\"mcp\"]\n",
+    )
+    .unwrap();
+    let path = format!(
+        "{}:{}",
+        bin.display(),
+        std::env::var("PATH").unwrap_or_default()
+    );
+    (settings, path)
+}
+
+#[cfg(unix)]
+fn withpath(root: &Path, path: &str, arguments: &[&str], input: Option<&str>) -> Output {
+    let mut command = command(root);
+    command
+        .args(arguments)
+        .env("PATH", path)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+    if input.is_some() {
+        command.stdin(Stdio::piped());
+    }
+    let mut child = command.spawn().unwrap();
+    if let Some(input) = input {
+        child
+            .stdin
+            .take()
+            .unwrap()
+            .write_all(input.as_bytes())
+            .unwrap();
+    }
+    child.wait_with_output().unwrap()
+}
+
+#[cfg(unix)]
+#[test]
+fn a_library_server_reaches_a_tool_with_its_secret_in_the_vault_and_nowhere_else() {
+    let root = tempfile::tempdir().unwrap();
+    let (settings, path) = fakemcptool(root.path());
+    let synapse =
+        |arguments: &[&str], input: Option<&str>| withpath(root.path(), &path, arguments, input);
+
+    success(synapse(
+        &[
+            "mcp",
+            "add",
+            "demo",
+            "--",
+            "/bin/sh",
+            "-c",
+            "printf %s \"$DEMO_TOKEN\"",
+        ],
+        None,
+    ));
+    success(synapse(
+        &["mcp", "secret", "demo", "DEMO_TOKEN"],
+        Some("s3cret-value\n"),
+    ));
+
+    let library = fs::read_to_string(root.path().join("data/mcp/demo.toml")).unwrap();
+    assert!(
+        !library.contains("s3cret"),
+        "a secret value never lands in the library: {library}"
+    );
+    assert!(library.contains("mcp-demo.demo-token"), "{library}");
+
+    success(synapse(
+        &["mcp", "install", "demo", "--tool", "hermes"],
+        None,
+    ));
+    let held = fs::read_to_string(&settings).unwrap();
+    assert!(
+        held.contains("\"mcp\",\"run\",\"demo\""),
+        "the tool is handed `synapse mcp run`: {held}"
+    );
+    assert!(!held.contains("s3cret"), "and never the value: {held}");
+
+    let status = success(synapse(&["mcp", "status", "demo"], None));
+    assert!(status.contains("Hermes\tinstalled"), "{status}");
+
+    // What the tool starts gets the secret, and nothing extra on stdout ahead
+    // of the server's own output.
+    let ran = success(synapse(&["mcp", "run", "demo"], None));
+    assert_eq!(ran, "s3cret-value");
+
+    success(synapse(
+        &["mcp", "uninstall", "demo", "--tool", "hermes"],
+        None,
+    ));
+    assert_eq!(fs::read_to_string(&settings).unwrap(), "{}");
+}
+
+#[cfg(unix)]
+#[test]
+fn adopting_a_tools_server_moves_its_token_into_the_vault() {
+    let root = tempfile::tempdir().unwrap();
+    let (settings, path) = fakemcptool(root.path());
+    let synapse = |arguments: &[&str]| withpath(root.path(), &path, arguments, None);
+    fs::write(
+        &settings,
+        r#"{"servers":{"gh":{"command":"npx","args":["-y","server-github"],"env":{"GH_TOKEN":"plaintext-token"}}}}"#,
+    )
+    .unwrap();
+
+    let status = success(synapse(&["mcp", "status"]));
+    assert!(
+        status.contains("gh\tHermes"),
+        "a tool's own server is offered: {status}"
+    );
+
+    success(synapse(&["mcp", "adopt", "gh", "--tool", "hermes"]));
+    let library = fs::read_to_string(root.path().join("data/mcp/gh.toml")).unwrap();
+    assert!(!library.contains("plaintext-token"), "{library}");
+    assert!(library.contains("GH_TOKEN"), "{library}");
+
+    // Its own entry is still its own until somebody says to swap it.
+    let refused = synapse(&["mcp", "install", "gh", "--tool", "hermes"]);
+    assert!(
+        fs::read_to_string(&settings)
+            .unwrap()
+            .contains("plaintext-token")
+    );
+    assert!(String::from_utf8_lossy(&refused.stderr).contains("--replace"));
+
+    success(synapse(&[
+        "mcp",
+        "install",
+        "gh",
+        "--tool",
+        "hermes",
+        "--replace",
+    ]));
+    let held = fs::read_to_string(&settings).unwrap();
+    assert!(
+        !held.contains("plaintext-token"),
+        "the swap takes the plaintext out: {held}"
+    );
+    assert!(held.contains("\"mcp\",\"run\",\"gh\""), "{held}");
+}
+
+#[test]
+fn a_projects_sources_wait_for_approval_and_lose_it_when_edited() {
+    let root = tempfile::tempdir().unwrap();
+    let project = root.path().join("project");
+    fs::create_dir_all(project.join(".git")).unwrap();
+    fs::create_dir_all(project.join(".synapse")).unwrap();
+
+    // Adding a repository needs no request, so this stays off the network.
+    success(run(
+        root.path(),
+        &[
+            "source",
+            "add",
+            "team",
+            "acme/agent-skills@main/skills",
+            "--token",
+            "work.github",
+        ],
+        None,
+    ));
+    let mine = success(run(root.path(), &["source", "list"], None));
+    assert!(
+        mine.contains("team\tGitHub repository\tskills, MCP\tacme/agent-skills@main/skills\tyours"),
+        "{mine}"
+    );
+    assert!(
+        mine.contains("skills.sh"),
+        "the built-ins stay until removed: {mine}"
+    );
+    success(run(root.path(), &["source", "remove", "skills.sh"], None));
+    assert!(!success(run(root.path(), &["source", "list"], None)).contains("skills.sh"));
+
+    fs::write(
+        project.join(".synapse/sources.toml"),
+        "[[source]]\nname = \"shared\"\nkind = \"github\"\nrepo = \"acme/shared\"\n",
+    )
+    .unwrap();
+    let pending = success(runfrom(
+        root.path(),
+        Some(&project),
+        &["source", "list"],
+        None,
+    ));
+    assert!(
+        pending.contains("shared") && pending.contains("not approved"),
+        "{pending}"
+    );
+
+    success(runfrom(
+        root.path(),
+        Some(&project),
+        &["source", "allow"],
+        None,
+    ));
+    let approved = success(runfrom(
+        root.path(),
+        Some(&project),
+        &["source", "list"],
+        None,
+    ));
+    assert!(
+        approved.contains("this project") && !approved.contains("not approved"),
+        "{approved}"
+    );
+
+    fs::write(
+        project.join(".synapse/sources.toml"),
+        "[[source]]\nname = \"shared\"\nkind = \"github\"\nrepo = \"someone/else\"\n",
+    )
+    .unwrap();
+    let edited = success(runfrom(
+        root.path(),
+        Some(&project),
+        &["source", "list"],
+        None,
+    ));
+    assert!(
+        edited.contains("not approved"),
+        "an edit takes the approval away: {edited}"
+    );
+}

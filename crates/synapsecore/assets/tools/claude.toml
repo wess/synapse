@@ -21,6 +21,12 @@ remove = ["mcp", "remove", "--scope", "user", "synapse"]
 # added alongside, so `mcp add` is never asked to write a name already there.
 replace = true
 
+# The library's MCP servers, each handed over as `synapse mcp run <name>`.
+[servers]
+add = ["mcp", "add", "--scope", "user", "{name}", "--", "{server}", "mcp", "run", "{name}"]
+remove = ["mcp", "remove", "--scope", "user", "{name}"]
+at = ["mcpServers", "{name}"]
+
 [detect]
 format = "json"
 at = ["mcpServers", "synapse"]

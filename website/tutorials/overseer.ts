@@ -13,7 +13,6 @@ export const overseer: Page = {
     { label: "Describe an outcome", id: "describe" },
     { label: "Answer it", id: "answer" },
     { label: "Reach past it", id: "past" },
-    { label: "Do it from the app", id: "app" },
     { label: "Bound the fan-out", id: "bound" },
     { label: "Clean up", id: "cleanup" },
   ],
@@ -67,12 +66,6 @@ synapse mux --team overseer`)}
         ${code("text", `@notes skip the dependency bumps, they are noise`)}
         <p>Nothing was relayed. You did not interrupt the overseer's context to correct one of its workers, and it did not have to spend a turn passing the message along.</p>
         ${note("Why that matters more than it sounds", "A lead that relays for you pays its own context on every message and becomes a bottleneck for a job it is not doing. The overseer is addressable, never interposed — which is the same reason <code>synapse mux</code> exists at all.")}
-      </li>
-
-      <li>
-        <h2 id="app">Do the same from the app</h2>
-        <p>Open Synapse and click <strong>Console</strong>. It is the same seat: a transcript of everything said, what the mesh is doing, the roster, and a box to type in. Opening it registers you under the same login name, so an agent looking for somebody to ask finds one row rather than two.</p>
-        <p>Click an agent in the roster to aim a bare line at it, or use <code>@name</code> exactly as in the terminal. The grammar is one piece of code shared by both surfaces.</p>
       </li>
 
       <li>

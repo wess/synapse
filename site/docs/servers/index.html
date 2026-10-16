@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MCP servers — Synapse</title>
+  <meta name="description" content="Keep one list of MCP servers, give it to every connected tool, and keep their tokens in the vault rather than in each tool's config.">
+  <meta name="theme-color" content="#0a43c8">
+  <meta property="og:title" content="MCP servers — Synapse">
+  <meta property="og:description" content="Keep one list of MCP servers, give it to every connected tool, and keep their tokens in the vault rather than in each tool's config.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://wess.io/synapse/docs/servers/">
+  <link rel="canonical" href="https://wess.io/synapse/docs/servers/">
+  <link rel="icon" href="../../icon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Fragment+Mono&family=Manrope:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="../../style.css">
+  <script type="module" src="../../site.js"></script>
+</head>
+<body class="docs" data-root="../../">
+  
+  <a class="skip" href="#content">Skip to content</a>
+  <header class="topbar">
+    <a class="wordmark" href="../../" aria-label="Synapse home">
+      <img src="../../icon.svg" width="30" height="30" alt="">
+      <span>Synapse</span>
+    </a>
+    <button class="navtoggle" type="button" aria-expanded="false" aria-controls="topnav">Menu</button>
+    <nav id="topnav" aria-label="Primary">
+      <a href="../../docs/" aria-current="page">Docs</a>
+      <a href="../../tutorials/">Tutorials</a>
+      <a href="https://github.com/wess/synapse">GitHub <span aria-hidden="true">↗</span></a>
+      <a class="navdownload" href="https://github.com/wess/synapse/releases/latest/download/synapse.zip">Download</a>
+    </nav>
+  </header>
+  
+  <div class="doclayout">
+    
+  <aside class="docsrail" aria-label="Documentation navigation">
+    <div class="searchbox">
+      <label for="search">Search the guide</label>
+      <input id="search" type="search" placeholder="Memory, vaults, restore…" autocomplete="off">
+      <div class="searchresults" data-results hidden></div>
+      <span class="searchstatus" data-searchstatus role="status" aria-live="polite"></span>
+    </div>
+    <details class="railnav" open>
+      <summary>Browse all guides</summary>
+      <nav aria-label="All guides">
+        <h2>Documentation</h2>
+        <ul>
+        <li><a href="../../docs/">Start here</a></li>
+        <li><a href="../../docs/install/">Install and connect</a></li>
+        <li><a href="../../docs/harnesses/">Supported and custom harnesses</a></li>
+        <li><a href="../../docs/app/">Desktop app reference</a></li>
+        <li><a href="../../docs/memory/">Memory and recall</a></li>
+        <li><a href="../../docs/mcp/">MCP tool reference</a></li>
+        <li><a href="../../docs/mesh/">Agent mesh</a></li>
+        <li><a href="../../docs/skills/">Skills</a></li>
+        <li><a href="../../docs/servers/" aria-current="page">MCP servers</a></li>
+        <li><a href="../../docs/sources/">Sources</a></li>
+        <li><a href="../../docs/vault/">Vaults and scopes</a></li>
+        <li><a href="../../docs/data/">Data lifecycle</a></li>
+        <li><a href="../../docs/config/">Configuration and paths</a></li>
+        <li><a href="../../docs/security/">Security model</a></li>
+        <li><a href="../../docs/cli/">CLI reference</a></li>
+        <li><a href="../../docs/troubleshoot/">Troubleshooting</a></li></ul>
+        <h2>Tutorials</h2>
+        <ul>
+        <li><a href="../../tutorials/">Tutorials</a></li>
+        <li><a href="../../tutorials/connect/">Install and connect your first tools</a></li>
+        <li><a href="../../tutorials/continuity/">Carry one decision between tools</a></li>
+        <li><a href="../../tutorials/curate/">Curate and optimize memory</a></li>
+        <li><a href="../../tutorials/secrets/">Use a scoped secret in either shell mode</a></li>
+        <li><a href="../../tutorials/skills/">Keep one skill library across every tool</a></li>
+        <li><a href="../../tutorials/learn/">Let your agents write skills</a></li>
+        <li><a href="../../tutorials/launch/">Start a tool with everything in place</a></li>
+        <li><a href="../../tutorials/mesh/">Run a team of agents and drive it yourself</a></li>
+        <li><a href="../../tutorials/overseer/">Hand a job to one agent and watch it grow a team</a></li>
+        <li><a href="../../tutorials/recovery/">Export and restore safely</a></li>
+        <li><a href="../../tutorials/lifecycle/">Check, migrate, and remove Synapse</a></li></ul>
+      </nav>
+    </details>
+  </aside>
+    <main class="article" id="content">
+      <header class="articlehead">
+        <h1>MCP servers</h1>
+        <span>Keep one list of MCP servers, give it to every connected tool, and keep their tokens in the vault rather than in each tool's config.</span>
+      </header>
+      
+    <h2 id="why">Why a library</h2>
+    <p>Every coding tool keeps its own list of MCP servers in its own format, so the same server ends up configured three times, and its token sits in plaintext in three files. Synapse keeps one list instead. Each server is a small TOML file in the Synapse data directory, and its secrets are held as references into the vault rather than as values.</p>
+    <p>What a tool is given is not the server itself. It is <code>synapse mcp run &lt;name&gt;</code>, written through that tool's own <code>mcp add</code>. When the tool starts it, Synapse reads the library, fetches the secrets from the vault, and replaces itself with the real server. Nothing is proxied: the tool talks to the server directly and keeps everything its own client does, and Synapse is gone from the path the moment the server starts.</p>
+    
+  <aside class="note">
+    <strong>Editing a server needs no reinstall. Tools only ever hold the &lt;code&gt;run&lt;/code&gt; line, so the next session that starts the server picks up the change.</strong>
+    <p>undefined</p>
+  </aside>
+
+    <h2 id="adding">Adding a server</h2>
+    <p>Describe it once. Everything after the bare <code>--</code> is the command, so its own flags are never read as Synapse's:</p>
+    
+  <div class="codeblock">
+    <div class="codebar">
+      <span>shell</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>synapse mcp add github -- docker run -i --rm -e GITHUB_PERSONAL_ACCESS_TOKEN ghcr.io/github/github-mcp-server
+synapse mcp show github
+synapse mcp edit github</code></pre>
+  </div>
+    <p>The file it writes has a <code>command</code>, its <code>args</code>, plain settings under <code>[env]</code>, and secrets under <code>[secrets]</code>. A value can only be written under <code>[env]</code>, which is what keeps a token out of it: the <code>[secrets]</code> table holds nothing but references.</p>
+    
+  <div class="codeblock">
+    <div class="codebar">
+      <span>toml</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>command = &quot;docker&quot;
+args = [&quot;run&quot;, &quot;-i&quot;, &quot;--rm&quot;, &quot;-e&quot;, &quot;GITHUB_PERSONAL_ACCESS_TOKEN&quot;, &quot;ghcr.io/github/github-mcp-server&quot;]
+
+[secrets]
+GITHUB_PERSONAL_ACCESS_TOKEN = &quot;mcp-github.github-personal-access-token&quot;</code></pre>
+  </div>
+
+    <h2 id="secrets">Secrets</h2>
+    <p>A secret is entered at a prompt or piped in, never passed as an argument, the same as every other secret Synapse holds:</p>
+    
+  <div class="codeblock">
+    <div class="codebar">
+      <span>shell</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>synapse mcp secret github GITHUB_PERSONAL_ACCESS_TOKEN</code></pre>
+  </div>
+    <p>Each server gets a vault of its own, named <code>mcp-&lt;server&gt;</code>, because a vault holds one secret per environment variable and two servers wanting <code>GITHUB_TOKEN</code> is ordinary. In the app, a server that still needs a secret shows a <strong>Set</strong> button beside it, and the value goes from the field straight into the vault.</p>
+    <p>A server is not started while anything is missing — a secret with no value, a setting left empty, or an argument still written as a <code>&lt;placeholder&gt;</code>. It is refused with a line saying what to fill in, rather than starting half-configured and failing somewhere less obvious.</p>
+
+    <h2 id="installing">Installing</h2>
+    
+  <div class="codeblock">
+    <div class="codebar">
+      <span>shell</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>synapse mcp install            # every server, every tool that can hold one
+synapse mcp install github --tool codex
+synapse mcp status
+synapse mcp uninstall github</code></pre>
+  </div>
+    <p>Claude Code, Codex, and Ainz can each be given library servers. pi has no MCP client of its own, so it gets no row. A tool somebody describes can take them too by adding a <code>[servers]</code> section to its descriptor with the <code>add</code>, <code>remove</code>, and <code>at</code> templates.</p>
+
+    <h2 id="states">What each state means</h2>
+    <table>
+      <thead><tr><th>State</th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr><td>installed</td><td>The tool starts this server through Synapse, from this binary.</td></tr>
+        <tr><td>update available</td><td>Through Synapse, but from a binary that has moved. <code>install</code> rewrites it.</td></tr>
+        <tr><td>not ours</td><td>The tool already has its own server by this name. It is left alone unless you say to replace it.</td></tr>
+        <tr><td>not installed</td><td>The tool does not have it.</td></tr>
+      </tbody>
+    </table>
+    <p>Whether an entry is Synapse's is read from the entry itself — <code>synapse mcp run &lt;its own name&gt;</code> — so there is no record to drift from what the file says. <code>synapse disconnect</code> and <code>synapse uninstall</code> take every such entry back out; a reset does not, because fixing a connection is no reason to lose a tool's servers.</p>
+
+    <h2 id="adopting">Adopting what you already have</h2>
+    <p>A server a tool already has can move into the library. Every value its entry carries goes into the vault — all of them, not only the ones whose names look secret, because a value misjudged as harmless would sit in plaintext in the library.</p>
+    
+  <div class="codeblock">
+    <div class="codebar">
+      <span>shell</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>synapse mcp adopt github --tool claude
+synapse mcp install github --tool claude --replace</code></pre>
+  </div>
+    <p>Adopting does not touch the tool. Its own entry still holds the token until you install over it with <code>--replace</code>, which swaps it for the <code>run</code> line and takes the plaintext out. In the app, that is the <strong>Swap</strong> button, offered only for the tool the server was adopted from.</p>
+
+    <h2 id="finding">Finding servers</h2>
+    <p><code>synapse mcp search</code> asks the official <a href="https://registry.modelcontextprotocol.io">MCP Registry</a>, and <code>synapse mcp get</code> turns an entry into a library server: an npm package becomes <code>npx</code>, a PyPI one <code>uvx</code>, a container image <code>docker run</code>. Whatever the entry needs and gives no value for is left for you to fill in.</p>
+    
+  <div class="codeblock">
+    <div class="codebar">
+      <span>shell</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>synapse mcp search postgres
+synapse mcp get io.github.owner/server-name
+synapse mcp install server-name</code></pre>
+  </div>
+    <p>The official registry is one source among any you add: an organisation's own registry, or a GitHub repository holding <code>server.json</code> files. See <a href="../sources/">Sources</a>.</p>
+    
+  <aside class="note">
+    <strong>The registry is slow — fifteen to forty-five seconds a search when measured — and sorts by name, with nothing like a download count to rank by. Synapse puts what it can run first and waits a full minute before giving up.</strong>
+    <p>undefined</p>
+  </aside>
+
+    <h2 id="limits">Limits</h2>
+    <ul>
+      <li>Remote servers, which a tool reaches over HTTP rather than starting, are not kept here. Add those in each tool directly.</li>
+      <li>A server's secrets are handed to it whenever a tool starts it, from any folder. The mapping you set up is the permission; there is no per-project scope for library servers.</li>
+      <li>Deleting a server with <code>synapse mcp delete &lt;name&gt; --confirm</code> takes it out of every tool Synapse gave it to and forgets its vault. A tool's own entry by the same name is left alone.</li>
+    </ul>
+  
+    </main>
+    <aside class="ontoc" aria-label="On this page">
+        <span>On this page</span>
+        <ol><li><a href="#why">Why a library</a></li><li><a href="#adding">Adding a server</a></li><li><a href="#secrets">Secrets</a></li><li><a href="#installing">Installing</a></li><li><a href="#states">What each state means</a></li><li><a href="#adopting">Adopting what you already have</a></li><li><a href="#finding">Finding servers</a></li><li><a href="#limits">Limits</a></li></ol>
+      </aside>
+  </div>
+  
+  <footer class="footer">
+    <div>
+      <a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">Synapse</a>
+      <p>Shared memory and skills for coding agents, kept on your machine.</p>
+    </div>
+    <nav aria-label="Footer">
+      <a href="../../docs/">Documentation</a>
+      <a href="../../tutorials/">Tutorials</a>
+      <a href="https://github.com/wess/synapse">Source</a>
+      <a href="https://github.com/wess/synapse/releases">Releases</a>
+    </nav>
+    <p class="footerfine">No account required. macOS desktop · Linux terminal, CLI &amp; MCP.</p>
+  </footer>
+</body>
+</html>

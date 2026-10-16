@@ -1,6 +1,6 @@
 mod apply;
 mod catalog;
-mod config;
+pub mod config;
 mod detect;
 mod guidance;
 mod hooks;

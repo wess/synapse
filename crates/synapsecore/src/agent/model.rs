@@ -58,6 +58,7 @@ pub struct Agent {
     pub projectskills: String,
     pub connect: super::tool::Connect,
     pub detect: super::tool::Detect,
+    pub servers: super::tool::Servers,
     pub launch: super::tool::Launch,
     /// Which layer the descriptor resolved from, so the dashboard can say
     /// whether a tool is built in or somebody's own.

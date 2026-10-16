@@ -1,11 +1,12 @@
 mod install;
 pub mod library;
+pub mod market;
 mod model;
 mod receipts;
 mod record;
 
 pub use install::{State, Status, install, remove, skillish, state, target};
-pub use model::{ENTRY, Shelf, Skill, compose, validname};
+pub use model::{ENTRY, Shelf, Skill, compose, split, validname};
 pub use receipts::Receipts;
 pub use record::{Proposal, Revision};
 

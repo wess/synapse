@@ -11,7 +11,7 @@ export const app: Page = {
     { label: "Navigation", id: "navigation" },
     { label: "Connections", id: "connections" },
     { label: "Memory", id: "memory" },
-    { label: "Console", id: "console" },
+    { label: "MCP", id: "servers" },
     { label: "Mesh", id: "mesh" },
     { label: "Skills", id: "skills" },
     { label: "Vaults", id: "vaults" },
@@ -27,9 +27,9 @@ export const app: Page = {
         <tr><td>Map</td><td>See the whole store at once: which projects it holds anything about, where the weight is, and what a memory sits next to.</td><td>Nothing. The map reads.</td></tr>
         <tr><td>Connections</td><td>Detect and connect supported developer tools.</td><td>Tool MCP configuration and managed instruction blocks.</td></tr>
         <tr><td>Memory</td><td>Import, scope, search, inspect, correct, or remove durable context.</td><td>Memory rows, scope metadata, and reversible import batches.</td></tr>
-        <tr><td>Console</td><td>Talk to the agents. Opening it puts you on the roster under your login name.</td><td>Messages you send, and one roster row that is you.</td></tr>
+        <tr><td>MCP</td><td>Keep one list of MCP servers, give it to every connected tool, and find servers in the registry.</td><td>Server files in the Synapse data directory, their secrets in the vault, and each tool's MCP entries through its own CLI.</td></tr>
         <tr><td>Mesh</td><td>Turn the agent mesh on and watch who has joined, what they report, and what they send each other.</td><td>One local preference. The roster and messages are written by the agents themselves.</td></tr>
-        <tr><td>Skills</td><td>Keep one Agent Skills library and install it into every connected tool.</td><td>The library in the Synapse data directory, and skill folders inside each tool.</td></tr>
+        <tr><td>Skills</td><td>Keep one Agent Skills library, install it into every connected tool, and find skills other people published.</td><td>The library in the Synapse data directory, and skill folders inside each tool.</td></tr>
         <tr><td>Vaults</td><td>Manage labels, stored values, mappings, the value store itself, and approved project scopes.</td><td>Vault metadata, stored values, and <code>.synapse.yaml</code>.</td></tr>
         <tr><td>Settings</td><td>Manage shared guidance, recall, the mesh, self-improvement, the worker limit, appearance, CLI, and shell integration.</td><td><code>SOUL.md</code>, global pointers, local preferences, the CLI launcher, and one managed shell block.</td></tr>
       </tbody>
@@ -98,10 +98,10 @@ export const app: Page = {
     <p><strong>Delete</strong> changes to <strong>Confirm delete</strong> before removing one entry. <strong>Wipe memories</strong> separately changes to <strong>Confirm wipe</strong> before deleting the entire memory table. A wipe does not affect vault labels, stored values, scope approvals, or settings.</p>
     <p>Recall optimization changes responses, not what this screen stores or displays. Read <a href="../memory/">Memory and recall</a> for search behavior, response budgets, and CLI equivalents.</p>
 
-    <h2 id="console">Console</h2>
-    <p>The Mesh screen next door reports; the Console lets you answer. Three columns — a transcript of everything said on the mesh, what the mesh is currently doing, and who is on it — with a box to type in underneath.</p>
-    <p>Opening it registers you on the roster under your login name, and closing the app takes you off again. That row is what lets a headless worker ask you something: it runs with its permission prompts bypassed, so without a person to address it has had to guess.</p>
-    <p>Addressing is the same as <code>synapse mux</code>, because it is the same code: <code>@name</code> reaches one agent, <code>#channel</code> a channel, <code>!</code> everyone, and a bare line goes to whichever agent you picked in the roster. Nothing is interposed — you are a row like any other, and every worker stays directly addressable rather than reachable only through a lead.</p>
+    <h2 id="servers">MCP</h2>
+    <p>The MCP screen has the same two tabs as Skills. <strong>Installed</strong> is a card per library server with the command it runs and a badge per tool. A server that still needs a secret says so with a <strong>Set</strong> button beside each one, and the value goes from that field into the vault; <strong>Install</strong> stays off until nothing is missing. <strong>Edit</strong> opens the server's file, and a draft that is not a valid server is not saved. Servers your tools already have appear under <strong>Already in your tools</strong> with <strong>Adopt</strong>, and an adopted server offers <strong>Swap</strong> to replace that tool's own entry, plaintext and all, with the library's.</p>
+    <p><strong>Search</strong> asks the official MCP Registry, which can take half a minute. Selecting a result shows the exact command it would become; <strong>Add to library</strong> keeps it without touching any tool.</p>
+    <p>See <a href="../servers/">MCP servers</a> for the file format, the states, and what is and is not kept.</p>
 
     <h2 id="mesh">Mesh</h2>
     <p>The Mesh screen is off until you turn it on, here or in Settings. While it is off the screen explains the trade: the coordination tools are loaded by every connected tool, and that costs context in each session.</p>
@@ -111,6 +111,7 @@ export const app: Page = {
     <h2 id="skills">Skills</h2>
     <p>The Skills screen lists your library, and beside each skill a badge per connected tool saying whether that tool has it, has an older copy, or has one Synapse did not write. <strong>Install</strong> on a skill copies it wherever it is missing or behind; <strong>Install all</strong> does the lot.</p>
     <p>Skills a tool already has that the library does not know about appear under <strong>Already in your tools</strong> with an <strong>Adopt</strong> button, which copies one into the library and starts managing it. A skill Synapse did not install is never overwritten or deleted from this screen — it is reported instead, and the result line says how many were left alone.</p>
+    <p>The <strong>Search</strong> tab asks skills.sh. Results are listed down the left; selecting one reads its whole <code>SKILL.md</code> into the panel beside them without keeping anything, and <strong>Add to library</strong> brings it in waiting for review, so it shows up on the Installed tab with Approve and Turn down rather than in any tool.</p>
     <p>See <a href="../skills/">Skills</a> for the format, the exact folders, and what each state means.</p>
 
     <h2 id="vaults">Vaults and scopes</h2>

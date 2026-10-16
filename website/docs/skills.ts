@@ -14,6 +14,7 @@ export const skills: Page = {
     { label: "Installing", id: "installing" },
     { label: "What each state means", id: "states" },
     { label: "Adopting what you already have", id: "adopting" },
+    { label: "Finding published skills", id: "finding" },
     { label: "Project skills", id: "projects" },
     { label: "Skills agents write", id: "learning" },
     { label: "Limits", id: "limits" },
@@ -85,6 +86,17 @@ synapse skill remove my-workflow       # take it back out`)}
     ${code("shell", `synapse skill adopt humanize --tool claude
 synapse skill install humanize`)}
     <p>The app lists these under <strong>Already in your tools</strong> on the Skills screen, with an Adopt button beside each.</p>
+
+    <h2 id="finding">Finding published skills</h2>
+    <p>Other people publish skills too. <code>synapse skill search</code> asks <a href="https://skills.sh">skills.sh</a>, a public index of the skills on GitHub that weighs a match by how many people installed it, and <code>synapse skill get</code> brings one into your library.</p>
+    ${code("shell", `synapse skill search release notes
+synapse skill get phuryn/pm-skills/release-notes
+synapse skill show release-notes
+synapse skill approve release-notes`)}
+    <p>A skill you get arrives <strong>proposed</strong>, exactly like one an agent wrote: it is in the library and in no tool until you approve it. It is somebody else's instructions, its description would be loaded into every session of every tool holding it, and a skill can carry scripts, so read it first. Every file is checked before anything is written — paths stay inside the skill, the frontmatter is valid, and a skill already in your library is never replaced.</p>
+    <p>skills.sh is one source among any you add: a team's own GitHub repository, or another index. Every source is asked at once, and results are written <code>source:id</code>. See <a href="../sources/">Sources</a>.</p>
+    <p>The app's Skills screen has the same thing as a second tab: <strong>Search</strong> lists the results down the left and shows the selected skill's whole <code>SKILL.md</code> beside them, with <strong>Add to library</strong>.</p>
+    ${note("Searching is the one part of the skill library that reaches the network, and only when you search. The query and the skill you fetch go to skills.sh; nothing else about your machine or library does.")}
 
     <h2 id="projects">Project skills</h2>
     <p>A procedure you work out in one repository is usually about that repository. A library where every skill is global costs every session on the machine to hold one project's checklist, so skills have <strong>shelves</strong>: the library root for what is true everywhere, and one shelf per project beside it.</p>

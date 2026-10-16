@@ -19,6 +19,11 @@ projectskills = ".agents/skills"
 add = ["mcp", "add", "synapse", "--", "{server}", "mcp"]
 remove = ["mcp", "remove", "synapse"]
 
+[servers]
+add = ["mcp", "add", "{name}", "--", "{server}", "mcp", "run", "{name}"]
+remove = ["mcp", "remove", "{name}"]
+at = ["mcp_servers", "{name}"]
+
 [detect]
 format = "toml"
 at = ["mcp_servers", "synapse"]

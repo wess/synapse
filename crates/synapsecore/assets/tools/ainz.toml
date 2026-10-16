@@ -24,6 +24,13 @@ projectskills = ".ainz/skills"
 add = ["mcp", "add", "synapse", "--required", "--", "{server}", "mcp"]
 remove = ["mcp", "remove", "synapse"]
 
+# Not `--required`: that is for Synapse's own entry, whose guidance must arrive
+# with its tools. A server from the library is an ordinary one.
+[servers]
+add = ["mcp", "add", "{name}", "--", "{server}", "mcp", "run", "{name}"]
+remove = ["mcp", "remove", "{name}"]
+at = ["servers", "{name}"]
+
 [detect]
 format = "toml"
 at = ["servers", "synapse"]

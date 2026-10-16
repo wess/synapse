@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sources — Synapse</title>
+  <meta name="description" content="Choose where skill and MCP searches look: public indexes, MCP registries, and your own or your team's GitHub repositories.">
+  <meta name="theme-color" content="#0a43c8">
+  <meta property="og:title" content="Sources — Synapse">
+  <meta property="og:description" content="Choose where skill and MCP searches look: public indexes, MCP registries, and your own or your team's GitHub repositories.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://wess.io/synapse/docs/sources/">
+  <link rel="canonical" href="https://wess.io/synapse/docs/sources/">
+  <link rel="icon" href="../../icon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Fragment+Mono&family=Manrope:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="../../style.css">
+  <script type="module" src="../../site.js"></script>
+</head>
+<body class="docs" data-root="../../">
+  
+  <a class="skip" href="#content">Skip to content</a>
+  <header class="topbar">
+    <a class="wordmark" href="../../" aria-label="Synapse home">
+      <img src="../../icon.svg" width="30" height="30" alt="">
+      <span>Synapse</span>
+    </a>
+    <button class="navtoggle" type="button" aria-expanded="false" aria-controls="topnav">Menu</button>
+    <nav id="topnav" aria-label="Primary">
+      <a href="../../docs/" aria-current="page">Docs</a>
+      <a href="../../tutorials/">Tutorials</a>
+      <a href="https://github.com/wess/synapse">GitHub <span aria-hidden="true">↗</span></a>
+      <a class="navdownload" href="https://github.com/wess/synapse/releases/latest/download/synapse.zip">Download</a>
+    </nav>
+  </header>
+  
+  <div class="doclayout">
+    
+  <aside class="docsrail" aria-label="Documentation navigation">
+    <div class="searchbox">
+      <label for="search">Search the guide</label>
+      <input id="search" type="search" placeholder="Memory, vaults, restore…" autocomplete="off">
+      <div class="searchresults" data-results hidden></div>
+      <span class="searchstatus" data-searchstatus role="status" aria-live="polite"></span>
+    </div>
+    <details class="railnav" open>
+      <summary>Browse all guides</summary>
+      <nav aria-label="All guides">
+        <h2>Documentation</h2>
+        <ul>
+        <li><a href="../../docs/">Start here</a></li>
+        <li><a href="../../docs/install/">Install and connect</a></li>
+        <li><a href="../../docs/harnesses/">Supported and custom harnesses</a></li>
+        <li><a href="../../docs/app/">Desktop app reference</a></li>
+        <li><a href="../../docs/memory/">Memory and recall</a></li>
+        <li><a href="../../docs/mcp/">MCP tool reference</a></li>
+        <li><a href="../../docs/mesh/">Agent mesh</a></li>
+        <li><a href="../../docs/skills/">Skills</a></li>
+        <li><a href="../../docs/servers/">MCP servers</a></li>
+        <li><a href="../../docs/sources/" aria-current="page">Sources</a></li>
+        <li><a href="../../docs/vault/">Vaults and scopes</a></li>
+        <li><a href="../../docs/data/">Data lifecycle</a></li>
+        <li><a href="../../docs/config/">Configuration and paths</a></li>
+        <li><a href="../../docs/security/">Security model</a></li>
+        <li><a href="../../docs/cli/">CLI reference</a></li>
+        <li><a href="../../docs/troubleshoot/">Troubleshooting</a></li></ul>
+        <h2>Tutorials</h2>
+        <ul>
+        <li><a href="../../tutorials/">Tutorials</a></li>
+        <li><a href="../../tutorials/connect/">Install and connect your first tools</a></li>
+        <li><a href="../../tutorials/continuity/">Carry one decision between tools</a></li>
+        <li><a href="../../tutorials/curate/">Curate and optimize memory</a></li>
+        <li><a href="../../tutorials/secrets/">Use a scoped secret in either shell mode</a></li>
+        <li><a href="../../tutorials/skills/">Keep one skill library across every tool</a></li>
+        <li><a href="../../tutorials/learn/">Let your agents write skills</a></li>
+        <li><a href="../../tutorials/launch/">Start a tool with everything in place</a></li>
+        <li><a href="../../tutorials/mesh/">Run a team of agents and drive it yourself</a></li>
+        <li><a href="../../tutorials/overseer/">Hand a job to one agent and watch it grow a team</a></li>
+        <li><a href="../../tutorials/recovery/">Export and restore safely</a></li>
+        <li><a href="../../tutorials/lifecycle/">Check, migrate, and remove Synapse</a></li></ul>
+      </nav>
+    </details>
+  </aside>
+    <main class="article" id="content">
+      <header class="articlehead">
+        <h1>Sources</h1>
+        <span>Choose where skill and MCP searches look: public indexes, MCP registries, and your own or your team's GitHub repositories.</span>
+      </header>
+      
+    <h2 id="kinds">What a source is</h2>
+    <p><code>synapse skill search</code> and <code>synapse mcp search</code>, and the Search tabs in the app, ask every source at once and label each result with the one it came from. A source is one of three kinds:</p>
+    <table>
+      <thead><tr><th>Kind</th><th>Holds</th><th>What it is</th></tr></thead>
+      <tbody>
+        <tr><td>skills index</td><td>Skills</td><td>skills.sh, or anything answering its <code>/api/search</code> and <code>/api/download</code>.</td></tr>
+        <tr><td>MCP registry</td><td>MCP servers</td><td>The official MCP Registry, or any registry implementing its <code>/v0/servers</code> API — including one an organisation runs for itself.</td></tr>
+        <tr><td>GitHub repository</td><td>Both</td><td>Every <code>SKILL.md</code> folder and every <code>server.json</code> in a repository, or in one folder of it.</td></tr>
+      </tbody>
+    </table>
+    <p>skills.sh and the official MCP Registry are built in. Once you change the list it is yours, so a built-in can be removed like any other.</p>
+
+    <h2 id="adding">Adding one</h2>
+    
+  <div class="codeblock">
+    <div class="codebar">
+      <span>shell</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>synapse source add team acme/agent-skills
+synapse source add team acme/agents@main/skills      # a branch and a folder
+synapse source add internal https://mcp.example.com   # a registry
+synapse source list
+synapse source remove skills.sh</code></pre>
+  </div>
+    <p>Synapse works out the kind. <code>owner/repo</code> or a github.com address is a repository; an address is asked whether it answers as an MCP registry or as a skills index, so a typo is caught when the source is added rather than on every search. <code>--kind</code> settles it when asking cannot.</p>
+    <p>Results are written <code>source:id</code>, which is what <code>get</code> takes. A bare id still means the first index, so <code>synapse skill get owner/repo/skill</code> works as it always has.</p>
+    
+  <div class="codeblock">
+    <div class="codebar">
+      <span>shell</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>synapse skill search release notes
+synapse skill get team:skills/release-notes
+synapse mcp get internal:com.example/billing</code></pre>
+  </div>
+    <p>In the app, the bottom of each Search tab lists the sources that tab asks, with a field to add one and Remove beside each.</p>
+
+    <h2 id="private">Private repositories</h2>
+    <p>A private repository reads its token from the vault, and the sources file holds only the reference:</p>
+    
+  <div class="codeblock">
+    <div class="codebar">
+      <span>shell</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>synapse secret set work github GITHUB_TOKEN      # prompted
+synapse source add team acme/agent-skills --token work.github</code></pre>
+  </div>
+
+    <h2 id="project">A project's sources</h2>
+    <p>A repository can carry <code>.synapse/sources.toml</code> so everyone working in it searches the team's own sources:</p>
+    
+  <div class="codeblock">
+    <div class="codebar">
+      <span>toml</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>[[source]]
+name = &quot;team&quot;
+kind = &quot;github&quot;
+repo = &quot;acme/agent-skills&quot;
+path = &quot;skills&quot;</code></pre>
+  </div>
+    <p>It is used only once somebody has approved its exact contents, the same bargain <code>.synapse.yaml</code> makes. A file somebody else committed decides where your searches go and whose instructions come back, so it is listed and not searched until you say otherwise:</p>
+    
+  <div class="codeblock">
+    <div class="codebar">
+      <span>shell</span>
+      <button type="button" data-copy aria-live="polite">Copy</button>
+    </div>
+    <pre><code>synapse source allow</code></pre>
+  </div>
+    <p>Editing the file takes the approval away until it is allowed again. A project source whose name is already in your own list is skipped and reported, so <code>team:release</code> always means one thing.</p>
+    
+  <aside class="note">
+    <strong>Approving a source is not approving what it holds. A skill from any source still arrives waiting for review, and a server still reaches no tool until you install it.</strong>
+    <p>undefined</p>
+  </aside>
+
+    <h2 id="repositories">How a repository is read</h2>
+    <p>One request to GitHub's trees API lists the whole repository, and the files come from raw.githubusercontent.com, which does not count against GitHub's allowance of sixty requests an hour without a token. The catalogue — every skill's name and description, every <code>server.json</code> — is cached in the data folder for an hour, and a refresh whose tree has not changed reads nothing else. <code>synapse source refresh</code> reads it again now.</p>
+    <p>A <code>server.json</code> straight out of a repository is often the template a release fills in, with <code>${VERSION}</code> where the version goes. Synapse cannot fill it, so the server runs unpinned.</p>
+  
+    </main>
+    <aside class="ontoc" aria-label="On this page">
+        <span>On this page</span>
+        <ol><li><a href="#kinds">What a source is</a></li><li><a href="#adding">Adding one</a></li><li><a href="#private">Private repositories</a></li><li><a href="#project">A project's sources</a></li><li><a href="#repositories">How a repository is read</a></li></ol>
+      </aside>
+  </div>
+  
+  <footer class="footer">
+    <div>
+      <a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">Synapse</a>
+      <p>Shared memory and skills for coding agents, kept on your machine.</p>
+    </div>
+    <nav aria-label="Footer">
+      <a href="../../docs/">Documentation</a>
+      <a href="../../tutorials/">Tutorials</a>
+      <a href="https://github.com/wess/synapse">Source</a>
+      <a href="https://github.com/wess/synapse/releases">Releases</a>
+    </nav>
+    <p class="footerfine">No account required. macOS desktop · Linux terminal, CLI &amp; MCP.</p>
+  </footer>
+</body>
+</html>

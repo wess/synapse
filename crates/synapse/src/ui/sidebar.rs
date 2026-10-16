@@ -1,8 +1,8 @@
 //! The left column: where you are, and everywhere else you could be.
 //!
-//! Seven destinations in a row across the top was already crowded, and the
-//! console makes it worse — a nav that reflows when the window narrows is a nav
-//! that moves the thing you were about to click. Down the side it has room to
+//! Seven destinations in a row across the top is crowded, and a nav that
+//! reflows when the window narrows is a nav that moves the thing you were about
+//! to click. Down the side it has room to
 //! grow, room to say what each group is for, and it stops competing with the
 //! page's own title for the top of the window.
 
@@ -25,7 +25,7 @@ pub struct Navigation {
     pub connections: Click,
     pub memories: Click,
     pub skills: Click,
-    pub console: Click,
+    pub servers: Click,
     pub mesh: Click,
     pub vaults: Click,
     pub settings: Click,
@@ -37,7 +37,7 @@ pub fn render(page: Page, go: Navigation, cx: &App) -> impl IntoElement {
         connections,
         memories,
         skills,
-        console,
+        servers,
         mesh,
         vaults,
         settings,
@@ -98,15 +98,15 @@ pub fn render(page: Page, go: Navigation, cx: &App) -> impl IntoElement {
             &colours,
             skills,
         ))
-        .child(group("Agents"))
         .child(entry(
-            "navconsole",
-            "Console",
-            IconName::MessageSquare,
-            page == Page::Console,
+            "navservers",
+            "MCP",
+            IconName::Server,
+            page == Page::Servers,
             &colours,
-            console,
+            servers,
         ))
+        .child(group("Agents"))
         .child(entry(
             "navmesh",
             "Mesh",

@@ -60,6 +60,13 @@ add = ["mcp", "add", "synapse", "--", "{server}", "mcp"]
 remove = ["mcp", "remove", "synapse"]
 # replace = true          # remove a stale registration before adding
 
+# Optional: how to give this tool the MCP servers in Synapse's library.
+# `{name}` is the server's name. Leave it out if the tool has no MCP client.
+# [servers]
+# add = ["mcp", "add", "{name}", "--", "{server}", "mcp", "run", "{name}"]
+# remove = ["mcp", "remove", "{name}"]
+# at = ["mcpServers", "{name}"]
+
 # How to read `integration` back and tell a connection from a stale entry.
 [detect]
 format = "json"           # json or toml
@@ -85,6 +92,31 @@ pub struct Connect {
     pub remove: Vec<String>,
     #[serde(default)]
     pub replace: bool,
+}
+
+/// How to give a tool one of the library's MCP servers, and find it again.
+///
+/// `{name}` is the server's name and `{server}` this binary. What a tool is
+/// handed is never the server itself: it is `synapse mcp run <name>`, which
+/// reads the library and the vault when the tool starts it, so the tool's own
+/// config holds no command worth keeping in step and no secret. A tool without
+/// this section has no MCP client Synapse can write to, and gets no row.
+#[derive(Clone, Debug, Default, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Servers {
+    #[serde(default)]
+    pub add: Vec<String>,
+    #[serde(default)]
+    pub remove: Vec<String>,
+    /// The key path to one server's entry, with `{name}` in it.
+    #[serde(default)]
+    pub at: Vec<String>,
+}
+
+impl Servers {
+    pub fn supported(&self) -> bool {
+        !self.add.is_empty() && !self.remove.is_empty() && !self.at.is_empty()
+    }
 }
 
 /// How a tool's config file answers "is Synapse connected?".
@@ -163,6 +195,8 @@ struct File {
     connect: Connect,
     #[serde(default)]
     detect: Detect,
+    #[serde(default)]
+    servers: Servers,
     #[serde(default)]
     launch: Launch,
 }
@@ -304,6 +338,7 @@ fn parse(home: &Path, slug: &str, text: &str, source: Source) -> Result<Agent> {
             .to_owned(),
         connect: file.connect,
         detect: file.detect,
+        servers: file.servers,
         launch: file.launch,
         source,
     })
@@ -408,6 +443,23 @@ mod tests {
         assert_eq!(ainz.integration, ainzhome.join("mcp.toml"));
         assert_eq!(ainz.skills, ainzhome.join("skills"));
         assert_eq!(ainz.projectskills, ".ainz/skills");
+
+        // Every built-in with an MCP client can be given the library's
+        // servers; pi has none, so it gets no row rather than a broken one.
+        for tool in [&claude, &codex, &ainz] {
+            assert!(
+                tool.servers.supported(),
+                "{} should take library servers",
+                tool.name
+            );
+            assert!(tool.servers.add.ends_with(&[
+                "{server}".to_owned(),
+                "mcp".to_owned(),
+                "run".to_owned(),
+                "{name}".to_owned()
+            ]));
+        }
+        assert!(!pi.servers.supported());
     }
 
     #[test]

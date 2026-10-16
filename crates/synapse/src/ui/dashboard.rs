@@ -1,12 +1,12 @@
 use crate::ui::buffer::{self, Buffer, Format};
 use crate::ui::{
-    Document, Notice, Page, Row, SaveDocument, agentrow, clibanner, console, document, graph,
-    memories, mesh, settings, sidebar, skills, summary, vaults,
+    Document, Notice, Page, Row, SaveDocument, agentrow, clibanner, document, graph, memories,
+    mesh, servers, settings, sidebar, skills, sources, summary, vaults,
 };
 use gpui::prelude::*;
 use gpui::{Context, Entity, IntoElement, Window, div, px};
 use guise::editor::EditorEvent;
-use guise::input::FileInputEvent;
+use guise::input::{FileInputEvent, TextInputEvent};
 use guise::markdown::MarkdownEditorEvent;
 use guise::prelude::*;
 use std::path::PathBuf;
@@ -82,23 +82,41 @@ pub struct Dashboard {
     meshagents: Vec<synapsecore::relay::AgentView>,
     meshworkers: Vec<synapsecore::relay::WorkerView>,
     meshfeed: Vec<synapsecore::relay::Message>,
-    /// The name this window is on the roster under, or why it is not on it.
-    /// `Err` is a state the console has to be able to draw: a mesh that is off,
-    /// or a name an agent already answers to.
-    consoleidentity: Result<String, String>,
-    consolefocus: Option<String>,
-    consoleinput: Entity<TextInput>,
     /// Most workers one session may run, read with the rest of the mesh.
-    consolelimit: usize,
-    /// Whether the console refresh loop is running.
-    /// The poll. A conversation nobody refreshed is a conversation that looks
-    /// finished, so this is the one page that reloads on its own — and it only
-    /// exists while that page is open.
-    consoletick: Option<gpui::Task<()>>,
+    workerlimit: usize,
     mesherror: Option<String>,
     skillrows: Vec<skills::Row>,
     skillunmanaged: Vec<(String, String)>,
     skillproblems: Vec<String>,
+    /// Where skill and MCP searches look, shared by both Search tabs.
+    sourcelist: Vec<synapsecore::sources::Source>,
+    sourceproblems: Vec<String>,
+    sourcename: Entity<TextInput>,
+    sourcelocation: Entity<TextInput>,
+    sourcebusy: bool,
+    serverrows: Vec<servers::Row>,
+    serverforeign: Vec<(String, String)>,
+    serverproblems: Vec<String>,
+    servertab: skills::Tab,
+    serverquery: Entity<TextInput>,
+    serversearching: servers::Searching,
+    serverselected: Option<usize>,
+    serveradding: bool,
+    serversearchrun: u64,
+    /// Installing runs every tool's own CLI, which is seconds, not frames.
+    serverbusy: bool,
+    /// The secret being typed: (server, variable).
+    serverentering: Option<(String, String)>,
+    serversecret: Entity<PasswordInput>,
+    skilltab: skills::Tab,
+    skillquery: Entity<TextInput>,
+    skillsearching: skills::Searching,
+    skillreading: skills::Reading,
+    skilladding: bool,
+    /// Which search is the latest. Results arrive off the main thread, and a
+    /// slow answer to an earlier query must not replace a quick answer to the
+    /// one somebody typed after it.
+    skillsearchrun: u64,
     guidance: GuidanceState,
     pendingguidance: bool,
     clistatus: synapsecore::cli::InstallStatus,
@@ -219,10 +237,38 @@ impl Dashboard {
                 .placeholder("hermes")
         });
         let vaultname = cx.new(|cx| TextInput::new(cx).label("New vault").placeholder("work"));
-        let consoleinput = cx.new(|cx| {
+        let skillquery = cx.new(|cx| {
             TextInput::new(cx)
-                .label("Say something to the mesh")
-                .placeholder("@overseer get the release notes written")
+                .label("Search published skills")
+                .placeholder("release notes")
+        });
+        cx.subscribe(&skillquery, |this, _input, event: &TextInputEvent, cx| {
+            if let TextInputEvent::Submit(_) = event {
+                this.searchskills(cx);
+            }
+        })
+        .detach();
+        let sourcename = cx.new(|cx| TextInput::new(cx).label("Name").placeholder("team"));
+        let sourcelocation = cx.new(|cx| {
+            TextInput::new(cx)
+                .label("Repository or address")
+                .placeholder("acme/agent-skills")
+        });
+        let serverquery = cx.new(|cx| {
+            TextInput::new(cx)
+                .label("Search the MCP Registry")
+                .placeholder("github")
+        });
+        cx.subscribe(&serverquery, |this, _input, event: &TextInputEvent, cx| {
+            if let TextInputEvent::Submit(_) = event {
+                this.searchservers(cx);
+            }
+        })
+        .detach();
+        let serversecret = cx.new(|cx| {
+            PasswordInput::new(cx)
+                .label("Value")
+                .placeholder("Stored in the vault")
         });
         let secretname = cx.new(|cx| TextInput::new(cx).label("Name").placeholder("database"));
         let secretenv = cx.new(|cx| {
@@ -272,7 +318,7 @@ impl Dashboard {
             notice = Notice::Error(format!("Could not create SOUL.md: {error}"));
         }
         let learnenabled = settings.learn;
-        let consolelimit = settings.workers;
+        let workerlimit = settings.workers;
         Self {
             // Filled by `opened`, once there is a window to fill.
             rows: Vec::new(),
@@ -323,18 +369,34 @@ impl Dashboard {
             meshagents: meshdata.agents,
             meshworkers: meshdata.workers,
             meshfeed: meshdata.feed,
-            consoleidentity: Err(
-                "The agent mesh is off. Turn it on in Settings to reach agents from here."
-                    .to_owned(),
-            ),
-            consolefocus: None,
-            consoleinput,
-            consolelimit,
-            consoletick: None,
+            workerlimit,
             mesherror: meshdata.error,
             skillrows: skilldata.rows,
             skillunmanaged: skilldata.unmanaged,
             skillproblems: skilldata.problems,
+            sourcelist: Vec::new(),
+            sourceproblems: Vec::new(),
+            sourcename,
+            sourcelocation,
+            sourcebusy: false,
+            serverrows: Vec::new(),
+            serverforeign: Vec::new(),
+            serverproblems: Vec::new(),
+            servertab: skills::Tab::Installed,
+            serverquery,
+            serversearching: servers::Searching::Idle,
+            serverselected: None,
+            serveradding: false,
+            serversearchrun: 0,
+            serverbusy: false,
+            serverentering: None,
+            serversecret,
+            skilltab: skills::Tab::Installed,
+            skillquery,
+            skillsearching: skills::Searching::Idle,
+            skillreading: skills::Reading::Nothing,
+            skilladding: false,
+            skillsearchrun: 0,
             guidance,
             pendingguidance: false,
             clistatus,
@@ -383,8 +445,8 @@ impl Dashboard {
             connections: Box::new(cx.listener(|this, _, _, cx| this.showconnections(cx))),
             memories: Box::new(cx.listener(|this, _, _, cx| this.showmemories(cx))),
             mesh: Box::new(cx.listener(|this, _, _, cx| this.showmesh(cx))),
-            console: Box::new(cx.listener(|this, _, _, cx| this.showconsole(cx))),
             skills: Box::new(cx.listener(|this, _, _, cx| this.showskills(cx))),
+            servers: Box::new(cx.listener(|this, _, _, cx| this.showservers(cx))),
             vaults: Box::new(cx.listener(|this, _, _, cx| this.showvaults(cx))),
             settings: Box::new(cx.listener(|this, _, _, cx| this.showsettings(cx))),
         }
@@ -757,6 +819,7 @@ impl Dashboard {
 
     fn showskills(&mut self, cx: &mut Context<Self>) {
         self.page = Page::Skills;
+        self.refreshsources();
         self.refreshskills(cx);
     }
 
@@ -879,6 +942,522 @@ impl Dashboard {
         self.refreshskills(cx);
     }
 
+    fn showskilltab(&mut self, tab: skills::Tab, cx: &mut Context<Self>) {
+        self.skilltab = tab;
+        cx.notify();
+    }
+
+    /// Ask the index. Off the main thread, because it is somebody else's
+    /// server and the window does not wait on one.
+    fn searchskills(&mut self, cx: &mut Context<Self>) {
+        let query = self.skillquery.read(cx).text().trim().to_owned();
+        if query.is_empty() {
+            return;
+        }
+        self.skillsearchrun += 1;
+        let run = self.skillsearchrun;
+        self.skillsearching = skills::Searching::Busy;
+        self.skillreading = skills::Reading::Nothing;
+        cx.notify();
+        cx.spawn(async move |this, cx| {
+            let found = cx
+                .background_executor()
+                .spawn(async move {
+                    let folder = std::env::current_dir().ok();
+                    block(synapsecore::skill::market::search(
+                        &query,
+                        folder.as_deref(),
+                    ))
+                })
+                .await;
+            this.update(cx, |this, cx| {
+                if this.skillsearchrun != run {
+                    return;
+                }
+                this.skillsearching = match found {
+                    Ok(found) => skills::Searching::Done(found),
+                    Err(error) => skills::Searching::Failed(format!("{error:#}")),
+                };
+                cx.notify();
+            })
+            .ok();
+        })
+        .detach();
+    }
+
+    /// Read one result in full. Nothing is written.
+    fn readskill(&mut self, id: String, cx: &mut Context<Self>) {
+        self.skillreading = skills::Reading::Busy(id.clone());
+        cx.notify();
+        cx.spawn(async move |this, cx| {
+            let wanted = id.clone();
+            let preview = cx
+                .background_executor()
+                .spawn(async move {
+                    block(async move {
+                        let folder = std::env::current_dir().ok();
+                        let (source, id) =
+                            synapsecore::skill::market::locate(&wanted, folder.as_deref()).await?;
+                        synapsecore::skill::market::preview(&source, &id).await
+                    })
+                })
+                .await;
+            this.update(cx, |this, cx| {
+                // Somebody clicked another result while this one was on its way.
+                if !matches!(&this.skillreading, skills::Reading::Busy(current) if *current == id) {
+                    return;
+                }
+                this.skillreading = match preview {
+                    Ok(preview) => skills::Reading::Ready(preview),
+                    Err(error) => skills::Reading::Failed(id, format!("{error:#}")),
+                };
+                cx.notify();
+            })
+            .ok();
+        })
+        .detach();
+    }
+
+    /// Bring the skill being read into the library. It arrives proposed, so it
+    /// shows up on the Installed tab waiting for review and in no tool.
+    fn addskill(&mut self, cx: &mut Context<Self>) {
+        let skills::Reading::Ready(preview) = &self.skillreading else {
+            return;
+        };
+        let id = format!("{}:{}", preview.from, preview.id);
+        self.skilladding = true;
+        cx.notify();
+        cx.spawn(async move |this, cx| {
+            let added = cx
+                .background_executor()
+                .spawn(async move {
+                    block(async move {
+                        let receipts =
+                            synapsecore::skill::Receipts::open(synapsecore::files::database()?)
+                                .await?;
+                        let folder = std::env::current_dir().ok();
+                        let (source, id) =
+                            synapsecore::skill::market::locate(&id, folder.as_deref()).await?;
+                        synapsecore::skill::market::fetch(&receipts, &source, &id).await
+                    })
+                })
+                .await;
+            this.update(cx, |this, cx| {
+                this.skilladding = false;
+                this.notice = match added {
+                    Ok((name, _)) => Notice::Success(format!(
+                        "Added {name}. It is waiting for review under Installed, and in no tool until you approve it."
+                    )),
+                    Err(error) => Notice::Error(format!("Could not add it: {error:#}")),
+                };
+                this.refreshskills(cx);
+            })
+            .ok();
+        })
+        .detach();
+    }
+
+    fn showservers(&mut self, cx: &mut Context<Self>) {
+        self.page = Page::Servers;
+        self.refreshsources();
+        self.refreshservers(cx);
+    }
+
+    /// Read the sources again. A file and one glance at the database, so it is
+    /// cheap enough to do every time a page that shows them opens.
+    fn refreshsources(&mut self) {
+        let folder = std::env::current_dir().ok();
+        match block(synapsecore::sources::resolved(folder.as_deref())) {
+            Ok((list, problems)) => {
+                self.sourcelist = list;
+                self.sourceproblems = problems;
+            }
+            Err(error) => {
+                self.sourcelist = Vec::new();
+                self.sourceproblems = vec![format!("{error:#}")];
+            }
+        }
+    }
+
+    /// The panel under a Search tab: the sources holding what that tab finds.
+    fn sourcespanel(
+        &self,
+        prefix: &'static str,
+        skills: bool,
+        cx: &mut Context<Self>,
+    ) -> gpui::AnyElement {
+        let host = cx.entity().downgrade();
+        let remove = Box::new(move |name: String| -> skills::Click {
+            let host = host.clone();
+            Box::new(move |_, _, cx| {
+                host.update(cx, |this, cx| this.removesource(name.clone(), cx))
+                    .ok();
+            })
+        });
+        sources::render(
+            prefix,
+            sources::View {
+                sources: self
+                    .sourcelist
+                    .iter()
+                    .filter(|source| match skills {
+                        true => source.skills(),
+                        false => source.servers(),
+                    })
+                    .cloned()
+                    .collect(),
+                problems: self.sourceproblems.clone(),
+                name: self.sourcename.clone(),
+                location: self.sourcelocation.clone(),
+                busy: self.sourcebusy,
+            },
+            sources::Actions {
+                add: Box::new(cx.listener(|this, _, _, cx| this.addsource(cx))),
+                remove,
+                allow: Box::new(cx.listener(|this, _, _, cx| this.allowsources(cx))),
+            },
+            cx,
+        )
+    }
+
+    /// Add a source, which asks an address what it is before keeping it — so
+    /// off the main thread.
+    fn addsource(&mut self, cx: &mut Context<Self>) {
+        let name = self.sourcename.read(cx).text().trim().to_owned();
+        let location = self.sourcelocation.read(cx).text().trim().to_owned();
+        if name.is_empty() || location.is_empty() || self.sourcebusy {
+            self.notice =
+                Notice::Error("A source needs a name and a repository or address.".to_owned());
+            cx.notify();
+            return;
+        }
+        self.sourcebusy = true;
+        cx.notify();
+        cx.spawn(async move |this, cx| {
+            let added = cx
+                .background_executor()
+                .spawn(async move {
+                    block(async move {
+                        let source = synapsecore::sources::infer(&name, &location, None).await?;
+                        synapsecore::sources::add(source.clone())?;
+                        Ok::<_, anyhow::Error>(source)
+                    })
+                })
+                .await;
+            this.update(cx, |this, cx| {
+                this.sourcebusy = false;
+                this.notice = match added {
+                    Ok(source) => {
+                        this.sourcename
+                            .update(cx, |input, cx| input.set_text("", cx));
+                        this.sourcelocation
+                            .update(cx, |input, cx| input.set_text("", cx));
+                        Notice::Success(format!(
+                            "Added {} as a {}. The next search asks it too.",
+                            source.name,
+                            source.kind.label()
+                        ))
+                    }
+                    Err(error) => Notice::Error(format!("Could not add it: {error:#}")),
+                };
+                this.refreshsources();
+                cx.notify();
+            })
+            .ok();
+        })
+        .detach();
+    }
+
+    fn removesource(&mut self, name: String, cx: &mut Context<Self>) {
+        self.notice = match synapsecore::sources::remove(&name) {
+            Ok(_) => Notice::Success(format!("Searches no longer ask {name}.")),
+            Err(error) => Notice::Error(format!("Could not remove it: {error:#}")),
+        };
+        self.refreshsources();
+        cx.notify();
+    }
+
+    fn allowsources(&mut self, cx: &mut Context<Self>) {
+        let folder = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+        self.notice = match block(synapsecore::sources::allow(&folder)) {
+            Ok(path) => Notice::Success(format!(
+                "Approved {} as it reads now. Editing it takes the approval away.",
+                path.display()
+            )),
+            Err(error) => Notice::Error(format!("Could not approve it: {error:#}")),
+        };
+        self.refreshsources();
+        cx.notify();
+    }
+
+    /// Re-read the library and every tool's MCP entries. Files only, so it
+    /// stays on this thread; nothing here runs another program.
+    fn refreshservers(&mut self, cx: &mut Context<Self>) {
+        let loaded = loadservers();
+        self.serverrows = loaded.rows;
+        self.serverforeign = loaded.foreign;
+        self.serverproblems = loaded.problems;
+        cx.notify();
+    }
+
+    fn showservertab(&mut self, tab: skills::Tab, cx: &mut Context<Self>) {
+        self.servertab = tab;
+        cx.notify();
+    }
+
+    /// Run something that shells out to tools or opens the vault, off the main
+    /// thread, and report it through the page notice.
+    fn serverjob(
+        &mut self,
+        work: impl FnOnce() -> anyhow::Result<String> + Send + 'static,
+        failure: &'static str,
+        cx: &mut Context<Self>,
+    ) {
+        if self.serverbusy {
+            return;
+        }
+        self.serverbusy = true;
+        cx.notify();
+        cx.spawn(async move |this, cx| {
+            let outcome = cx.background_executor().spawn(async move { work() }).await;
+            this.update(cx, |this, cx| {
+                this.serverbusy = false;
+                this.notice = match outcome {
+                    Ok(message) => Notice::Success(message),
+                    Err(error) => Notice::Error(format!("{failure}: {error:#}")),
+                };
+                this.refreshservers(cx);
+            })
+            .ok();
+        })
+        .detach();
+    }
+
+    /// Give one server to every tool that can hold it. `replace` names the one
+    /// tool whose own entry may be swapped, and only ever the tool it was
+    /// adopted from.
+    fn installserver(&mut self, name: String, replace: Option<String>, cx: &mut Context<Self>) {
+        let Some(binary) = connectionserver() else {
+            self.notice =
+                Notice::Error("Could not find the Synapse command to hand the tools.".to_owned());
+            cx.notify();
+            return;
+        };
+        self.serverjob(
+            move || {
+                let server = synapsecore::servers::read(&name)?;
+                let home = files::home()?;
+                let mut reached = Vec::new();
+                let mut refused = Vec::new();
+                for agent in agent::agents(&home)
+                    .iter()
+                    .filter(|agent| agent.servers.supported())
+                {
+                    let swap = replace.as_deref() == Some(agent.name.as_str());
+                    match synapsecore::servers::install(agent, &server, &binary, swap) {
+                        Ok(_) => reached.push(agent.name.clone()),
+                        Err(error) => refused.push(format!("{error:#}")),
+                    }
+                }
+                anyhow::ensure!(
+                    refused.is_empty() || !reached.is_empty(),
+                    "{}",
+                    refused.join("; ")
+                );
+                Ok(match refused.is_empty() {
+                    true => format!("{name} is in {}.", reached.join(", ")),
+                    false => format!(
+                        "{name} is in {}; left alone: {}",
+                        reached.join(", "),
+                        refused.join("; ")
+                    ),
+                })
+            },
+            "Could not install it",
+            cx,
+        );
+    }
+
+    fn uninstallserver(&mut self, name: String, cx: &mut Context<Self>) {
+        let Some(binary) = connectionserver() else {
+            return;
+        };
+        self.serverjob(
+            move || {
+                let home = files::home()?;
+                let mut taken = Vec::new();
+                for agent in agent::agents(&home) {
+                    if synapsecore::servers::uninstall(&agent, &name, &binary)? {
+                        taken.push(agent.name.clone());
+                    }
+                }
+                Ok(format!(
+                    "Took {name} out of {}. It stays in the library.",
+                    taken.join(", ")
+                ))
+            },
+            "Could not remove it",
+            cx,
+        );
+    }
+
+    fn adoptserver(&mut self, tool: String, name: String, cx: &mut Context<Self>) {
+        self.serverjob(
+            move || {
+                let home = files::home()?;
+                let agent = agent::agents(&home)
+                    .into_iter()
+                    .find(|agent| agent.name == tool)
+                    .ok_or_else(|| anyhow::anyhow!("that tool is no longer connected"))?;
+                let adopted = block(synapsecore::servers::adopt(&agent, &name))?;
+                Ok(format!(
+                    "Moved {tool}'s {name} into the library as {adopted}, its values into the vault. {tool}'s own entry still holds them until you swap it."
+                ))
+            },
+            "Could not adopt it",
+            cx,
+        );
+    }
+
+    fn editserver(&mut self, name: String, window: &mut Window, cx: &mut Context<Self>) {
+        let path = match synapsecore::servers::directory() {
+            Ok(directory) => directory.join(format!("{name}.toml")),
+            Err(error) => {
+                self.notice = Notice::Error(format!("Could not open {name}: {error}"));
+                cx.notify();
+                return;
+            }
+        };
+        match Self::loaddocument(format!("MCP · {name}"), path, cx) {
+            Ok(document) => {
+                let focus = buffer::focus(&document.editor, cx);
+                self.document = Some(document);
+                window.focus(&focus);
+                cx.notify();
+            }
+            Err(error) => {
+                self.notice = Notice::Error(format!("Could not open {name}: {error}"));
+                cx.notify();
+            }
+        }
+    }
+
+    fn asksecret(&mut self, server: String, variable: String, cx: &mut Context<Self>) {
+        self.serversecret
+            .update(cx, |input, cx| input.set_text("", cx));
+        self.serverentering = Some((server, variable));
+        cx.notify();
+    }
+
+    fn cancelsecret(&mut self, cx: &mut Context<Self>) {
+        self.serversecret
+            .update(cx, |input, cx| input.set_text("", cx));
+        self.serverentering = None;
+        cx.notify();
+    }
+
+    /// The value goes from the field to the vault and is cleared from the
+    /// field whether or not it was stored, so it is never left on screen.
+    fn savesecret(&mut self, cx: &mut Context<Self>) {
+        let Some((server, variable)) = self.serverentering.take() else {
+            return;
+        };
+        let value = self.serversecret.read(cx).text();
+        self.serversecret
+            .update(cx, |input, cx| input.set_text("", cx));
+        self.serverjob(
+            move || {
+                let reference = block(synapsecore::servers::setsecret(&server, &variable, &value))?;
+                Ok(format!("{server} now reads {variable} from {reference}."))
+            },
+            "Could not store it",
+            cx,
+        );
+    }
+
+    fn searchservers(&mut self, cx: &mut Context<Self>) {
+        let query = self.serverquery.read(cx).text().trim().to_owned();
+        if query.is_empty() {
+            return;
+        }
+        self.serversearchrun += 1;
+        let run = self.serversearchrun;
+        self.serversearching = servers::Searching::Busy;
+        self.serverselected = None;
+        cx.notify();
+        cx.spawn(async move |this, cx| {
+            let found = cx
+                .background_executor()
+                .spawn(async move {
+                    let folder = std::env::current_dir().ok();
+                    block(synapsecore::servers::registry::search(
+                        &query,
+                        folder.as_deref(),
+                    ))
+                })
+                .await;
+            this.update(cx, |this, cx| {
+                if this.serversearchrun != run {
+                    return;
+                }
+                this.serversearching = match found {
+                    Ok(found) => servers::Searching::Done(found),
+                    Err(error) => servers::Searching::Failed(format!("{error:#}")),
+                };
+                cx.notify();
+            })
+            .ok();
+        })
+        .detach();
+    }
+
+    fn selectlisting(&mut self, index: usize, cx: &mut Context<Self>) {
+        self.serverselected = Some(index);
+        cx.notify();
+    }
+
+    /// Keep the selected registry entry as a library server. It reaches no
+    /// tool from here; that is Install, on the other tab, once it is complete.
+    fn addlisting(&mut self, cx: &mut Context<Self>) {
+        let servers::Searching::Done(searched) = &self.serversearching else {
+            return;
+        };
+        let Some(draft) = self
+            .serverselected
+            .and_then(|index| searched.found.get(index))
+            .and_then(|listing| listing.draft.clone())
+        else {
+            return;
+        };
+        let name = draft.name.clone();
+        let outcome = match synapsecore::servers::read(&name) {
+            Ok(_) => Err(anyhow::anyhow!(
+                "the library already has a server named `{name}`"
+            )),
+            Err(_) => synapsecore::servers::save(&draft),
+        };
+        self.notice = match outcome {
+            Ok(_) if draft.missing().is_empty() => {
+                Notice::Success(format!("Added {name}. Install it from the Installed tab."))
+            }
+            Ok(_) => Notice::Success(format!(
+                "Added {name}. It needs {} before it can be installed.",
+                draft.missing().join(", ")
+            )),
+            Err(error) => Notice::Error(format!("Could not add it: {error:#}")),
+        };
+        self.refreshservers(cx);
+    }
+
+    fn openservers(&mut self) {
+        self.notice = match synapsecore::servers::directory()
+            .and_then(|path| files::reveal(&path).map(|_| path))
+        {
+            Ok(_) => Notice::Ready,
+            Err(error) => Notice::Error(format!("Could not open the library: {error}")),
+        };
+    }
+
     fn openskills(&mut self) {
         self.notice = match synapsecore::skill::library::directory()
             .and_then(|path| files::reveal(&path).map(|_| path))
@@ -888,12 +1467,6 @@ impl Dashboard {
         };
     }
 
-    /// What clicking to the initial page would have done.
-    ///
-    /// `new` cannot do it: joining the mesh and starting the poll both want a
-    /// handle to an entity that does not exist until it has returned. Without
-    /// this, `SYNAPSE_PAGE=console` drew a console that had never joined —
-    /// every column correct and empty, and nothing saying why.
     /// Everything that was left out of the first frame, done once there is a
     /// frame.
     ///
@@ -917,148 +1490,12 @@ impl Dashboard {
             self.brain = Some(brain);
         }
         match self.page {
-            Page::Console => self.showconsole(cx),
             Page::Skills => self.refreshskills(cx),
+            Page::Servers => self.refreshservers(cx),
             Page::Memories => self.refreshimports(cx),
             _ => {}
         }
         cx.notify();
-    }
-
-    /// Open the console, which means joining the mesh as yourself.
-    ///
-    /// Arriving here rather than at startup is deliberate. A roster row is a
-    /// promise that somebody is reachable, and an app sitting in the dock with
-    /// nobody in front of it is not — so the row appears when the page does.
-    fn showconsole(&mut self, cx: &mut Context<Self>) {
-        self.page = Page::Console;
-        self.consoleidentity = self.joinmesh();
-        self.refreshconsole(cx);
-        const FRAME: std::time::Duration = std::time::Duration::from_millis(1200);
-        if self.consoletick.is_none() {
-            self.consoletick = Some(cx.spawn(async move |this, cx| {
-                loop {
-                    cx.background_executor().timer(FRAME).await;
-                    let alive = this
-                        .update(cx, |this, cx| {
-                            if this.page != Page::Console {
-                                this.consoletick = None;
-                                return false;
-                            }
-                            this.refreshconsole(cx);
-                            true
-                        })
-                        .unwrap_or(false);
-                    if !alive {
-                        break;
-                    }
-                }
-            }));
-        }
-    }
-
-    /// Register this window as a person on the roster.
-    ///
-    /// `relay::console::arrive` is the only thing anywhere that sets `human`,
-    /// and both a terminal `mux` and this call it — an agent is told to ask a
-    /// human row questions and never delegate to one, so two ways of creating
-    /// that row is two ways of getting it wrong.
-    fn joinmesh(&self) -> Result<String, String> {
-        if !self.meshenabled {
-            return Err(
-                "The agent mesh is off. Turn it on in Settings to reach agents from here."
-                    .to_owned(),
-            );
-        }
-        let name = synapsecore::relay::console::whoami();
-        let database = self.database.clone();
-        let root = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
-        let joined = block(async {
-            let mesh = synapsecore::relay::Mesh::open(&database).await?;
-            synapsecore::relay::console::arrive(&mesh, &name, &root, "Synapse").await
-        });
-        match joined {
-            Ok(()) => Ok(name),
-            Err(error) => Err(format!("Could not join the mesh: {error:#}")),
-        }
-    }
-
-    /// Reload what the console shows, and keep this window's roster row alive.
-    fn refreshconsole(&mut self, cx: &mut Context<Self>) {
-        self.refreshmesh(cx);
-        let database = self.database.clone();
-        let me = self.consoleidentity.clone().ok();
-        self.consolelimit = block(async {
-            let mesh = synapsecore::relay::Mesh::glance(&database).await?;
-            if let Some(name) = me {
-                let _ = mesh.touch(&name).await;
-            }
-            mesh.maxworkers().await
-        })
-        .unwrap_or(synapsecore::relay::DEFAULTWORKERS);
-        cx.notify();
-    }
-
-    /// Aim a bare line at one agent. Nothing depends on it — `@name` always
-    /// works — so this only ever saves typing.
-    fn focusagent(&mut self, name: String, cx: &mut Context<Self>) {
-        self.consolefocus = match self.consolefocus.as_deref() == Some(name.as_str()) {
-            true => None,
-            false => Some(name),
-        };
-        cx.notify();
-    }
-
-    /// Send what is in the composer, under the same grammar `synapse mux` uses.
-    fn sendconsole(&mut self, cx: &mut Context<Self>) {
-        use synapsecore::relay::console::Line;
-
-        let Ok(me) = self.consoleidentity.clone() else {
-            return;
-        };
-        let typed = self.consoleinput.read(cx).text();
-        let (kind, target, body) = match synapsecore::relay::console::read(
-            &typed,
-            self.consolefocus.as_deref(),
-        ) {
-            Line::Blank => return,
-            Line::Empty => {
-                self.notice = Notice::Error("Nothing to send.".to_owned());
-                cx.notify();
-                return;
-            }
-            Line::Undirected => {
-                self.notice = Notice::Error(synapsecore::relay::console::UNDIRECTED.to_owned());
-                cx.notify();
-                return;
-            }
-            // The console has no slash commands: everything they do in a
-            // terminal is a button or a page here. Sending one as a message
-            // would be worse than saying so.
-            Line::Command(_) => {
-                self.notice = Notice::Error(
-                        "The console has no slash commands — use the roster, or `synapse mux` in a terminal.".to_owned(),
-                    );
-                cx.notify();
-                return;
-            }
-            Line::Message { kind, target, body } => (kind, target, body),
-        };
-
-        let database = self.database.clone();
-        let sent = block(async {
-            let mesh = synapsecore::relay::Mesh::open(&database).await?;
-            synapsecore::relay::deliver(&mesh, &me, kind, target.as_deref(), &body).await
-        });
-        self.notice = match sent {
-            Ok(_) => {
-                self.consoleinput
-                    .update(cx, |input, cx| input.set_text("", cx));
-                Notice::Ready
-            }
-            Err(error) => Notice::Error(format!("Could not send: {error:#}")),
-        };
-        self.refreshconsole(cx);
     }
 
     fn showmesh(&mut self, cx: &mut Context<Self>) {
@@ -1087,7 +1524,7 @@ impl Dashboard {
         });
         self.notice = match result {
             Ok(()) => {
-                self.consolelimit = count;
+                self.workerlimit = count;
                 Notice::Success(format!(
                     "One session may now run {count} background worker(s) at once."
                 ))
@@ -2047,6 +2484,23 @@ impl Dashboard {
             };
             let refreshscope = document.path.file_name().and_then(|name| name.to_str())
                 == Some(synapsecore::vault::CONFIG);
+            // A server file that is valid TOML can still be a server `run`
+            // cannot start; say so here rather than on the next session start.
+            let server = synapsecore::servers::directory()
+                .is_ok_and(|directory| document.path.parent() == Some(directory.as_path()))
+                .then(|| {
+                    let name = document
+                        .path
+                        .file_stem()
+                        .and_then(|name| name.to_str())
+                        .unwrap_or_default();
+                    synapsecore::servers::Server::parse(name, &document.current)
+                });
+            if let Some(Err(error)) = server {
+                document.error = Some(format!("Not saved: {error:#}"));
+                cx.notify();
+                return;
+            }
             match files::write(&document.path, &document.current) {
                 Ok(()) => {
                     document.saved = document.current.clone();
@@ -2069,6 +2523,9 @@ impl Dashboard {
             return;
         }
         self.document = None;
+        if self.page == Page::Servers {
+            self.refreshservers(cx);
+        }
         cx.notify();
     }
 
@@ -2367,53 +2824,6 @@ impl Dashboard {
                 .into_any_element();
         }
 
-        if self.page == Page::Console {
-            let aimhost = cx.entity().downgrade();
-            let aim = move |name: String| -> console::Click {
-                let host = aimhost.clone();
-                Box::new(move |_, _, cx| {
-                    host.update(cx, |this, cx| this.focusagent(name.clone(), cx))
-                        .ok();
-                })
-            };
-            return shell
-                .child(console::render(
-                    console::View {
-                        identity: self.consoleidentity.clone(),
-                        focus: self.consolefocus.clone(),
-                        feed: self.meshfeed.clone(),
-                        agents: self.meshagents.clone(),
-                        workers: self.meshworkers.clone(),
-                        limit: self.consolelimit,
-                        composer: self.consoleinput.clone(),
-                        message: match &self.notice {
-                            Notice::Ready => None,
-                            Notice::Success(message) => Some((message.clone(), false)),
-                            Notice::Error(message) => Some((message.clone(), true)),
-                        },
-                    },
-                    console::Actions {
-                        send: Box::new(cx.listener(|this, _, _, cx| this.sendconsole(cx))),
-                        refresh: Box::new(cx.listener(|this, _, _, cx| this.refreshconsole(cx))),
-                        focus: Box::new(aim),
-                    },
-                    cx,
-                ))
-                .child(
-                    StatusBar::new()
-                        .height(36.0)
-                        .left(
-                            Text::new(match &self.consoleidentity {
-                                Ok(name) => format!("On the mesh as {name}"),
-                                Err(_) => "Not on the mesh".to_owned(),
-                            })
-                            .size(Size::Xs),
-                        )
-                        .right(Text::new("@name · #channel · ! for everyone").size(Size::Xs)),
-                )
-                .into_any_element();
-        }
-
         if self.page == Page::Skills {
             let host = cx.entity().downgrade();
             let install = move |name: String| -> skills::Click {
@@ -2453,9 +2863,33 @@ impl Dashboard {
                     .ok();
                 })
             };
+            let selecthost = cx.entity().downgrade();
+            let select = move |id: String| -> skills::Click {
+                let host = selecthost.clone();
+                Box::new(move |_, _, cx| {
+                    host.update(cx, |this, cx| this.readskill(id.clone(), cx))
+                        .ok();
+                })
+            };
+            let open =
+                |url: String| -> skills::Click { Box::new(move |_, _, cx| cx.open_url(&url)) };
             return shell
                 .child(skills::render(
                     skills::View {
+                        tab: self.skilltab,
+                        search: skills::Search {
+                            query: self.skillquery.clone(),
+                            searching: self.skillsearching.clone(),
+                            reading: self.skillreading.clone(),
+                            adding: self.skilladding,
+                            library: self
+                                .skillrows
+                                .iter()
+                                .filter(|row| row.scope != "project")
+                                .map(|row| row.name.clone())
+                                .collect(),
+                            sources: self.sourcespanel("skillsource", true, cx),
+                        },
                         rows: self.skillrows.clone(),
                         unmanaged: self.skillunmanaged.clone(),
                         problems: self.skillproblems.clone(),
@@ -2469,6 +2903,18 @@ impl Dashboard {
                         },
                     },
                     skills::Actions {
+                        installed: Box::new(cx.listener(|this, _, _, cx| {
+                            this.showskilltab(skills::Tab::Installed, cx)
+                        })),
+                        browse: Box::new(
+                            cx.listener(|this, _, _, cx| {
+                                this.showskilltab(skills::Tab::Search, cx)
+                            }),
+                        ),
+                        runsearch: Box::new(cx.listener(|this, _, _, cx| this.searchskills(cx))),
+                        select: Box::new(select),
+                        add: Box::new(cx.listener(|this, _, _, cx| this.addskill(cx))),
+                        open: Box::new(open),
                         installall: Box::new(
                             cx.listener(|this, _, _, cx| this.installskills(None, cx)),
                         ),
@@ -2486,6 +2932,137 @@ impl Dashboard {
                         .height(36.0)
                         .left(Text::new("Skills · one library, every tool").size(Size::Xs))
                         .right(Text::new("Agent Skills open format").size(Size::Xs)),
+                )
+                .into_any_element();
+        }
+
+        if self.page == Page::Servers {
+            let entity = cx.entity().downgrade();
+            let named = |act: fn(&mut Dashboard, String, &mut Context<Dashboard>)| {
+                let host = entity.clone();
+                Box::new(move |name: String| -> skills::Click {
+                    let host = host.clone();
+                    Box::new(move |_, _, cx| {
+                        host.update(cx, |this, cx| act(this, name.clone(), cx)).ok();
+                    })
+                }) as Box<dyn Fn(String) -> skills::Click>
+            };
+            let edithost = entity.clone();
+            let edit = Box::new(move |name: String| -> skills::Click {
+                let host = edithost.clone();
+                Box::new(move |_, window, cx| {
+                    host.update(cx, |this, cx| this.editserver(name.clone(), window, cx))
+                        .ok();
+                })
+            });
+            let pairhost = entity.clone();
+            let asksecret = Box::new(move |server: String, variable: String| -> skills::Click {
+                let host = pairhost.clone();
+                Box::new(move |_, _, cx| {
+                    host.update(cx, |this, cx| {
+                        this.asksecret(server.clone(), variable.clone(), cx)
+                    })
+                    .ok();
+                })
+            });
+            let adopthost = entity.clone();
+            let adopt = Box::new(move |tool: String, name: String| -> skills::Click {
+                let host = adopthost.clone();
+                Box::new(move |_, _, cx| {
+                    host.update(cx, |this, cx| {
+                        this.adoptserver(tool.clone(), name.clone(), cx)
+                    })
+                    .ok();
+                })
+            });
+            let selecthost = entity.clone();
+            let select = Box::new(move |index: usize| -> skills::Click {
+                let host = selecthost.clone();
+                Box::new(move |_, _, cx| {
+                    host.update(cx, |this, cx| this.selectlisting(index, cx))
+                        .ok();
+                })
+            });
+            let rows = self.serverrows.clone();
+            let replacehost = entity.clone();
+            let replace = Box::new(move |name: String| -> skills::Click {
+                let host = replacehost.clone();
+                let from = rows
+                    .iter()
+                    .find(|row| row.name == name)
+                    .map(|row| row.adoptedfrom.clone())
+                    .filter(|from| !from.is_empty());
+                Box::new(move |_, _, cx| {
+                    host.update(cx, |this, cx| {
+                        this.installserver(name.clone(), from.clone(), cx)
+                    })
+                    .ok();
+                })
+            });
+            let open = Box::new(|url: String| -> skills::Click {
+                Box::new(move |_, _, cx| cx.open_url(&url))
+            });
+            return shell
+                .child(servers::render(
+                    servers::View {
+                        tab: self.servertab,
+                        rows: self.serverrows.clone(),
+                        foreign: self.serverforeign.clone(),
+                        problems: self.serverproblems.clone(),
+                        folder: synapsecore::servers::directory()
+                            .map(|path| path.display().to_string())
+                            .unwrap_or_default(),
+                        message: match &self.notice {
+                            Notice::Ready => None,
+                            Notice::Success(message) => Some((message.clone(), false)),
+                            Notice::Error(message) => Some((message.clone(), true)),
+                        },
+                        busy: self.serverbusy,
+                        search: servers::Search {
+                            query: self.serverquery.clone(),
+                            searching: self.serversearching.clone(),
+                            selected: self.serverselected,
+                            adding: self.serveradding,
+                            library: self.serverrows.iter().map(|row| row.name.clone()).collect(),
+                            sources: self.sourcespanel("serversource", false, cx),
+                        },
+                        entering: self.serverentering.clone().map(|(server, variable)| {
+                            servers::Entering {
+                                server,
+                                variable,
+                                input: self.serversecret.clone(),
+                            }
+                        }),
+                    },
+                    servers::Actions {
+                        installed: Box::new(cx.listener(|this, _, _, cx| {
+                            this.showservertab(skills::Tab::Installed, cx)
+                        })),
+                        browse: Box::new(cx.listener(|this, _, _, cx| {
+                            this.showservertab(skills::Tab::Search, cx)
+                        })),
+                        refresh: Box::new(cx.listener(|this, _, _, cx| this.refreshservers(cx))),
+                        openfolder: Box::new(cx.listener(|this, _, _, _| this.openservers())),
+                        install: named(|this, name, cx| this.installserver(name, None, cx)),
+                        uninstall: named(|this, name, cx| this.uninstallserver(name, cx)),
+                        replace,
+                        edit,
+                        asksecret,
+                        savesecret: Box::new(cx.listener(|this, _, _, cx| this.savesecret(cx))),
+                        cancelsecret: Box::new(cx.listener(|this, _, _, cx| this.cancelsecret(cx))),
+                        adopt,
+                        runsearch: Box::new(cx.listener(|this, _, _, cx| this.searchservers(cx))),
+                        select,
+                        add: Box::new(cx.listener(|this, _, _, cx| this.addlisting(cx))),
+                        open,
+                    },
+                    cx,
+                ))
+                .child(
+                    StatusBar::new()
+                        .height(36.0)
+                        .left(Text::new("MCP · one list, every tool").size(Size::Xs))
+                        .right(Text::new("Secrets stay in the vault").size(Size::Xs)),
                 )
                 .into_any_element();
         }
@@ -2508,7 +3085,7 @@ impl Dashboard {
                         optimization: self.optimization,
                         mesh: self.meshenabled,
                         learn: self.learnenabled,
-                        workers: self.consolelimit,
+                        workers: self.workerlimit,
                         thememode: crate::ui::theme::mode(cx),
                         clistatus,
                         clipath,
@@ -2807,8 +3384,8 @@ fn initialpage() -> Page {
         Ok("map") => Page::Map,
         Ok("memory") => Page::Memories,
         Ok("mesh") => Page::Mesh,
-        Ok("console") => Page::Console,
         Ok("skills") => Page::Skills,
+        Ok("mcp") => Page::Servers,
         Ok("vaults") => Page::Vaults,
         Ok("settings") => Page::Settings,
         _ => Page::Connections,
@@ -2844,6 +3421,58 @@ fn changedocument(
 /// Everything the Skills screen shows. Opening the app straight onto a page has
 /// to fill it the same way navigating to it does, or the screen reports an
 /// empty library that is not empty.
+struct ServerData {
+    rows: Vec<servers::Row>,
+    foreign: Vec<(String, String)>,
+    problems: Vec<String>,
+}
+
+/// The library, where each server stands in each tool, and what the tools
+/// have that the library does not. Reads files only.
+fn loadservers() -> ServerData {
+    let home = files::home().unwrap_or_else(|_| PathBuf::from("."));
+    let agents = agent::agents(&home);
+    let (library, problems) = match synapsecore::servers::all() {
+        Ok(found) => found,
+        Err(error) => (
+            Vec::new(),
+            vec![format!("the library could not be read: {error}")],
+        ),
+    };
+    let binary = connectionserver().unwrap_or_default();
+    let placements = synapsecore::servers::survey(&agents, &library, &binary);
+    let known: Vec<String> = library.iter().map(|server| server.name.clone()).collect();
+    ServerData {
+        foreign: synapsecore::servers::foreign(&agents, &known),
+        rows: library
+            .into_iter()
+            .map(|server| servers::Row {
+                commandline: server.commandline(),
+                missing: server.missing(),
+                unset: server
+                    .secrets
+                    .iter()
+                    .filter(|(_, reference)| reference.is_empty())
+                    .map(|(variable, _)| variable.clone())
+                    .collect(),
+                places: placements
+                    .iter()
+                    .filter(|placement| placement.server == server.name)
+                    .cloned()
+                    .collect(),
+                adoptedfrom: server
+                    .source
+                    .strip_prefix("adopted from ")
+                    .unwrap_or_default()
+                    .to_owned(),
+                name: server.name,
+                description: server.description,
+            })
+            .collect(),
+        problems,
+    }
+}
+
 struct SkillData {
     rows: Vec<skills::Row>,
     unmanaged: Vec<(String, String)>,
@@ -2904,6 +3533,7 @@ fn loadskills() -> SkillData {
                     project: skill.shelf.root().unwrap_or_default().to_owned(),
                     proposed: proposal.is_some(),
                     note: proposal.map(|item| item.note.clone()).unwrap_or_default(),
+                    origin: proposal.map(|item| item.tool.clone()).unwrap_or_default(),
                 }
             })
             .collect(),

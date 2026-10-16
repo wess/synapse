@@ -1,7 +1,6 @@
 mod agentrow;
 mod buffer;
 mod clibanner;
-mod console;
 mod dashboard;
 mod document;
 mod graph;
@@ -11,9 +10,11 @@ mod menu;
 mod mesh;
 mod model;
 mod runtime;
+mod servers;
 mod settings;
 mod sidebar;
 mod skills;
+mod sources;
 #[cfg(target_os = "macos")]
 mod statusbar;
 mod summary;

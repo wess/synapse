@@ -1,18 +1,16 @@
 //! What a person types at the mesh, and what it means.
 //!
-//! There are two surfaces where a human sits on the mesh rather than an agent —
-//! `synapse mux` in a terminal and the Console in the desktop — and they have to
-//! agree about two things that nothing else would catch if they drifted.
+//! `synapse mux` is where a human sits on the mesh rather than an agent. What it
+//! means by a typed line, and who it says is a person, live here rather than in
+//! the command, because the second is a promise to every agent on the mesh.
 //!
-//! The first is addressing. `@name`, `#channel`, `!` and a bare line going
-//! wherever the focus is are a small grammar, and a small grammar implemented
-//! twice is a small grammar that means two things by next year.
+//! Addressing is `@name`, `#channel`, `!`, and a bare line going wherever the
+//! focus is.
 //!
-//! The second is who counts as a person. `human = 1` is what tells every agent
-//! on the mesh to ask this row questions and never delegate to it, and a headless
-//! worker running with its permission prompts off has no other way to find
-//! somebody to ask. So exactly one function sets it, and both surfaces call
-//! that one.
+//! `human = 1` is what tells every agent on the mesh to ask this row questions
+//! and never delegate to it, and a headless worker running with its permission
+//! prompts off has no other way to find somebody to ask. So exactly one function
+//! sets it, and any surface that seats a person calls that one.
 
 use crate::relay::{Mesh, MessageKind, Registration};
 use anyhow::Result;
@@ -90,9 +88,8 @@ pub const UNDIRECTED: &str =
 /// The name to join under when none was given.
 ///
 /// A login name is what the person already answers to, and it is already the
-/// shape a mesh name has to be. Shared for the same reason the rest of this
-/// module is: a person who is `wess` in the terminal and `me` in the window is
-/// two rows on the roster, and an agent asking the wrong one waits forever.
+/// shape a mesh name has to be. One person under two names is two rows on the
+/// roster, and an agent asking the wrong one waits forever.
 pub fn whoami() -> String {
     let candidate = std::env::var("USER")
         .or_else(|_| std::env::var("LOGNAME"))
@@ -106,8 +103,8 @@ pub fn whoami() -> String {
 /// agent, whoever is sitting in front of it; this is for a surface that *is* the
 /// person, and the flag is what stops every agent on the mesh from treating them
 /// as somewhere to delegate work.
-/// `surface` is what to record as the tool — "synapse mux", "Synapse" — so a
-/// roster row says which of a person's own windows they are reachable at.
+/// `surface` is what to record as the tool — "synapse mux" — so a roster row
+/// says where the person is reachable.
 pub async fn arrive(mesh: &Mesh, name: &str, root: &Path, surface: &str) -> Result<()> {
     let taken = mesh
         .agents()

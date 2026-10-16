@@ -58,11 +58,13 @@ export const overview: Page = {
       <dt>I want my tools to work together.</dt>
       <dd>Read <a href="mesh/">Agent mesh</a>. It covers turning it on, roles, teams, background workers, and what the mesh deliberately does not do.</dd>
       <dt>I want to talk to my agents rather than watch them.</dt>
-      <dd>The app's <a href="app/#console">Console</a> puts you on the mesh under your own name. <a href="../tutorials/overseer/">Hand a job to one agent</a> walks through describing an outcome and letting it decide whether the work needs a team.</dd>
+      <dd><a href="mesh/#mux"><code>synapse mux</code></a> puts you on the mesh under your own name. <a href="../tutorials/overseer/">Hand a job to one agent</a> walks through describing an outcome and letting it decide whether the work needs a team.</dd>
       <dt>I keep re-deriving the same procedure.</dt>
       <dd>Let a session write it down. <a href="../tutorials/learn/">Let your agents write skills</a> covers what an agent may and may not do to your library, and why the gate is on installing rather than on writing.</dd>
       <dt>I keep copying the same skill into every tool.</dt>
       <dd>Read <a href="skills/">Skills</a>. One library, installed into Claude Code, Codex, pi, and Ainz together, with drift reported rather than silently resolved.</dd>
+      <dt>I configure the same MCP server in every tool, token and all.</dt>
+      <dd>Read <a href="servers/">MCP servers</a>. One list, given to every tool through its own <code>mcp add</code>, with each token in the vault instead of in plaintext in three config files.</dd>
       <dt>I need automation or exact syntax.</dt>
       <dd>Use the <a href="cli/">complete CLI reference</a> and <a href="mcp/">MCP tool reference</a>.</dd>
       <dt>I am planning backups or a recovery.</dt>

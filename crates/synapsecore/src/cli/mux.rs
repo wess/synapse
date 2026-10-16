@@ -189,8 +189,7 @@ async fn handle(
     focus: &mut Option<String>,
     line: &str,
 ) -> Result<bool> {
-    // Addressing is `relay::console`'s, not this file's. The desktop Console
-    // reads the same grammar, and two copies of it would mean two grammars.
+    // Addressing is `relay::console`'s, not this file's.
     let (kind, target, body) = match relay::console::read(line, focus.as_deref()) {
         relay::console::Line::Blank => return Ok(true),
         relay::console::Line::Command(rest) => {

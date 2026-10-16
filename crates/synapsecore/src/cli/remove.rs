@@ -161,6 +161,14 @@ fn preview(alsodata: bool) -> Result<Outcome> {
         if detection.hooks.notice || detection.hooks.compact || detection.hooks.statusline {
             println!("  · the Synapse hooks and status line from Claude Code");
         }
+        let servers = crate::servers::ours(&agent);
+        if !servers.is_empty() {
+            println!(
+                "  · the MCP servers Synapse gave {}: {}",
+                agent.name,
+                servers.join(", ")
+            );
+        }
     }
     if let Ok(integration) = crate::shellsetup::status(&server)
         && integration.state != crate::shellsetup::IntegrationState::Missing

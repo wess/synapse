@@ -38,9 +38,23 @@ impl Removed {
 }
 
 /// Disconnect one tool: its MCP registration, the managed block in its
-/// instruction file, the Claude Code session notice and status line, and any
-/// skill Synapse installed for it.
+/// instruction file, the Claude Code session notice and status line, any skill
+/// Synapse installed for it, and every library MCP server it was given.
 pub async fn disconnect(agent: &Agent, server: &Path) -> Removed {
+    let mut removed = unwire(agent, server).await;
+    for name in crate::servers::ours(agent) {
+        removed.step(
+            &format!("{} MCP server `{name}`", agent.name),
+            crate::servers::uninstall(agent, &name, server),
+        );
+    }
+    removed
+}
+
+/// Everything `disconnect` takes out except the library's servers. A reset
+/// reconnects straight after, and taking a tool's servers away as a side
+/// effect of fixing its connection to Synapse is not what a reset is for.
+pub(crate) async fn unwire(agent: &Agent, server: &Path) -> Removed {
     let mut removed = Removed::default();
     removed.step(&connection(agent), unregister(agent, server));
     removed.step(

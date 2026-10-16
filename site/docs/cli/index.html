@@ -57,6 +57,8 @@
         <li><a href="../../docs/mcp/">MCP tool reference</a></li>
         <li><a href="../../docs/mesh/">Agent mesh</a></li>
         <li><a href="../../docs/skills/">Skills</a></li>
+        <li><a href="../../docs/servers/">MCP servers</a></li>
+        <li><a href="../../docs/sources/">Sources</a></li>
         <li><a href="../../docs/vault/">Vaults and scopes</a></li>
         <li><a href="../../docs/data/">Data lifecycle</a></li>
         <li><a href="../../docs/config/">Configuration and paths</a></li>
@@ -608,6 +610,166 @@
       <code>synapse skill history &amp;lt;name&amp;gt; [--json]</code>
     </div>
     <p>Show what a skill used to say, newest first, with the line saying what was wrong with each version. The newest twenty are kept.</p>
+  </section>
+    
+  <section class="command" id="mcpadd">
+    <div>
+      <h3>mcp add</h3>
+      <code>synapse mcp add &amp;lt;name&amp;gt; [--description &amp;lt;text&amp;gt;] -- &amp;lt;command&amp;gt; [args...]</code>
+    </div>
+    <p>Describe an MCP server for the library. Everything after the bare <code>--</code> is its command. Nothing reaches a tool until <code>mcp install</code>.</p>
+  </section>
+    
+  <section class="command" id="mcplist">
+    <div>
+      <h3>mcp list</h3>
+      <code>synapse mcp list [--json]</code>
+    </div>
+    <p>List the library's servers, the command each runs, and anything one still needs before it can start.</p>
+  </section>
+    
+  <section class="command" id="mcpshow">
+    <div>
+      <h3>mcp show</h3>
+      <code>synapse mcp show &amp;lt;name&amp;gt;</code>
+    </div>
+    <p>Print one server's description. Secrets appear as vault references, never values.</p>
+  </section>
+    
+  <section class="command" id="mcpedit">
+    <div>
+      <h3>mcp edit</h3>
+      <code>synapse mcp edit &amp;lt;name&amp;gt;</code>
+    </div>
+    <p>Edit a server in <code>$EDITOR</code>. A draft that is not a valid server is kept rather than saved. Tools pick the change up the next time they start it.</p>
+  </section>
+    
+  <section class="command" id="mcpdelete">
+    <div>
+      <h3>mcp delete</h3>
+      <code>synapse mcp delete &amp;lt;name&amp;gt; --confirm</code>
+    </div>
+    <p>Take a server out of every tool Synapse gave it to, forget its vault, and remove it from the library. A tool's own entry by that name is left alone.</p>
+  </section>
+    
+  <section class="command" id="mcpsecret">
+    <div>
+      <h3>mcp secret</h3>
+      <code>synapse mcp secret &amp;lt;name&amp;gt; &amp;lt;VARIABLE&amp;gt;</code>
+    </div>
+    <p>Store one of a server's secrets in its own vault, read from a prompt or stdin, and point the server at it.</p>
+  </section>
+    
+  <section class="command" id="mcpinstall">
+    <div>
+      <h3>mcp install</h3>
+      <code>synapse mcp install [name] [--tool &amp;lt;tool&amp;gt;] [--replace]</code>
+    </div>
+    <p>Give library servers to connected tools through each tool's own <code>mcp add</code>, as <code>synapse mcp run &lt;name&gt;</code>. A tool's own server by the same name is left alone unless <code>--replace</code> is given; a server that still needs something is skipped.</p>
+  </section>
+    
+  <section class="command" id="mcpuninstall">
+    <div>
+      <h3>mcp uninstall</h3>
+      <code>synapse mcp uninstall &amp;lt;name&amp;gt; [--tool &amp;lt;tool&amp;gt;]</code>
+    </div>
+    <p>Take a server back out of the tools Synapse gave it to. It stays in the library.</p>
+  </section>
+    
+  <section class="command" id="mcpstatus">
+    <div>
+      <h3>mcp status</h3>
+      <code>synapse mcp status [name] [--json]</code>
+    </div>
+    <p>Show where each server stands in each tool — installed, update available, not ours, not installed — and the servers tools have that the library does not.</p>
+  </section>
+    
+  <section class="command" id="mcpadopt">
+    <div>
+      <h3>mcp adopt</h3>
+      <code>synapse mcp adopt &amp;lt;name&amp;gt; [--tool &amp;lt;tool&amp;gt;]</code>
+    </div>
+    <p>Move a tool's own server into the library, every value it carries into the vault. The tool's entry is unchanged until you install over it with <code>--replace</code>.</p>
+  </section>
+    
+  <section class="command" id="mcpsearch">
+    <div>
+      <h3>mcp search</h3>
+      <code>synapse mcp search &amp;lt;words&amp;gt; [--json]</code>
+    </div>
+    <p>Search every source that holds MCP servers — registries and repositories — with what Synapse can run first. A registry is slow; allow half a minute.</p>
+  </section>
+    
+  <section class="command" id="mcpget">
+    <div>
+      <h3>mcp get</h3>
+      <code>synapse mcp get &amp;lt;source:id&amp;gt; [--name &amp;lt;name&amp;gt;]</code>
+    </div>
+    <p>Add a registry entry to the library as the command that runs it — <code>npx</code>, <code>uvx</code>, or <code>docker run</code> — with anything it needs left to fill in.</p>
+  </section>
+    
+  <section class="command" id="mcprun">
+    <div>
+      <h3>mcp run</h3>
+      <code>synapse mcp run &amp;lt;name&amp;gt;</code>
+    </div>
+    <p>What a tool starts. Reads the library and the vault, then replaces itself with the server. Writes nothing to stdout of its own.</p>
+  </section>
+    
+  <section class="command" id="skillsearch">
+    <div>
+      <h3>skill search</h3>
+      <code>synapse skill search &amp;lt;words&amp;gt; [--json]</code>
+    </div>
+    <p>Search every source that holds skills at once — skills.sh and any repository you added — and print each result as <code>source:id</code> with its installs or description and its page. A source that cannot answer is reported beside the rest.</p>
+  </section>
+    
+  <section class="command" id="skillget">
+    <div>
+      <h3>skill get</h3>
+      <code>synapse skill get &amp;lt;source:id&amp;gt;</code>
+    </div>
+    <p>Bring a published skill into the library, proposed. It reaches no tool until <code>skill approve</code>. A bare <code>owner/repo/skill</code> means the first skills index. Refused if the library already has a skill by that name.</p>
+  </section>
+    
+  <section class="command" id="sourcelist">
+    <div>
+      <h3>source list</h3>
+      <code>synapse source list [--json]</code>
+    </div>
+    <p>List where skill and MCP searches look: each source's kind, what it holds, where it is, and whether it is built in, yours, or this project's — and whether that project's file is approved.</p>
+  </section>
+    
+  <section class="command" id="sourceadd">
+    <div>
+      <h3>source add</h3>
+      <code>synapse source add &amp;lt;name&amp;gt; &amp;lt;owner/repo | address&amp;gt; [--kind &amp;lt;kind&amp;gt;] [--token &amp;lt;vault.name&amp;gt;]</code>
+    </div>
+    <p>Add a skills index, MCP registry, or GitHub repository. The kind is worked out — a repository needs no request, an address is asked — unless <code>--kind</code> says. A private repository names its token in the vault.</p>
+  </section>
+    
+  <section class="command" id="sourceremove">
+    <div>
+      <h3>source remove</h3>
+      <code>synapse source remove &amp;lt;name&amp;gt;</code>
+    </div>
+    <p>Stop searching a source, built-in or yours. A project's sources are edited in its <code>.synapse/sources.toml</code>.</p>
+  </section>
+    
+  <section class="command" id="sourceallow">
+    <div>
+      <h3>source allow</h3>
+      <code>synapse source allow</code>
+    </div>
+    <p>Approve this project's <code>.synapse/sources.toml</code> as it reads now. Until then its sources are listed and not searched, and editing it takes the approval away.</p>
+  </section>
+    
+  <section class="command" id="sourcerefresh">
+    <div>
+      <h3>source refresh</h3>
+      <code>synapse source refresh [name]</code>
+    </div>
+    <p>Read a repository source's catalogue again now rather than within the hour.</p>
   </section>
     
   <section class="command" id="skillrevert">

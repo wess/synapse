@@ -15,7 +15,7 @@ use anyhow::{Context, Result};
 use std::ffi::OsString;
 use std::path::PathBuf;
 
-const USAGE: &str = "usage: synapse skill <list|show|create|edit|delete|install|remove|status|adopt|proposed|approve|reject|history|revert>";
+const USAGE: &str = "usage: synapse skill <list|show|create|edit|delete|install|remove|status|adopt|proposed|approve|reject|history|revert|search|get>";
 
 pub fn run(arguments: &[OsString]) -> Result<Outcome> {
     let action = super::relay::text(arguments, 0, USAGE)?;
@@ -35,6 +35,8 @@ pub fn run(arguments: &[OsString]) -> Result<Outcome> {
         "reject" => reject(arguments)?,
         "history" => history(arguments, json)?,
         "revert" => revert(arguments)?,
+        "search" => search(arguments, json)?,
+        "get" => get(arguments)?,
         unknown => anyhow::bail!("unknown skill command `{unknown}`\n\n{USAGE}"),
     }
     Ok(Outcome::Exit(0))
@@ -429,6 +431,73 @@ fn revert(arguments: &[OsString]) -> Result<()> {
 
 /// The shelf a command was told to use, or `None` when it should work it out
 /// from the name.
+/// Look for published skills. The words after `search` are the query, so it
+/// needs no quoting.
+fn search(arguments: &[OsString], json: bool) -> Result<()> {
+    let query = words(arguments);
+    anyhow::ensure!(
+        !query.is_empty(),
+        "usage: synapse skill search <words> [--json]"
+    );
+    let runtime = tokio::runtime::Runtime::new()?;
+    let folder = std::env::current_dir().ok();
+    let searched = runtime.block_on(skill::market::search(&query, folder.as_deref()))?;
+    if json {
+        println!("{}", serde_json::to_string_pretty(&searched)?);
+        return Ok(());
+    }
+    for problem in &searched.problems {
+        eprintln!("warning: {problem}");
+    }
+    if searched.found.is_empty() {
+        println!("Nothing published matches `{query}`.");
+        return Ok(());
+    }
+    for item in &searched.found {
+        let count = item
+            .installs
+            .map(|installs| format!("{installs} installs"))
+            .unwrap_or_else(|| headline(&item.description));
+        println!("{}\t{count}\t{}", item.qualified(), item.page);
+    }
+    println!();
+    println!("`synapse skill get <source:id>` brings one into the library for review.");
+    Ok(())
+}
+
+/// Bring a published skill into the library. It arrives proposed, so getting
+/// one and installing one stay two decisions.
+fn get(arguments: &[OsString]) -> Result<()> {
+    let id = super::relay::text(arguments, 1, "usage: synapse skill get <source:id>")?;
+    let runtime = tokio::runtime::Runtime::new()?;
+    let folder = std::env::current_dir().ok();
+    let (source, id) = runtime.block_on(skill::market::locate(&id, folder.as_deref()))?;
+    let receipts = runtime.block_on(Receipts::open(crate::files::database()?))?;
+    let (name, path) = runtime.block_on(skill::market::fetch(&receipts, &source, &id))?;
+    println!(
+        "Added {name} from {} to the library at {}",
+        source.name,
+        path.display()
+    );
+    println!(
+        "It is in no tool yet. Read it with `synapse skill show {name}` — a skill can carry scripts —"
+    );
+    println!("then `synapse skill approve {name}` or `synapse skill reject {name} --confirm`.");
+    Ok(())
+}
+
+/// Every positional word after the action, for a command whose argument is
+/// free text.
+fn words(arguments: &[OsString]) -> String {
+    arguments
+        .iter()
+        .skip(1)
+        .filter_map(|argument| argument.to_str())
+        .filter(|argument| !argument.starts_with("--"))
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
 fn shelf(arguments: &[OsString]) -> Result<Option<Shelf>> {
     if arguments.iter().any(|value| value == "--global") {
         return Ok(Some(Shelf::Global));
@@ -465,7 +534,7 @@ fn named(arguments: &[OsString]) -> Option<String> {
 
 /// Which tools a command applies to. Everything by default, or one named with
 /// `--tool`.
-fn chosen(arguments: &[OsString]) -> Result<Vec<Agent>> {
+pub(super) fn chosen(arguments: &[OsString]) -> Result<Vec<Agent>> {
     let home = crate::files::home()?;
     let agents = crate::agent::agents(&home);
     let Some(wanted) = super::relay::value(arguments, "--tool") else {
@@ -510,6 +579,15 @@ mod tests {
 
     fn arguments(values: &[&str]) -> Vec<OsString> {
         values.iter().map(OsString::from).collect()
+    }
+
+    #[test]
+    fn a_search_query_is_every_word_that_is_not_a_flag() {
+        assert_eq!(
+            words(&arguments(&["search", "release", "notes", "--json"])),
+            "release notes"
+        );
+        assert_eq!(words(&arguments(&["search", "--json"])), "");
     }
 
     #[test]

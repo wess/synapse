@@ -74,7 +74,7 @@ pub async fn refresh(
 /// wrong after it, so this reads the machine again rather than being handed a
 /// stale answer that would skip the very write it exists to make.
 pub async fn reset(agent: &Agent, server: &Path, soul: &Path, database: &Path) -> Result<Removed> {
-    let removed = super::disconnect(agent, server).await;
+    let removed = super::teardown::unwire(agent, server).await;
     let _ = receipt::forget(database, &agent.slug).await;
     let after = super::detect(agent, Some(server));
     super::reapply(agent, &after, server, soul)?;

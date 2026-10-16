@@ -99,7 +99,8 @@ See the [installation guide](https://wess.io/synapse/docs/install/) for CLI setu
 | Existing memory | Preview and import Claude and Codex memory without changing the originals. Undo an import batch when needed. |
 | Shared guidance | Edit one `SOUL.md` and point your connected tools at it. |
 | Agent Skills | Maintain one library, install skills into connected tools, and check which copies have drifted. |
-| Agent coordination | Enable the optional mesh to let agents message each other and work together. Join them through the Console. |
+| MCP servers | Keep one list of MCP servers and give it to every connected tool, with each token in the vault instead of in plaintext in every tool's config. |
+| Agent coordination | Enable the optional mesh to let agents message each other and work together. Join them yourself with `synapse mux`. |
 | Scoped credentials | Approve which project folders may receive which environment variables, using the local encrypted vault or macOS Keychain. |
 | The Map | See every memory as a graph in three dimensions — projects as clusters, a correction as a line to what it replaced, and a memory nothing else touches looking like one. |
 
@@ -138,6 +139,13 @@ synapse skill history cut-a-release   # what it used to say
 synapse skill revert cut-a-release    # and back again
 ```
 
+Or bring in one somebody else published. It arrives waiting for review, the same as one an agent wrote:
+
+```sh
+synapse skill search release notes
+synapse skill get phuryn/pm-skills/release-notes
+```
+
 The gate is on installing rather than on writing. A taught skill sits in the library and in no tool until you approve it, so writing one costs you a line in a list rather than context in every session on the machine. Corrections are the deliberate exception: they reach the copies Synapse installed, because you already agreed to that skill being loaded and a correction that never arrives leaves every session running the version that was wrong. Nothing it replaces is lost.
 
 ## Working as a team
@@ -161,7 +169,34 @@ synapse mux --team overseer
 @overseer get the release notes written and the changelog updated
 ```
 
-You are on the roster yourself either way, so nothing is interposed: any worker it starts is directly addressable without going through it. The app has the same seat on its **Console** screen, with a transcript, the roster, and a box to type in.
+You are on the roster yourself either way, so nothing is interposed: any worker it starts is directly addressable without going through it.
+
+## MCP servers
+
+Describe a server once and every connected tool gets it. What a tool is handed is `synapse mcp run <name>`, which reads the library, fetches the secrets from the vault, and replaces itself with the real server, so no token sits in any tool's config:
+
+```sh
+synapse mcp add github -- docker run -i --rm -e GITHUB_PERSONAL_ACCESS_TOKEN ghcr.io/github/github-mcp-server
+synapse mcp secret github GITHUB_PERSONAL_ACCESS_TOKEN   # prompted, stored in the vault
+synapse mcp install github                              # Claude Code, Codex, Ainz
+```
+
+A server a tool already has can be adopted, its values moved into the vault, and the tool's own entry swapped for the library's:
+
+```sh
+synapse mcp adopt github --tool claude
+synapse mcp install github --tool claude --replace
+```
+
+`synapse mcp search` finds servers in the official MCP Registry. The app's MCP screen does all of this, with Installed and Search tabs.
+
+Both searches ask every **source** at once: skills.sh and the MCP Registry are built in, and a team's own GitHub repository of skills and `server.json` files is one command away. A repository can carry `.synapse/sources.toml`, which is searched only once its exact contents are approved:
+
+```sh
+synapse source add team acme/agent-skills --token work.github
+synapse skill get team:skills/release-notes
+synapse source allow          # approve this project's sources file
+```
 
 ## Using pi
 

@@ -97,6 +97,25 @@ impl Value {
         }
     }
 
+    fn entries(&self) -> Option<Vec<(String, Value)>> {
+        match self {
+            Self::Json(value) => Some(
+                value
+                    .as_object()?
+                    .iter()
+                    .map(|(key, value)| (key.clone(), Value::Json(value.clone())))
+                    .collect(),
+            ),
+            Self::Toml(value) => Some(
+                value
+                    .as_table()?
+                    .iter()
+                    .map(|(key, value)| (key.clone(), Value::Toml(value.clone())))
+                    .collect(),
+            ),
+        }
+    }
+
     fn array(&self) -> Option<Vec<Value>> {
         match self {
             Self::Json(value) => Some(value.as_array()?.iter().cloned().map(Value::Json).collect()),
@@ -125,6 +144,62 @@ fn clone(value: &Value) -> Value {
     }
 }
 
+/// One MCP server entry in a tool's config, read the same way whatever format
+/// the tool keeps it in.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct Entry {
+    pub command: String,
+    pub args: Vec<String>,
+    /// Exactly what the tool holds, which for most entries is a secret in
+    /// plaintext. Only `servers::adopt` reads it, and only to move it into the
+    /// vault.
+    pub env: Vec<(String, String)>,
+    /// Set for a remote server, which has no command.
+    pub url: String,
+}
+
+/// Every MCP server entry a tool holds, by name. `at` is the descriptor's path
+/// to one entry, with `{name}` as its last key.
+pub fn servers(agent: &Agent, at: &[String]) -> Vec<(String, Entry)> {
+    let Some((_, parent)) = at.split_last() else {
+        return Vec::new();
+    };
+    let Some(value) = fs::read_to_string(&agent.integration)
+        .ok()
+        .and_then(|content| value(agent.detect.format, &content))
+    else {
+        return Vec::new();
+    };
+    let Some(table) = self::at(&value, parent).and_then(|value| value.entries()) else {
+        return Vec::new();
+    };
+    table
+        .into_iter()
+        .map(|(name, value)| (name, entry(&value)))
+        .collect()
+}
+
+fn entry(value: &Value) -> Entry {
+    let (command, args) = registration(value).unwrap_or_default();
+    let env = value
+        .get("env")
+        .and_then(|value| value.entries())
+        .unwrap_or_default()
+        .into_iter()
+        .filter_map(|(key, value)| value.string().map(|value| (key, value)))
+        .collect();
+    let url = value
+        .get("url")
+        .and_then(|value| value.string())
+        .unwrap_or_default();
+    Entry {
+        command,
+        args,
+        env,
+        url,
+    }
+}
+
 /// The command and arguments of a registration, whichever format it is in. A
 /// malformed entry has none, which leaves it registered but not configured — so
 /// it can still be replaced rather than becoming unfixable.
@@ -141,7 +216,7 @@ fn registration(value: &Value) -> Option<Server> {
     Some((command, args))
 }
 
-fn samepath(stored: &str, expected: &Path) -> bool {
+pub fn samepath(stored: &str, expected: &Path) -> bool {
     let stored = PathBuf::from(stored);
     stored == expected
         || stored

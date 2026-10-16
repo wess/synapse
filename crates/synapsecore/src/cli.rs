@@ -11,9 +11,11 @@ mod memory;
 mod mux;
 mod relay;
 mod remove;
+mod servers;
 mod session;
 mod shell;
 mod skills;
+mod sources;
 pub(crate) mod tokens;
 mod wrap;
 

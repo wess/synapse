@@ -12,6 +12,23 @@ Usage: synapse [command]
 Commands:
   app                              Open the desktop application
   mcp                              Run the MCP stdio server
+  mcp list [--json]                List the MCP servers in your library
+  mcp show <name>                  Print one server's description
+  mcp add <name> [--description <text>] -- <command> [args...]
+                                   Describe a server for the library
+  mcp edit <name>                  Edit a server in $EDITOR
+  mcp delete <name> --confirm      Remove a server, from every tool and the vault too
+  mcp secret <name> <VARIABLE>     Store a server's secret in the vault (prompted)
+  mcp install [name] [--tool <tool>] [--replace]
+                                   Give library servers to your connected tools
+  mcp uninstall <name> [--tool <tool>]
+                                   Take a server back out of your tools
+  mcp status [name] [--json]       Show which tools have which servers
+  mcp adopt <name> [--tool <tool>] Move a tool's own server into the library
+  mcp search <words> [--json]      Search every source that holds MCP servers
+  mcp get <source:id> [--name <name>]
+                                   Add a found server to the library
+  mcp run <name>                   Start a library server (what tools run)
   launch <tool> [-- <flags>]       Start a tool wired into memory and the vault
   run -- <command> [arguments]     Run with resolved vault variables
   mux [--as <name>] [--team <team>]
@@ -94,6 +111,14 @@ Commands:
   skill reject <name> --confirm    Turn down a proposed skill
   skill history <name> [--json]    Show what a skill used to say
   skill revert <name> [<id>]       Put an earlier version of a skill back
+  skill search <words> [--json]    Search every source that holds skills
+  skill get <source:id>            Bring a published skill into the library for review
+  source list [--json]             List where skill and MCP searches look
+  source add <name> <owner/repo | address> [--kind <kind>] [--token <vault.name>]
+                                   Add a skills index, MCP registry, or GitHub repo
+  source remove <name>             Stop searching a source
+  source allow                     Approve this project's .synapse/sources.toml
+  source refresh [name]            Re-read a repository source now
   tool list [--json]               List the tools Synapse can connect to
   tool show <name>                 Print one tool's descriptor
   tool create <name> [--user]      Describe a tool Synapse does not ship
@@ -140,10 +165,13 @@ pub fn run(arguments: Vec<OsString>) -> Result<Outcome> {
             None => output(HELP),
         },
         "version" | "--version" | "-V" => output(&format!("synapse {}", env!("CARGO_PKG_VERSION"))),
-        "mcp" => {
+        // Bare, it is Synapse's own server — what every tool's registration
+        // runs, so that meaning cannot move. Anything after it is the library.
+        "mcp" if rest.is_empty() => {
             runtime()?.block_on(crate::mcp::run())?;
             Ok(Outcome::Exit(0))
         }
+        "mcp" => super::servers::run(rest),
         "run" => {
             let status = runtime()?.block_on(crate::vault::run(rest.to_vec()))?;
             Ok(Outcome::Exit(status.code().unwrap_or(1)))
@@ -163,6 +191,7 @@ pub fn run(arguments: Vec<OsString>) -> Result<Outcome> {
         "mux" => super::mux::run(rest),
         "relay" => super::relay::run(rest),
         "skill" => super::skills::run(rest),
+        "source" => super::sources::run(rest),
         "tool" => super::layers::tool(rest),
         "session" => super::session::session(rest),
         "statusline" => super::session::statusline(rest),
