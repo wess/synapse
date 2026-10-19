@@ -15,7 +15,7 @@ mod report;
 
 pub use format::{approximately, money, thousands};
 pub use price::{DEFAULTPRICE, dollars, price, setprice};
-pub use record::{Entry, Kind, bodies, hooked, record, standing};
+pub use record::{Entry, Kind, RETENTIONDAYS, bodies, hooked, record, standing};
 pub use report::{Day, Report, Totals, report};
 
 /// Characters per token. An estimate, not a tokenizer.

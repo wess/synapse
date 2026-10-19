@@ -87,7 +87,7 @@ synapse connect
 synapse
 ```
 
-`synapse connect` connects installed tools. Restart them afterward. Use `synapse status` for text status; the same binary provides the CLI and MCP server. The Linux build has no desktop UI dependency and uses the encrypted vault instead of macOS Keychain. Current release downloads contain the macOS app; Linux users build from source.
+`synapse connect` connects installed tools. Restart them afterward. Use `synapse status` for text status; the same binary provides the CLI and MCP server. The Linux build has no desktop UI dependency and uses the encrypted vault instead of macOS Keychain. Release downloads contain the macOS app and Windows installer; Linux users build from source.
 
 See the [installation guide](https://wess.io/synapse/docs/install/) for CLI setup and connection troubleshooting.
 

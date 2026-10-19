@@ -81,6 +81,11 @@ fn report(drift: &Drift) -> String {
             thousands(SCANCEILING as usize)
         ));
     }
+    if drift.partial {
+        text.push_str(
+            "Similar-memory comparisons hit a resource limit; findings may be incomplete.\n",
+        );
+    }
     if drift.root.is_none() {
         text.push_str(
             "No checkout here, so paths relative to a project were not checked. \
@@ -131,6 +136,7 @@ mod tests {
             project: Some("github.com/acme/app".into()),
             scanned: 12,
             capped: false,
+            partial: false,
             findings: vec![
                 finding(
                     Concern::Stale,
@@ -167,6 +173,7 @@ mod tests {
             project: None,
             scanned: 1,
             capped: true,
+            partial: false,
             findings: Vec::new(),
         };
         let text = report(&drift);

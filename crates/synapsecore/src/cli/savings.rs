@@ -115,7 +115,10 @@ fn print(report: &Report) {
     }
     println!();
     if let Some(since) = &report.since {
-        println!("  Counting since {since} on this machine.");
+        println!(
+            "  Counting since {since} on this machine. Usage older than {} days is pruned.",
+            crate::usage::RETENTIONDAYS
+        );
     }
     println!(
         "  Baseline: the same memory in an instruction file every session loads.\n  \
