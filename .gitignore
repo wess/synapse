@@ -130,6 +130,7 @@ cscope.*
 *.local
 secrets.*
 !website/tutorials/secrets.ts
+!crates/synapsecore/src/servers/secrets.rs
 *.pem
 *.key
 *.p12
