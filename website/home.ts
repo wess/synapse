@@ -27,7 +27,7 @@ const body = `
           <a class="button" href="${downloadurl}">Download for macOS <span aria-hidden="true">↓</span></a>
           <a class="button secondary" href="tutorials/continuity/">Try a handoff</a>
         </div>
-        <span class="heronote">macOS desktop · Linux terminal, CLI &amp; MCP · <a href="docs/install/#linux">Linux setup</a></span>
+        <span class="heronote">macOS and Windows desktop · Linux CLI &amp; MCP · <a href="docs/install/">Install options</a></span>
       </div>
       <div class="matchcut" aria-label="Illustrative example: save a convention in Codex and recall it in Claude Code in the same project">
         <div class="terminal codex">
@@ -133,7 +133,7 @@ Settings → Shell integration → Enable</pre>
     </div>
     <div class="guidelist">
       <a href="docs/harnesses/"><span><strong>Supported and custom harnesses</strong><span>See the support list, add your harness, or contribute a connector.</span></span><b aria-hidden="true">→</b></a>
-      <a href="docs/install/"><span><strong>Install and connect</strong><span>Set up the macOS app or Linux CLI and connect a tool.</span></span><b aria-hidden="true">→</b></a>
+      <a href="docs/install/"><span><strong>Install and connect</strong><span>Set up Synapse on macOS, Windows, or Linux and connect a tool.</span></span><b aria-hidden="true">→</b></a>
       <a href="tutorials/continuity/"><span><strong>Try your first handoff</strong><span>Save a decision in one agent. Recall it in another.</span></span><b aria-hidden="true">→</b></a>
       <a href="tutorials/skills/"><span><strong>Share your skills</strong><span>Install one skill library across your coding tools.</span></span><b aria-hidden="true">→</b></a>
     </div>
@@ -154,7 +154,7 @@ Settings → Shell integration → Enable</pre>
 export const home: Page = {
   path: "index.html",
   title: "Synapse",
-  description: "Share local project memory and skills between Claude Code, Codex, pi, and Ainz. Recall saved decisions across coding agents. Open source for macOS and Linux.",
+  description: "Share local project memory and skills between Claude Code, Codex, pi, and Ainz. Recall saved decisions across coding agents. Open source for macOS, Windows, and Linux.",
   kind: "home",
   body,
   contract,

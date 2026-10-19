@@ -67,13 +67,15 @@ pub struct Drifted {
     pub stale: usize,
     pub conflicting: usize,
     pub repeated: usize,
+    pub limited: bool,
 }
 
 impl Drifted {
-    fn of(findings: &[crate::brain::drift::Finding]) -> Self {
+    fn of(drift: &crate::brain::drift::Drift) -> Self {
         use crate::brain::drift::Concern;
         let count = |concern: Concern| {
-            findings
+            drift
+                .findings
                 .iter()
                 .filter(|finding| finding.concern == concern)
                 .count()
@@ -82,6 +84,7 @@ impl Drifted {
             stale: count(Concern::Stale),
             conflicting: count(Concern::Conflict),
             repeated: count(Concern::Duplicate),
+            limited: drift.capped || drift.partial,
         }
     }
 
@@ -89,9 +92,15 @@ impl Drifted {
         if *self == Self::default() {
             return "none found from this folder".to_owned();
         }
+        if self.stale + self.conflicting + self.repeated == 0 {
+            return "none found in the checked portion (see synapse memory drift)".to_owned();
+        }
         format!(
-            "{} stale, {} conflicting, {} repeated (see synapse memory drift)",
-            self.stale, self.conflicting, self.repeated
+            "{} stale, {} conflicting, {} repeated{} (see synapse memory drift)",
+            self.stale,
+            self.conflicting,
+            self.repeated,
+            if self.limited { "; check limited" } else { "" }
         )
     }
 }
@@ -340,7 +349,7 @@ fn store(database: Option<&Path>) -> Store {
                 .drift(folder.as_deref())
                 .await
                 .ok()
-                .map(|drift| Drifted::of(&drift.findings));
+                .map(|drift| Drifted::of(&drift));
             Ok::<_, anyhow::Error>((
                 report.version,
                 brain.stats().await?.entries,
@@ -558,7 +567,7 @@ fn runtime() -> Result<tokio::runtime::Runtime> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::brain::drift::{Concern, Finding};
+    use crate::brain::drift::{Concern, Drift, Finding};
 
     #[test]
     fn drift_is_counted_by_kind_and_says_where_to_look() {
@@ -568,15 +577,30 @@ mod tests {
             note: String::new(),
             missing: Vec::new(),
         };
-        let drifted = Drifted::of(&[
-            finding(Concern::Stale),
-            finding(Concern::Conflict),
-            finding(Concern::Conflict),
-        ]);
+        let drift = Drift {
+            root: None,
+            project: None,
+            scanned: 3,
+            capped: false,
+            partial: false,
+            findings: vec![
+                finding(Concern::Stale),
+                finding(Concern::Conflict),
+                finding(Concern::Conflict),
+            ],
+        };
+        let drifted = Drifted::of(&drift);
         assert_eq!(
             drifted.line(),
             "1 stale, 2 conflicting, 0 repeated (see synapse memory drift)"
         );
-        assert_eq!(Drifted::of(&[]).line(), "none found from this folder");
+        assert_eq!(
+            Drifted::of(&Drift {
+                findings: Vec::new(),
+                ..drift
+            })
+            .line(),
+            "none found from this folder"
+        );
     }
 }

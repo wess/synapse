@@ -25,7 +25,7 @@
 //! `statusline` answers Claude Code's `statusLine` command and prints the one
 //! line under the prompt for the rest of the session.
 
-use crate::brain::drift::{Checkout, Finding};
+use crate::brain::drift::{Checkout, Concern, Finding};
 use crate::brain::{Brain, Memory, Optimization};
 use crate::cli::Outcome;
 use crate::usage::Entry;
@@ -62,6 +62,9 @@ pub struct Report {
     /// Why memories were left out of the hand-over.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub held: Vec<Finding>,
+    /// Possible conflicts and duplicates need human judgment, so both stay visible.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub flagged: Vec<Finding>,
     /// Set instead of the rest when Synapse could not be read at all.
     pub problem: Option<String>,
 }
@@ -266,6 +269,7 @@ fn context(report: &Report) -> String {
     );
     context.push_str(&recalled(report));
     context.push_str(&withheld(report));
+    context.push_str(&flagged(report));
     context
 }
 
@@ -287,11 +291,26 @@ fn withheld(report: &Report) -> String {
         .iter()
         .map(|finding| format!("- {}\n", finding.note))
         .collect();
+    let count = held(report);
+    let noun = if count == 1 { "memory" } else { "memories" };
     format!(
-        "\n\nSynapse held back {} more because they look stale or a newer memory above \
-         contradicts or repeats them:\n\n{notes}\nPrefer the memories above. `recall` still \
-         returns the held-back ones, marked, if the task needs them.",
-        held(report)
+        "\n\nSynapse held back {count} {noun} naming missing paths:\n\n{notes}\n`recall` still \
+         returns them, marked, if the task needs them.",
+    )
+}
+
+fn flagged(report: &Report) -> String {
+    if report.flagged.is_empty() {
+        return String::new();
+    }
+    let notes: String = report
+        .flagged
+        .iter()
+        .map(|finding| format!("- {}\n", finding.note))
+        .collect();
+    format!(
+        "\n\nSynapse found possible conflicts or repeats among the memories above. \
+         Both sides remain visible because the check cannot prove they refer to the same context:\n\n{notes}"
     )
 }
 
@@ -312,9 +331,10 @@ fn restored(report: &Report) -> String {
     format!(
         "This session was just compacted, which dropped the memory Synapse handed over when it \
          started. Here it is again, most recent first, including anything remembered earlier in \
-         this session:\n\n{}{}",
+         this session:\n\n{}{}{}",
         recalled(report),
-        withheld(report)
+        withheld(report),
+        flagged(report)
     )
 }
 
@@ -407,6 +427,7 @@ fn collect(root: Option<&Path>, recall: Recall) -> Report {
             vault: "inactive".to_owned(),
             recalled: Vec::new(),
             held: Vec::new(),
+            flagged: Vec::new(),
             problem: Some(shortened(&format!("{error:#}"))),
         },
     }
@@ -463,15 +484,15 @@ fn gather(root: Option<&Path>, recall: Recall) -> Result<Report> {
         // An empty query asks for nothing in particular, which is exactly the
         // question a session opening has: it routes to the recent list, scoped
         // to global memory plus this project's, ordered newest first.
-        let (recalled, held, matched) = match recall {
+        let (recalled, held, flagged, matched) = match recall {
             Recall::Yes(_) => {
                 let (_, memories, matched) = brain
                     .recallmeasured("", u32::MAX, Some(BUDGET), root)
                     .await?;
-                let (recalled, held) = screened(memories, &Checkout::at(root));
-                (recalled, held, matched)
+                let (recalled, held, flagged) = screened(memories, &Checkout::at(root));
+                (recalled, held, flagged, matched)
             }
-            Recall::No => (Vec::new(), Vec::new(), 0),
+            Recall::No => (Vec::new(), Vec::new(), Vec::new(), 0),
         };
         let report = Report {
             connected: true,
@@ -484,6 +505,7 @@ fn gather(root: Option<&Path>, recall: Recall) -> Result<Report> {
             vault: vault.to_owned(),
             recalled,
             held,
+            flagged,
             problem: None,
         };
         if let Recall::Yes(handed) = recall {
@@ -493,21 +515,27 @@ fn gather(root: Option<&Path>, recall: Recall) -> Result<Report> {
     })
 }
 
-/// Drops stale memories and the older half of any conflicting or duplicate
-/// pair from the session hand-over. It's injected unasked into every session,
-/// so it should only carry what still holds. `recall` still returns them.
-fn screened(memories: Vec<Memory>, checkout: &Checkout) -> (Vec<Memory>, Vec<Finding>) {
+/// Missing paths can be checked here. Pair matches are only lexical guesses,
+/// so both memories stay in the hand-over with a warning.
+fn screened(
+    memories: Vec<Memory>,
+    checkout: &Checkout,
+) -> (Vec<Memory>, Vec<Finding>, Vec<Finding>) {
     let findings = crate::brain::drift::scan(&memories, checkout);
-    // Ids are oldest first: the stale memory, or the older of a pair.
-    let withheld: std::collections::HashSet<i64> = findings
+    let (held, mut flagged): (Vec<Finding>, Vec<Finding>) = findings
+        .iter()
+        .cloned()
+        .partition(|finding| finding.concern == Concern::Stale);
+    let withheld: std::collections::HashSet<i64> = held
         .iter()
         .filter_map(|finding| finding.ids.first().copied())
         .collect();
+    flagged.retain(|finding| finding.ids.iter().all(|id| !withheld.contains(id)));
     let kept = memories
         .into_iter()
         .filter(|memory| !withheld.contains(&memory.id))
         .collect();
-    (kept, findings)
+    (kept, held, flagged)
 }
 
 /// Records the session in the savings ledger. Errors are ignored so the hook
@@ -602,6 +630,7 @@ mod tests {
             vault: "inactive".to_owned(),
             recalled: Vec::new(),
             held: Vec::new(),
+            flagged: Vec::new(),
             problem: None,
         }
     }
@@ -809,7 +838,7 @@ mod tests {
     }
 
     #[test]
-    fn a_session_is_not_handed_what_drift_has_flagged() {
+    fn a_session_holds_missing_paths_but_keeps_both_sides_of_a_possible_conflict() {
         let directory = tempfile::tempdir().unwrap();
         let root = directory.path().join("app");
         std::fs::create_dir_all(root.join(".git")).unwrap();
@@ -843,11 +872,31 @@ mod tests {
                 10,
             )),
         ];
-        let (kept, held) = screened(memories, &Checkout::at(Some(&root)));
+        let (kept, held, flagged) = screened(memories, &Checkout::at(Some(&root)));
         let ids: Vec<i64> = kept.iter().map(|memory| memory.id).collect();
-        assert_eq!(ids, vec![4, 2]);
-        let flagged: Vec<Vec<i64>> = held.iter().map(|finding| finding.ids.clone()).collect();
-        assert_eq!(flagged, vec![vec![3], vec![1, 4]]);
+        assert_eq!(ids, vec![4, 2, 1]);
+        assert_eq!(held[0].ids, vec![3]);
+        assert_eq!(flagged[0].ids, vec![1, 4]);
+    }
+
+    #[test]
+    fn different_environments_can_look_like_a_conflict_but_both_rules_remain() {
+        let memories = vec![
+            dated(
+                2,
+                "Never keep server logs for seven days during staging deployments.",
+                20,
+            ),
+            dated(
+                1,
+                "Always keep server logs for seven days during production deployments.",
+                10,
+            ),
+        ];
+        let (kept, held, flagged) = screened(memories, &Checkout::nowhere());
+        assert_eq!(kept.len(), 2);
+        assert!(held.is_empty());
+        assert_eq!(flagged.len(), 1);
     }
 
     #[test]
@@ -860,24 +909,26 @@ mod tests {
         };
         let report = Report {
             recalled: vec![memory("Never squash commits into main.", "")],
-            held: vec![
+            flagged: vec![
                 finding(vec![1, 4], "#1 says `always` where #4 says `never`."),
                 finding(vec![1, 6], "#1 and #6 say nearly the same thing."),
-                finding(
-                    vec![3],
-                    "#3 names `src/router.rs`, which is no longer there.",
-                ),
             ],
+            held: vec![Finding {
+                concern: Concern::Stale,
+                ids: vec![3],
+                note: "#3 names `src/router.rs`, which is no longer there.".to_owned(),
+                missing: vec!["src/router.rs".to_owned()],
+            }],
             ..report()
         };
         // Drift stays out of the user's notice.
         assert_eq!(notice(&report), "Synapse connected · 128 memories");
         let told = context(&report);
-        assert!(told.contains("held back 2 more"), "{told}");
+        assert!(told.contains("held back 1 memory"), "{told}");
         assert!(told.contains("- #3 names `src/router.rs`, which is no longer there."));
-        assert!(told.contains("Prefer the memories above"));
+        assert!(told.contains("Both sides remain visible"));
         let after = restored(&report);
-        assert!(after.contains("held back 2 more"), "{after}");
+        assert!(after.contains("held back 1 memory"), "{after}");
         assert!(
             !context(&Report {
                 held: Vec::new(),

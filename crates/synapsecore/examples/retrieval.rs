@@ -5,6 +5,7 @@ use serde_json::{Value, json};
 use std::future::Future;
 use std::time::Instant;
 use synapsecore::brain::{Brain, Optimization, RecallResponse};
+use synapsecore::usage::{self, Entry};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -56,6 +57,47 @@ async fn main() -> Result<()> {
             .await?,
         );
     }
+    measurements.push(
+        measure("recall_with_drift", iterations, || async {
+            let (settings, memories) = brain
+                .recallscoped(
+                    "database migrations scheduling durability",
+                    4,
+                    Some(Optimization::Lean),
+                    None,
+                )
+                .await?;
+            let drift = brain.drifted(&memories, None).await?;
+            let response = RecallResponse {
+                optimization: settings.optimization,
+                memories: memories.into_iter().map(Into::into).collect(),
+                drift,
+            };
+            Ok(serde_json::to_vec(&response)?.len())
+        })
+        .await?,
+    );
+    let (_, sample) = brain
+        .recallscoped(
+            "database migrations scheduling durability",
+            4,
+            Some(Optimization::Lean),
+            None,
+        )
+        .await?;
+    measurements.push(
+        measure("drift_only", iterations, || async {
+            Ok(serde_json::to_vec(&brain.drifted(&sample, None).await?)?.len())
+        })
+        .await?,
+    );
+    measurements.push(
+        measure("usage_record", iterations, || async {
+            usage::record(&brain, Entry::session(100_000, 2_000)).await?;
+            Ok(0)
+        })
+        .await?,
+    );
     measurements.push(
         measure("readmemory", iterations, || async {
             let response = brain

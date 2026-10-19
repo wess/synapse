@@ -5,12 +5,13 @@ import { releaseurl } from "../deploy";
 export const install: Page = {
   path: "docs/install/index.html",
   title: "Install and connect",
-  description: "Install the macOS desktop app or build the Linux CLI, then connect your coding tools.",
+  description: "Install Synapse on macOS or Windows, or build the Linux CLI, then connect your coding tools.",
   kind: "docs",
   toc: [
     { label: "Requirements", id: "requirements" },
     { label: "Linux setup", id: "linux" },
     { label: "macOS app", id: "app" },
+    { label: "Windows installer", id: "windows" },
     { label: "Install the CLI", id: "cli" },
     { label: "Shell integration", id: "shell" },
     { label: "Connect tools", id: "tools" },
@@ -22,13 +23,14 @@ export const install: Page = {
     <h2 id="requirements">Requirements</h2>
     <ul>
       <li>macOS desktop: Apple-silicon Mac running macOS 13 or later.</li>
+      <li>Windows desktop: a Windows x64 machine with Direct3D 11.</li>
       <li>Linux CLI and MCP server: a current stable Rust toolchain and a C compiler/linker to build from source.</li>
       <li>At least one supported tool on <code>PATH</code>: Codex, Claude Code, pi, or Ainz.</li>
       <li>A writable <code>~/.local/bin</code>, or a custom path supplied through <code>SYNAPSE_BIN</code>.</li>
     </ul>
 
     <h2 id="linux">Install on Linux</h2>
-    <p>Linux supports the CLI and MCP server through <code>synapsecore</code>. This build does not depend on the desktop UI. Current release downloads contain the macOS app; build the Linux version from the <a href="https://github.com/wess/synapse">source repository</a>.</p>
+    <p>Linux supports the CLI and MCP server through <code>synapsecore</code>. This build does not depend on the desktop UI. Release downloads contain the macOS app and Windows installer; build the Linux version from the <a href="https://github.com/wess/synapse">source repository</a>.</p>
     <p>From the repository root, run:</p>
     ${code("shell", `cargo build --release --locked --manifest-path crates/synapsecore/Cargo.toml
 ./crates/synapsecore/target/release/synapse-cli install
@@ -45,6 +47,9 @@ synapse status`)}
       <li>Open Synapse. The app is Developer ID signed and notarized by Apple, so it opens under default Gatekeeper settings with no security override.</li>
     </ol>
     ${note("Why move it first?", "The installed CLI is a small launcher that points into the signed application bundle. Moving the app later would leave that launcher pointing at the old location.")}
+
+    <h2 id="windows">Install on Windows</h2>
+    <p>Download the <code>synapse.&lt;version&gt;.windows.x64.exe</code> installer from the <a href="${releaseurl}">latest release</a>. It installs the app and CLI for your user account. Open a new terminal after installation to use <code>synapse</code> by name. See the <a href="https://github.com/wess/synapse/blob/main/docs/windows.md">Windows guide</a> for build and verification steps.</p>
 
     <h2 id="cli">Install the CLI</h2>
     <p>Open <strong>Settings</strong> in Synapse and choose <strong>Install CLI</strong>, or run the application binary once from a terminal and use:</p>

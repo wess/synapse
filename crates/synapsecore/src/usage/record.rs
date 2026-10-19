@@ -7,6 +7,9 @@ use std::time::{SystemTime, UNIX_EPOCH};
 /// that never reach a model.
 const HOOKED: &[&str] = &["claude-code", "pi"];
 
+/// Keep the ledger bounded while retaining enough history for long reports.
+pub const RETENTIONDAYS: i64 = 730;
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Kind {
     /// Session start, or the restart after a compaction.
@@ -100,6 +103,7 @@ pub async fn record(brain: &Brain, entry: Entry) -> Result<()> {
         .duration_since(UNIX_EPOCH)
         .map(|elapsed| elapsed.as_secs() as i64)
         .unwrap_or_default();
+    let mut transaction = brain.pool().begin().await?;
     sqlx::query(
         "INSERT INTO usage(kind, memories, reach, matched, sent, overhead, created) \
          VALUES (?, ?, ?, ?, ?, ?, ?)",
@@ -111,8 +115,14 @@ pub async fn record(brain: &Brain, entry: Entry) -> Result<()> {
     .bind(entry.sent as i64)
     .bind(entry.overhead as i64)
     .bind(created)
-    .execute(brain.pool())
+    .execute(&mut *transaction)
     .await
     .context("could not record usage")?;
+    sqlx::query("DELETE FROM usage WHERE created < ?")
+        .bind(created - RETENTIONDAYS * 86_400)
+        .execute(&mut *transaction)
+        .await
+        .context("could not prune old usage")?;
+    transaction.commit().await?;
     Ok(())
 }

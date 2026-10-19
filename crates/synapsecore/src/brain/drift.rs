@@ -27,9 +27,17 @@ use std::path::{Path, PathBuf};
 /// Newest memories read by a full check.
 pub const SCANCEILING: i64 = 5_000;
 
+/// Maximum pair checks and findings in one advisory scan.
+const PAIRCEILING: usize = 50_000;
+const PROBECEILING: usize = 200_000;
+const FINDINGCEILING: usize = 1_000;
+
 /// Candidates read when looking for one memory's counterparts. A contradiction
 /// shares most of its words, so it ranks near the top.
 const COUNTERPARTS: i64 = 8;
+
+/// Recent visible memories checked for a correction the query did not match.
+const RECENT: i64 = 256;
 
 /// Words from the memory used for that search.
 const PROBE: usize = 16;
@@ -67,6 +75,8 @@ pub struct Drift {
     pub scanned: usize,
     /// More than [`SCANCEILING`] memories, so only the newest were read.
     pub capped: bool,
+    /// A dense set of similar memories hit the pair or finding safety limit.
+    pub partial: bool,
     pub findings: Vec<Finding>,
 }
 
@@ -85,12 +95,14 @@ impl Brain {
         .context("could not read memory to check")?;
         let capped = memories.len() as i64 > SCANCEILING;
         let memories = &memories[..memories.len().min(SCANCEILING as usize)];
+        let (findings, partial) = scanlimited(memories, &checkout);
         Ok(Drift {
             root: checkout.root().map(Path::to_path_buf),
             project,
             scanned: memories.len(),
             capped,
-            findings: scan(memories, &checkout),
+            partial,
+            findings,
         })
     }
 }
@@ -111,13 +123,44 @@ impl Brain {
             .flatten()
             .unwrap_or_default();
         let mut findings = scan(memories, &checkout);
+        if memories.is_empty() {
+            return Ok(findings);
+        }
         let present: HashSet<i64> = memories.iter().map(|memory| memory.id).collect();
+        let earliest = memories
+            .iter()
+            .map(|memory| memory.created)
+            .min()
+            .unwrap_or_default();
+        let recent = sqlx::query_as::<_, Memory>(&format!(
+            "SELECT {COLUMNS} FROM memorymeta meta JOIN memory ON memory.rowid = meta.memoryid \
+             WHERE {VISIBLE} AND meta.created >= ? \
+             ORDER BY meta.created DESC, meta.memoryid DESC LIMIT ?"
+        ))
+        .bind(&project)
+        .bind(earliest)
+        .bind(RECENT)
+        .fetch_all(&self.pool)
+        .await
+        .context("could not check recent memory for corrections")?;
+        let profiles: Vec<Profile> = recent
+            .iter()
+            .map(|other| compare::profile(&other.body))
+            .collect();
         for memory in memories {
-            for (other, relation) in self.counterparts(memory, &project).await? {
-                let newer = (other.created, other.id) > (memory.created, memory.id);
-                if present.contains(&other.id) || !newer {
+            let own = compare::profile(&memory.body);
+            if !own.comparable() {
+                continue;
+            }
+            for (other, profile) in recent.iter().zip(&profiles) {
+                if present.contains(&other.id)
+                    || (other.created, other.id) <= (memory.created, memory.id)
+                {
                     continue;
                 }
+                let Some(relation @ Relation::Conflict(_)) = compare::relate(&own, profile) else {
+                    continue;
+                };
                 let mut finding = paired(memory, &other, relation);
                 finding.note.push_str(&format!(
                     " #{} is not in this response; it says: {}",
@@ -127,6 +170,7 @@ impl Brain {
                 if !findings.iter().any(|known| known.ids == finding.ids) {
                     findings.push(finding);
                 }
+                break;
             }
         }
         findings.sort_by(|a, b| a.concern.cmp(&b.concern).then(a.ids.cmp(&b.ids)));
@@ -205,21 +249,36 @@ fn quoted(body: &str) -> String {
 }
 
 pub fn scan(memories: &[Memory], checkout: &Checkout) -> Vec<Finding> {
+    scanlimited(memories, checkout).0
+}
+
+fn scanlimited(memories: &[Memory], checkout: &Checkout) -> (Vec<Finding>, bool) {
     let mut findings: Vec<Finding> = memories
         .iter()
         .filter_map(|memory| stale(memory, checkout))
+        .take(FINDINGCEILING + 1)
         .collect();
+    if findings.len() > FINDINGCEILING {
+        findings.truncate(FINDINGCEILING);
+        return (findings, true);
+    }
     let profiles: Vec<Profile> = memories
         .iter()
         .map(|memory| compare::profile(&memory.body))
         .collect();
-    for (first, second) in candidates(&profiles) {
+    let (pairs, pairscapped) = candidates(&profiles);
+    let mut findingscapped = false;
+    for (first, second) in pairs {
         if let Some(relation) = compare::relate(&profiles[first], &profiles[second]) {
             findings.push(paired(&memories[first], &memories[second], relation));
+            if findings.len() == FINDINGCEILING {
+                findingscapped = true;
+                break;
+            }
         }
     }
     findings.sort_by(|a, b| a.concern.cmp(&b.concern).then(a.ids.cmp(&b.ids)));
-    findings
+    (findings, pairscapped || findingscapped)
 }
 
 fn stale(memory: &Memory, checkout: &Checkout) -> Option<Finding> {
@@ -253,7 +312,7 @@ fn stale(memory: &Memory, checkout: &Checkout) -> Option<Finding> {
 /// share one within the first `size - α + 1` of each. `relate` never reports a
 /// pair with fewer than [`compare::MINSHARED`] shared words, so indexing just
 /// those prefixes misses nothing, and rare words keep the posting lists short.
-fn candidates(profiles: &[Profile]) -> Vec<(usize, usize)> {
+fn candidates(profiles: &[Profile]) -> (Vec<(usize, usize)>, bool) {
     let mut frequency: HashMap<&String, usize> = HashMap::new();
     for profile in profiles.iter().filter(|profile| profile.comparable()) {
         for word in profile.words() {
@@ -272,17 +331,26 @@ fn candidates(profiles: &[Profile]) -> Vec<(usize, usize)> {
             postings.entry(word).or_default().push(index);
         }
     }
-    let mut pairs: Vec<(usize, usize)> = Vec::new();
-    for holders in postings.values() {
+    let mut ordered: Vec<_> = postings.into_iter().collect();
+    ordered.sort_by(|(a, ah), (b, bh)| ah.len().cmp(&bh.len()).then(a.cmp(b)));
+    let mut pairs: HashSet<(usize, usize)> = HashSet::new();
+    let mut probes = 0;
+    for (_, holders) in ordered {
         for (position, first) in holders.iter().enumerate() {
             for second in &holders[position + 1..] {
-                pairs.push((*first.min(second), *first.max(second)));
+                probes += 1;
+                pairs.insert((*first.min(second), *first.max(second)));
+                if pairs.len() == PAIRCEILING || probes == PROBECEILING {
+                    let mut pairs: Vec<_> = pairs.into_iter().collect();
+                    pairs.sort_unstable();
+                    return (pairs, true);
+                }
             }
         }
     }
+    let mut pairs: Vec<_> = pairs.into_iter().collect();
     pairs.sort_unstable();
-    pairs.dedup();
-    pairs
+    (pairs, false)
 }
 
 fn paired(first: &Memory, second: &Memory, relation: Relation) -> Finding {

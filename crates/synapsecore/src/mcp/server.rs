@@ -101,7 +101,7 @@ impl Server {
     }
 
     #[tool(
-        description = "Recall durable context with a focused query and the smallest practical limit. Use the lean budget first; a per-call budget can only reduce the configured ceiling. For an `abridged` hit, use `readmemory` with its id and the same project to read the exact text in bounded pages. `drift` marks hits that look stale or that another memory contradicts or repeats; prefer the newer one."
+        description = "Recall durable context with a focused query and the smallest practical limit. Use the lean budget first; a per-call budget can only reduce the configured ceiling. For an `abridged` hit, use `readmemory` with its id and the same project to read the exact text in bounded pages. `drift` marks hits that look stale or that another memory may contradict or repeat; compare contexts before treating a pair as a correction."
     )]
     async fn recall(
         &self,

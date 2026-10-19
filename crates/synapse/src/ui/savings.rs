@@ -424,8 +424,9 @@ fn empty(border: Hsla, surface: Hsla) -> AnyElement {
 fn footnote(report: &Report) -> AnyElement {
     let since = report.since.as_deref().unwrap_or_default();
     Text::new(format!(
-        "Counting since {since} on this machine. Tokens are characters ÷ {}, counted once per session, so treat these as a floor.",
-        usage::PERTOKEN
+        "Counting since {since} on this machine. Usage older than {} days is pruned. Tokens are characters ÷ {}, counted once per session, so treat these as a floor.",
+        usage::RETENTIONDAYS,
+        usage::PERTOKEN,
     ))
     .size(Size::Xs)
     .dimmed()

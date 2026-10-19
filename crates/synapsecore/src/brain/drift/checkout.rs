@@ -83,7 +83,10 @@ impl Checkout {
     /// pass true for memory from this project.
     pub fn presence(&self, reference: &str, relative: bool) -> Presence {
         // Build output comes and goes; an unbuilt binary isn't a stale memory.
-        if reference.split('/').any(|part| SKIPPED.contains(&part)) {
+        if reference
+            .split(['/', '\\'])
+            .any(|part| SKIPPED.contains(&part))
+        {
             return Presence::Unknown;
         }
         if let Some(rest) = reference.strip_prefix("~/") {
@@ -92,13 +95,14 @@ impl Checkout {
                 None => Presence::Unknown,
             };
         }
-        if reference.starts_with('/') {
-            return self.absolute(Path::new(reference));
+        let path = Path::new(reference);
+        if path.is_absolute() {
+            return self.absolute(path);
         }
         let Some(root) = self.root.as_deref().filter(|_| relative) else {
             return Presence::Unknown;
         };
-        let wanted = reference.trim_end_matches('/');
+        let wanted = reference.trim_end_matches(['/', '\\']);
         if root.join(wanted).exists() {
             return Presence::Present;
         }
@@ -106,8 +110,9 @@ impl Checkout {
         // `src/cli/memory.rs` for `crates/core/src/cli/memory.rs`.
         match self.index.get_or_init(|| walk(root)) {
             Some(index) => {
+                let wanted = wanted.replace('\\', "/");
                 let suffix = format!("/{wanted}");
-                match index.contains(wanted) || index.iter().any(|path| path.ends_with(&suffix)) {
+                match index.contains(&wanted) || index.iter().any(|path| path.ends_with(&suffix)) {
                     true => Presence::Present,
                     false => Presence::Missing,
                 }
@@ -126,7 +131,16 @@ impl Checkout {
             .is_some_and(|home| path.starts_with(home));
         let foreign = ["/Users/", "/home/"]
             .iter()
-            .any(|prefix| text.starts_with(prefix) && !own);
+            .any(|prefix| text.starts_with(prefix) && !own)
+            || self.home.as_deref().is_some_and(|home| {
+                home.parent().is_some_and(|parent| {
+                    parent
+                        .file_name()
+                        .is_some_and(|name| name.eq_ignore_ascii_case("users") || name == "home")
+                        && path.starts_with(parent)
+                        && !own
+                })
+            });
         let transient = !own && TRANSIENT.iter().any(|prefix| text.starts_with(prefix));
         match foreign || transient {
             true => Presence::Unknown,
@@ -282,8 +296,28 @@ mod tests {
             checkout.presence(&own.to_string_lossy(), false),
             Presence::Present
         );
+        #[cfg(windows)]
+        let missing = std::env::current_dir()
+            .unwrap()
+            .join("definitely-not-present.rs");
+        #[cfg(not(windows))]
+        let missing = PathBuf::from("/definitely/not/here.rs");
         assert_eq!(
-            checkout.presence("/definitely/not/here.rs", false),
+            checkout.presence(&missing.to_string_lossy(), false),
+            Presence::Missing
+        );
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn windows_absolute_paths_and_other_accounts_home() {
+        let checkout = Checkout::new(None, None, Some(PathBuf::from("C:\\Users\\me")));
+        assert_eq!(
+            checkout.presence("C:\\Users\\somebodyelse\\project\\a.rs", false),
+            Presence::Unknown
+        );
+        assert_eq!(
+            checkout.presence("C:\\definitely\\not\\here.rs", false),
             Presence::Missing
         );
     }
