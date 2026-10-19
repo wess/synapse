@@ -1,12 +1,14 @@
 use crate::brain::{
-    Brain, MemoryScope, ReadRequest, ReadResponse, RecallRequest, RecallResponse, RememberRequest,
-    RememberResponse,
+    Brain, MemoryScope, ReadRequest, ReadResponse, RecallRequest, RecallResponse, Recalled,
+    RememberRequest, RememberResponse,
 };
 use crate::relay::{Mesh, Supervisor};
 use crate::skill::Receipts;
+use crate::usage::Entry;
 use crate::vault::{VaultStatusRequest, VaultStatusResponse, VaultStore};
 use rmcp::handler::server::{router::tool::ToolRouter, wrapper::Parameters};
 use rmcp::model::{Implementation, ServerCapabilities, ServerInfo};
+use rmcp::service::{NotificationContext, RoleServer};
 use rmcp::{Json, ServerHandler, ServiceExt, tool, tool_handler, tool_router, transport::stdio};
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -29,6 +31,8 @@ pub struct Server {
     /// agent, so binding it here is the whole of identity.
     pub(super) identity: Arc<Mutex<Option<String>>>,
     instructions: String,
+    /// Fixed per-session cost in characters, for the savings ledger.
+    standing: usize,
     toolrouter: ToolRouter<Self>,
 }
 
@@ -40,6 +44,7 @@ impl Server {
         mesh: Option<Mesh>,
         receipts: Option<Receipts>,
         instructions: String,
+        standing: usize,
     ) -> Self {
         let mut toolrouter = Self::memorytools();
         if mesh.is_some() {
@@ -56,12 +61,13 @@ impl Server {
             supervisor: Supervisor::new(),
             identity: Arc::new(Mutex::new(None)),
             instructions,
+            standing,
             toolrouter,
         }
     }
 
     #[tool(
-        description = "Store a durable fact, decision, preference, convention, or correction. When it corrects something an earlier recall returned, pass that memory's id in `supersedes` so the outdated version stops being recalled; nothing is deleted."
+        description = "Store a durable fact, decision, preference, convention, or correction. When it corrects something an earlier recall returned, pass that memory's id in `supersedes` so the outdated version stops being recalled; nothing is deleted. `drift` in the response lists existing memories this one contradicts or repeats: if it replaces one, remember it again with `supersedes` naming both ids."
     )]
     async fn remember(
         &self,
@@ -69,7 +75,8 @@ impl Server {
     ) -> Result<Json<RememberResponse>, String> {
         let project = projectpath(request.project.as_deref());
         let redacted = crate::brain::redact(&request.content).count;
-        self.brain
+        let (id, superseded) = self
+            .brain
             .rememberreplacing(
                 &request.content,
                 request.source.as_deref(),
@@ -78,40 +85,58 @@ impl Server {
                 request.supersedes.as_deref().unwrap_or_default(),
             )
             .await
-            .map(|(id, superseded)| {
-                Json(RememberResponse {
-                    id,
-                    stored: true,
-                    superseded,
-                    redacted,
-                })
-            })
-            .map_err(|error| error.to_string())
+            .map_err(|error| error.to_string())?;
+        let drift = self
+            .brain
+            .related(id, project.as_deref())
+            .await
+            .unwrap_or_default();
+        Ok(Json(RememberResponse {
+            id,
+            stored: true,
+            superseded,
+            redacted,
+            drift,
+        }))
     }
 
     #[tool(
-        description = "Recall durable context with a focused query and the smallest practical limit. Use the lean budget first; a per-call budget can only reduce the configured ceiling. For an `abridged` hit, use `readmemory` with its id and the same project to read the exact text in bounded pages."
+        description = "Recall durable context with a focused query and the smallest practical limit. Use the lean budget first; a per-call budget can only reduce the configured ceiling. For an `abridged` hit, use `readmemory` with its id and the same project to read the exact text in bounded pages. `drift` marks hits that look stale or that another memory contradicts or repeats; prefer the newer one."
     )]
     async fn recall(
         &self,
         Parameters(request): Parameters<RecallRequest>,
     ) -> Result<Json<RecallResponse>, String> {
         let project = projectpath(request.project.as_deref());
-        self.brain
-            .recallscoped(
+        let (settings, memories, matched) = self
+            .brain
+            .recallmeasured(
                 &request.query,
                 request.limit.unwrap_or(8),
                 request.budget,
                 project.as_deref(),
             )
             .await
-            .map(|(settings, memories)| {
-                Json(RecallResponse {
-                    optimization: settings.optimization,
-                    memories,
-                })
-            })
-            .map_err(|error| error.to_string())
+            .map_err(|error| error.to_string())?;
+        let drift = self
+            .brain
+            .drifted(&memories, project.as_deref())
+            .await
+            .unwrap_or_default();
+        let sent = crate::usage::bodies(&memories);
+        let response = RecallResponse {
+            optimization: settings.optimization,
+            memories: memories.into_iter().map(Recalled::from).collect(),
+            drift,
+        };
+        self.count(Entry::recall(
+            response.memories.len(),
+            sent,
+            matched,
+            measured(&response),
+        ))
+        .await;
+        Ok(Json(response))
     }
 
     #[tool(
@@ -122,7 +147,8 @@ impl Server {
         Parameters(request): Parameters<ReadRequest>,
     ) -> Result<Json<ReadResponse>, String> {
         let project = projectpath(request.project.as_deref());
-        self.brain
+        let response = self
+            .brain
             .readscoped(
                 request.id,
                 request.offset.unwrap_or(0),
@@ -130,8 +156,12 @@ impl Server {
                 project.as_deref(),
             )
             .await
-            .map(Json)
-            .map_err(|error| error.to_string())
+            .map_err(|error| error.to_string())?;
+        if let Some(page) = &response.memory {
+            self.count(Entry::read(page.body.chars().count(), measured(&response)))
+                .await;
+        }
+        Ok(Json(response))
     }
 
     #[tool(
@@ -195,6 +225,13 @@ impl Server {
     }
 }
 
+/// Serialized size, framing included.
+fn measured(response: &impl serde::Serialize) -> usize {
+    serde_json::to_string(response)
+        .map(|text| text.chars().count())
+        .unwrap_or_default()
+}
+
 pub(super) fn projectpath(requested: Option<&str>) -> Option<std::path::PathBuf> {
     requested
         .filter(|value| !value.trim().is_empty())
@@ -214,6 +251,26 @@ impl ServerHandler for Server {
                     .with_description("Local memory, agent mesh, and scoped credential metadata"),
             )
     }
+
+    /// Count the session, unless its tool's SessionStart hook already has.
+    async fn on_initialized(&self, context: NotificationContext<RoleServer>) {
+        let client = context
+            .peer
+            .peer_info()
+            .map(|info| info.client_info.name.clone())
+            .unwrap_or_default();
+        if crate::usage::hooked(&client) {
+            return;
+        }
+        let project = projectpath(None);
+        let reach = self
+            .brain
+            .reachsize(project.as_deref())
+            .await
+            .unwrap_or_default();
+        self.count(Entry::session(reach.max(0) as usize, self.standing))
+            .await;
+    }
 }
 
 pub async fn run(
@@ -222,8 +279,9 @@ pub async fn run(
     mesh: Option<Mesh>,
     receipts: Option<Receipts>,
     instructions: String,
+    standing: usize,
 ) -> anyhow::Result<()> {
-    let server = Server::new(brain, vaults, mesh, receipts, instructions);
+    let server = Server::new(brain, vaults, mesh, receipts, instructions, standing);
     let closing = server.clone();
     let service = server.serve(stdio()).await?;
     service.waiting().await?;
@@ -232,6 +290,11 @@ pub async fn run(
 }
 
 impl Server {
+    /// Bookkeeping failures are ignored; they must never fail the call.
+    async fn count(&self, entry: Entry) {
+        let _ = crate::usage::record(&self.brain, entry).await;
+    }
+
     /// Take this session off the mesh when it ends: stop the workers it owns and
     /// drop its roster row, so a closed session neither leaves headless agents
     /// running nor keeps answering as a live teammate.

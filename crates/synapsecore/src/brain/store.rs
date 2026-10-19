@@ -1,4 +1,4 @@
-use crate::brain::rank::{self, Reach};
+use crate::brain::rank::{self, Purpose, Reach};
 use crate::brain::{Explanation, Memory, MemoryScope, Optimization, Ranked, Settings, Stats};
 use anyhow::{Context, Result};
 use sqlx::SqlitePool;
@@ -10,7 +10,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 /// The columns every read of a memory selects, in the order `Memory` declares
 /// them. One place, because a column added to `Memory` and forgotten in one of
 /// these reads is a row that silently decodes with a default nobody wrote.
-const COLUMNS: &str = "memory.rowid AS id, memory.body, memory.source, meta.scope, meta.project, \
+pub(super) const COLUMNS: &str = "memory.rowid AS id, memory.body, memory.source, meta.scope, meta.project, \
                        CAST(memory.created AS INTEGER) AS created, meta.superseded";
 
 /// Restricts a read to memory a session in `project` can see: everything
@@ -206,6 +206,19 @@ impl Brain {
         budget: Option<Optimization>,
         project: Option<&Path>,
     ) -> Result<(Settings, Vec<Memory>)> {
+        let (settings, memories, _) = self.recallmeasured(query, limit, budget, project).await?;
+        Ok((settings, memories))
+    }
+
+    /// [`Brain::recallscoped`] plus the full size of the matches before the
+    /// budget trimmed them.
+    pub async fn recallmeasured(
+        &self,
+        query: &str,
+        limit: u32,
+        budget: Option<Optimization>,
+        project: Option<&Path>,
+    ) -> Result<(Settings, Vec<Memory>, usize)> {
         let configured = self.settings().await?;
         let settings = Settings::from(configured.optimization.constrained(budget));
         let project = project
@@ -223,10 +236,15 @@ impl Brain {
                 Some((memory.id, excerpt))
             })
             .collect();
-        let memories = found.into_iter().map(|(memory, _)| memory).collect();
+        let memories: Vec<Memory> = found.into_iter().map(|(memory, _)| memory).collect();
+        let matched = memories
+            .iter()
+            .map(|memory| memory.body.chars().count())
+            .sum();
         Ok((
             settings,
             crate::brain::optimize::around(memories, settings, &excerpts),
+            matched,
         ))
     }
 
@@ -253,9 +271,10 @@ impl Brain {
         }
         let hits = rank::rank(
             &self.pool,
-            &rank::expressions(&kept),
+            &kept,
             limit as usize,
             Reach::Everything,
+            Purpose::Browse,
         )
         .await?;
         Ok(self
@@ -297,8 +316,14 @@ impl Brain {
         let (kept, dropped) = terms(query);
         let expressions = rank::expressions(&kept);
         let matches = if expressions.words.is_some() {
-            let hits =
-                rank::rank(&self.pool, &expressions, limit as usize, Reach::Everything).await?;
+            let hits = rank::rank(
+                &self.pool,
+                &kept,
+                limit as usize,
+                Reach::Everything,
+                Purpose::Browse,
+            )
+            .await?;
             self.fetch(&hits)
                 .await?
                 .into_iter()
@@ -367,9 +392,10 @@ impl Brain {
         if !kept.is_empty() {
             let hits = rank::rank(
                 &self.pool,
-                &rank::expressions(&kept),
+                &kept,
                 limit as usize,
                 Reach::Visible(project),
+                Purpose::Recall,
             )
             .await?;
             Ok(self
@@ -419,6 +445,23 @@ impl Brain {
         .fetch_one(&self.pool)
         .await
         .context("could not count memories for this project")
+    }
+
+    /// Total characters in [`Brain::reach`]'s memories.
+    pub async fn reachsize(&self, project: Option<&Path>) -> Result<i64> {
+        let project = project
+            .map(crate::brain::projectkey)
+            .transpose()?
+            .flatten()
+            .unwrap_or_default();
+        sqlx::query_scalar::<_, i64>(&format!(
+            "SELECT COALESCE(SUM(length(memory.body)), 0) \
+             FROM memorymeta meta JOIN memory ON memory.rowid = meta.memoryid WHERE {VISIBLE}"
+        ))
+        .bind(project)
+        .fetch_one(&self.pool)
+        .await
+        .context("could not measure memory for this project")
     }
 
     pub async fn memory(&self, id: i64) -> Result<Option<Memory>> {
@@ -636,7 +679,7 @@ fn search_expression(query: &str) -> Option<String> {
 /// A query split into the terms that were searched for and the ones dropped for
 /// matching nearly everything. Both search expressions are built from the first half,
 /// so `--explain` and recall can never disagree about what happened.
-fn terms(query: &str) -> (Vec<String>, Vec<String>) {
+pub(super) fn terms(query: &str) -> (Vec<String>, Vec<String>) {
     let (dropped, kept): (Vec<&str>, Vec<&str>) =
         query.split_whitespace().partition(|term| stopword(term));
     (

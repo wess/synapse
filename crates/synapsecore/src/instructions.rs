@@ -49,6 +49,12 @@ pub fn modelfacing(guidance: &str, mesh: bool, learn: bool) -> String {
     merged
 }
 
+/// Characters of [`modelfacing`] that Synapse adds on top of the user's text.
+pub fn added(guidance: &str, mesh: bool, learn: bool) -> usize {
+    let sent = modelfacing(guidance, mesh, learn).chars().count();
+    sent.saturating_sub(ours(guidance).trim_end().chars().count())
+}
+
 /// A guidance file with every section this binary owns removed, so they can be
 /// written again in a known order.
 fn ours(guidance: &str) -> String {

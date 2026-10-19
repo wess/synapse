@@ -62,6 +62,8 @@ Commands:
   memory grep <text> [--json]      Find memories containing an exact string
   memory eval <cases.toml> [--limit <n>] [--budget <b>] [--fail-under <0-1>] [--json]
                                    Score recall against labeled questions
+  memory drift [folder] [--json] [--strict]
+                                   Find stale, conflicting, and repeated memories
   memory show <id> [--json]        Inspect one memory
   memory add [source] [--global|--project <folder>]
                                    Store content read from stdin
@@ -136,6 +138,7 @@ Commands:
   settings mesh <on|off>           Turn the agent mesh tools on or off
   settings learn <on|off>          Let agents write and correct skills
   settings workers <count>         Most background workers one session may run
+  settings price <dollars>         Price savings at this many dollars per million tokens
   install                          Install the synapse CLI for this user
   connect [tool]                   Wire a tool into memory, or every one found
   connect <tool> --refresh         Re-apply this release's descriptor to it
@@ -143,6 +146,8 @@ Commands:
   disconnect [tool]                Undo one tool's connection, or every tool's
   uninstall [--data] [--confirm]   Remove everything Synapse installed
   tokens [--json]                  What Synapse costs a session in context
+  savings [--days <n>|--all] [--json]
+                                   What Synapse saved, in tokens and dollars
   path                             Print the local data and CLI paths
   version                          Print the version
   help                             Show this help
@@ -200,6 +205,7 @@ pub fn run(arguments: Vec<OsString>) -> Result<Outcome> {
         "settings" => settings(rest),
         "install" => install(),
         "tokens" => super::tokens::tokens(rest),
+        "savings" => super::savings::savings(rest),
         "connect" => super::connect::connect(rest),
         "disconnect" => super::remove::disconnect(rest),
         "uninstall" => super::remove::uninstall(rest),
@@ -694,7 +700,7 @@ fn settings(arguments: &[OsString]) -> Result<Outcome> {
     let action = textarg(
         arguments,
         0,
-        "usage: synapse settings <show|optimize|mesh|learn>",
+        "usage: synapse settings <show|optimize|mesh|learn|workers|price>",
     )?;
     let runtime = runtime()?;
     let brain = runtime.block_on(crate::brain::Brain::open(crate::files::database()?))?;
@@ -727,6 +733,10 @@ fn settings(arguments: &[OsString]) -> Result<Outcome> {
                 }
             );
             println!("max workers\t{}", runtime.block_on(brain.maxworkers())?);
+            println!(
+                "price\t${:.2} per million input tokens",
+                runtime.block_on(crate::usage::price(&brain))
+            );
             println!("shell modes\tcommand-scoped, ambient directory");
             println!("zsh hook\teval \"$(synapse hook zsh)\"");
         }
@@ -771,6 +781,15 @@ fn settings(arguments: &[OsString]) -> Result<Outcome> {
                 "One session may now run {workers} background worker(s) at once. \
                  A running supervisor picks this up on its next spawn."
             );
+        }
+        "price" => {
+            let value = textarg(arguments, 1, "usage: synapse settings price <dollars>")?;
+            let dollars: f64 = value
+                .trim_start_matches('$')
+                .parse()
+                .with_context(|| format!("`{value}` is not a price in dollars"))?;
+            runtime.block_on(crate::usage::setprice(&brain, dollars))?;
+            println!("Savings are now priced at ${dollars:.2} per million input tokens.");
         }
         "optimize" => {
             let value = textarg(

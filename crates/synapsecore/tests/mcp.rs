@@ -908,3 +908,123 @@ fn exact_memory_reads_page_under_the_configured_budget_and_scope() {
     assert!(hidden["result"]["structuredContent"]["memory"].is_null());
     client.child.kill().ok();
 }
+
+#[test]
+fn recall_marks_what_has_drifted_in_what_it_returns() {
+    let root = tempfile::tempdir().unwrap();
+    let home = root.path().join("home");
+    let data = root.path().join("data");
+    let app = root.path().join("app");
+    std::fs::create_dir_all(&home).unwrap();
+    std::fs::create_dir_all(app.join(".git")).unwrap();
+    std::fs::write(
+        app.join(".git/config"),
+        "[remote \"origin\"]\n\turl = git@github.com:acme/app.git\n",
+    )
+    .unwrap();
+    let mut client = session(&home, &data);
+    let mut remember = |id: i64, content: &str| {
+        tool(
+            &mut client,
+            id,
+            "remember",
+            json!({"content": content, "scope": "project", "project": app}),
+        )["result"]["structuredContent"]
+            .clone()
+    };
+    let older = remember(
+        20,
+        "Always squash commits when merging a pull request into main.",
+    );
+    assert!(
+        older.get("drift").is_none(),
+        "nothing to contradict yet: {older}"
+    );
+    let older = older["id"].as_i64().unwrap();
+    let newer = remember(
+        21,
+        "Never squash commits when merging a pull request into main.",
+    );
+    assert_eq!(newer["drift"][0]["concern"], "conflict", "{newer}");
+    let newer = newer["id"].as_i64().unwrap();
+    assert_eq!(
+        remember(
+            21,
+            "Never squash commits when merging a pull request into main."
+        )["drift"][0]["ids"],
+        json!([older, newer + 1])
+    );
+    run(
+        &home,
+        &data,
+        &["memory", "delete", &(newer + 1).to_string(), "--confirm"],
+    );
+    let stale = remember(
+        22,
+        "Squash merge settings live in config/merge.toml for the bot.",
+    )["id"]
+        .as_i64()
+        .unwrap();
+    let recalled = tool(
+        &mut client,
+        23,
+        "recall",
+        json!({"query": "squash merge", "project": app, "budget": "full"}),
+    );
+    let result = &recalled["result"]["structuredContent"];
+    assert_eq!(result["memories"].as_array().unwrap().len(), 3, "{result}");
+    for memory in result["memories"].as_array().unwrap() {
+        let written = memory["written"].as_str().unwrap();
+        assert_eq!(written.len(), 10, "{memory}");
+        assert!(memory["created"].as_i64().unwrap() > 0);
+    }
+    let drift = result["drift"].as_array().unwrap();
+    let findings: Vec<(String, Vec<i64>)> = drift
+        .iter()
+        .map(|finding| {
+            (
+                finding["concern"].as_str().unwrap().to_owned(),
+                finding["ids"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .map(|id| id.as_i64().unwrap())
+                    .collect(),
+            )
+        })
+        .collect();
+    assert_eq!(
+        findings,
+        vec![
+            ("stale".to_owned(), vec![stale]),
+            ("conflict".to_owned(), vec![older, newer]),
+        ]
+    );
+    assert_eq!(drift[0]["missing"], json!(["config/merge.toml"]));
+
+    // Fix both and the drift field disappears.
+    std::fs::create_dir_all(app.join("config")).unwrap();
+    std::fs::write(app.join("config/merge.toml"), "").unwrap();
+    run(
+        &home,
+        &data,
+        &[
+            "memory",
+            "supersede",
+            &older.to_string(),
+            &newer.to_string(),
+        ],
+    );
+    let recalled = tool(
+        &mut client,
+        24,
+        "recall",
+        json!({"query": "squash merge", "project": app, "budget": "full"}),
+    );
+    assert!(
+        recalled["result"]["structuredContent"]
+            .get("drift")
+            .is_none()
+    );
+    client.finish();
+}

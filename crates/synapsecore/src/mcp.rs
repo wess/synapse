@@ -49,5 +49,6 @@ pub async fn run() -> anyhow::Result<()> {
         false => None,
     };
     let instructions = crate::instructions::modelfacing(&guidance, enabled, learning);
-    server::run(brain, vaults, mesh, receipts, instructions).await
+    let standing = crate::usage::standing(&guidance, enabled, learning);
+    server::run(brain, vaults, mesh, receipts, instructions, standing).await
 }

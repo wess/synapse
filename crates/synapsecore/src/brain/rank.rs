@@ -15,10 +15,13 @@
 //! A memory's `source` — the topic it was filed under — is indexed too, at
 //! well under the weight of its body, so a topic word helps a memory without
 //! letting its label outrank what another memory actually says.
+//!
+//! Terms are OR'd, so a memory sharing one word with a long question still
+//! matches. For recall, [`floor`] drops weak matches before the limit.
 
 use anyhow::{Context, Result};
 use sqlx::SqlitePool;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 /// Dampens how much the top of either list dominates. Sixty is the value the
 /// method was published with, and the one nearly everything since has kept.
@@ -48,6 +51,13 @@ pub(super) enum Reach<'a> {
     Everything,
 }
 
+/// Recall gets the [`floor`]; browsing sees every match.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(super) enum Purpose {
+    Recall,
+    Browse,
+}
+
 /// One ranked memory.
 #[derive(Debug, Clone)]
 pub(super) struct Hit {
@@ -67,33 +77,42 @@ pub(super) struct Expressions {
     pub fragments: Option<String>,
 }
 
+/// Quotes a term as an FTS5 phrase so punctuation isn't parsed as syntax.
+fn quoted(term: &str) -> String {
+    format!("\"{}\"", term.replace('"', "\"\""))
+}
+
 /// Builds both expressions from the terms a query kept.
 ///
 /// A fragment search needs at least three characters, because that is the
 /// smallest piece the trigram index holds; a shorter term would match
 /// nothing there and is left to the word index.
 pub(super) fn expressions(terms: &[String]) -> Expressions {
-    let quoted = |term: &String| format!("\"{}\"", term.replace('"', "\"\""));
     let join = |items: Vec<String>| (!items.is_empty()).then(|| items.join(" OR "));
     Expressions {
-        words: join(terms.iter().map(quoted).collect()),
+        words: join(terms.iter().map(|term| quoted(term)).collect()),
         fragments: join(
             terms
                 .iter()
-                .filter(|term| term.chars().count() >= 3)
-                .map(quoted)
+                .filter(|term| fragmentable(term))
+                .map(|term| quoted(term))
                 .collect(),
         ),
     }
 }
 
-/// Ranks `expressions` and returns at most `limit` hits, best first.
+fn fragmentable(term: &str) -> bool {
+    term.chars().count() >= 3
+}
+
 pub(super) async fn rank(
     pool: &SqlitePool,
-    expressions: &Expressions,
+    terms: &[String],
     limit: usize,
     reach: Reach<'_>,
+    purpose: Purpose,
 ) -> Result<Vec<Hit>> {
+    let expressions = expressions(terms);
     let depth = (limit * DEPTH).max(20);
     let words = match &expressions.words {
         Some(expression) => list(pool, "memory", expression, depth, reach).await?,
@@ -103,7 +122,81 @@ pub(super) async fn rank(
         Some(expression) => list(pool, "memorygram", expression, depth, reach).await?,
         None => Vec::new(),
     };
-    Ok(fuse(&[words, fragments], limit))
+    let fused = fuse(&[words, fragments], usize::MAX);
+    Ok(match purpose {
+        Purpose::Recall => {
+            let held = coverage(pool, terms, &fused).await?;
+            select(fused, &held, limit)
+        }
+        Purpose::Browse => fused.into_iter().take(limit).collect(),
+    })
+}
+
+/// Floor before limit, so a dropped hit makes room for a stronger one below.
+fn select(fused: Vec<Hit>, held: &HashMap<i64, usize>, limit: usize) -> Vec<Hit> {
+    floor(fused, held).into_iter().take(limit).collect()
+}
+
+/// How many of `terms` each hit matches in either index.
+///
+/// Looks up each candidate by rowid. FTS5 seeks directly on `rowid = ?` but
+/// reads the term's whole doclist before filtering an `IN` list, which for a
+/// common word is the entire store.
+async fn coverage(
+    pool: &SqlitePool,
+    terms: &[String],
+    hits: &[Hit],
+) -> Result<HashMap<i64, usize>> {
+    let mut held: HashMap<i64, usize> = HashMap::new();
+    // Nothing to compare with a single term.
+    if terms.len() < 2 || hits.is_empty() {
+        return Ok(held);
+    }
+    let distinct: HashSet<&String> = terms.iter().collect();
+    for term in distinct {
+        let tables: &[&str] = match fragmentable(term) {
+            true => &["memory", "memorygram"],
+            false => &["memory"],
+        };
+        let mut holding: HashSet<i64> = HashSet::new();
+        for table in tables {
+            let sql = format!("SELECT rowid FROM {table} WHERE {table} MATCH ? AND rowid = ?");
+            let unplaced: Vec<i64> = hits
+                .iter()
+                .map(|hit| hit.id)
+                .filter(|id| !holding.contains(id))
+                .collect();
+            for id in unplaced {
+                let found = sqlx::query_scalar::<_, i64>(&sql)
+                    .bind(quoted(term))
+                    .bind(id)
+                    .fetch_optional(pool)
+                    .await
+                    .with_context(|| format!("could not check {table} for a query term"))?;
+                holding.extend(found);
+            }
+        }
+        for id in holding {
+            *held.entry(id).or_default() += 1;
+        }
+    }
+    Ok(held)
+}
+
+/// Drops hits matching fewer than half as many query terms as the best hit.
+///
+/// Relative, so the best match always survives even if it's weak. Has no effect
+/// until the best hit matches three terms.
+pub(super) fn floor(hits: Vec<Hit>, held: &HashMap<i64, usize>) -> Vec<Hit> {
+    let best = hits
+        .iter()
+        .map(|hit| held.get(&hit.id).copied().unwrap_or(0))
+        .max()
+        .unwrap_or(0);
+    let needed = best.div_ceil(2);
+    hits.into_iter()
+        .filter(|hit| held.get(&hit.id).copied().unwrap_or(0) >= needed)
+        .collect()
 }
 
 /// One index's ranking: ids with an excerpt, best first.
@@ -185,6 +278,64 @@ mod tests {
         assert_eq!(fuse(&[list(&[1, 2, 3]), list(&[3, 4])], 2).len(), 2);
     }
 
+    fn hits(ids: &[i64]) -> Vec<Hit> {
+        ids.iter()
+            .map(|id| Hit {
+                id: *id,
+                score: 0.0,
+                excerpt: None,
+            })
+            .collect()
+    }
+
+    fn ids(hits: &[Hit]) -> Vec<i64> {
+        hits.iter().map(|hit| hit.id).collect()
+    }
+
+    #[test]
+    fn the_floor_is_half_of_what_the_best_hit_holds() {
+        let held = HashMap::from([(1, 3), (2, 1), (3, 2), (4, 1), (5, 3)]);
+        assert_eq!(ids(&floor(hits(&[1, 2, 3, 4, 5]), &held)), vec![1, 3, 5]);
+
+        let held = HashMap::from([(1, 5), (2, 3), (3, 2), (4, 4)]);
+        assert_eq!(
+            ids(&floor(hits(&[2, 1, 3, 4]), &held)),
+            vec![2, 1, 4],
+            "five terms need three, and order is kept"
+        );
+    }
+
+    #[test]
+    fn the_floor_never_cuts_below_what_the_best_hit_reaches() {
+        let held = HashMap::from([(1, 2), (2, 1), (3, 1)]);
+        assert_eq!(ids(&floor(hits(&[1, 2, 3]), &held)), vec![1, 2, 3]);
+        let held = HashMap::from([(1, 1), (2, 1)]);
+        assert_eq!(ids(&floor(hits(&[1, 2]), &held)), vec![1, 2]);
+        // Single-term queries aren't counted.
+        assert_eq!(ids(&floor(hits(&[1, 2]), &HashMap::new())), vec![1, 2]);
+        assert!(floor(Vec::new(), &HashMap::new()).is_empty());
+    }
+
+    #[test]
+    fn the_floor_never_drops_the_best_hit() {
+        for best in 1..=8 {
+            let held = HashMap::from([(1, best), (2, 1)]);
+            let kept = floor(hits(&[2, 1]), &held);
+            assert!(ids(&kept).contains(&1), "best holding {best}");
+        }
+    }
+
+    #[test]
+    fn the_floor_is_applied_before_the_limit() {
+        let held = HashMap::from([(1, 1), (2, 1), (3, 2), (4, 3)]);
+        assert_eq!(ids(&select(hits(&[1, 2, 3, 4]), &held, 2)), vec![3, 4]);
+        let cut_late: Vec<i64> = ids(&floor(
+            hits(&[1, 2, 3, 4]).into_iter().take(2).collect(),
+            &held,
+        ));
+        assert_eq!(cut_late, vec![1, 2], "the order this guards against");
+    }
+
     #[test]
     fn short_terms_are_searched_as_words_only() {
         let terms = vec!["ci".to_owned(), "deploy".to_owned()];
@@ -215,6 +366,77 @@ mod search {
                 .unwrap();
         }
         (directory, brain)
+    }
+
+    async fn recalled(brain: &Brain, query: &str, limit: u32) -> Vec<String> {
+        brain
+            .recallscoped(query, limit, Some(crate::brain::Optimization::Full), None)
+            .await
+            .unwrap()
+            .1
+            .into_iter()
+            .map(|memory| memory.body)
+            .collect()
+    }
+
+    #[tokio::test]
+    async fn memories_sharing_one_word_with_a_question_are_not_handed_over() {
+        let (_directory, brain) = brain(&[
+            (
+                "Kafka credentials rotate weekly through the vault rotate command.",
+                "ops",
+            ),
+            (
+                "Kafka topics are named after the service that owns them.",
+                "kafka",
+            ),
+            (
+                "Kafka consumers commit offsets after processing, never before.",
+                "kafka",
+            ),
+            (
+                "Database credentials are read from the environment at startup.",
+                "db",
+            ),
+            (
+                "Credentials never go in a commit, even for a test account.",
+                "security",
+            ),
+            ("Rotate the log files daily on the build machine.", "ops"),
+        ])
+        .await;
+        let found = recalled(&brain, "rotate kafka credentials", 8).await;
+        assert_eq!(
+            found,
+            vec!["Kafka credentials rotate weekly through the vault rotate command."]
+        );
+        // Browsing still sees everything.
+        assert_eq!(
+            brain
+                .search("rotate kafka credentials", 8)
+                .await
+                .unwrap()
+                .len(),
+            6
+        );
+    }
+
+    #[tokio::test]
+    async fn a_question_nothing_answers_well_still_gets_its_best_matches() {
+        let (_directory, brain) = brain(&[
+            (
+                "Kafka topics are named after the service that owns them.",
+                "kafka",
+            ),
+            ("Credentials never go in a commit.", "security"),
+        ])
+        .await;
+        let found = recalled(&brain, "rotate kafka credentials", 8).await;
+        assert_eq!(
+            found.len(),
+            2,
+            "one term each, and one is the best there is"
+        );
     }
 
     async fn first(brain: &Brain, query: &str) -> Option<String> {

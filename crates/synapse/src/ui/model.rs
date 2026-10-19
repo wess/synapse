@@ -8,6 +8,7 @@ pub use synapsecore::agent::Connection as Row;
 pub enum Page {
     Map,
     Connections,
+    Savings,
     Memories,
     Servers,
     Mesh,

@@ -36,6 +36,9 @@ async fn main() -> Result<()> {
         ("selective", "zebra"),
         ("common", "database"),
         ("fragment", "age"),
+        // Several terms, every one held by every memory: the floor counts each
+        // term against every candidate, and this is its most expensive case.
+        ("multiterm", "database migrations scheduling durability"),
         ("recent", ""),
     ] {
         measurements.push(
@@ -45,7 +48,8 @@ async fn main() -> Result<()> {
                     .await?;
                 let response = RecallResponse {
                     optimization: settings.optimization,
-                    memories,
+                    memories: memories.into_iter().map(Into::into).collect(),
+                    drift: Vec::new(),
                 };
                 Ok(serde_json::to_vec(&response)?.len())
             })

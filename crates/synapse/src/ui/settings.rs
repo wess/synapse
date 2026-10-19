@@ -998,7 +998,7 @@ fn shellmode(
 /// here labels its two buttons "Off" and "On", and gpui takes the first element
 /// with a given id and drops the rest — which is why the mesh switch worked and
 /// the two below it did nothing at all.
-fn option(
+pub(crate) fn option(
     panel: &str,
     label: &str,
     description: &str,

@@ -13,6 +13,31 @@ hit has to be abridged, recall sends its opening line if that holds a matched wo
 and the FTS5 snippet around the match otherwise. `readmemory` reads by id and uses
 neither index.
 
+Every query term is an OR, so a memory sharing one word with a long question
+still matches. Recall counts how many of the query's terms each candidate holds
+and drops any holding fewer than half as many as the best one, before applying
+the limit. The best match always survives, so a question with a weak answer
+still gets it. `memory list` and `--explain` show every match.
+
+## Drift
+
+Recall and the session hook check what they hand over:
+
+- a path the memory names that is gone from the checkout (stale),
+- two memories that say opposite things or carry different numbers (conflict),
+- two memories that say the same thing (duplicate).
+
+Recall returns everything and lists findings in `drift`. When a newer memory
+contradicts a returned one but didn't match the query, recall quotes it. The
+session hook leaves stale memories and the older half of a conflicting or
+duplicate pair out of what it injects, and says so. `remember` reports what a
+new memory contradicts or repeats. `synapse memory drift` runs the check on
+everything a folder can see. Nothing is superseded or deleted automatically.
+
+Relative paths are only checked for project memory in its own checkout. Paths
+under another account's home, temp folders, and build output are never called
+missing.
+
 ## Exact reading
 
 Call `readmemory` with the id and project from a recall. Start at offset zero, then
@@ -53,7 +78,13 @@ the complete recall-to-read flow through the released tool schema.
 
 Approximate wording overlap cannot establish that two facts are equivalent.
 Balanced and Lean retain exact-body deduplication but no longer suppress distinct
-bodies by word-set similarity. Only explicit supersession establishes a correction.
+bodies by word-set similarity. Only explicit supersession establishes a correction;
+drift findings point at candidates for one.
+
+`tests/bias.rs` scores the relevance floor against an unfloored search on a
+labeled corpus (no answer lost or moved down; surplus beside each answer falls
+from 5.1 to 0.9 memories) and checks that an unmarked correction is always
+flagged when its outdated memory comes back.
 
 ## Performance fixture
 

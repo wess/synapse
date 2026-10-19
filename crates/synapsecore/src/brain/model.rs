@@ -201,6 +201,9 @@ pub struct RememberResponse {
     /// the text it sent, and does not go on believing a value was saved.
     #[serde(skip_serializing_if = "iszerocount")]
     pub redacted: usize,
+    /// Existing memories this one contradicts or repeats.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub drift: Vec<crate::brain::drift::Finding>,
 }
 
 fn iszerocount(value: &usize) -> bool {
@@ -222,7 +225,33 @@ pub struct RecallRequest {
 #[derive(Debug, Serialize, JsonSchema)]
 pub struct RecallResponse {
     pub optimization: Optimization,
-    pub memories: Vec<Memory>,
+    pub memories: Vec<Recalled>,
+    /// Memories here that look stale or are contradicted or repeated by another.
+    /// The newer of a pair is more likely current.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub drift: Vec<crate::brain::drift::Finding>,
+}
+
+/// A recalled memory plus a readable date, so a model can compare ages
+/// without decoding `created`.
+#[derive(Debug, Serialize, JsonSchema)]
+pub struct Recalled {
+    #[serde(flatten)]
+    pub memory: Memory,
+    /// `YYYY-MM-DD`, in UTC.
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub written: String,
+}
+
+impl From<Memory> for Recalled {
+    fn from(memory: Memory) -> Self {
+        let written = (memory.created > 0)
+            .then(|| chrono::DateTime::from_timestamp(memory.created, 0))
+            .flatten()
+            .map(|moment| moment.format("%Y-%m-%d").to_string())
+            .unwrap_or_default();
+        Self { memory, written }
+    }
 }
 
 /// Why a search answered the way it did.

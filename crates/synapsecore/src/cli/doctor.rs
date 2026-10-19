@@ -59,6 +59,41 @@ pub struct Store {
     pub megabytes: Option<u64>,
     pub backups: usize,
     pub optimization: Option<String>,
+    pub drift: Option<Drifted>,
+}
+
+#[derive(Serialize, Default, PartialEq, Eq, Debug)]
+pub struct Drifted {
+    pub stale: usize,
+    pub conflicting: usize,
+    pub repeated: usize,
+}
+
+impl Drifted {
+    fn of(findings: &[crate::brain::drift::Finding]) -> Self {
+        use crate::brain::drift::Concern;
+        let count = |concern: Concern| {
+            findings
+                .iter()
+                .filter(|finding| finding.concern == concern)
+                .count()
+        };
+        Self {
+            stale: count(Concern::Stale),
+            conflicting: count(Concern::Conflict),
+            repeated: count(Concern::Duplicate),
+        }
+    }
+
+    fn line(&self) -> String {
+        if *self == Self::default() {
+            return "none found from this folder".to_owned();
+        }
+        format!(
+            "{} stale, {} conflicting, {} repeated (see synapse memory drift)",
+            self.stale, self.conflicting, self.repeated
+        )
+    }
 }
 
 #[derive(Serialize)]
@@ -125,6 +160,9 @@ fn print(report: &Report) {
     println!("  Backups        {}", report.store.backups);
     if let Some(optimization) = &report.store.optimization {
         println!("  Recall budget  {optimization}");
+    }
+    if let Some(drift) = &report.store.drift {
+        println!("  Drift          {}", drift.line());
     }
 
     if !report.context.is_empty() {
@@ -274,6 +312,7 @@ fn store(database: Option<&Path>) -> Store {
         megabytes: None,
         backups: 0,
         optimization: None,
+        drift: None,
     };
     let Some(database) = database else {
         return unknown("could not locate the database".to_owned());
@@ -296,21 +335,29 @@ fn store(database: Option<&Path>) -> Store {
         runtime.block_on(async {
             let report = crate::database::check(database).await?;
             let brain = crate::brain::Brain::glance(database).await?;
+            let folder = std::env::current_dir().ok();
+            let drift = brain
+                .drift(folder.as_deref())
+                .await
+                .ok()
+                .map(|drift| Drifted::of(&drift.findings));
             Ok::<_, anyhow::Error>((
                 report.version,
                 brain.stats().await?.entries,
                 brain.settings().await?.optimization,
+                drift,
             ))
         })
     });
     match gathered {
-        Ok((version, memories, optimization)) => Store {
+        Ok((version, memories, optimization, drift)) => Store {
             state: "ok".to_owned(),
             version: Some(version),
             memories: Some(memories),
             megabytes,
             backups,
             optimization: Some(format!("{optimization:?}").to_lowercase()),
+            drift,
         },
         Err(error) => Store {
             state: format!("{error:#}"),
@@ -506,4 +553,30 @@ fn cli() -> String {
 
 fn runtime() -> Result<tokio::runtime::Runtime> {
     tokio::runtime::Runtime::new().map_err(Into::into)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::brain::drift::{Concern, Finding};
+
+    #[test]
+    fn drift_is_counted_by_kind_and_says_where_to_look() {
+        let finding = |concern: Concern| Finding {
+            concern,
+            ids: vec![1, 2],
+            note: String::new(),
+            missing: Vec::new(),
+        };
+        let drifted = Drifted::of(&[
+            finding(Concern::Stale),
+            finding(Concern::Conflict),
+            finding(Concern::Conflict),
+        ]);
+        assert_eq!(
+            drifted.line(),
+            "1 stale, 2 conflicting, 0 repeated (see synapse memory drift)"
+        );
+        assert_eq!(Drifted::of(&[]).line(), "none found from this folder");
+    }
 }

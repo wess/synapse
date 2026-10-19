@@ -1,6 +1,7 @@
 mod command;
 mod connect;
 mod doctor;
+mod drift;
 mod editor;
 mod eval;
 mod guidance;
@@ -11,6 +12,7 @@ mod memory;
 mod mux;
 mod relay;
 mod remove;
+mod savings;
 mod servers;
 mod session;
 mod shell;

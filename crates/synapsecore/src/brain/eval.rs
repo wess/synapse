@@ -75,6 +75,8 @@ pub struct Evaluation {
     /// Memories returned per unanswerable case. Every one is something an
     /// agent read for nothing, and might act on.
     pub noise: f64,
+    /// Extra memories returned alongside the answer, per answered case.
+    pub surplus: f64,
 }
 
 /// Reads a cases file.
@@ -172,6 +174,20 @@ fn summarize(cases: Vec<Scored>, limit: u32) -> Evaluation {
         0 => 0.0,
         count => unanswerable.iter().map(|case| case.returned).sum::<usize>() as f64 / count as f64,
     };
+    let answered: Vec<&&Scored> = answerable
+        .iter()
+        .filter(|case| case.rank.is_some())
+        .collect();
+    let surplus = match answered.len() {
+        0 => 0.0,
+        count => {
+            answered
+                .iter()
+                .map(|case| case.returned.saturating_sub(1))
+                .sum::<usize>() as f64
+                / count as f64
+        }
+    };
     Evaluation {
         limit,
         cases,
@@ -180,6 +196,7 @@ fn summarize(cases: Vec<Scored>, limit: u32) -> Evaluation {
         mrr,
         shown,
         noise,
+        surplus,
     }
 }
 
@@ -233,6 +250,8 @@ mod tests {
         assert_eq!(evaluation.mrr, 1.5 / 4.0);
         assert_eq!(evaluation.shown, 0.25);
         assert_eq!(evaluation.noise, 1.0);
+        // Two answered cases with two extras each; misses don't count.
+        assert_eq!(evaluation.surplus, 2.0);
     }
 
     /// End to end against a real store, and a guard on search itself: the

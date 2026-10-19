@@ -6,7 +6,7 @@ use std::ffi::OsString;
 use std::io::{IsTerminal, Read};
 use std::path::PathBuf;
 
-const USAGE: &str = "usage: synapse memory <list|grep|eval|show|add|edit|supersede|restore|import|imports|undo|delete|wipe>";
+const USAGE: &str = "usage: synapse memory <list|grep|eval|drift|show|add|edit|supersede|restore|import|imports|undo|delete|wipe>";
 
 pub fn run(arguments: &[OsString]) -> Result<Outcome> {
     let action = textarg(arguments, 0, USAGE)?;
@@ -17,6 +17,7 @@ pub fn run(arguments: &[OsString]) -> Result<Outcome> {
         "list" => list(&runtime, &brain, arguments, json)?,
         "grep" => grep(&runtime, &brain, arguments, json)?,
         "eval" => return super::eval::run(&runtime, &brain, arguments, json),
+        "drift" => return super::drift::run(&runtime, &brain, arguments, json),
         "show" => show(&runtime, &brain, arguments, json)?,
         "add" => add(&runtime, &brain, arguments)?,
         "edit" => edit(&runtime, &brain, arguments)?,

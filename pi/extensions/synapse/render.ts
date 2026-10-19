@@ -25,8 +25,15 @@ export interface Agent {
   tool: string;
 }
 
+export interface Finding {
+  concern: string;
+  ids: number[];
+  note: string;
+}
+
 export function memories(structured: unknown, fallback: string): string {
-  const found = (structured as { memories?: Memory[] } | undefined)?.memories;
+  const answer = structured as { memories?: Memory[]; drift?: Finding[] } | undefined;
+  const found = answer?.memories;
   if (!Array.isArray(found)) {
     return fallback;
   }
@@ -34,7 +41,12 @@ export function memories(structured: unknown, fallback: string): string {
     return "Nothing stored for this project yet.";
   }
   const header = `${found.length} ${found.length === 1 ? "memory" : "memories"}, newest first`;
-  return [header, "", ...found.map(entry)].join("\n");
+  const lines = [header, "", ...found.map(entry)];
+  const drift = Array.isArray(answer?.drift) ? answer.drift : [];
+  if (drift.length > 0) {
+    lines.push("", "Drift:", ...drift.map((finding) => `- ${finding.note}`));
+  }
+  return lines.join("\n");
 }
 
 export function roster(structured: unknown, fallback: string): string {

@@ -1,3 +1,4 @@
+pub mod drift;
 mod eval;
 mod gram;
 mod graph;
@@ -17,7 +18,7 @@ pub use eval::{Case, Evaluation, Scored, cases};
 pub use graph::{Graph, Kind as NodeKind, Link, NODES, Node, Tie, build as buildmap, map};
 pub use model::{
     Explanation, Memory, MemoryScope, Optimization, Ranked, RecallRequest, RecallResponse,
-    RememberRequest, RememberResponse, Settings, Stats,
+    Recalled, RememberRequest, RememberResponse, Settings, Stats,
 };
 pub use read::{MemoryPage, ReadRequest, ReadResponse};
 pub use redact::{Redacted, redact};

@@ -26,12 +26,13 @@
 
 use crate::brain::{Brain, Optimization};
 use crate::cli::Outcome;
+use crate::usage::thousands;
 use anyhow::Result;
 use std::ffi::OsString;
 
 /// Characters per token. A rule of thumb, and stated as one everywhere it is
-/// shown — see the module note.
-const PERTOKEN: usize = 4;
+/// shown — see the module note. Shared with `savings`.
+const PERTOKEN: usize = crate::usage::PERTOKEN as usize;
 
 /// Where shared guidance stops being shared guidance and starts being a book
 /// every session has to read. Three thousand tokens is already the largest
@@ -57,7 +58,7 @@ const RECALLGUIDE: usize = 8_000;
 /// `1 skill`, `2 skills`, `3 memories`. Every line here is counting something,
 /// and a report that says "1 skills" reads as a report nobody looked at. Both
 /// forms are given rather than an `s` appended, because English does not.
-fn plural(count: usize, one: &str, many: &str) -> String {
+pub(crate) fn plural(count: usize, one: &str, many: &str) -> String {
     match count {
         1 => format!("1 {one}"),
         other => format!("{other} {many}"),
@@ -198,11 +199,11 @@ fn tooldefinitions(mesh: bool, learn: bool) -> Line {
     let chars: usize = tools.iter().map(|(_, size)| size).sum();
     // What the setting is worth, in the same units, whichever way it is set: a
     // switch is a decision with a number beside it rather than a preference.
-    let without: usize = crate::mcp::toolcost(false, learn)
+    let other: usize = crate::mcp::toolcost(!mesh, learn)
         .iter()
         .map(|(_, size)| size)
         .sum();
-    let difference = thousands(chars.abs_diff(without) / PERTOKEN);
+    let difference = thousands(chars.abs_diff(other) / PERTOKEN);
     let saved = match mesh {
         true => format!(" · mesh on, costing ~{difference} tokens"),
         false => format!(" · mesh off, saving ~{difference} tokens"),
@@ -300,20 +301,6 @@ async fn startuprecall(brain: &Brain, optimization: Optimization) -> Line {
     }
 }
 
-/// `16450` as `16,450`. Every number here is compared against another one, and
-/// digits in a row are hard to compare at a glance.
-fn thousands(value: usize) -> String {
-    let digits = value.to_string();
-    let mut out = String::new();
-    for (index, digit) in digits.chars().enumerate() {
-        if index > 0 && (digits.len() - index).is_multiple_of(3) {
-            out.push(',');
-        }
-        out.push(digit);
-    }
-    out
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -325,15 +312,6 @@ mod tests {
         assert_eq!(plural(2, "skill", "skills"), "2 skills");
         assert_eq!(plural(1, "memory", "memories"), "1 memory");
         assert_eq!(plural(3, "memory", "memories"), "3 memories");
-    }
-
-    #[test]
-    fn numbers_are_grouped_for_comparing() {
-        assert_eq!(thousands(0), "0");
-        assert_eq!(thousands(999), "999");
-        assert_eq!(thousands(1_000), "1,000");
-        assert_eq!(thousands(16_450), "16,450");
-        assert_eq!(thousands(1_234_567), "1,234,567");
     }
 
     /// The mesh setting is the largest lever there is, and the report's job is
@@ -351,6 +329,7 @@ mod tests {
         // And the saving is named while it is being made, not only once it is
         // too late to make it.
         assert!(base.detail.contains("saving"), "got {}", base.detail);
+        assert!(!base.detail.contains("saving ~0 "), "got {}", base.detail);
         assert!(
             !withmesh.detail.contains("saving"),
             "got {}",

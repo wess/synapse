@@ -23,6 +23,7 @@ const WIDTH: f32 = 212.0;
 pub struct Navigation {
     pub map: Click,
     pub connections: Click,
+    pub savings: Click,
     pub memories: Click,
     pub skills: Click,
     pub servers: Click,
@@ -35,6 +36,7 @@ pub fn render(page: Page, go: Navigation, cx: &App) -> impl IntoElement {
     let Navigation {
         map,
         connections,
+        savings,
         memories,
         skills,
         servers,
@@ -81,6 +83,14 @@ pub fn render(page: Page, go: Navigation, cx: &App) -> impl IntoElement {
             page == Page::Connections,
             &colours,
             connections,
+        ))
+        .child(entry(
+            "navsavings",
+            "Savings",
+            IconName::PiggyBank,
+            page == Page::Savings,
+            &colours,
+            savings,
         ))
         .child(entry(
             "navmemories",

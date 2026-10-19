@@ -3,7 +3,7 @@ use anyhow::{Context, Result};
 use sqlx::SqlitePool;
 use std::path::Path;
 
-pub const LATEST: i64 = 13;
+pub const LATEST: i64 = 14;
 
 /// The vault's own schema, in its own file. One table today, with the numbered
 /// migration around it anyway: the day it grows a column is not the day to
@@ -313,6 +313,23 @@ const MIGRATIONS: &[Migration] = &[
             "CREATE VIRTUAL TABLE memorygram USING fts5(\
              body, source, content='', contentless_delete=1, tokenize='trigram')",
             "INSERT INTO memorygram(rowid, body, source) SELECT rowid, body, source FROM memory",
+        ],
+    },
+    Migration {
+        version: 14,
+        statements: &[
+            // Savings ledger: sizes only, never text. Local to this machine;
+            // sync ignores it. See `usage`.
+            "CREATE TABLE usage(\
+             id INTEGER PRIMARY KEY AUTOINCREMENT, \
+             kind TEXT NOT NULL CHECK(kind IN ('session', 'recall', 'read')), \
+             memories INTEGER NOT NULL DEFAULT 0, \
+             reach INTEGER NOT NULL DEFAULT 0, \
+             matched INTEGER NOT NULL DEFAULT 0, \
+             sent INTEGER NOT NULL DEFAULT 0, \
+             overhead INTEGER NOT NULL DEFAULT 0, \
+             created INTEGER NOT NULL)",
+            "CREATE INDEX usagecreated ON usage(created)",
         ],
     },
 ];

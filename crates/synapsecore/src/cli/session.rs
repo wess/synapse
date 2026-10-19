@@ -25,8 +25,10 @@
 //! `statusline` answers Claude Code's `statusLine` command and prints the one
 //! line under the prompt for the rest of the session.
 
-use crate::brain::{Memory, Optimization};
+use crate::brain::drift::{Checkout, Finding};
+use crate::brain::{Brain, Memory, Optimization};
 use crate::cli::Outcome;
+use crate::usage::Entry;
 use anyhow::Result;
 use serde::Serialize;
 use std::ffi::OsString;
@@ -57,6 +59,9 @@ pub struct Report {
     /// hook and left empty for the status line, which redraws every turn.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub recalled: Vec<Memory>,
+    /// Why memories were left out of the hand-over.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub held: Vec<Finding>,
     /// Set instead of the rest when Synapse could not be read at all.
     pub problem: Option<String>,
 }
@@ -64,8 +69,15 @@ pub struct Report {
 pub fn session(arguments: &[OsString]) -> Result<Outcome> {
     let input = stdin();
     let root = folder(&input);
-    let report = collect(root.as_deref(), Recall::Yes);
-    if arguments.iter().any(|value| value == "--json") {
+    let json = arguments.iter().any(|value| value == "--json");
+    // `--json` leaves the wording to the caller, so it adds no framing.
+    let handed: Handed = match (json, compacted(&input)) {
+        (true, _) => |_| String::new(),
+        (false, true) => restored,
+        (false, false) => context,
+    };
+    let report = collect(root.as_deref(), Recall::Yes(handed));
+    if json {
         println!("{}", serde_json::to_string_pretty(&report)?);
         return Ok(Outcome::Exit(0));
     }
@@ -76,17 +88,17 @@ pub fn session(arguments: &[OsString]) -> Result<Outcome> {
 
 /// What the SessionStart hook answers with, for the trigger `input` names.
 fn payload(input: &serde_json::Value, report: &Report) -> serde_json::Value {
-    match input.pointer("/source").and_then(serde_json::Value::as_str) {
+    match compacted(input) {
         // The same session, resumed from its own summary. The user saw the
         // notice when it started, so there is none; what goes back is the
         // memory the summary may not have kept.
-        Some("compact") => serde_json::json!({
+        true => serde_json::json!({
             "hookSpecificOutput": {
                 "hookEventName": "SessionStart",
                 "additionalContext": restored(report),
             }
         }),
-        _ => serde_json::json!({
+        false => serde_json::json!({
             "systemMessage": notice(report),
             "hookSpecificOutput": {
                 "hookEventName": "SessionStart",
@@ -94,6 +106,10 @@ fn payload(input: &serde_json::Value, report: &Report) -> serde_json::Value {
             }
         }),
     }
+}
+
+fn compacted(input: &serde_json::Value) -> bool {
+    input.pointer("/source").and_then(serde_json::Value::as_str) == Some("compact")
 }
 
 pub fn statusline(_arguments: &[OsString]) -> Result<Outcome> {
@@ -170,11 +186,14 @@ fn reminder(report: &Report) -> String {
 /// Whether a report reads the memories themselves or only counts them. The
 /// status line redraws on every turn of every session and shows a count, so it
 /// has no use for the bodies and should not pay to read them.
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy)]
 enum Recall {
-    Yes,
+    /// Hand memories over, and count the session using this rendered text.
+    Yes(Handed),
     No,
 }
+
+type Handed = fn(&Report) -> String;
 
 /// The one line shown to the user at startup. Reports what is actually there,
 /// including when that is nothing.
@@ -246,7 +265,34 @@ fn context(report: &Report) -> String {
          need to call `recall` to start:\n\n",
     );
     context.push_str(&recalled(report));
+    context.push_str(&withheld(report));
     context
+}
+
+fn held(report: &Report) -> usize {
+    report
+        .held
+        .iter()
+        .filter_map(|finding| finding.ids.first())
+        .collect::<std::collections::HashSet<_>>()
+        .len()
+}
+
+fn withheld(report: &Report) -> String {
+    if report.held.is_empty() {
+        return String::new();
+    }
+    let notes: String = report
+        .held
+        .iter()
+        .map(|finding| format!("- {}\n", finding.note))
+        .collect();
+    format!(
+        "\n\nSynapse held back {} more because they look stale or a newer memory above \
+         contradicts or repeats them:\n\n{notes}\nPrefer the memories above. `recall` still \
+         returns the held-back ones, marked, if the task needs them.",
+        held(report)
+    )
 }
 
 /// What a session is handed back after compaction.
@@ -266,8 +312,9 @@ fn restored(report: &Report) -> String {
     format!(
         "This session was just compacted, which dropped the memory Synapse handed over when it \
          started. Here it is again, most recent first, including anything remembered earlier in \
-         this session:\n\n{}",
-        recalled(report)
+         this session:\n\n{}{}",
+        recalled(report),
+        withheld(report)
     )
 }
 
@@ -303,8 +350,17 @@ fn bullet(memory: &Memory) -> String {
             memory.id
         ));
     }
-    if !memory.source.trim().is_empty() {
-        item.push_str(&format!("  ({})\n", memory.source.trim()));
+    let written = (memory.created > 0)
+        .then(|| chrono::DateTime::from_timestamp(memory.created, 0))
+        .flatten()
+        .map(|moment| moment.format("%Y-%m-%d").to_string());
+    let label: Vec<String> = [Some(memory.source.trim().to_owned()), written]
+        .into_iter()
+        .flatten()
+        .filter(|part| !part.is_empty())
+        .collect();
+    if !label.is_empty() {
+        item.push_str(&format!("  ({})\n", label.join(" · ")));
     }
     item
 }
@@ -350,6 +406,7 @@ fn collect(root: Option<&Path>, recall: Recall) -> Report {
             proposed: 0,
             vault: "inactive".to_owned(),
             recalled: Vec::new(),
+            held: Vec::new(),
             problem: Some(shortened(&format!("{error:#}"))),
         },
     }
@@ -406,16 +463,17 @@ fn gather(root: Option<&Path>, recall: Recall) -> Result<Report> {
         // An empty query asks for nothing in particular, which is exactly the
         // question a session opening has: it routes to the recent list, scoped
         // to global memory plus this project's, ordered newest first.
-        let recalled = match recall {
-            Recall::Yes => {
-                brain
-                    .recallscoped("", u32::MAX, Some(BUDGET), root)
-                    .await?
-                    .1
+        let (recalled, held, matched) = match recall {
+            Recall::Yes(_) => {
+                let (_, memories, matched) = brain
+                    .recallmeasured("", u32::MAX, Some(BUDGET), root)
+                    .await?;
+                let (recalled, held) = screened(memories, &Checkout::at(root));
+                (recalled, held, matched)
             }
-            Recall::No => Vec::new(),
+            Recall::No => (Vec::new(), Vec::new(), 0),
         };
-        Ok(Report {
+        let report = Report {
             connected: true,
             memories,
             project,
@@ -425,9 +483,57 @@ fn gather(root: Option<&Path>, recall: Recall) -> Result<Report> {
             proposed,
             vault: vault.to_owned(),
             recalled,
+            held,
             problem: None,
-        })
+        };
+        if let Recall::Yes(handed) = recall {
+            count(&brain, &report, matched, handed, root).await;
+        }
+        Ok(report)
     })
+}
+
+/// Drops stale memories and the older half of any conflicting or duplicate
+/// pair from the session hand-over. It's injected unasked into every session,
+/// so it should only carry what still holds. `recall` still returns them.
+fn screened(memories: Vec<Memory>, checkout: &Checkout) -> (Vec<Memory>, Vec<Finding>) {
+    let findings = crate::brain::drift::scan(&memories, checkout);
+    // Ids are oldest first: the stale memory, or the older of a pair.
+    let withheld: std::collections::HashSet<i64> = findings
+        .iter()
+        .filter_map(|finding| finding.ids.first().copied())
+        .collect();
+    let kept = memories
+        .into_iter()
+        .filter(|memory| !withheld.contains(&memory.id))
+        .collect();
+    (kept, findings)
+}
+
+/// Records the session in the savings ledger. Errors are ignored so the hook
+/// never fails over bookkeeping.
+async fn count(
+    brain: &Brain,
+    report: &Report,
+    matched: usize,
+    handed: Handed,
+    root: Option<&Path>,
+) {
+    let reach = brain.reachsize(root).await.unwrap_or_default().max(0) as usize;
+    let guidance = crate::files::soul()
+        .ok()
+        .and_then(|path| std::fs::read_to_string(path).ok())
+        .unwrap_or_default();
+    let sent = crate::usage::bodies(&report.recalled);
+    let framing = handed(report).chars().count().saturating_sub(sent);
+    let standing = crate::usage::standing(&guidance, report.mesh, report.learn);
+    let entry = Entry {
+        memories: report.recalled.len(),
+        matched,
+        sent,
+        ..Entry::session(reach, standing + framing)
+    };
+    let _ = crate::usage::record(brain, entry).await;
 }
 
 /// How long to wait for the calling tool to say where it is working. A client
@@ -495,6 +601,7 @@ mod tests {
             proposed: 0,
             vault: "inactive".to_owned(),
             recalled: Vec::new(),
+            held: Vec::new(),
             problem: None,
         }
     }
@@ -691,6 +798,108 @@ mod tests {
         // An unindented continuation would read as a second memory.
         assert!(item.contains("\n  second line\n"));
         assert!(item.contains("\n  (notes)\n"));
+    }
+
+    fn dated(id: i64, body: &str, created: i64) -> Memory {
+        Memory {
+            id,
+            created,
+            ..memory(body, "")
+        }
+    }
+
+    #[test]
+    fn a_session_is_not_handed_what_drift_has_flagged() {
+        let directory = tempfile::tempdir().unwrap();
+        let root = directory.path().join("app");
+        std::fs::create_dir_all(root.join(".git")).unwrap();
+        std::fs::write(
+            root.join(".git/config"),
+            "[remote \"origin\"]\n\turl = git@github.com:acme/app.git\n",
+        )
+        .unwrap();
+        std::fs::create_dir_all(root.join("src")).unwrap();
+        std::fs::write(root.join("src/main.rs"), "").unwrap();
+        let project = |memory: Memory| Memory {
+            scope: crate::brain::MemoryScope::Project,
+            project: "github.com/acme/app".to_owned(),
+            ..memory
+        };
+        let memories = vec![
+            project(dated(
+                4,
+                "Never squash commits when merging a pull request into main.",
+                40,
+            )),
+            project(dated(
+                3,
+                "Routing lives in src/router.rs next to the handlers.",
+                30,
+            )),
+            project(dated(2, "Entry point is src/main.rs and nothing else.", 20)),
+            project(dated(
+                1,
+                "Always squash commits when merging a pull request into main.",
+                10,
+            )),
+        ];
+        let (kept, held) = screened(memories, &Checkout::at(Some(&root)));
+        let ids: Vec<i64> = kept.iter().map(|memory| memory.id).collect();
+        assert_eq!(ids, vec![4, 2]);
+        let flagged: Vec<Vec<i64>> = held.iter().map(|finding| finding.ids.clone()).collect();
+        assert_eq!(flagged, vec![vec![3], vec![1, 4]]);
+    }
+
+    #[test]
+    fn the_model_is_told_what_was_held_back_and_the_person_is_not_interrupted() {
+        let finding = |ids: Vec<i64>, note: &str| Finding {
+            concern: crate::brain::drift::Concern::Conflict,
+            ids,
+            note: note.to_owned(),
+            missing: Vec::new(),
+        };
+        let report = Report {
+            recalled: vec![memory("Never squash commits into main.", "")],
+            held: vec![
+                finding(vec![1, 4], "#1 says `always` where #4 says `never`."),
+                finding(vec![1, 6], "#1 and #6 say nearly the same thing."),
+                finding(
+                    vec![3],
+                    "#3 names `src/router.rs`, which is no longer there.",
+                ),
+            ],
+            ..report()
+        };
+        // Drift stays out of the user's notice.
+        assert_eq!(notice(&report), "Synapse connected · 128 memories");
+        let told = context(&report);
+        assert!(told.contains("held back 2 more"), "{told}");
+        assert!(told.contains("- #3 names `src/router.rs`, which is no longer there."));
+        assert!(told.contains("Prefer the memories above"));
+        let after = restored(&report);
+        assert!(after.contains("held back 2 more"), "{after}");
+        assert!(
+            !context(&Report {
+                held: Vec::new(),
+                ..report
+            })
+            .contains("held back")
+        );
+    }
+
+    #[test]
+    fn a_memory_says_when_it_was_written() {
+        let written = 1_789_000_000; // 2026-09-10 UTC
+        let item = bullet(&Memory {
+            created: written,
+            ..memory("Deploys run from the release branch.", "decision")
+        });
+        assert_eq!(
+            item,
+            "- Deploys run from the release branch.\n  (decision · 2026-09-10)\n"
+        );
+        let item = bullet(&dated(1, "Stands alone.", written));
+        assert_eq!(item, "- Stands alone.\n  (2026-09-10)\n");
     }
 
     #[test]

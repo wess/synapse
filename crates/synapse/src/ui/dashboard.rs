@@ -1,7 +1,7 @@
 use crate::ui::buffer::{self, Buffer, Format};
 use crate::ui::{
     Document, Notice, Page, Row, SaveDocument, agentrow, clibanner, document, graph, memories,
-    mesh, servers, settings, sidebar, skills, sources, summary, vaults,
+    mesh, savings, servers, settings, sidebar, skills, sources, summary, vaults,
 };
 use gpui::prelude::*;
 use gpui::{Context, Entity, IntoElement, Window, div, px};
@@ -84,6 +84,9 @@ pub struct Dashboard {
     meshfeed: Vec<synapsecore::relay::Message>,
     /// Most workers one session may run, read with the rest of the mesh.
     workerlimit: usize,
+    savings: Option<synapsecore::usage::Report>,
+    savingsdays: Option<u32>,
+    savingserror: Option<String>,
     mesherror: Option<String>,
     skillrows: Vec<skills::Row>,
     skillunmanaged: Vec<(String, String)>,
@@ -370,6 +373,9 @@ impl Dashboard {
             meshworkers: meshdata.workers,
             meshfeed: meshdata.feed,
             workerlimit,
+            savings: None,
+            savingsdays: Some(30),
+            savingserror: None,
             mesherror: meshdata.error,
             skillrows: skilldata.rows,
             skillunmanaged: skilldata.unmanaged,
@@ -443,6 +449,7 @@ impl Dashboard {
         sidebar::Navigation {
             map: Box::new(cx.listener(|this, _, _, cx| this.showmap(cx))),
             connections: Box::new(cx.listener(|this, _, _, cx| this.showconnections(cx))),
+            savings: Box::new(cx.listener(|this, _, _, cx| this.showsavings(cx))),
             memories: Box::new(cx.listener(|this, _, _, cx| this.showmemories(cx))),
             mesh: Box::new(cx.listener(|this, _, _, cx| this.showmesh(cx))),
             skills: Box::new(cx.listener(|this, _, _, cx| this.showskills(cx))),
@@ -455,6 +462,48 @@ impl Dashboard {
     fn showconnections(&mut self, cx: &mut Context<Self>) {
         self.page = Page::Connections;
         cx.notify();
+    }
+
+    fn showsavings(&mut self, cx: &mut Context<Self>) {
+        self.page = Page::Savings;
+        self.refreshsavings(cx);
+    }
+
+    fn refreshsavings(&mut self, cx: &mut Context<Self>) {
+        let Some(brain) = self.brain.clone() else {
+            self.savingserror = Some("Synapse could not open its store.".to_owned());
+            cx.notify();
+            return;
+        };
+        let days = self.savingsdays;
+        match block(async move { synapsecore::usage::report(&brain, days).await }) {
+            Ok(report) => {
+                self.savings = Some(report);
+                self.savingserror = None;
+            }
+            Err(error) => self.savingserror = Some(format!("Could not read savings: {error}")),
+        }
+        cx.notify();
+    }
+
+    fn setsavingswindow(&mut self, days: Option<u32>, cx: &mut Context<Self>) {
+        self.savingsdays = days;
+        self.refreshsavings(cx);
+    }
+
+    fn setprice(&mut self, dollars: f64, cx: &mut Context<Self>) {
+        let database = self.database.clone();
+        let result = block(async {
+            let brain = Brain::open(database).await?;
+            synapsecore::usage::setprice(&brain, dollars).await
+        });
+        self.notice = match result {
+            Ok(()) => Notice::Success(format!(
+                "Savings are now priced at ${dollars:.2} per million input tokens."
+            )),
+            Err(error) => Notice::Error(format!("Could not change the price: {error}")),
+        };
+        self.refreshsavings(cx);
     }
 
     fn showmap(&mut self, cx: &mut Context<Self>) {
@@ -1490,6 +1539,7 @@ impl Dashboard {
             self.brain = Some(brain);
         }
         match self.page {
+            Page::Savings => self.refreshsavings(cx),
             Page::Skills => self.refreshskills(cx),
             Page::Servers => self.refreshservers(cx),
             Page::Memories => self.refreshimports(cx),
@@ -2799,6 +2849,44 @@ impl Dashboard {
                 .into_any_element();
         }
 
+        if self.page == Page::Savings {
+            let host = cx.entity().downgrade();
+            let window = move |days: Option<u32>| -> settings::Click {
+                let host = host.clone();
+                Box::new(move |_, _, cx| {
+                    let _ = host.update(cx, |this, cx| this.setsavingswindow(days, cx));
+                })
+            };
+            let host = cx.entity().downgrade();
+            let price = move |dollars: f64| -> settings::Click {
+                let host = host.clone();
+                Box::new(move |_, _, cx| {
+                    let _ = host.update(cx, |this, cx| this.setprice(dollars, cx));
+                })
+            };
+            return shell
+                .child(savings::render(
+                    savings::View {
+                        report: self.savings.clone(),
+                        days: self.savingsdays,
+                        error: self.savingserror.clone(),
+                    },
+                    savings::Actions {
+                        window: Box::new(window),
+                        price: Box::new(price),
+                        refresh: Box::new(cx.listener(|this, _, _, cx| this.refreshsavings(cx))),
+                    },
+                    cx,
+                ))
+                .child(
+                    StatusBar::new()
+                        .height(36.0)
+                        .left(Text::new("Savings · counted on this machine").size(Size::Xs))
+                        .right(Text::new("Sizes only, never memory text").size(Size::Xs)),
+                )
+                .into_any_element();
+        }
+
         if self.page == Page::Mesh {
             return shell
                 .child(mesh::render(
@@ -3382,6 +3470,7 @@ fn connectionserver() -> Option<PathBuf> {
 fn initialpage() -> Page {
     match std::env::var("SYNAPSE_PAGE").as_deref() {
         Ok("map") => Page::Map,
+        Ok("savings") => Page::Savings,
         Ok("memory") => Page::Memories,
         Ok("mesh") => Page::Mesh,
         Ok("skills") => Page::Skills,

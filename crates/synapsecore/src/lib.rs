@@ -20,4 +20,5 @@ pub mod shellsetup;
 pub mod skill;
 pub mod sources;
 pub mod sync;
+pub mod usage;
 pub mod vault;

@@ -306,7 +306,15 @@
       <h3>memory eval</h3>
       <code>synapse memory eval &amp;lt;cases.toml&amp;gt; [--limit &amp;lt;n&amp;gt;] [--budget &amp;lt;full|balanced|lean&amp;gt;] [--fail-under &amp;lt;0-1&amp;gt;] [--json]</code>
     </div>
-    <p>Score recall against a file of labeled questions. Each <code>[[case]]</code> has a <code>query</code>, an optional <code>project</code> folder, and <code>expect</code>: text a useful memory contains, matched case-insensitively, or nothing when no stored memory answers it. Reports how often the answer ranked first, how often it came back at all, mean reciprocal rank, how often the answer text survived the response budget, and how many memories came back where none answer. <code>--limit</code> defaults to 5; <code>--budget</code> sets the response budget for the run and defaults to the configured one. <code>--fail-under</code> exits 1 when the found share is below the floor.</p>
+    <p>Score recall against a file of labeled questions. Each <code>[[case]]</code> has a <code>query</code>, an optional <code>project</code> folder, and <code>expect</code>: text a useful memory contains, matched case-insensitively, or nothing when no stored memory answers it. Reports how often the answer ranked first, how often it came back at all, mean reciprocal rank, how often the answer text survived the response budget, how many memories came back beside the answer, and how many came back where none answer. <code>--limit</code> defaults to 5; <code>--budget</code> sets the response budget for the run and defaults to the configured one. <code>--fail-under</code> exits 1 when the found share is below the floor.</p>
+  </section>
+    
+  <section class="command" id="memorydrift">
+    <div>
+      <h3>memory drift</h3>
+      <code>synapse memory drift [folder] [--json] [--strict]</code>
+    </div>
+    <p>Check everything a folder's sessions can see for memory that no longer holds: a file path that is gone from the checkout, two memories that say opposite things or carry different numbers, and two that say the same thing. Each finding comes with the command that settles it. Nothing is changed. <code>--strict</code> exits 1 when anything is found. Recall and the session hook run the same check on what they hand over.</p>
   </section>
     
   <section class="command" id="memoryshow">
@@ -830,6 +838,14 @@
     <p>Turn the agent mesh tools on or off. Connected tools pick the change up the next time they start.</p>
   </section>
     
+  <section class="command" id="settingsprice">
+    <div>
+      <h3>settings price</h3>
+      <code>synapse settings price &amp;lt;dollars&amp;gt;</code>
+    </div>
+    <p>The price per million input tokens that <code>synapse savings</code> and the Savings page use for the dollar figure. Defaults to $2.</p>
+  </section>
+    
   <section class="command" id="settingsworkers">
     <div>
       <h3>settings workers</h3>
@@ -942,12 +958,20 @@
     <p>Print the resolved data directory, SOUL.md, and CLI destination.</p>
   </section>
     
+  <section class="command" id="savings">
+    <div>
+      <h3>savings</h3>
+      <code>synapse savings [--days &amp;lt;n&amp;gt;|--all] [--json]</code>
+    </div>
+    <p>Tokens and dollars Synapse kept out of your sessions, compared with keeping the same memory in an instruction file every session loads. Counts what each session could reach, what recall and the session hook actually sent, and what Synapse's own tool definitions and guidance cost. Defaults to the last 30 days. Figures are characters divided by four, counted once per session, so they understate.</p>
+  </section>
+    
   <section class="command" id="doctor">
     <div>
       <h3>doctor</h3>
       <code>synapse doctor [--json]</code>
     </div>
-    <p>Report everything a bug report needs: version, store state and size, connected tools and what each is set up with, skill and mesh state, shell and CLI integration, resolved paths, and recent crashes. Every check reports rather than fails, so a broken store is described instead of stopping the report. Nothing is sent anywhere.</p>
+    <p>Report everything a bug report needs: version, store state and size, drift found from the current folder, connected tools and what each is set up with, skill and mesh state, shell and CLI integration, resolved paths, and recent crashes. Every check reports rather than fails, so a broken store is described instead of stopping the report. Nothing is sent anywhere.</p>
   </section>
     
   <section class="command" id="connect">

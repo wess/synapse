@@ -10,6 +10,7 @@ mod menu;
 mod mesh;
 mod model;
 mod runtime;
+mod savings;
 mod servers;
 mod settings;
 mod sidebar;

@@ -74,11 +74,13 @@ fn report(evaluation: &Evaluation) -> String {
             "First:   {:.0}%  answer ranked first\n\
              Found:   {:.0}%  answer returned at all\n\
              MRR:     {:.2}\n\
-             Shown:   {:.0}%  answer text inside what recall returned\n",
+             Shown:   {:.0}%  answer text inside what recall returned\n\
+             Surplus: {:.1}  memories returned beside the answer\n",
             evaluation.top * 100.0,
             evaluation.found * 100.0,
             evaluation.mrr,
-            evaluation.shown * 100.0
+            evaluation.shown * 100.0,
+            evaluation.surplus
         ));
     }
     if unanswerable > 0 {
@@ -169,6 +171,7 @@ mod tests {
             mrr: 0.0,
             shown: 0.0,
             noise: 1.0,
+            surplus: 0.0,
         };
         let text = report(&evaluation);
         assert!(text.contains("miss\t2\tdeploy branch"));
