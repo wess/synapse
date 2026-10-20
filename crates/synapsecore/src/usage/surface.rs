@@ -1,5 +1,5 @@
-//! What every session carries before the first turn: Synapse's guidance, its
-//! tool definitions, the skill descriptions, and the session hook's recall.
+//! A session's startup footprint: Synapse's guidance, its tool definitions,
+//! the potential skill description cost, and the session hook's recall.
 //! Nothing here has a budget except the recall, which is why it's counted.
 //! Character counts are exact; tokens are an estimate.
 
@@ -108,8 +108,8 @@ fn tooldefinitions(mesh: bool, learn: bool) -> Surface {
     }
 }
 
-/// Names and descriptions, which a tool loads for every installed skill. Bodies
-/// are read on demand and don't count.
+/// Names and descriptions in the library. This is potential cost: a tool only
+/// loads the skills installed in it. Bodies are read on demand and don't count.
 fn skills() -> Result<Surface> {
     let (skills, _) = crate::skill::library::all()?;
     let mut chars = 0;
@@ -126,7 +126,7 @@ fn skills() -> Result<Surface> {
     Ok(Surface {
         label: "Skill library",
         detail: format!(
-            "{}, descriptions only",
+            "{} in library, if installed",
             plural(skills.len(), "skill", "skills")
         ),
         chars,

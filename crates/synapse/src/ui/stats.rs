@@ -31,6 +31,7 @@ pub struct View {
     pub surfaces: Vec<Surface>,
     pub days: Option<u32>,
     pub error: Option<String>,
+    pub loading: bool,
 }
 
 pub struct Actions {
@@ -70,6 +71,10 @@ pub fn render(view: View, actions: Actions, cx: &App) -> AnyElement {
                 .child(Icon::new(IconName::CircleAlert).size(Size::Sm))
                 .child(Text::new(error).size(Size::Sm)),
         );
+    }
+
+    if view.loading && view.report.is_none() {
+        page = page.child(Text::new("Loading stats…").size(Size::Sm).dimmed());
     }
 
     let warning = theme.warning().hsla();
@@ -352,10 +357,10 @@ fn persession(surfaces: &[Surface], border: Hsla, background: Hsla, warning: Hsl
                 .flex()
                 .flex_col()
                 .gap(px(2.0))
-                .child(Text::new("In every session").size(Size::Sm).bold())
+                .child(Text::new("Startup footprint").size(Size::Sm).bold())
                 .child(
                     Text::new(
-                        "Loaded before the first turn by each connected tool. Same numbers as `synapse tokens`.",
+                        "Potential startup cost. Skill descriptions count the library; each tool loads only its installed skills.",
                     )
                     .size(Size::Xs)
                     .dimmed(),
@@ -370,9 +375,9 @@ fn persession(surfaces: &[Surface], border: Hsla, background: Hsla, warning: Hsl
         }))
         .child(div().h(px(1.0)).bg(border))
         .child(line(
-            "Total",
+            "Total potential",
             total as i64,
-            "Per session, per connected tool".to_owned(),
+            "If all library skills are installed in the tool".to_owned(),
         ));
     for text in surfaces.iter().filter_map(|item| item.warning.clone()) {
         panel = panel.child(

@@ -88,6 +88,8 @@ pub struct Dashboard {
     usagedays: Option<u32>,
     surfaces: Vec<synapsecore::usage::Surface>,
     statserror: Option<String>,
+    statsloading: bool,
+    statsrun: u64,
     mesherror: Option<String>,
     skillrows: Vec<skills::Row>,
     skillunmanaged: Vec<(String, String)>,
@@ -378,6 +380,8 @@ impl Dashboard {
             usagedays: Some(30),
             surfaces: Vec::new(),
             statserror: None,
+            statsloading: false,
+            statsrun: 0,
             mesherror: meshdata.error,
             skillrows: skilldata.rows,
             skillunmanaged: skilldata.unmanaged,
@@ -468,37 +472,67 @@ impl Dashboard {
 
     fn showstats(&mut self, cx: &mut Context<Self>) {
         self.page = Page::Stats;
-        self.refreshstats(cx);
+        self.refreshstats(true, cx);
     }
 
     /// The startup recall is measured outside any project, since the app has
     /// none open.
-    fn refreshstats(&mut self, cx: &mut Context<Self>) {
+    fn refreshstats(&mut self, measure_surfaces: bool, cx: &mut Context<Self>) {
         let Some(brain) = self.brain.clone() else {
             self.statserror = Some("Synapse could not open its store.".to_owned());
+            self.statsloading = false;
             cx.notify();
             return;
         };
-        let days = self.usagedays;
-        let result = block(async move {
-            let report = synapsecore::usage::report(&brain, days).await?;
-            let surfaces = synapsecore::usage::surfaces(&brain, &files::soul()?, None).await?;
-            anyhow::Ok((report, surfaces))
-        });
-        match result {
-            Ok((report, surfaces)) => {
-                self.usage = Some(report);
-                self.surfaces = surfaces;
-                self.statserror = None;
-            }
-            Err(error) => self.statserror = Some(format!("Could not read stats: {error}")),
-        }
+        self.statsloading = true;
+        self.statserror = None;
         cx.notify();
+        self.statsrun = self.statsrun.wrapping_add(1);
+        let run = self.statsrun;
+        let days = self.usagedays;
+        let measure_surfaces = measure_surfaces || self.surfaces.is_empty();
+        cx.spawn(async move |this, cx| {
+            let result = cx
+                .background_executor()
+                .spawn(async move {
+                    let report = block(synapsecore::usage::report(&brain, days));
+                    let surfaces = measure_surfaces.then(|| {
+                        files::soul().and_then(|soul| {
+                            block(synapsecore::usage::surfaces(&brain, &soul, None))
+                        })
+                    });
+                    (report, surfaces)
+                })
+                .await;
+            this.update(cx, |this, cx| {
+                if this.statsrun != run {
+                    return;
+                }
+                this.statsloading = false;
+                let (report, surfaces) = result;
+                let mut errors = Vec::new();
+                match report {
+                    Ok(report) => this.usage = Some(report),
+                    Err(error) => errors.push(format!("usage: {error}")),
+                }
+                if let Some(surfaces) = surfaces {
+                    match surfaces {
+                        Ok(surfaces) => this.surfaces = surfaces,
+                        Err(error) => errors.push(format!("startup cost: {error}")),
+                    }
+                }
+                this.statserror = (!errors.is_empty())
+                    .then(|| format!("Could not read stats: {}", errors.join("; ")));
+                cx.notify();
+            })
+            .ok();
+        })
+        .detach();
     }
 
     fn setstatswindow(&mut self, days: Option<u32>, cx: &mut Context<Self>) {
         self.usagedays = days;
-        self.refreshstats(cx);
+        self.refreshstats(false, cx);
     }
 
     fn setprice(&mut self, dollars: f64, cx: &mut Context<Self>) {
@@ -513,7 +547,7 @@ impl Dashboard {
             )),
             Err(error) => Notice::Error(format!("Could not change the price: {error}")),
         };
-        self.refreshstats(cx);
+        self.refreshstats(false, cx);
     }
 
     fn showmap(&mut self, cx: &mut Context<Self>) {
@@ -1549,7 +1583,7 @@ impl Dashboard {
             self.brain = Some(brain);
         }
         match self.page {
-            Page::Stats => self.refreshstats(cx),
+            Page::Stats => self.refreshstats(true, cx),
             Page::Skills => self.refreshskills(cx),
             Page::Servers => self.refreshservers(cx),
             Page::Memories => self.refreshimports(cx),
@@ -2881,11 +2915,14 @@ impl Dashboard {
                         surfaces: self.surfaces.clone(),
                         days: self.usagedays,
                         error: self.statserror.clone(),
+                        loading: self.statsloading,
                     },
                     stats::Actions {
                         window: Box::new(window),
                         price: Box::new(price),
-                        refresh: Box::new(cx.listener(|this, _, _, cx| this.refreshstats(cx))),
+                        refresh: Box::new(
+                            cx.listener(|this, _, _, cx| this.refreshstats(true, cx)),
+                        ),
                     },
                     cx,
                 ))
@@ -3481,7 +3518,7 @@ fn connectionserver() -> Option<PathBuf> {
 fn initialpage() -> Page {
     match std::env::var("SYNAPSE_PAGE").as_deref() {
         Ok("map") => Page::Map,
-        Ok("stats") => Page::Stats,
+        Ok("stats" | "savings") => Page::Stats,
         Ok("memory") => Page::Memories,
         Ok("mesh") => Page::Mesh,
         Ok("skills") => Page::Skills,
