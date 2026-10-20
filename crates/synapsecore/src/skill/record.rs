@@ -15,6 +15,7 @@ use crate::skill::Receipts;
 use anyhow::{Context, Result};
 use schemars::JsonSchema;
 use serde::Serialize;
+use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 /// How many revisions of one skill are kept. Anything unbounded that Synapse
@@ -75,8 +76,8 @@ impl Receipts {
         .bind(shelf)
         .bind(skill)
         .bind(project)
-        .bind(tool)
-        .bind(note)
+        .bind(crate::brain::redact(tool).body)
+        .bind(crate::brain::redact(note).body)
         .bind(now()?)
         .execute(&self.pool)
         .await
@@ -123,10 +124,30 @@ impl Receipts {
     /// How many skills are waiting, without reading any of them. What the
     /// status line and the session hook want.
     pub async fn waiting(&self) -> Result<i64> {
-        sqlx::query_scalar("SELECT COUNT(*) FROM skillproposal")
-            .fetch_one(&self.pool)
-            .await
-            .context("could not count the proposed skills")
+        sqlx::query_scalar(
+            "SELECT (SELECT COUNT(*) FROM skillproposal) + \
+            (SELECT COUNT(*) FROM learningpromotion WHERE state = 'proposed')",
+        )
+        .fetch_one(&self.pool)
+        .await
+        .context("could not count the proposed skills")
+    }
+
+    pub async fn waitingfor(&self, folder: Option<&Path>) -> Result<i64> {
+        let project = folder
+            .map(crate::brain::projectkey)
+            .transpose()?
+            .flatten()
+            .unwrap_or_default();
+        let shelf = folder.map(crate::skill::Shelf::project).unwrap_or_default();
+        Ok(sqlx::query_scalar(
+            "SELECT (SELECT COUNT(*) FROM skillproposal WHERE shelf = '' OR shelf = ?) + \
+             (SELECT COUNT(*) FROM learningpromotion WHERE project = ? AND state = 'proposed')",
+        )
+        .bind(shelf.key())
+        .bind(project)
+        .fetch_one(&self.pool)
+        .await?)
     }
 
     pub async fn settle(&self, shelf: &str, skill: &str) -> Result<()> {
@@ -148,6 +169,10 @@ impl Receipts {
         note: &str,
         tool: &str,
     ) -> Result<i64> {
+        anyhow::ensure!(
+            crate::brain::redact(body).count == 0,
+            "the existing skill contains credentials or private sections; remove them before retaining a revision"
+        );
         let id: i64 = sqlx::query_scalar(
             "INSERT INTO skillrevision(shelf, skill, body, note, tool, created) \
              VALUES (?, ?, ?, ?, ?, ?) RETURNING id",
@@ -155,8 +180,8 @@ impl Receipts {
         .bind(shelf)
         .bind(skill)
         .bind(body)
-        .bind(note)
-        .bind(tool)
+        .bind(crate::brain::redact(note).body)
+        .bind(crate::brain::redact(tool).body)
         .bind(now()?)
         .fetch_one(&self.pool)
         .await

@@ -13,6 +13,7 @@ pub mod database;
 pub mod files;
 pub mod imports;
 pub mod instructions;
+pub mod learning;
 pub mod mcp;
 pub mod relay;
 pub mod servers;

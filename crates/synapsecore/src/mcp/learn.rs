@@ -11,12 +11,77 @@
 //! tool until a person says so, and that a revised one keeps what it used to
 //! say.
 
+use crate::brain::drift::Finding;
+use crate::learning::{Disposition, Feedback, Outcome, Verification};
 use crate::mcp::model::*;
 use crate::mcp::server::{Server, projectpath};
 use crate::skill::{self, Shelf};
 use rmcp::handler::server::wrapper::Parameters;
 use rmcp::service::{RequestContext, RoleServer};
 use rmcp::{Json, tool, tool_router};
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+
+#[derive(JsonSchema)]
+struct FeedbackRequest {
+    feedback: Feedback,
+    project: Option<String>,
+}
+
+impl<'de> Deserialize<'de> for FeedbackRequest {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        #[derive(Deserialize)]
+        #[serde(deny_unknown_fields)]
+        struct Input {
+            feedback: Feedback,
+            project: Option<String>,
+        }
+        let input = Input::deserialize(deserializer)
+            .map_err(|_| serde::de::Error::custom("invalid feedback parameters"))?;
+        Ok(Self {
+            feedback: input.feedback,
+            project: input.project,
+        })
+    }
+}
+
+#[derive(Serialize, JsonSchema)]
+struct FeedbackReceipt {
+    id: i64,
+    outcome: Outcome,
+    verification: Verification,
+    qualified: bool,
+    unstable: bool,
+}
+
+#[derive(JsonSchema)]
+struct ResolveRequest {
+    finding: Finding,
+    disposition: Disposition,
+    note: String,
+    project: Option<String>,
+}
+
+impl<'de> Deserialize<'de> for ResolveRequest {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        #[derive(Deserialize)]
+        #[serde(deny_unknown_fields)]
+        struct Input {
+            finding: Finding,
+            disposition: Disposition,
+            note: String,
+            project: Option<String>,
+        }
+        let input = Input::deserialize(deserializer)
+            .map_err(|_| serde::de::Error::custom("invalid drift resolution parameters"))?;
+        Ok(Self {
+            finding: input.finding,
+            disposition: input.disposition,
+            note: input.note,
+            project: input.project,
+        })
+    }
+}
 
 #[tool_router(router = learntools, vis = "pub(super)")]
 impl Server {
@@ -54,37 +119,87 @@ impl Server {
     }
 
     #[tool(
-        description = "Correct a skill that turned out wrong, incomplete, or out of date, replacing its instructions and saying in one line what was wrong with it. Unlike a new skill this reaches the copies Synapse installed, because the user already agreed to this skill being loaded and a correction that never arrives leaves every session running the version that was wrong. What it used to say is kept and can be restored. A copy the user edited by hand is theirs and is left alone."
+        description = "Propose a corrected skill with its full replacement instructions and a reason. The exact diff waits for approval through synapse learn approve; no installed copy changes before review. Approval preserves revision history and leaves hand-edited copies alone."
     )]
     async fn revise(
         &self,
         Parameters(request): Parameters<ReviseRequest>,
-        context: RequestContext<RoleServer>,
     ) -> Result<Json<ReviseResponse>, String> {
-        let receipts = self.receipts()?;
-        let home = crate::files::home().map_err(|error| error.to_string())?;
+        self.receipts()?;
         let name = request.name.trim().to_lowercase();
         let project = projectpath(request.project.as_deref());
+        let project =
+            project.ok_or_else(|| "a skill revision needs a project folder".to_owned())?;
         let existing =
-            skill::library::locate(&name, project.as_deref()).map_err(|error| error.to_string())?;
-        let (revision, reached) = skill::revise(
-            receipts,
-            &home,
-            &existing,
-            request.description.as_deref(),
-            &request.instructions,
-            &tool(&context),
-            request.note.as_deref().unwrap_or_default(),
-        )
-        .await
-        .map_err(|error| format!("{error:#}"))?;
+            skill::library::locate(&name, Some(&project)).map_err(|error| error.to_string())?;
+        let proposal = self
+            .brain
+            .proposerevision(
+                &project,
+                &existing,
+                request.description.as_deref(),
+                &request.instructions,
+                request.note.as_deref().unwrap_or_default(),
+                &self.learningid,
+            )
+            .await
+            .map_err(|error| format!("{error:#}"))?;
 
         Ok(Json(ReviseResponse {
             skill: name,
             scope: existing.shelf.label().to_owned(),
-            revision,
-            updated: reached,
+            revision: 0,
+            updated: Vec::new(),
+            proposed: proposal.state == "proposed",
+            proposal: Some(proposal.id),
+            state: proposal.state,
         }))
+    }
+
+    #[tool(
+        description = "Record an outcome for a memory or skill, the mistake, repeatable correction, and evidence. Claims stay reported until a check or user confirmation verifies them. Use unresolved after a passing retry when the cause is still unknown. Include query and expected only for a proposed recall regression case. Never send credentials or raw command output."
+    )]
+    async fn feedback(
+        &self,
+        Parameters(request): Parameters<FeedbackRequest>,
+    ) -> Result<Json<FeedbackReceipt>, String> {
+        self.receipts()?;
+        let folder = projectpath(request.project.as_deref())
+            .ok_or_else(|| "feedback needs a project folder".to_owned())?;
+        let record = self
+            .brain
+            .feedback(request.feedback, &folder, &self.learningid)
+            .await
+            .map_err(|error| format!("{error:#}"))?;
+        Ok(Json(FeedbackReceipt {
+            id: record.id,
+            outcome: record.outcome,
+            verification: record.verification,
+            qualified: record.qualified(),
+            unstable: record.unstable,
+        }))
+    }
+
+    #[tool(
+        description = "Resolve one exact drift finding after checking its context. Use contextual when both claims apply in different contexts, falsepositive when the warning is mistaken, and corrected only after supersession. Give the evidence in a short note. Resolutions are project scoped, reversible, and stop applying when memory content changes."
+    )]
+    async fn resolvedrift(
+        &self,
+        Parameters(request): Parameters<ResolveRequest>,
+    ) -> Result<Json<crate::learning::Resolution>, String> {
+        self.receipts()?;
+        let folder = projectpath(request.project.as_deref())
+            .ok_or_else(|| "a drift resolution needs a project folder".to_owned())?;
+        self.brain
+            .resolvefinding(
+                &folder,
+                &request.finding,
+                request.disposition,
+                &request.note,
+            )
+            .await
+            .map(Json)
+            .map_err(|error| format!("{error:#}"))
     }
 }
 

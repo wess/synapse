@@ -78,6 +78,26 @@ Commands:
   memory undo <batch> --confirm    Undo one import batch
   memory delete <id> --confirm     Delete one memory
   memory wipe --confirm            Delete every memory
+  learn report --session <id>      Record JSON feedback from stdin
+  learn list [--json]              List this project's outcome evidence
+  learn show <id> [--json]         Inspect one feedback record
+  learn check <id> [--timeout <seconds>] -- <command> [args...]
+                                   Observe a verification check without storing output
+  learn confirm <id> --confirm     Confirm a feedback claim explicitly
+  learn reject <id> --confirm      Reject a feedback claim
+  learn proposals [--json]         Review suggested skills and revisions
+  learn proposal <id> [--json]     Inspect the replacement, current content, and evidence
+  learn approve <id> --confirm [--global]
+                                   Approve one exact proposed skill or revision
+  learn dismiss <id> --confirm     Dismiss a suggestion without changing any tool
+  learn cases [--json]             List proposed and reviewed regression cases
+  learn review <id> <--accept|--reject> --confirm
+                                   Review the expected answer for a regression case
+  learn eval [--limit <n>] [--budget <b>] [--fail-under <0-1>] [--json]
+                                   Replay this project's reviewed learning cases
+  learn resolve --confirm          Resolve a drift finding from JSON stdin
+  learn resolutions [--json]       List this project's drift resolutions
+  learn restore <id> --confirm     Restore a dismissed drift warning
   guidance show [--json]           Show SOUL.md and pointer status
   guidance sync                    Create SOUL.md and refresh both pointers
   guidance adopt --confirm         Move global guidance into SOUL.md
@@ -191,6 +211,7 @@ pub fn run(arguments: Vec<OsString>) -> Result<Outcome> {
         "scope" => scope(rest),
         "data" => data(rest),
         "memory" => super::memory::run(rest),
+        "learn" => super::learning::run(rest),
         "guidance" => super::guidance::run(rest),
         "launch" => super::wrap::run(rest),
         "mux" => super::mux::run(rest),

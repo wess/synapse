@@ -10,7 +10,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 /// The columns every read of a memory selects, in the order `Memory` declares
 /// them. One place, because a column added to `Memory` and forgotten in one of
 /// these reads is a row that silently decodes with a default nobody wrote.
-pub(super) const COLUMNS: &str = "memory.rowid AS id, memory.body, memory.source, meta.scope, meta.project, \
+pub(crate) const COLUMNS: &str = "memory.rowid AS id, memory.body, memory.source, meta.scope, meta.project, \
                        CAST(memory.created AS INTEGER) AS created, meta.superseded";
 
 /// Restricts a read to memory a session in `project` can see: everything
@@ -85,7 +85,7 @@ impl Brain {
             .duration_since(UNIX_EPOCH)
             .context("system clock is before the Unix epoch")?
             .as_secs() as i64;
-        let mut transaction = self.pool.begin().await?;
+        let mut transaction = self.pool.begin_with("BEGIN IMMEDIATE").await?;
         let result = sqlx::query("INSERT INTO memory(body, source, created) VALUES (?, ?, ?)")
             .bind(body)
             .bind(source.unwrap_or(""))
@@ -169,7 +169,7 @@ impl Brain {
     ) -> Result<i64> {
         let body = body.trim();
         anyhow::ensure!(!body.is_empty(), "memory content cannot be empty");
-        let mut transaction = self.pool.begin().await?;
+        let mut transaction = self.pool.begin_with("BEGIN IMMEDIATE").await?;
         let result = sqlx::query("INSERT INTO memory(body, source, created) VALUES (?, ?, ?)")
             .bind(body)
             .bind(source)
@@ -197,6 +197,17 @@ impl Brain {
     /// The pool, for the sync module's own bookkeeping table.
     pub fn pool(&self) -> &SqlitePool {
         &self.pool
+    }
+
+    pub(crate) fn handle(&self) -> crate::database::Opened {
+        crate::database::Opened {
+            pool: self.pool.clone(),
+            lock: self._lock.clone(),
+        }
+    }
+
+    pub(crate) fn databasepath(&self) -> &Path {
+        &self.path
     }
 
     pub async fn recallscoped(
@@ -516,7 +527,7 @@ impl Brain {
     ) -> Result<Option<Memory>> {
         let body = stored(body)?;
         let body = body.as_str();
-        let mut transaction = self.pool.begin().await?;
+        let mut transaction = self.pool.begin_with("BEGIN IMMEDIATE").await?;
         crate::brain::gram::unindex(&mut transaction, id).await?;
         let result =
             sqlx::query("UPDATE memory SET body = ?, source = COALESCE(?, source) WHERE rowid = ?")
@@ -543,7 +554,7 @@ impl Brain {
     pub async fn deletememory(&self, id: i64) -> Result<Option<Memory>> {
         let memory = self.memory(id).await?;
         if memory.is_some() {
-            let mut transaction = self.pool.begin().await?;
+            let mut transaction = self.pool.begin_with("BEGIN IMMEDIATE").await?;
             // Anything this memory replaced comes back. Leaving those rows
             // pointing at an id that no longer resolves would hide them for
             // good, with nothing left on the machine to name what replaced
@@ -572,7 +583,7 @@ impl Brain {
     }
 
     pub async fn wipememories(&self) -> Result<u64> {
-        let mut transaction = self.pool.begin().await?;
+        let mut transaction = self.pool.begin_with("BEGIN IMMEDIATE").await?;
         sqlx::query("DELETE FROM memoryorigin")
             .execute(&mut *transaction)
             .await?;

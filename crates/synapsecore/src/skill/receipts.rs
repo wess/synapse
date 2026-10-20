@@ -30,6 +30,14 @@ pub struct Receipts {
 }
 
 impl Receipts {
+    pub(crate) fn frombrain(brain: &crate::brain::Brain) -> Self {
+        let opened = brain.handle();
+        Self {
+            pool: opened.pool,
+            _lock: opened.lock,
+        }
+    }
+
     pub async fn open(path: impl AsRef<Path>) -> Result<Self> {
         let opened = crate::database::open(path.as_ref()).await?;
         Ok(Self {

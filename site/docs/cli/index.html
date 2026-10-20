@@ -397,6 +397,137 @@
     <p>Delete every memory entry and import batch while leaving SOUL.md, settings, vaults, stored values, and scope approvals intact. The exact guard is required.</p>
   </section>
 
+    <h2 id="learning">Learning</h2>
+    <p>Learning runs through ordinary session events and requires no open window. Enable collection with <code>synapse settings learn on</code>. These commands default to the current project; each accepts <code>--project &lt;folder&gt;</code>. Record and inspection commands print JSON so a connected session can use them directly.</p>
+
+  <section class="command" id="learnreport">
+    <div>
+      <h3>learn report</h3>
+      <code>synapse learn report --session &amp;lt;id&amp;gt;</code>
+    </div>
+    <p>Read a feedback object from stdin: target, outcome, problem, correction, evidence, and optional query/expected. Memory targets use kind=memory and id; skill targets use kind=skill, name, and scope. Outcomes are helpful, failed, or unresolved. One session counts once for the same lesson. Reports cannot claim verification. Input is bounded and credential patterns are redacted.</p>
+  </section>
+
+  <section class="command" id="learnlist">
+    <div>
+      <h3>learn list</h3>
+      <code>synapse learn list [--json]</code>
+    </div>
+    <p>List up to 100 feedback records visible to this project.</p>
+  </section>
+
+  <section class="command" id="learnshow">
+    <div>
+      <h3>learn show</h3>
+      <code>synapse learn show &amp;lt;id&amp;gt; [--json]</code>
+    </div>
+    <p>Inspect one outcome, its evidence, content fingerprint, and verification state.</p>
+  </section>
+
+  <section class="command" id="learncheck">
+    <div>
+      <h3>learn check</h3>
+      <code>synapse learn check &amp;lt;id&amp;gt; [--timeout &amp;lt;seconds&amp;gt;] -- &amp;lt;command&amp;gt; [args...]</code>
+    </div>
+    <p>Run an explicitly chosen verification command in this project and observe its exit status. Command output and arguments are not stored. The default timeout is 120 seconds, with a 300 second ceiling. A timeout or failed exit cannot qualify a lesson. A passing retry leaves an unresolved outcome unresolved. Failed checks remain flagged until a user reviews the cause; later checks cannot erase a rejection. Use this around a relevant check rather than running extra checks to gather evidence.</p>
+  </section>
+
+  <section class="command" id="learnconfirm">
+    <div>
+      <h3>learn confirm</h3>
+      <code>synapse learn confirm &amp;lt;id&amp;gt; --confirm</code>
+    </div>
+    <p>Record an explicit user confirmation. A changed target needs fresh evidence.</p>
+  </section>
+
+  <section class="command" id="learnreject">
+    <div>
+      <h3>learn reject</h3>
+      <code>synapse learn reject &amp;lt;id&amp;gt; --confirm</code>
+    </div>
+    <p>Reject a feedback claim while keeping its record.</p>
+  </section>
+
+  <section class="command" id="learnproposals">
+    <div>
+      <h3>learn proposals</h3>
+      <code>synapse learn proposals [--json]</code>
+    </div>
+    <p>List compact summaries of proposed procedures and skill replacements. Three independently checked or confirmed sessions supporting the same correction generate one suggestion; ordinary recall and self-reported success do not qualify.</p>
+  </section>
+
+  <section class="command" id="learnproposal">
+    <div>
+      <h3>learn proposal</h3>
+      <code>synapse learn proposal &amp;lt;id&amp;gt; [--json]</code>
+    </div>
+    <p>Compare a proposed replacement with the current version, inspect supporting and conflicting evidence, and check whether its original fingerprint is still current. Sensitive content in the original is redacted.</p>
+  </section>
+
+  <section class="command" id="learnapprove">
+    <div>
+      <h3>learn approve</h3>
+      <code>synapse learn approve &amp;lt;id&amp;gt; --confirm [--global]</code>
+    </div>
+    <p>Approve the exact proposal after reviewing its evidence and instructions. New procedures become project skills. Replacements require an unchanged original fingerprint, retain revision history, and preserve hand-edited tool copies. A shared skill replacement also requires --global.</p>
+  </section>
+
+  <section class="command" id="learndismiss">
+    <div>
+      <h3>learn dismiss</h3>
+      <code>synapse learn dismiss &amp;lt;id&amp;gt; --confirm</code>
+    </div>
+    <p>Dismiss a suggestion. Repeated evidence for that same lesson does not recreate it while its retained record exists.</p>
+  </section>
+
+  <section class="command" id="learncases">
+    <div>
+      <h3>learn cases</h3>
+      <code>synapse learn cases [--json]</code>
+    </div>
+    <p>List proposed and reviewed query/expected regression cases. Confirmed corrections can propose cases; the expected answer still needs human review.</p>
+  </section>
+
+  <section class="command" id="learnreview">
+    <div>
+      <h3>learn review</h3>
+      <code>synapse learn review &amp;lt;id&amp;gt; &amp;lt;--accept|--reject&amp;gt; --confirm</code>
+    </div>
+    <p>Review a proposed regression label. Only accepted cases enter the evaluation set. Rejected cases stay dismissed when the same evidence is reported again. Reviewed cases survive expiry of the feedback that proposed them.</p>
+  </section>
+
+  <section class="command" id="learneval">
+    <div>
+      <h3>learn eval</h3>
+      <code>synapse learn eval [--limit &amp;lt;n&amp;gt;] [--budget &amp;lt;full|balanced|lean&amp;gt;] [--fail-under &amp;lt;0-1&amp;gt;] [--json]</code>
+    </div>
+    <p>Replay reviewed cases through actual scoped recall. Report answer quality, irrelevant results, context size, and recall latency; exit nonzero below the requested answer-retrieval floor.</p>
+  </section>
+
+  <section class="command" id="learnresolve">
+    <div>
+      <h3>learn resolve</h3>
+      <code>synapse learn resolve --confirm</code>
+    </div>
+    <p>Read finding, disposition, and note from JSON stdin. Dispositions are contextual, falsepositive, or corrected. A corrected finding requires actual supersession. Unchanged assessed warnings stay quiet across recall and session hooks; changed content is checked again.</p>
+  </section>
+
+  <section class="command" id="learnresolutions">
+    <div>
+      <h3>learn resolutions</h3>
+      <code>synapse learn resolutions [--json]</code>
+    </div>
+    <p>Inspect up to 100 resolutions for this project.</p>
+  </section>
+
+  <section class="command" id="learnrestore">
+    <div>
+      <h3>learn restore</h3>
+      <code>synapse learn restore &amp;lt;id&amp;gt; --confirm</code>
+    </div>
+    <p>Remove one resolution so its warning can appear again. This does not alter or delete a memory.</p>
+  </section>
+
     <h2 id="mesh">Agent mesh</h2>
     <p>These commands need the mesh switched on with <code>synapse settings mesh on</code>. See the <a href="../mesh/">agent mesh guide</a> for what each part is for.</p>
     
@@ -1033,7 +1164,7 @@
     </main>
     <aside class="ontoc" aria-label="On this page">
         <span>On this page</span>
-        <ol><li><a href="#invocation">Invocation</a></li><li><a href="#application">Application and server</a></li><li><a href="#shell">Shell environments</a></li><li><a href="#vault">Vault and scope</a></li><li><a href="#memory">Memory</a></li><li><a href="#mesh">Agent mesh</a></li><li><a href="#skills">Skills</a></li><li><a href="#data">Data and settings</a></li><li><a href="#install">Installation and paths</a></li></ol>
+        <ol><li><a href="#invocation">Invocation</a></li><li><a href="#application">Application and server</a></li><li><a href="#shell">Shell environments</a></li><li><a href="#vault">Vault and scope</a></li><li><a href="#memory">Memory</a></li><li><a href="#learning">Learning</a></li><li><a href="#mesh">Agent mesh</a></li><li><a href="#skills">Skills</a></li><li><a href="#data">Data and settings</a></li><li><a href="#install">Installation and paths</a></li></ol>
       </aside>
   </div>
   

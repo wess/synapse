@@ -33,8 +33,8 @@ export const learn: Page = {
         <h2 id="enable">Turn it on</h2>
         ${code("shell", `synapse settings learn on
 synapse settings show | grep learn`)}
-        <p>Two tools, <code>teach</code> and <code>revise</code>, appear in every connected session the next time it starts, along with the guidance explaining them. Both arrive and leave together — a tool a session cannot explain is one it will use wrongly.</p>
-        ${note("Why it is off by default", "Two more tool definitions cost context in every session that loads them, whether or not they are used. Somebody who does not want agents editing a library should never pay for the option.")}
+        <p>Four tools, <code>teach</code>, <code>revise</code>, <code>feedback</code>, and <code>resolvedrift</code>, appear the next time a connected session starts, together with their guidance.</p>
+        ${note("Why it is off by default", "Additional tool definitions cost context in every session that loads them, whether or not they are used. Somebody who does not want agents editing a library should never pay for the option.")}
       </li>
 
       <li>
@@ -80,9 +80,11 @@ synapse skill status cut-a-release`)}
         <h2 id="revise">Let it correct itself</h2>
         <p>Use the skill in a session and let it turn out wrong — a missing step, a stale path. Tell the session:</p>
         ${code("text", `Step 3 is wrong now. Fix the skill.`)}
-        <p>It calls <code>revise</code>, and this one <em>does</em> reach the copies Synapse installed:</p>
-        ${code("shell", `grep -c "the corrected step" ~/.claude/skills/cut-a-release/SKILL.md`)}
-        <p>That is the deliberate exception. You already agreed to this skill being loaded, and a correction that never arrives leaves every session running the version that was wrong. It reaches only copies Synapse wrote and nobody has edited — one you changed by hand is yours, and is left where it is.</p>
+        <p>It calls <code>revise</code> and queues the full replacement against the original content fingerprint. Inspect the proposal, then approve the exact change:</p>
+        ${code("shell", `synapse learn proposals
+synapse learn approve 12 --confirm
+synapse skill show cut-a-release`)}
+        <p>The approved change reaches only unmodified copies Synapse installed. An intervening edit invalidates the proposal, and a copy changed by hand remains protected.</p>
       </li>
 
       <li>

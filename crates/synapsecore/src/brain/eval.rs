@@ -55,6 +55,10 @@ pub struct Scored {
     pub shown: bool,
     /// How many memories came back.
     pub returned: usize,
+    /// Memory characters actually handed over, after the recall budget.
+    pub characters: usize,
+    /// Recall latency, excluding the evaluation's label lookup.
+    pub micros: u64,
 }
 
 /// The whole run.
@@ -106,9 +110,15 @@ impl Brain {
     ) -> Result<Evaluation> {
         let mut scored = Vec::with_capacity(cases.len());
         for case in cases {
+            let started = std::time::Instant::now();
             let (_, recalled) = self
                 .recallscoped(&case.query, limit, budget, case.project.as_deref())
                 .await?;
+            let micros = started.elapsed().as_micros().min(u64::MAX as u128) as u64;
+            let characters = recalled
+                .iter()
+                .map(|memory| memory.body.chars().count())
+                .sum();
             let expect: Vec<String> = case.expect.iter().map(|text| text.to_lowercase()).collect();
             let mut rank = None;
             let mut shown = false;
@@ -131,6 +141,8 @@ impl Brain {
                 rank,
                 shown,
                 returned: recalled.len(),
+                characters,
+                micros,
             });
         }
         Ok(summarize(scored, limit))
@@ -233,6 +245,8 @@ mod tests {
             rank,
             shown: rank == Some(1),
             returned,
+            characters: 0,
+            micros: 0,
         };
         let evaluation = summarize(
             vec![

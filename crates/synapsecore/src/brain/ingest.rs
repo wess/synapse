@@ -66,7 +66,7 @@ impl Brain {
         includeflagged: bool,
     ) -> Result<ImportReport> {
         let created = now()?;
-        let mut transaction = self.pool.begin().await?;
+        let mut transaction = self.pool.begin_with("BEGIN IMMEDIATE").await?;
         let batchid = sqlx::query("INSERT INTO importbatch(provider, created) VALUES (?, ?)")
             .bind(preview.provider.value())
             .bind(created)
@@ -207,7 +207,7 @@ impl Brain {
             .await?
             .context("import batch not found")?;
         anyhow::ensure!(!batch.undone, "import batch {id} was already undone");
-        let mut transaction = self.pool.begin().await?;
+        let mut transaction = self.pool.begin_with("BEGIN IMMEDIATE").await?;
         let memories = sqlx::query_scalar::<_, i64>(
             "SELECT DISTINCT memoryid FROM memoryorigin WHERE batchid = ?",
         )
