@@ -59,7 +59,8 @@ impl Brain {
         );
         let now = now()?;
         let assessment = self.assessevidence(record).await?;
-        let mut transaction = self.pool().begin().await?;
+        let _writer = self.writing().await;
+        let mut transaction = self.pool().begin_with("BEGIN IMMEDIATE").await?;
         if !record.query.is_empty() {
             sqlx::query(
                 "INSERT INTO learningcase(project,feedback,query,expected,created) VALUES (?,?,?,?,?) \

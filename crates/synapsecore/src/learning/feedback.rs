@@ -27,7 +27,8 @@ impl Brain {
         let lesson = digest(&(&target, &problem, &correction, &query, &expected))?;
         let session = digest(&session)?;
         let now = now()?;
-        let mut transaction = self.pool().begin().await?;
+        let _writer = self.writing().await;
+        let mut transaction = self.pool().begin_with("BEGIN IMMEDIATE").await?;
         let id: i64 = sqlx::query_scalar(
             "INSERT INTO learningfeedback(project, target, digest, lesson, session, outcome, \
              problem, correction, evidence, query, expected, created, updated) \
@@ -114,6 +115,7 @@ impl Brain {
             "the target changed; collect fresh evidence"
         );
         let now = now()?;
+        let _writer = self.writing().await;
         let mut transaction = self.pool().begin_with("BEGIN IMMEDIATE").await?;
         let mut current: Record =
             sqlx::query_as("SELECT * FROM learningfeedback WHERE id = ? AND project = ?")
@@ -174,6 +176,7 @@ impl Brain {
             .bind(current.checked).bind(current.reviewed).bind(current.unstable).bind(now).bind(id)
             .execute(&mut *transaction).await?;
         transaction.commit().await?;
+        drop(_writer);
         let record = self.feedbackrecord(id, folder).await?;
         self.collectlearning(&record, folder).await?;
         Ok(record)

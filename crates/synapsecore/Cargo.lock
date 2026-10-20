@@ -1789,7 +1789,7 @@ dependencies = [
 
 [[package]]
 name = "synapsecore"
-version = "1.14.0"
+version = "1.14.1"
 dependencies = [
  "anyhow",
  "chacha20poly1305",
