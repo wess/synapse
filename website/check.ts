@@ -205,6 +205,16 @@ for (const command of [
   "synapse settings mesh",
   "synapse settings optimize",
   "synapse settings learn",
+  "synapse learn report",
+  "synapse learn check",
+  "synapse learn proposals",
+  "synapse learn proposal",
+  "synapse learn approve",
+  "synapse learn cases",
+  "synapse learn review",
+  "synapse learn eval",
+  "synapse learn resolve",
+  "synapse learn restore",
   "synapse settings workers",
   "synapse skill proposed",
   "synapse skill approve",
@@ -228,7 +238,7 @@ for (const command of [
   if (!corpus.includes(command)) fail(`documentation is missing subcommand: ${command}`);
 }
 
-// The four always-present tools, the two self-improvement adds, then the
+// The four always-present tools, the four self-improvement adds, then the
 // sixteen the mesh adds. A tool that ships without documentation is one an
 // agent can call and a reader cannot look up.
 for (const tool of [
@@ -238,6 +248,8 @@ for (const tool of [
   "vaultstatus",
   "teach",
   "revise",
+  "feedback",
+  "resolvedrift",
   "register",
   "send",
   "post",

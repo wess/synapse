@@ -12,6 +12,7 @@ export const cli: Page = {
     { label: "Shell environments", id: "shell" },
     { label: "Vault and scope", id: "vault" },
     { label: "Memory", id: "memory" },
+    { label: "Learning", id: "learning" },
     { label: "Agent mesh", id: "mesh" },
     { label: "Skills", id: "skills" },
     { label: "Data and settings", id: "data" },
@@ -66,6 +67,25 @@ ${command("memory imports", "synapse memory imports [--json]", "List import batc
 ${command("memory undo", "synapse memory undo <batch> --confirm", "Remove memories created only by that import batch. Preserve manually edited memories and records linked to another origin.")}
     ${command("memory delete", "synapse memory delete <id> --confirm", "Delete one memory. The exact <code>--confirm</code> guard is required.")}
     ${command("memory wipe", "synapse memory wipe --confirm", "Delete every memory entry and import batch while leaving SOUL.md, settings, vaults, stored values, and scope approvals intact. The exact guard is required.")}
+
+    <h2 id="learning">Learning</h2>
+    <p>Learning runs through ordinary session events and requires no open window. Enable collection with <code>synapse settings learn on</code>. These commands default to the current project; each accepts <code>--project &lt;folder&gt;</code>. Record and inspection commands print JSON so a connected session can use them directly.</p>
+${command("learn report", "synapse learn report --session &lt;id&gt;", "Read a feedback object from stdin: target, outcome, problem, correction, evidence, and optional query/expected. Memory targets use kind=memory and id; skill targets use kind=skill, name, and scope. Outcomes are helpful, failed, or unresolved. One session counts once for the same lesson. Reports cannot claim verification. Input is bounded and credential patterns are redacted.")}
+${command("learn list", "synapse learn list [--json]", "List up to 100 feedback records visible to this project.")}
+${command("learn show", "synapse learn show &lt;id&gt; [--json]", "Inspect one outcome, its evidence, content fingerprint, and verification state.")}
+${command("learn check", "synapse learn check &lt;id&gt; [--timeout &lt;seconds&gt;] -- &lt;command&gt; [args...]", "Run an explicitly chosen verification command in this project and observe its exit status. Command output and arguments are not stored. The default timeout is 120 seconds, with a 300 second ceiling. A timeout or failed exit cannot qualify a lesson. A passing retry leaves an unresolved outcome unresolved. Failed checks remain flagged until a user reviews the cause; later checks cannot erase a rejection. Use this around a relevant check rather than running extra checks to gather evidence.")}
+${command("learn confirm", "synapse learn confirm &lt;id&gt; --confirm", "Record an explicit user confirmation. A changed target needs fresh evidence.")}
+${command("learn reject", "synapse learn reject &lt;id&gt; --confirm", "Reject a feedback claim while keeping its record.")}
+${command("learn proposals", "synapse learn proposals [--json]", "List compact summaries of proposed procedures and skill replacements. Three independently checked or confirmed sessions supporting the same correction generate one suggestion; ordinary recall and self-reported success do not qualify.")}
+${command("learn proposal", "synapse learn proposal &lt;id&gt; [--json]", "Compare a proposed replacement with the current version, inspect supporting and conflicting evidence, and check whether its original fingerprint is still current. Sensitive content in the original is redacted.")}
+${command("learn approve", "synapse learn approve &lt;id&gt; --confirm [--global]", "Approve the exact proposal after reviewing its evidence and instructions. New procedures become project skills. Replacements require an unchanged original fingerprint, retain revision history, and preserve hand-edited tool copies. A shared skill replacement also requires --global.")}
+${command("learn dismiss", "synapse learn dismiss &lt;id&gt; --confirm", "Dismiss a suggestion. Repeated evidence for that same lesson does not recreate it while its retained record exists.")}
+${command("learn cases", "synapse learn cases [--json]", "List proposed and reviewed query/expected regression cases. Confirmed corrections can propose cases; the expected answer still needs human review.")}
+${command("learn review", "synapse learn review &lt;id&gt; &lt;--accept|--reject&gt; --confirm", "Review a proposed regression label. Only accepted cases enter the evaluation set. Rejected cases stay dismissed when the same evidence is reported again. Reviewed cases survive expiry of the feedback that proposed them.")}
+${command("learn eval", "synapse learn eval [--limit &lt;n&gt;] [--budget &lt;full|balanced|lean&gt;] [--fail-under &lt;0-1&gt;] [--json]", "Replay reviewed cases through actual scoped recall. Report answer quality, irrelevant results, context size, and recall latency; exit nonzero below the requested answer-retrieval floor.")}
+${command("learn resolve", "synapse learn resolve --confirm", "Read finding, disposition, and note from JSON stdin. Dispositions are contextual, falsepositive, or corrected. A corrected finding requires actual supersession. Unchanged assessed warnings stay quiet across recall and session hooks; changed content is checked again.")}
+${command("learn resolutions", "synapse learn resolutions [--json]", "Inspect up to 100 resolutions for this project.")}
+${command("learn restore", "synapse learn restore &lt;id&gt; --confirm", "Remove one resolution so its warning can appear again. This does not alter or delete a memory.")}
 
     <h2 id="mesh">Agent mesh</h2>
     <p>These commands need the mesh switched on with <code>synapse settings mesh on</code>. See the <a href="../mesh/">agent mesh guide</a> for what each part is for.</p>

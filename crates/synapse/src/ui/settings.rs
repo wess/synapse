@@ -463,7 +463,7 @@ fn learnpanel(
                         )
                         .child(
                             Text::new(
-                                "Lets a session write down a procedure it worked out as a skill, and correct one that turned out wrong.",
+                                "Lets sessions record outcomes, resolve drift, and propose procedures. Skill changes wait for approval.",
                             )
                             .size(Size::Xs)
                             .dimmed(),

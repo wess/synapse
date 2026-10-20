@@ -30,6 +30,7 @@ pub struct Server {
     /// The name this session registered on the mesh under. One session is one
     /// agent, so binding it here is the whole of identity.
     pub(super) identity: Arc<Mutex<Option<String>>>,
+    pub(super) learningid: Arc<String>,
     instructions: String,
     /// Fixed per-session cost in characters, for the savings ledger.
     standing: usize,
@@ -60,6 +61,14 @@ impl Server {
             receipts,
             supervisor: Supervisor::new(),
             identity: Arc::new(Mutex::new(None)),
+            learningid: Arc::new(format!(
+                "{}-{}",
+                std::process::id(),
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap_or_default()
+                    .as_nanos()
+            )),
             instructions,
             standing,
             toolrouter,

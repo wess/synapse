@@ -8,6 +8,7 @@ mod guidance;
 mod install;
 mod launch;
 mod layers;
+mod learning;
 mod memory;
 mod mux;
 mod relay;

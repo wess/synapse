@@ -1638,7 +1638,7 @@ impl Dashboard {
             Ok(()) => {
                 self.learnenabled = enabled;
                 self.notice = Notice::Success(match enabled {
-                    true => "Self-improvement on. A skill an agent writes waits on the Skills page until you approve it.".to_owned(),
+                    true => "Self-improvement on. Sessions can record outcomes and propose procedures for approval.".to_owned(),
                     false => "Self-improvement off. Skills already in the library stay where they are.".to_owned(),
                 });
                 self.refreshskills(cx);

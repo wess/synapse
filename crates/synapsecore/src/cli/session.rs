@@ -179,8 +179,10 @@ fn reminder(report: &Report) -> String {
         text.push_str(
             " Do the same for procedure: if this session worked out a repeatable way of doing \
              something that is not already a skill, call `teach` with the steps; if a skill it \
-             loaded turned out wrong or incomplete, call `revise`. Neither is a summary of the \
-             session — a skill is instructions for doing this again from nothing.",
+             loaded turned out wrong or incomplete, call `revise` to queue its correction for review. \
+             Record useful or failed memory and skill outcomes with `feedback`, keeping an unknown \
+             cause unresolved even after a passing retry. A skill is instructions for doing this \
+             again from nothing, not a summary of this session.",
         );
     }
     text
@@ -250,9 +252,9 @@ fn context(report: &Report) -> String {
     );
     if report.proposed > 0 {
         context.push_str(&format!(
-            " {} skill(s) written in earlier sessions are waiting for the user to approve them: \
-             they are not installed and not loaded, so do not teach the same procedure again and \
-             do not rely on one being available.",
+            " {} skill suggestion(s) are waiting for review through `synapse skill proposed` or \
+             `synapse learn proposals`. Proposed replacements have not changed installed copies. \
+             Do not propose the same procedure again or rely on an unapproved change.",
             report.proposed
         ));
     }
@@ -450,7 +452,7 @@ fn gather(root: Option<&Path>, recall: Recall) -> Result<Report> {
         let proposed = match learn {
             true => crate::skill::Receipts::glance(&database)
                 .await?
-                .waiting()
+                .waitingfor(root)
                 .await
                 .unwrap_or(0),
             false => 0,
@@ -489,7 +491,11 @@ fn gather(root: Option<&Path>, recall: Recall) -> Result<Report> {
                 let (_, memories, matched) = brain
                     .recallmeasured("", u32::MAX, Some(BUDGET), root)
                     .await?;
-                let (recalled, held, flagged) = screened(memories, &Checkout::at(root));
+                let findings = crate::brain::drift::scan(&memories, &Checkout::at(root));
+                let findings = brain
+                    .filterdrift(findings, &memories.iter().collect::<Vec<_>>(), root, false)
+                    .await?;
+                let (recalled, held, flagged) = screenfindings(memories, findings);
                 (recalled, held, flagged, matched)
             }
             Recall::No => (Vec::new(), Vec::new(), Vec::new(), 0),
@@ -517,11 +523,19 @@ fn gather(root: Option<&Path>, recall: Recall) -> Result<Report> {
 
 /// Missing paths can be checked here. Pair matches are only lexical guesses,
 /// so both memories stay in the hand-over with a warning.
+#[cfg(test)]
 fn screened(
     memories: Vec<Memory>,
     checkout: &Checkout,
 ) -> (Vec<Memory>, Vec<Finding>, Vec<Finding>) {
     let findings = crate::brain::drift::scan(&memories, checkout);
+    screenfindings(memories, findings)
+}
+
+fn screenfindings(
+    memories: Vec<Memory>,
+    findings: Vec<Finding>,
+) -> (Vec<Memory>, Vec<Finding>, Vec<Finding>) {
     let (held, mut flagged): (Vec<Finding>, Vec<Finding>) = findings
         .iter()
         .cloned()

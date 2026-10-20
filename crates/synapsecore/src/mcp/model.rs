@@ -209,9 +209,12 @@ pub struct ReviseRequest {
 pub struct ReviseResponse {
     pub skill: String,
     pub scope: String,
-    /// The id holding what it used to say, restorable with `synapse skill
-    /// revert`.
+    /// Zero while the proposed correction is awaiting review. An applied
+    /// revision is retained in `synapse skill history` and can be reverted.
     pub revision: i64,
     /// The tools this correction reached.
     pub updated: Vec<String>,
+    pub proposed: bool,
+    pub proposal: Option<i64>,
+    pub state: String,
 }

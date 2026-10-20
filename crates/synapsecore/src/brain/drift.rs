@@ -20,7 +20,7 @@ use crate::brain::{Brain, Memory, MemoryScope};
 use anyhow::{Context, Result};
 use compare::{Disagreement, Profile, Relation};
 use schemars::JsonSchema;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
@@ -45,7 +45,9 @@ const PROBE: usize = 16;
 /// Characters of a counterpart quoted in a finding.
 const QUOTED: usize = 200;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, JsonSchema)]
+#[derive(
+    Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Deserialize, Serialize, JsonSchema,
+)]
 #[serde(rename_all = "lowercase")]
 pub enum Concern {
     /// Names a path that is gone.
@@ -57,13 +59,13 @@ pub enum Concern {
 }
 
 /// Ids are oldest first.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, JsonSchema)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
 pub struct Finding {
     pub concern: Concern,
     pub ids: Vec<i64>,
     pub note: String,
     /// Paths a stale memory names that are gone.
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub missing: Vec<String>,
 }
 
@@ -96,6 +98,9 @@ impl Brain {
         let capped = memories.len() as i64 > SCANCEILING;
         let memories = &memories[..memories.len().min(SCANCEILING as usize)];
         let (findings, partial) = scanlimited(memories, &checkout);
+        let findings = self
+            .filterdrift(findings, &memories.iter().collect::<Vec<_>>(), folder, true)
+            .await?;
         Ok(Drift {
             root: checkout.root().map(Path::to_path_buf),
             project,
@@ -161,7 +166,7 @@ impl Brain {
                 let Some(relation @ Relation::Conflict(_)) = compare::relate(&own, profile) else {
                     continue;
                 };
-                let mut finding = paired(memory, &other, relation);
+                let mut finding = paired(memory, other, relation);
                 finding.note.push_str(&format!(
                     " #{} is not in this response; it says: {}",
                     other.id,
@@ -174,7 +179,8 @@ impl Brain {
             }
         }
         findings.sort_by(|a, b| a.concern.cmp(&b.concern).then(a.ids.cmp(&b.ids)));
-        Ok(findings)
+        let known = memories.iter().chain(recent.iter()).collect::<Vec<_>>();
+        self.filterdrift(findings, &known, folder, false).await
     }
 
     /// What a newly written memory contradicts or repeats.
@@ -190,14 +196,16 @@ impl Brain {
                 .flatten()
                 .unwrap_or_default(),
         };
-        let mut findings: Vec<Finding> = self
-            .counterparts(&memory, &project)
-            .await?
-            .into_iter()
-            .map(|(other, relation)| paired(&memory, &other, relation))
+        let counterparts = self.counterparts(&memory, &project).await?;
+        let mut findings: Vec<Finding> = counterparts
+            .iter()
+            .map(|(other, relation)| paired(&memory, other, relation.clone()))
             .collect();
         findings.sort_by(|a, b| a.concern.cmp(&b.concern).then(a.ids.cmp(&b.ids)));
-        Ok(findings)
+        let known = std::iter::once(&memory)
+            .chain(counterparts.iter().map(|(other, _)| other))
+            .collect::<Vec<_>>();
+        self.filterdrift(findings, &known, folder, true).await
     }
 
     /// Visible memories related to `memory`, found by searching its own words.

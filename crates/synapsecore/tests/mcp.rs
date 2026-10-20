@@ -1,3 +1,6 @@
+#[path = "mcp/learning.rs"]
+mod learning;
+
 use serde_json::{Value, json};
 use std::io::{BufRead, BufReader, Read, Write};
 use std::process::{Command, Stdio};
@@ -720,7 +723,7 @@ fn a_session_writes_a_skill_that_waits_for_a_person() {
             .contains("Notarize")
     );
 
-    // A correction does reach the copy, and what it replaced is kept.
+    // A replacement waits for review before it can change installed behavior.
     let revised = tool(
         &mut agent,
         11,
@@ -732,7 +735,29 @@ fn a_session_writes_a_skill_that_waits_for_a_person() {
             "project": project.display().to_string()
         }),
     );
-    assert!(revised.to_string().contains("Claude Code"), "got {revised}");
+    assert_eq!(revised["result"]["structuredContent"]["proposed"], true);
+    assert_eq!(revised["result"]["structuredContent"]["revision"], 0);
+    assert!(
+        !std::fs::read_to_string(&installed)
+            .unwrap()
+            .contains("Staple the ticket")
+    );
+    let proposal = revised["result"]["structuredContent"]["proposal"]
+        .as_i64()
+        .unwrap()
+        .to_string();
+    run(
+        &home,
+        &data,
+        &[
+            "learn",
+            "approve",
+            &proposal,
+            "--project",
+            project.to_str().unwrap(),
+            "--confirm",
+        ],
+    );
     assert!(
         std::fs::read_to_string(&installed)
             .unwrap()

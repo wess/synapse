@@ -24,3 +24,4 @@ pub use read::{MemoryPage, ReadRequest, ReadResponse};
 pub use redact::{Redacted, redact};
 pub use scope::{projectkey, projectroot};
 pub use store::Brain;
+pub(crate) use store::COLUMNS;

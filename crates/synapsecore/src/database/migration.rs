@@ -3,7 +3,7 @@ use anyhow::{Context, Result};
 use sqlx::SqlitePool;
 use std::path::Path;
 
-pub const LATEST: i64 = 14;
+pub const LATEST: i64 = 15;
 
 /// The vault's own schema, in its own file. One table today, with the numbered
 /// migration around it anyway: the day it grows a column is not the day to
@@ -330,6 +330,50 @@ const MIGRATIONS: &[Migration] = &[
              overhead INTEGER NOT NULL DEFAULT 0, \
              created INTEGER NOT NULL)",
             "CREATE INDEX usagecreated ON usage(created)",
+        ],
+    },
+    Migration {
+        version: 15,
+        statements: &[
+            "CREATE TABLE learningfeedback(\
+             id INTEGER PRIMARY KEY AUTOINCREMENT, project TEXT NOT NULL, \
+             target TEXT NOT NULL, digest TEXT NOT NULL, lesson TEXT NOT NULL, session TEXT NOT NULL, \
+             outcome TEXT NOT NULL CHECK(outcome IN ('helpful', 'failed', 'unresolved')), \
+             verification TEXT NOT NULL DEFAULT 'reported' \
+             CHECK(verification IN ('reported', 'checkpassed', 'checkfailed', 'checktimedout', 'confirmed', 'rejected')), \
+             judgment TEXT NOT NULL DEFAULT 'unreviewed' CHECK(judgment IN ('unreviewed','accepted','rejected')), \
+             checkstate TEXT NOT NULL DEFAULT 'none' CHECK(checkstate IN ('none','passed','failed','timedout')), \
+             checked INTEGER NOT NULL DEFAULT 0, reviewed INTEGER NOT NULL DEFAULT 0, \
+             unstable INTEGER NOT NULL DEFAULT 0 CHECK(unstable IN (0,1)), \
+             problem TEXT NOT NULL, correction TEXT NOT NULL, evidence TEXT NOT NULL, \
+             query TEXT NOT NULL DEFAULT '', expected TEXT NOT NULL DEFAULT '', \
+             created INTEGER NOT NULL, updated INTEGER NOT NULL, \
+             UNIQUE(project, target, digest, lesson, session))",
+            "CREATE INDEX learningfeedbackproject ON learningfeedback(project, id DESC)",
+            "CREATE INDEX learningfeedbacklesson ON learningfeedback(project, target, digest, lesson)",
+            "CREATE INDEX learningfeedbackupdated ON learningfeedback(updated)",
+            "CREATE TABLE driftresolution(\
+             id INTEGER PRIMARY KEY AUTOINCREMENT, project TEXT NOT NULL, fingerprint TEXT NOT NULL, \
+             memoryid INTEGER NOT NULL REFERENCES memorymeta(memoryid) ON DELETE CASCADE, \
+             disposition TEXT NOT NULL CHECK(disposition IN ('corrected', 'contextual', 'falsepositive')), \
+             note TEXT NOT NULL, created INTEGER NOT NULL, UNIQUE(project, fingerprint))",
+            "CREATE INDEX driftresolutioncreated ON driftresolution(created)",
+            "CREATE INDEX driftresolutionmemory ON driftresolution(project,memoryid)",
+            "CREATE TABLE learningcase(\
+             id INTEGER PRIMARY KEY AUTOINCREMENT, project TEXT NOT NULL, \
+             feedback INTEGER REFERENCES learningfeedback(id) ON DELETE SET NULL, \
+             query TEXT NOT NULL, expected TEXT NOT NULL, reviewed INTEGER NOT NULL DEFAULT 0 \
+             CHECK(reviewed IN (0, 1)), dismissed INTEGER NOT NULL DEFAULT 0 CHECK(dismissed IN (0,1)), \
+             created INTEGER NOT NULL, UNIQUE(project, query, expected))",
+            "CREATE INDEX learningcaseproject ON learningcase(project, reviewed, id)",
+            "CREATE TABLE learningpromotion(\
+             id INTEGER PRIMARY KEY AUTOINCREMENT, project TEXT NOT NULL, lesson TEXT NOT NULL, \
+             feedback INTEGER NOT NULL REFERENCES learningfeedback(id) ON DELETE CASCADE, \
+             skill TEXT NOT NULL, description TEXT NOT NULL, instructions TEXT NOT NULL, \
+             origin TEXT NOT NULL DEFAULT 'repeated' CHECK(origin IN ('repeated','revision')), \
+             state TEXT NOT NULL DEFAULT 'proposed' CHECK(state IN ('proposed', 'approved', 'rejected')), \
+             created INTEGER NOT NULL, UNIQUE(project, lesson))",
+            "CREATE INDEX learningpromotionproject ON learningpromotion(project, state, id)",
         ],
     },
 ];

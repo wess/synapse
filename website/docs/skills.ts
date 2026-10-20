@@ -110,7 +110,7 @@ synapse skill list --global                  # or just the shared ones`)}
     <h2 id="learning">Skills agents write</h2>
     <p>Switch this on and a session can write down a procedure it worked out, and correct one that turned out wrong:</p>
     ${code("shell", `synapse settings learn on`)}
-    <p>That adds two tools, <code>teach</code> and <code>revise</code>, to every connected session, and the guidance explaining them arrives with them. It is off until you ask for it, because a tool definition costs context in every session that loads it.</p>
+    <p>That adds <code>teach</code>, <code>revise</code>, <code>feedback</code>, and <code>resolvedrift</code> to connected sessions, together with the guidance explaining them. It is off until you ask for it, because a tool definition costs context in every session that loads it.</p>
     <p>Synapse has no model and runs no loop, so it never reflects on a session. The session decides what it learned; Synapse decides where that lands and who has to agree to it.</p>
     <h3>Nothing reaches a tool until you say so</h3>
     <p>A skill an agent writes is <strong>proposed</strong>. It is in the library and in no tool, and it stays there until you approve it. The gate is on installing rather than on writing, because the library is Synapse's own folder while a skill's description is loaded into every session of every tool holding it — so writing one costs you a line in a list, and installing it is the decision.</p>
@@ -120,12 +120,28 @@ synapse skill approve cut-a-release     # install it where it belongs
 synapse skill reject cut-a-release --confirm`)}
     <p><code>synapse skill install</code> with no name steps over anything waiting, so a proposal never reaches a tool because you installed everything. The app shows the same queue on the <strong>Skills</strong> screen with Approve and Turn down beside each.</p>
     <p>You will also see it said once at the start of a session — <code>Synapse connected · 1 skill to review</code> — and nowhere else. Waiting is what a proposal is for; a queue that interrupts is not a queue.</p>
-    <h3>Corrections do reach the copies</h3>
-    <p><code>revise</code> is the deliberate exception. You already agreed to that skill being loaded, and a correction that never arrives leaves every session running the version that was wrong — so a revision goes out to the copies Synapse installed. It reaches only copies Synapse wrote that nobody has edited since; one you changed by hand is yours and is left where it is.</p>
+    <h3>Review corrections against the installed version</h3>
+    <p>A session's <code>revise</code> call queues the complete proposed replacement. Free-form instructions can introduce permissions without declaring them, so the replacement waits for approval against the exact original fingerprint. It cannot replace a skill edited since the proposal was made.</p>
+${code("shell", `synapse learn proposals
+synapse learn proposal 12
+synapse learn approve 12 --confirm`)}
+    <p>Approval records the old version and updates only copies Synapse installed that remain unmodified. Shared skill replacements additionally require <code>--global</code>. The review and approval paths work entirely from the CLI.</p>
     <p>Nothing is lost doing it. What the skill said before is kept, and putting it back is one command:</p>
-    ${code("shell", `synapse skill history cut-a-release     # what it used to say, and what was wrong
+${code("shell", `synapse skill history cut-a-release     # what it used to say, and what was wrong
 synapse skill revert cut-a-release      # put the last version back`)}
     <p>Reverting is itself a revision, so a revert can be reverted. The newest twenty versions of each skill are kept.</p>
+
+    <h3>Learn from verified outcomes</h3>
+    <p>Sessions can report which memories or procedures helped or failed, with a short account of the problem, correction, and evidence. Reports remain distinct from an observed command check and explicit user confirmation. A passing retry leaves an unknown cause unresolved. Failed checks remain flagged until explicit user review, and verified failures block automatic promotion. Repeated recall does not increase a memory's authority.</p>
+    <p>Three independent sessions with the same checked or confirmed correction produce one suggestion automatically. New procedures stay project scoped. A rejected suggestion stays rejected while its retained record exists. Query and expected-answer pairs become proposed regression cases, which require a separate human review before they can grade retrieval.</p>
+${code("shell", `synapse learn list
+synapse learn check 7 -- cargo test
+synapse learn proposals
+synapse learn cases
+synapse learn review 3 --accept --confirm
+synapse learn eval --budget lean --fail-under 0.9`)}
+    <p>Collection happens through normal writes, recalls, and session boundaries. It starts no model, polling loop, or extra worker, and requires no GUI. Checks run only when explicitly requested. Commands discard their output and store only exit status; credentials and private sections are removed from evidence before storage.</p>
+    <p>Feedback, drift resolutions, and generated suggestions have a 180-day retention window and hard caps of 5,000, 2,000, and 500 rows respectively. Regression cases are capped at 500; reviewed labels survive feedback expiry and cannot be evicted by unreviewed candidates. These local records do not sync.</p>
 
     <h2 id="limits">Limits</h2>
     <ul>

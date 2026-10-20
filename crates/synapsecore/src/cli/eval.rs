@@ -56,7 +56,7 @@ pub fn run(
     }
 }
 
-fn report(evaluation: &Evaluation) -> String {
+pub(super) fn report(evaluation: &Evaluation) -> String {
     let answerable = evaluation
         .cases
         .iter()
@@ -87,6 +87,17 @@ fn report(evaluation: &Evaluation) -> String {
         text.push_str(&format!(
             "Noise:   {:.1}  memories returned where none answer\n",
             evaluation.noise
+        ));
+    }
+    let characters: usize = evaluation.cases.iter().map(|case| case.characters).sum();
+    let mut latency: Vec<_> = evaluation.cases.iter().map(|case| case.micros).collect();
+    latency.sort_unstable();
+    if !latency.is_empty() {
+        text.push_str(&format!(
+            "Context: ~{} tokens across all cases\nRecall:  {:.2} ms p50, {:.2} ms p95\n",
+            characters / crate::usage::PERTOKEN as usize,
+            latency[latency.len() / 2] as f64 / 1_000.0,
+            latency[(latency.len() * 95 / 100).min(latency.len() - 1)] as f64 / 1_000.0,
         ));
     }
     text.push_str("\nrank\treturned\tquery\n");
@@ -157,6 +168,8 @@ mod tests {
                     rank: None,
                     shown: false,
                     returned: 2,
+                    characters: 0,
+                    micros: 0,
                 },
                 Scored {
                     query: "wifi password".into(),
@@ -164,6 +177,8 @@ mod tests {
                     rank: None,
                     shown: false,
                     returned: 1,
+                    characters: 0,
+                    micros: 0,
                 },
             ],
             top: 0.0,
