@@ -10,12 +10,12 @@ mod menu;
 mod mesh;
 mod model;
 mod runtime;
-mod savings;
 mod servers;
 mod settings;
 mod sidebar;
 mod skills;
 mod sources;
+mod stats;
 #[cfg(target_os = "macos")]
 mod statusbar;
 mod summary;

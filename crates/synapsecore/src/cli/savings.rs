@@ -1,10 +1,9 @@
 //! `synapse savings`: tokens and dollars Synapse kept out of context. The
 //! counterpart to `synapse tokens`, which reports what it costs.
 
-use super::tokens::plural;
 use crate::brain::Brain;
 use crate::cli::Outcome;
-use crate::usage::{Report, approximately, money, thousands, tokens};
+use crate::usage::{Report, approximately, money, plural, thousands, tokens};
 use anyhow::{Context, Result};
 use std::ffi::OsString;
 

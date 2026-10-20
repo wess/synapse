@@ -1,10 +1,11 @@
-//! The Savings page. Same numbers as `synapse savings`.
+//! The Stats page: what Synapse saved, from `synapse savings`, and what every
+//! session carries, from `synapse tokens`.
 
 use crate::ui::settings::{Click, option};
 use gpui::prelude::*;
 use gpui::{AnyElement, App, Hsla, div, px};
 use guise::prelude::*;
-use synapsecore::usage::{self, Report, approximately, money, thousands, tokens};
+use synapsecore::usage::{self, Report, Surface, approximately, money, thousands, tokens};
 
 /// `None` is all time.
 const WINDOWS: [(Option<u32>, &str); 3] = [
@@ -27,6 +28,7 @@ const PRICES: [(f64, &str, &str); 4] = [
 
 pub struct View {
     pub report: Option<Report>,
+    pub surfaces: Vec<Surface>,
     pub days: Option<u32>,
     pub error: Option<String>,
 }
@@ -70,22 +72,26 @@ pub fn render(view: View, actions: Actions, cx: &App) -> AnyElement {
         );
     }
 
+    let warning = theme.warning().hsla();
+    let carried =
+        (!view.surfaces.is_empty()).then(|| persession(&view.surfaces, border, surface, warning));
     page = match view.report {
         Some(report) if report.since.is_some() => page
             .child(tiles(&report, border, surface))
             .child(chart(&report, border, surface))
             .child(breakdown(&report, border, surface))
+            .children(carried)
             .child(pricing(report.price, &price, border, surface))
             .child(footnote(&report)),
-        Some(report) => {
-            page.child(empty(border, surface))
-                .child(pricing(report.price, &price, border, surface))
-        }
-        None => page,
+        Some(report) => page
+            .child(empty(border, surface))
+            .children(carried)
+            .child(pricing(report.price, &price, border, surface)),
+        None => page.children(carried),
     };
 
     div()
-        .id("savingsmain")
+        .id("statsmain")
         .flex_1()
         .min_h(px(0.0))
         .overflow_y_scroll()
@@ -106,10 +112,10 @@ fn header(days: Option<u32>, window: &dyn Fn(Option<u32>) -> Click, refresh: Cli
                 .flex()
                 .flex_col()
                 .gap(px(7.0))
-                .child(Title::new("Savings").order(2))
+                .child(Title::new("Stats").order(2))
                 .child(
                     Text::new(
-                        "What Synapse kept out of your sessions, compared with keeping the same memory in an instruction file every session loads.",
+                        "Tokens kept out of your sessions, compared with loading the same memory from an instruction file, and what each session carries.",
                     )
                     .size(Size::Sm)
                     .dimmed(),
@@ -124,7 +130,7 @@ fn header(days: Option<u32>, window: &dyn Fn(Option<u32>) -> Click, refresh: Cli
                 .children(WINDOWS.into_iter().map(|(choice, label)| {
                     let click = window(choice);
                     Button::new(
-                        gpui::ElementId::Name(format!("savingswindow{label}").into()),
+                        gpui::ElementId::Name(format!("statswindow{label}").into()),
                         label,
                     )
                     .variant(if choice == days {
@@ -137,7 +143,7 @@ fn header(days: Option<u32>, window: &dyn Fn(Option<u32>) -> Click, refresh: Cli
                     .on_click(move |event, window, cx| click(event, window, cx))
                 }))
                 .child(
-                    Button::new("savingsrefresh", "Refresh")
+                    Button::new("statsrefresh", "Refresh")
                         .variant(Variant::Subtle)
                         .color(ColorName::Violet)
                         .size(Size::Sm)
@@ -328,6 +334,67 @@ fn line(label: &'static str, chars: i64, detail: String) -> AnyElement {
             ),
         )
         .into_any_element()
+}
+
+fn persession(surfaces: &[Surface], border: Hsla, background: Hsla, warning: Hsla) -> AnyElement {
+    let total: usize = surfaces.iter().map(|item| item.chars).sum();
+    let mut panel = div()
+        .rounded(px(6.0))
+        .border_1()
+        .border_color(border)
+        .bg(background)
+        .p(px(16.0))
+        .flex()
+        .flex_col()
+        .gap(px(10.0))
+        .child(
+            div()
+                .flex()
+                .flex_col()
+                .gap(px(2.0))
+                .child(Text::new("In every session").size(Size::Sm).bold())
+                .child(
+                    Text::new(
+                        "Loaded before the first turn by each connected tool. Same numbers as `synapse tokens`.",
+                    )
+                    .size(Size::Xs)
+                    .dimmed(),
+                ),
+        )
+        .children(surfaces.iter().map(|item| {
+            line(
+                item.label,
+                item.chars as i64,
+                format!("{} · {} chars", item.detail, thousands(item.chars)),
+            )
+        }))
+        .child(div().h(px(1.0)).bg(border))
+        .child(line(
+            "Total",
+            total as i64,
+            "Per session, per connected tool".to_owned(),
+        ));
+    for text in surfaces.iter().filter_map(|item| item.warning.clone()) {
+        panel = panel.child(
+            div()
+                .flex()
+                .items_start()
+                .gap(px(8.0))
+                .text_color(warning)
+                .child(
+                    div()
+                        .flex_none()
+                        .child(Icon::new(IconName::TriangleAlert).size(Size::Xs)),
+                )
+                .child(
+                    div()
+                        .flex_1()
+                        .min_w(px(0.0))
+                        .child(Text::new(text).size(Size::Xs)),
+                ),
+        );
+    }
+    panel.into_any_element()
 }
 
 fn pricing(current: f64, price: &dyn Fn(f64) -> Click, border: Hsla, surface: Hsla) -> AnyElement {

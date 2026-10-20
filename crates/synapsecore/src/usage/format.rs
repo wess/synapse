@@ -20,6 +20,14 @@ pub fn approximately(value: i64) -> String {
     }
 }
 
+/// `1 skill`, `2 skills`, `3 memories`.
+pub fn plural(count: usize, one: &str, many: &str) -> String {
+    match count {
+        1 => format!("1 {one}"),
+        other => format!("{other} {many}"),
+    }
+}
+
 /// Cents below $100, whole dollars above.
 pub fn money(amount: f64) -> String {
     let sign = if amount <= -0.005 { "−" } else { "" };
@@ -41,6 +49,15 @@ mod tests {
         assert_eq!(thousands(1_000), "1,000");
         assert_eq!(thousands(16_450), "16,450");
         assert_eq!(thousands(1_234_567), "1,234,567");
+    }
+
+    #[test]
+    fn one_of_a_thing_is_not_reported_as_one_things() {
+        assert_eq!(plural(0, "skill", "skills"), "0 skills");
+        assert_eq!(plural(1, "skill", "skills"), "1 skill");
+        assert_eq!(plural(2, "skill", "skills"), "2 skills");
+        assert_eq!(plural(1, "memory", "memories"), "1 memory");
+        assert_eq!(plural(3, "memory", "memories"), "3 memories");
     }
 
     #[test]
