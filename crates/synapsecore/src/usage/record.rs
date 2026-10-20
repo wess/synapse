@@ -103,7 +103,8 @@ pub async fn record(brain: &Brain, entry: Entry) -> Result<()> {
         .duration_since(UNIX_EPOCH)
         .map(|elapsed| elapsed.as_secs() as i64)
         .unwrap_or_default();
-    let mut transaction = brain.pool().begin().await?;
+    let _writer = brain.writing().await;
+    let mut transaction = brain.pool().begin_with("BEGIN IMMEDIATE").await?;
     sqlx::query(
         "INSERT INTO usage(kind, memories, reach, matched, sent, overhead, created) \
          VALUES (?, ?, ?, ?, ?, ?, ?)",

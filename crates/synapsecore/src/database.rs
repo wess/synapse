@@ -4,10 +4,12 @@ mod migration;
 mod permission;
 #[cfg(test)]
 mod tests;
+mod writer;
 
 pub use backup::{folder as backupfolder, snapshots};
 pub use lifecycle::{check, export, restore};
 pub use permission::{securedirectory, securefile};
+pub(crate) use writer::writequeue;
 
 use anyhow::{Context, Result};
 use sqlx::SqlitePool;

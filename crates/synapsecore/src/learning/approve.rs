@@ -81,7 +81,8 @@ impl Brain {
             )
             .await?;
         let now = now()?;
-        let mut transaction = self.pool().begin().await?;
+        let _writer = self.writing().await;
+        let mut transaction = self.pool().begin_with("BEGIN IMMEDIATE").await?;
         let id: i64 = sqlx::query_scalar(
             "INSERT INTO learningpromotion(project,lesson,feedback,skill,description,instructions,origin,created) \
              VALUES (?,?,?,?,?,?,'revision',?) ON CONFLICT(project,lesson) DO UPDATE SET \

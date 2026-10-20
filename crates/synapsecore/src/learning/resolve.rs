@@ -119,7 +119,8 @@ impl Brain {
         let checkout = crate::brain::projectroot(folder)?;
         let fingerprint = fingerprint(finding, &hashes, checkout.as_deref())?;
         let now = now()?;
-        let mut transaction = self.pool().begin().await?;
+        let _writer = self.writing().await;
+        let mut transaction = self.pool().begin_with("BEGIN IMMEDIATE").await?;
         let id: i64 = sqlx::query_scalar(
             "INSERT INTO driftresolution(project, fingerprint, memoryid, disposition, note, created) \
              VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(project, fingerprint) DO UPDATE SET \

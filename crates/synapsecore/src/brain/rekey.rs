@@ -54,6 +54,7 @@ impl Brain {
     /// Where two checkouts of one repository each hold an identical memory, the
     /// second keeps its old identity rather than colliding with the first.
     async fn move_project(&self, from: &str, to: &str) -> Result<usize> {
+        let _writer = self.writing().await;
         let mut transaction = self.pool.begin_with("BEGIN IMMEDIATE").await?;
         let rows = sqlx::query_as::<_, (i64, String, String, i64)>(
             "SELECT meta.memoryid, memory.body, memory.source, CAST(memory.created AS INTEGER) \

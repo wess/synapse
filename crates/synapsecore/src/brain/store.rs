@@ -22,6 +22,7 @@ pub struct Brain {
     pub(super) pool: SqlitePool,
     path: PathBuf,
     _lock: Arc<File>,
+    writer: Arc<tokio::sync::Mutex<()>>,
 }
 
 impl Brain {
@@ -40,6 +41,7 @@ impl Brain {
 
     fn from(opened: crate::database::Opened, path: PathBuf) -> Result<Self> {
         Ok(Self {
+            writer: crate::database::writequeue(&path)?,
             pool: opened.pool,
             path,
             _lock: opened.lock,
@@ -85,6 +87,7 @@ impl Brain {
             .duration_since(UNIX_EPOCH)
             .context("system clock is before the Unix epoch")?
             .as_secs() as i64;
+        let _writer = self.writing().await;
         let mut transaction = self.pool.begin_with("BEGIN IMMEDIATE").await?;
         let result = sqlx::query("INSERT INTO memory(body, source, created) VALUES (?, ?, ?)")
             .bind(body)
@@ -169,6 +172,7 @@ impl Brain {
     ) -> Result<i64> {
         let body = body.trim();
         anyhow::ensure!(!body.is_empty(), "memory content cannot be empty");
+        let _writer = self.writing().await;
         let mut transaction = self.pool.begin_with("BEGIN IMMEDIATE").await?;
         let result = sqlx::query("INSERT INTO memory(body, source, created) VALUES (?, ?, ?)")
             .bind(body)
@@ -204,6 +208,10 @@ impl Brain {
             pool: self.pool.clone(),
             lock: self._lock.clone(),
         }
+    }
+
+    pub(crate) async fn writing(&self) -> tokio::sync::MutexGuard<'_, ()> {
+        self.writer.lock().await
     }
 
     pub(crate) fn databasepath(&self) -> &Path {
@@ -527,6 +535,7 @@ impl Brain {
     ) -> Result<Option<Memory>> {
         let body = stored(body)?;
         let body = body.as_str();
+        let _writer = self.writing().await;
         let mut transaction = self.pool.begin_with("BEGIN IMMEDIATE").await?;
         crate::brain::gram::unindex(&mut transaction, id).await?;
         let result =
@@ -554,6 +563,7 @@ impl Brain {
     pub async fn deletememory(&self, id: i64) -> Result<Option<Memory>> {
         let memory = self.memory(id).await?;
         if memory.is_some() {
+            let _writer = self.writing().await;
             let mut transaction = self.pool.begin_with("BEGIN IMMEDIATE").await?;
             // Anything this memory replaced comes back. Leaving those rows
             // pointing at an id that no longer resolves would hide them for
@@ -583,6 +593,7 @@ impl Brain {
     }
 
     pub async fn wipememories(&self) -> Result<u64> {
+        let _writer = self.writing().await;
         let mut transaction = self.pool.begin_with("BEGIN IMMEDIATE").await?;
         sqlx::query("DELETE FROM memoryorigin")
             .execute(&mut *transaction)
