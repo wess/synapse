@@ -1,7 +1,7 @@
 //! `synapse tokens`: what Synapse costs a session before the first turn.
 //!
 //! Recall has a budget. The guidance, the tool definitions, and every skill
-//! description don't, and they're paid once per session per connected tool
+//! description don't, and installed descriptions are paid once per session per connected tool
 //! whether or not a memory is ever recalled. This counts them so the settings
 //! that move them (optimization, mesh, learn) have a number beside them. It
 //! changes nothing. The Stats page and `doctor` show the same measurement.
@@ -37,7 +37,7 @@ pub fn tokens(arguments: &[OsString]) -> Result<Outcome> {
         return Ok(Outcome::Exit(0));
     }
 
-    println!("What Synapse costs a session, before the first turn");
+    println!("Synapse's potential session cost, before the first turn");
     println!();
     for line in &lines {
         println!(
@@ -50,12 +50,15 @@ pub fn tokens(arguments: &[OsString]) -> Result<Outcome> {
     }
     println!("  {}", "─".repeat(62));
     println!(
-        "  {:<16} {:>7} chars  ~{:>6} tokens   per session, per connected tool",
-        "Total",
+        "  {:<16} {:>7} chars  ~{:>6} tokens   if all library skills are installed",
+        "Total potential",
         thousands(total),
         thousands(total / PERTOKEN)
     );
     println!();
+    println!(
+        "  Skill descriptions count the whole library; each tool loads only its installed skills."
+    );
     println!("  Token figures are characters ÷ {PERTOKEN}, not a tokenizer. Counts are exact.");
 
     let warnings: Vec<&Surface> = lines.iter().filter(|line| line.warning.is_some()).collect();
