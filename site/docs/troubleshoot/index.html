@@ -5,91 +5,52 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Troubleshooting — Synapse</title>
   <meta name="description" content="Diagnose installation, tool connection, scope, vault, memory, database, and restore failures without risking user-owned data.">
-  <meta name="theme-color" content="#0a43c8">
+  <meta name="theme-color" content="#352879">
   <meta property="og:title" content="Troubleshooting — Synapse">
   <meta property="og:description" content="Diagnose installation, tool connection, scope, vault, memory, database, and restore failures without risking user-owned data.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://wess.io/synapse/docs/troubleshoot/">
   <link rel="canonical" href="https://wess.io/synapse/docs/troubleshoot/">
   <link rel="icon" href="../../icon.svg" type="image/svg+xml">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Fragment+Mono&family=Manrope:wght@400;500;600;700&display=swap">
+  <link rel="preload" href="../../pixel.ttf" as="font" type="font/ttf" crossorigin>
   <link rel="stylesheet" href="../../style.css">
   <script type="module" src="../../site.js"></script>
 </head>
 <body class="docs" data-root="../../">
-  
+  <div class="shell">
   <a class="skip" href="#content">Skip to content</a>
+  <div class="windowbar"><a href="../../">synapse / manual</a><span>v1.14.2 · on your machine</span></div>
   <header class="topbar">
-    <a class="wordmark" href="../../" aria-label="Synapse home">
-      <img src="../../icon.svg" width="30" height="30" alt="">
-      <span>Synapse</span>
-    </a>
+    <a class="wordmark" href="../../" aria-label="Synapse home"><img src="../../icon.svg" width="28" height="28" alt=""><span>synapse</span></a>
     <button class="navtoggle" type="button" aria-expanded="false" aria-controls="topnav">Menu</button>
     <nav id="topnav" aria-label="Primary">
       <a href="../../docs/" aria-current="page">Docs</a>
       <a href="../../tutorials/">Tutorials</a>
-      <a href="https://github.com/wess/synapse">GitHub <span aria-hidden="true">↗</span></a>
-      <a class="navdownload" href="https://github.com/wess/synapse/releases/latest/download/synapse.zip">Download</a>
+      <a href="https://github.com/wess/synapse">Source</a>
+      <a class="navdownload" href="../../docs/install/">Install</a>
     </nav>
   </header>
-  
   <div class="doclayout">
-    
   <aside class="docsrail" aria-label="Documentation navigation">
     <div class="searchbox">
-      <label for="search">Search the guide</label>
-      <input id="search" type="search" placeholder="Memory, vaults, restore…" autocomplete="off">
-      <div class="searchresults" data-results hidden></div>
+      <label for="docssearch">Search docs &amp; tutorials</label>
+      <input id="docssearch" type="search" placeholder="Memory, vaults, restore…" autocomplete="off" aria-controls="searchresults">
+      <div id="searchresults" class="searchresults" data-results hidden></div>
       <span class="searchstatus" data-searchstatus role="status" aria-live="polite"></span>
     </div>
     <details class="railnav" open>
       <summary>Browse all guides</summary>
       <nav aria-label="All guides">
-        <h2>Documentation</h2>
-        <ul>
-        <li><a href="../../docs/">Start here</a></li>
-        <li><a href="../../docs/install/">Install and connect</a></li>
-        <li><a href="../../docs/harnesses/">Supported and custom harnesses</a></li>
-        <li><a href="../../docs/app/">Desktop app reference</a></li>
-        <li><a href="../../docs/memory/">Memory and recall</a></li>
-        <li><a href="../../docs/mcp/">MCP tool reference</a></li>
-        <li><a href="../../docs/mesh/">Agent mesh</a></li>
-        <li><a href="../../docs/skills/">Skills</a></li>
-        <li><a href="../../docs/servers/">MCP servers</a></li>
-        <li><a href="../../docs/sources/">Sources</a></li>
-        <li><a href="../../docs/vault/">Vaults and scopes</a></li>
-        <li><a href="../../docs/data/">Data lifecycle</a></li>
-        <li><a href="../../docs/config/">Configuration and paths</a></li>
-        <li><a href="../../docs/security/">Security model</a></li>
-        <li><a href="../../docs/cli/">CLI reference</a></li>
-        <li><a href="../../docs/troubleshoot/" aria-current="page">Troubleshooting</a></li></ul>
-        <h2>Tutorials</h2>
-        <ul>
-        <li><a href="../../tutorials/">Tutorials</a></li>
-        <li><a href="../../tutorials/connect/">Install and connect your first tools</a></li>
-        <li><a href="../../tutorials/continuity/">Carry one decision between tools</a></li>
-        <li><a href="../../tutorials/curate/">Curate and optimize memory</a></li>
-        <li><a href="../../tutorials/secrets/">Use a scoped secret in either shell mode</a></li>
-        <li><a href="../../tutorials/skills/">Keep one skill library across every tool</a></li>
-        <li><a href="../../tutorials/learn/">Let your agents write skills</a></li>
-        <li><a href="../../tutorials/launch/">Start a tool with everything in place</a></li>
-        <li><a href="../../tutorials/mesh/">Run a team of agents and drive it yourself</a></li>
-        <li><a href="../../tutorials/overseer/">Hand a job to one agent and watch it grow a team</a></li>
-        <li><a href="../../tutorials/recovery/">Export and restore safely</a></li>
-        <li><a href="../../tutorials/lifecycle/">Check, migrate, and remove Synapse</a></li></ul>
+        <h2>Start here</h2><ul><li><a href="../../docs/">Start here</a></li><li><a href="../../docs/install/">Install and connect</a></li><li><a href="../../docs/harnesses/">Supported and custom harnesses</a></li><li><a href="../../docs/app/">Desktop app reference</a></li></ul><h2>Reference</h2><ul><li><a href="../../docs/memory/">Memory and recall</a></li><li><a href="../../docs/mcp/">MCP tool reference</a></li><li><a href="../../docs/mesh/">Agent mesh</a></li><li><a href="../../docs/skills/">Skills</a></li><li><a href="../../docs/servers/">MCP servers</a></li><li><a href="../../docs/sources/">Sources</a></li></ul><h2>Your machine</h2><ul><li><a href="../../docs/vault/">Vaults and scopes</a></li><li><a href="../../docs/data/">Data lifecycle</a></li><li><a href="../../docs/config/">Configuration and paths</a></li><li><a href="../../docs/security/">Security model</a></li><li><a href="../../docs/sync/">Encrypted sync</a></li><li><a href="../../docs/troubleshoot/" aria-current="page">Troubleshooting</a></li></ul><h2>Build with it</h2><ul><li><a href="../../docs/cli/">CLI reference</a></li><li><a href="../../docs/developing/">Developing Synapse</a></li><li><a href="../../docs/synapsecore/">The core library</a></li><li><a href="../../docs/embedding/">Embedding Synapse</a></li><li><a href="../../docs/retrieval/">Retrieval checks</a></li><li><a href="../../docs/map/">The memory map</a></li><li><a href="../../docs/startup/">What launching costs</a></li><li><a href="../../docs/windows/">Windows</a></li><li><a href="../../docs/federation/">Federation proposal</a></li></ul>
+        <h2>Tutorials</h2><ul><li><a href="../../tutorials/">Tutorials</a></li><li><a href="../../tutorials/connect/">Install and connect your first tools</a></li><li><a href="../../tutorials/continuity/">Carry one decision between tools</a></li><li><a href="../../tutorials/curate/">Curate and optimize memory</a></li><li><a href="../../tutorials/secrets/">Use a scoped secret in either shell mode</a></li><li><a href="../../tutorials/skills/">Keep one skill library across every tool</a></li><li><a href="../../tutorials/learn/">Let your agents write skills</a></li><li><a href="../../tutorials/launch/">Start a tool with everything in place</a></li><li><a href="../../tutorials/mesh/">Run a team of agents and drive it yourself</a></li><li><a href="../../tutorials/overseer/">Hand a job to one agent and watch it grow a team</a></li><li><a href="../../tutorials/recovery/">Export and restore safely</a></li><li><a href="../../tutorials/lifecycle/">Check, migrate, and remove Synapse</a></li></ul>
       </nav>
     </details>
   </aside>
     <main class="article" id="content">
-      <header class="articlehead">
-        <h1>Troubleshooting</h1>
-        <span>Diagnose installation, tool connection, scope, vault, memory, database, and restore failures without risking user-owned data.</span>
-      </header>
-      
+      <header class="articlehead"><nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../">Synapse</a><span aria-hidden="true">/</span><a href="../../docs/">Manual</a></nav><h1>Troubleshooting</h1><p>Diagnose installation, tool connection, scope, vault, memory, database, and restore failures without risking user-owned data.</p></header>
+
     <h2 id="status">Start with status</h2>
-    
+
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
@@ -105,7 +66,7 @@ synapse settings show</code></pre>
 
     <h2 id="doctor">One command for a bug report</h2>
     <p><code>synapse doctor</code> gathers everything anyone would ask you for: version, store state and size, which tools are connected and what each is set up with, skill and mesh state, shell and CLI integration, resolved paths, and any crash Synapse has recorded.</p>
-    
+
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
@@ -115,7 +76,7 @@ synapse settings show</code></pre>
 synapse doctor --json</code></pre>
   </div>
     <p>Every check reports rather than fails, so a damaged store is described in the report instead of ending it. Synapse sends nothing anywhere &mdash; the report is printed for you to read or paste.</p>
-    
+
   <aside class="note">
     <strong>The desktop application writes panics to &lt;code&gt;crash.log&lt;/code&gt; in the data folder, because a window that disappears leaves nothing to read. The log holds only the crash itself and is bounded, so a crash loop cannot fill a disk. &lt;code&gt;doctor&lt;/code&gt; prints the most recent entries.</strong>
     <p>undefined</p>
@@ -126,7 +87,7 @@ synapse doctor --json</code></pre>
     <p>Confirm you downloaded the current archive from the release page, extracted it fully, and moved the app to Applications. The app is Developer ID signed and notarized, so a Gatekeeper refusal usually means the archive was altered or only partly extracted. Avoid modifying files inside the application bundle because that invalidates its signature.</p>
     <h3><code>synapse: command not found</code></h3>
     <p>Install the CLI from Settings, then add <code>~/.local/bin</code> to <code>PATH</code>. Run the executable by full path once to verify:</p>
-    
+
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
@@ -195,26 +156,14 @@ synapse doctor --json</code></pre>
     <p>The source schema must match the current release. Keep the source unchanged. Open it first with the Synapse version that created it, let that version migrate normally if appropriate, export a fresh snapshot, then restore that compatible export with the current app.</p>
     <h3>Secrets are missing after moving to another machine</h3>
     <p>Database exports carry <code>brain.db</code> and never a value. Recreate each value with <code>synapse secret set</code> on the destination, or — on the encrypted store — copy <code>vault.db</code> and <code>vault.key</code> across together, since neither is any use without the other. Existing vault labels and references in the restored database tell you which entries are expected.</p>
-  
+  <footer class="articlefoot"><div class="articlemeta"><a href="https://github.com/wess/synapse/blob/main/website/docs/troubleshoot.ts">View page source</a><span>Synapse 1.14.2</span></div><nav class="pagenav" aria-label="Guide pages"><a href="../../docs/sync/"><small>Previous</small><strong>Encrypted sync</strong></a><a href="../../docs/cli/"><small>Next</small><strong>CLI reference</strong></a></nav></footer>
     </main>
-    <aside class="ontoc" aria-label="On this page">
-        <span>On this page</span>
-        <ol><li><a href="#status">Start with status</a></li><li><a href="#doctor">One command for a bug report</a></li><li><a href="#app">App and CLI</a></li><li><a href="#connection">Tool connection</a></li><li><a href="#scopes">Scopes and secrets</a></li><li><a href="#database">Memory and database</a></li><li><a href="#restore">Restore</a></li></ol>
-      </aside>
+  <aside class="ontoc" aria-label="On this page"><span>Contents</span><ol><li><a href="#status">Start with status</a></li><li><a href="#doctor">One command for a bug report</a></li><li><a href="#app">App and CLI</a></li><li><a href="#connection">Tool connection</a></li><li><a href="#scopes">Scopes and secrets</a></li><li><a href="#database">Memory and database</a></li><li><a href="#restore">Restore</a></li></ol></aside>
   </div>
-  
   <footer class="footer">
-    <div>
-      <a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">Synapse</a>
-      <p>Shared memory and skills for coding agents, kept on your machine.</p>
-    </div>
-    <nav aria-label="Footer">
-      <a href="../../docs/">Documentation</a>
-      <a href="../../tutorials/">Tutorials</a>
-      <a href="https://github.com/wess/synapse">Source</a>
-      <a href="https://github.com/wess/synapse/releases">Releases</a>
-    </nav>
-    <p class="footerfine">No account required. macOS desktop · Linux terminal, CLI &amp; MCP.</p>
-  </footer>
+    <div class="footerupper"><div><a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">synapse</a><p>A shared memory. A little less starting over.</p></div>
+      <nav aria-label="Footer"><a href="../../docs/">Manual</a><a href="../../tutorials/">Tutorials</a><a href="https://github.com/wess/synapse">Source</a><a href="https://github.com/wess/synapse/releases">Releases</a><a href="https://wess.io">By Wess</a></nav></div>
+    <p class="footerfine"><span>macOS &amp; Windows desktop · Linux CLI &amp; MCP</span><span>v1.14.2 · MIT · No account required</span></p>
+  </footer></div>
 </body>
 </html>

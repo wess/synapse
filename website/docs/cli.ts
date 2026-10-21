@@ -16,7 +16,7 @@ export const cli: Page = {
     { label: "Agent mesh", id: "mesh" },
     { label: "Skills", id: "skills" },
     { label: "Data and settings", id: "data" },
-    { label: "Installation and paths", id: "install" },
+    { label: "Installation and paths", id: "installation" },
   ],
   body: `
     <h2 id="invocation">Invocation</h2>
@@ -175,9 +175,10 @@ ${command("guidance adopt", "synapse guidance adopt --confirm", "Move unmanaged 
     ${command("tool edit", "synapse tool edit &lt;name&gt;", "Edit a descriptor. Editing one Synapse ships copies it into a layer you own first, so the shipped file stays as it was.")}
     ${command("tool delete", "synapse tool delete &lt;name&gt;", "Remove a descriptor you added. Deleting a copy that overrides a built-in returns you to the shipped one.")}
 
-    <h2 id="install">Installation and paths</h2>
+    <h2 id="installation">Installation and paths</h2>
     ${command("install", "synapse install", "Install the current executable for this user. A packaged app creates a launcher into the signed bundle; a development binary is copied atomically. Unrelated destination files are never overwritten.")}
     ${command("path", "synapse path", "Print the resolved data directory, SOUL.md, and CLI destination.")}
+    ${command("tokens", "synapse tokens [--json]", "Measure the context cost of Synapse tool definitions, shared guidance, and managed skills before the first turn. Reads local files and the built-in schema without starting a model or modifying configuration. Reports characters and estimated tokens, with JSON available for comparison.")}
     ${command("savings", "synapse savings [--days &lt;n&gt;|--all] [--json]", "Tokens and dollars Synapse kept out of your sessions, compared with keeping the same memory in an instruction file every session loads. Counts what each session could reach, what recall and the session hook actually sent, and what Synapse's own tool definitions and guidance cost. Defaults to the last 30 days. Usage older than 730 days is pruned as new activity is recorded. Figures are characters divided by four, counted once per session, so they understate.")}
     ${command("doctor", "synapse doctor [--json]", "Report everything a bug report needs: version, store state and size, drift found from the current folder, connected tools and what each is set up with, skill and mesh state, shell and CLI integration, resolved paths, and recent crashes. Every check reports rather than fails, so a broken store is described instead of stopping the report. Nothing is sent anywhere.")}
     ${command("connect", "synapse connect [tool]", "Wire a tool into memory and the vault: register the Synapse MCP server through that tool's own CLI, and point its global instruction file at SOUL.md. With no name it connects every tool this machine has. An existing registration that already points at Synapse is left alone. Synapse never edits a tool's configuration itself \u2014 it asks the tool to.")}

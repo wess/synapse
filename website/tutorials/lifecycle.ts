@@ -1,5 +1,6 @@
 import { code, note } from "../markup";
 import type { Page } from "../types";
+import { version } from "../deploy";
 
 export const lifecycle: Page = {
   path: "tutorials/lifecycle/index.html",
@@ -30,11 +31,12 @@ export const lifecycle: Page = {
       <li>
         <h3 id="doctor">Get the whole picture in one command</h3>
         ${code("shell", `synapse doctor`)}
-        ${code("text", `Synapse 0.1.0-beta.24
+        <p>The example below illustrates the report format. Counts, detected tools, and paths depend on your machine.</p>
+        ${code("text", `Synapse ${version}
 
 Store
   State          ok
-  Schema         v10
+  Schema         v15
   Memories       0
   Size           0 MB
   Backups        0

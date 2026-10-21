@@ -38,12 +38,26 @@ const compactguides = () => {
 };
 
 const searchdocs = async () => {
-  const input = one("#search");
+  const input = one("#docssearch");
   const results = one("[data-results]");
   const status = one("[data-searchstatus]");
   if (!input || !results || !status) return;
   const root = document.body.dataset.root ?? "";
-  const entries = await fetch(`${root}search.json`).then((response) => response.json());
+  input.disabled = true;
+  input.placeholder = "Loading search…";
+  let entries;
+  try {
+    const response = await fetch(`${root}search.json`);
+    if (!response.ok) throw new Error("search unavailable");
+    entries = await response.json();
+  } catch {
+    input.disabled = false;
+    input.placeholder = "Search unavailable";
+    status.textContent = "Search could not load. Browse the guides below or reload to try again.";
+    return;
+  }
+  input.disabled = false;
+  input.placeholder = "Memory, vaults, restore…";
   input.addEventListener("input", () => {
     const query = input.value.trim().toLowerCase();
     if (query.length < 2) {
@@ -76,6 +90,9 @@ const searchdocs = async () => {
       ? `${matches.length} matching ${matches.length === 1 ? "guide" : "guides"}.`
       : "No matching guide.";
   });
+  input.addEventListener("focus", () => {
+    if (input.value.trim().length >= 2) input.dispatchEvent(new Event("input"));
+  });
   document.addEventListener("click", (event) => {
     if (!event.target.closest(".searchbox")) {
       results.hidden = true;
@@ -86,26 +103,20 @@ const searchdocs = async () => {
     if (event.key === "Escape") {
       results.hidden = true;
       status.textContent = "";
+    } else if (event.key === "ArrowDown" && !results.hidden) {
+      event.preventDefault();
+      one("a", results)?.focus();
     }
   });
-};
-
-const scenes = () => {
-  const index = one("[data-scene]");
-  const takes = all("[data-take]");
-  if (!index || !takes.length || !("IntersectionObserver" in window)) return;
-  const observer = new IntersectionObserver(
-    (entries) => {
-      const active = entries.find((entry) => entry.isIntersecting);
-      if (active) index.textContent = active.target.dataset.take;
-    },
-    { rootMargin: "-35% 0px -55%", threshold: 0 },
-  );
-  takes.forEach((take) => observer.observe(take));
+  results.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      input.focus();
+      results.hidden = true;
+    }
+  });
 };
 
 togglenav();
 copycode();
 compactguides();
-searchdocs().catch(() => undefined);
-scenes();
+searchdocs();

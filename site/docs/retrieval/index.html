@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Retrieval checks — Synapse</title>
+  <meta name="description" content="Ranking, drift, exact UTF-8 paging, relevance checks, and reproducible performance fixtures.">
+  <meta name="theme-color" content="#352879">
+  <meta property="og:title" content="Retrieval checks — Synapse">
+  <meta property="og:description" content="Ranking, drift, exact UTF-8 paging, relevance checks, and reproducible performance fixtures.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://wess.io/synapse/docs/retrieval/">
+  <link rel="canonical" href="https://wess.io/synapse/docs/retrieval/">
+  <link rel="icon" href="../../icon.svg" type="image/svg+xml">
+  <link rel="preload" href="../../pixel.ttf" as="font" type="font/ttf" crossorigin>
+  <link rel="stylesheet" href="../../style.css">
+  <script type="module" src="../../site.js"></script>
+</head>
+<body class="docs" data-root="../../">
+  <div class="shell">
+  <a class="skip" href="#content">Skip to content</a>
+  <div class="windowbar"><a href="../../">synapse / manual</a><span>v1.14.2 · on your machine</span></div>
+  <header class="topbar">
+    <a class="wordmark" href="../../" aria-label="Synapse home"><img src="../../icon.svg" width="28" height="28" alt=""><span>synapse</span></a>
+    <button class="navtoggle" type="button" aria-expanded="false" aria-controls="topnav">Menu</button>
+    <nav id="topnav" aria-label="Primary">
+      <a href="../../docs/" aria-current="page">Docs</a>
+      <a href="../../tutorials/">Tutorials</a>
+      <a href="https://github.com/wess/synapse">Source</a>
+      <a class="navdownload" href="../../docs/install/">Install</a>
+    </nav>
+  </header>
+  <div class="doclayout">
+  <aside class="docsrail" aria-label="Documentation navigation">
+    <div class="searchbox">
+      <label for="docssearch">Search docs &amp; tutorials</label>
+      <input id="docssearch" type="search" placeholder="Memory, vaults, restore…" autocomplete="off" aria-controls="searchresults">
+      <div id="searchresults" class="searchresults" data-results hidden></div>
+      <span class="searchstatus" data-searchstatus role="status" aria-live="polite"></span>
+    </div>
+    <details class="railnav" open>
+      <summary>Browse all guides</summary>
+      <nav aria-label="All guides">
+        <h2>Start here</h2><ul><li><a href="../../docs/">Start here</a></li><li><a href="../../docs/install/">Install and connect</a></li><li><a href="../../docs/harnesses/">Supported and custom harnesses</a></li><li><a href="../../docs/app/">Desktop app reference</a></li></ul><h2>Reference</h2><ul><li><a href="../../docs/memory/">Memory and recall</a></li><li><a href="../../docs/mcp/">MCP tool reference</a></li><li><a href="../../docs/mesh/">Agent mesh</a></li><li><a href="../../docs/skills/">Skills</a></li><li><a href="../../docs/servers/">MCP servers</a></li><li><a href="../../docs/sources/">Sources</a></li></ul><h2>Your machine</h2><ul><li><a href="../../docs/vault/">Vaults and scopes</a></li><li><a href="../../docs/data/">Data lifecycle</a></li><li><a href="../../docs/config/">Configuration and paths</a></li><li><a href="../../docs/security/">Security model</a></li><li><a href="../../docs/sync/">Encrypted sync</a></li><li><a href="../../docs/troubleshoot/">Troubleshooting</a></li></ul><h2>Build with it</h2><ul><li><a href="../../docs/cli/">CLI reference</a></li><li><a href="../../docs/developing/">Developing Synapse</a></li><li><a href="../../docs/synapsecore/">The core library</a></li><li><a href="../../docs/embedding/">Embedding Synapse</a></li><li><a href="../../docs/retrieval/" aria-current="page">Retrieval checks</a></li><li><a href="../../docs/map/">The memory map</a></li><li><a href="../../docs/startup/">What launching costs</a></li><li><a href="../../docs/windows/">Windows</a></li><li><a href="../../docs/federation/">Federation proposal</a></li></ul>
+        <h2>Tutorials</h2><ul><li><a href="../../tutorials/">Tutorials</a></li><li><a href="../../tutorials/connect/">Install and connect your first tools</a></li><li><a href="../../tutorials/continuity/">Carry one decision between tools</a></li><li><a href="../../tutorials/curate/">Curate and optimize memory</a></li><li><a href="../../tutorials/secrets/">Use a scoped secret in either shell mode</a></li><li><a href="../../tutorials/skills/">Keep one skill library across every tool</a></li><li><a href="../../tutorials/learn/">Let your agents write skills</a></li><li><a href="../../tutorials/launch/">Start a tool with everything in place</a></li><li><a href="../../tutorials/mesh/">Run a team of agents and drive it yourself</a></li><li><a href="../../tutorials/overseer/">Hand a job to one agent and watch it grow a team</a></li><li><a href="../../tutorials/recovery/">Export and restore safely</a></li><li><a href="../../tutorials/lifecycle/">Check, migrate, and remove Synapse</a></li></ul>
+      </nav>
+    </details>
+  </aside>
+    <main class="article" id="content">
+      <header class="articlehead"><nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../">Synapse</a><span aria-hidden="true">/</span><a href="../../docs/">Manual</a></nav><h1>Retrieval checks</h1><p>Ranking, drift, exact UTF-8 paging, relevance checks, and reproducible performance fixtures.</p></header>
+      <p>Recall finds relevant memories within the configured budget. <code>readmemory</code> reads the
+exact stored body of one hit in bounded pages. Both apply the same global plus
+current-project scope and exclude superseded records. Neither requires a model or
+network service.</p>
+<p>Recall searches two FTS5 indexes over the same rows: <code>memory</code>, stemmed with
+<code>porter unicode61</code> over body and source (source weighted 0.3), and <code>memorygram</code>, a
+contentless <code>trigram</code> index kept in step at every write. Each ranks the query on
+its own and the two lists are merged by reciprocal rank fusion (<code>K = 60</code>). When a
+hit has to be abridged, recall sends its opening line if that holds a matched word
+and the FTS5 snippet around the match otherwise. <code>readmemory</code> reads by id and uses
+neither index.</p>
+<p>Every query term is an OR, so a memory sharing one word with a long question
+still matches. Recall counts how many of the query's terms each candidate holds
+and drops any holding fewer than half as many as the best one, before applying
+the limit. The best match always survives, so a question with a weak answer
+still gets it. <code>memory list</code> and <code>--explain</code> show every match.</p>
+<h2 id="drift">Drift</h2>
+<p>Recall and the session hook check what they hand over:</p>
+<ul>
+<li>a path the memory names that is gone from the checkout (stale),</li>
+<li>two memories that say opposite things or carry different numbers (conflict),</li>
+<li>two memories that say the same thing (duplicate).</li>
+</ul>
+<p>Recall returns everything and lists findings in <code>drift</code>. When a newer memory
+contradicts a returned one but didn't match the query, recall quotes it. The
+session hook leaves stale memories and the older half of a conflicting or
+duplicate pair out of what it injects, and says so. <code>remember</code> reports what a
+new memory contradicts or repeats. <code>synapse memory drift</code> runs the check on
+everything a folder can see. Nothing is superseded or deleted automatically.</p>
+<p>Relative paths are only checked for project memory in its own checkout. Paths
+under another account's home, temp folders, and build output are never called
+missing.</p>
+<h2 id="exact-reading">Exact reading</h2>
+<p>Call <code>readmemory</code> with the id and project from a recall. Start at offset zero, then
+pass each returned <code>next</code> as the next offset until it is null. Offsets and <code>total</code>
+are UTF-8 byte counts. Concatenating the page bodies reconstructs stored text
+without compaction, ellipses, or broken characters.</p>
+<p>Lean limits a body page to 2,800 bytes. Balanced and Full limit it to 6,000 bytes.
+These byte bounds also fit within the configured character budget. Source labels
+have a separate 240-byte allowance with <code>sourceabridged</code> marking truncation;
+metadata and JSON framing are additional to the body allowance. SQLite selects
+only the requested body slice, so paging does not allocate the whole memory in
+the server.</p>
+<p>Missing, superseded, and out-of-scope ids all return a null memory. An offset
+beyond a visible body's end or inside a UTF-8 character is an error. The exact end
+returns an empty body and null <code>next</code>. Pages read current data; restart at zero if
+the memory is edited between requests. Owner-facing CLI inspection and restore
+remain available for hidden history.</p>
+<p>The MCP tool is also available through bridges that discover the server's tool
+list. Existing user guidance is preserved; the server supplies the reading hint
+at initialization when it is absent.</p>
+<h2 id="correctness-fixtures">Correctness fixtures</h2>
+<p>Run from <code>crates/synapsecore</code>:</p>
+<div class="codeblock"><div class="codebar"><span>sh</span><button type="button" data-copy aria-live="polite">Copy</button></div><pre><code>cargo test --test retrieval --test mcp
+</code></pre></div>
+<p>The retrieval fixtures check opposing statements, changed numbers and short
+identifiers, exact duplicates, Unicode search, scope isolation, supersession and
+restore, every budget combination, and lossless paging of long text containing
+code, whitespace, multibyte characters, and embedded NULs. Protocol tests exercise
+the complete recall-to-read flow through the released tool schema.</p>
+<p>Approximate wording overlap cannot establish that two facts are equivalent.
+Balanced and Lean retain exact-body deduplication but no longer suppress distinct
+bodies by word-set similarity. Only explicit supersession establishes a correction;
+drift findings point at candidates for one.</p>
+<p><code>tests/bias.rs</code> scores the relevance floor against an unfloored search on a
+labeled corpus (no answer lost or moved down; surplus beside each answer falls
+from 5.1 to 0.9 memories) and checks that an unmarked correction is always
+flagged when its outdated memory comes back.</p>
+<h2 id="performance-fixture">Performance fixture</h2>
+<div class="codeblock"><div class="codebar"><span>sh</span><button type="button" data-copy aria-live="polite">Copy</button></div><pre><code>cargo run --release --example retrieval -- 10000 30
+cargo run --release --example retrieval -- 100000 30
+</code></pre></div>
+<p>The arguments are memory count and measured iterations, defaulting to 10,000 and
+30. They are bounded at one million memories and one thousand iterations. The
+fixture creates and removes its own temporary database; it never opens the user's
+store, changes settings, or connects to a network service.</p>
+<p>Output is JSON containing build profile, seed time, database-open time, database
+bytes, and p50/p95/max latency plus structured response bytes for:</p>
+<ul>
+<li>selective recall: a term in every thousandth memory;</li>
+<li>common-term recall: a term present throughout the store;</li>
+<li>recent scoped recall: the newest visible memories;</li>
+<li>exact reading: the first bounded page of one memory.</li>
+</ul>
+<p>The corpus is deterministic and all-global, with approximately 240-byte bodies.
+Each operation has one untimed warmup. Timings include library calls and JSON
+serialization, but exclude process startup, transport framing, model/client
+processing, and fixture generation. The database-open measurement includes
+verification after seeding, with OS file caches still warm. Response sizes count
+structured JSON once; MCP transports may carry a text representation as well.</p>
+<p>Use release builds and record the machine alongside results. Compare the same
+fixture before and after a change. The fixture exposes scaling trends; it does
+not simulate cold disks, mixed-project query plans, long-duration memory growth,
+or semantic relevance on real user questions. Timing thresholds are deliberately
+absent from shared-runner correctness tests.</p>
+<h2 id="relevance">Relevance</h2>
+<p>Before changing ranking or adding inference, measure recall quality on
+representative questions:</p>
+<div class="codeblock"><div class="codebar"><span>sh</span><button type="button" data-copy aria-live="polite">Copy</button></div><pre><code>synapse memory eval cases.toml --budget lean
+</code></pre></div>
+<p>Each <code>[[case]]</code> names a <code>query</code>, an optional <code>project</code> folder, and <code>expect</code>: text a
+useful memory contains, or nothing for a question no memory answers. The report
+gives the share ranked first, the share found, MRR, the share whose answer text
+survived the response budget, and noise on unanswerable cases. Run it on a copy of
+a real store (<code>SYNAPSE_DATA</code> pointed at the copy, never the live folder) before and
+after the change, and keep resource cost in view alongside it.</p>
+<footer class="articlefoot"><div class="articlemeta"><a href="https://github.com/wess/synapse/blob/main/docs/retrieval.md">View page source</a><span>Synapse 1.14.2</span></div><nav class="pagenav" aria-label="Guide pages"><a href="../../docs/embedding/"><small>Previous</small><strong>Embedding Synapse</strong></a><a href="../../docs/map/"><small>Next</small><strong>The memory map</strong></a></nav></footer>
+    </main>
+  <aside class="ontoc" aria-label="On this page"><span>Contents</span><ol><li><a href="#drift">Drift</a></li><li><a href="#exact-reading">Exact reading</a></li><li><a href="#correctness-fixtures">Correctness fixtures</a></li><li><a href="#performance-fixture">Performance fixture</a></li><li><a href="#relevance">Relevance</a></li></ol></aside>
+  </div>
+  <footer class="footer">
+    <div class="footerupper"><div><a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">synapse</a><p>A shared memory. A little less starting over.</p></div>
+      <nav aria-label="Footer"><a href="../../docs/">Manual</a><a href="../../tutorials/">Tutorials</a><a href="https://github.com/wess/synapse">Source</a><a href="https://github.com/wess/synapse/releases">Releases</a><a href="https://wess.io">By Wess</a></nav></div>
+    <p class="footerfine"><span>macOS &amp; Windows desktop · Linux CLI &amp; MCP</span><span>v1.14.2 · MIT · No account required</span></p>
+  </footer></div>
+</body>
+</html>

@@ -1,161 +1,64 @@
 import type { Page } from "./types";
-import { downloadurl } from "./deploy";
-
-const contract = `<!--
-THESIS: A confirmed decision survives a cinematic match cut between work sessions; this refuses the generic neon node graph and the centered SaaS hero.
-OWN-WORLD: Committed cobalt film stock, cool leader white, dark ink transcripts, carmine cue marks, ruled continuity logs, condensed display titles, and measured timecode captions.
-STORY: See a lost decision become durable context, understand the two product jobs, trust the local boundary, then download it or enter the guide.
-FIRST VIEWPORT: Copy occupies the left third; two offset work transcripts fill the right; an off-white memory strip crosses both at center scale; download sits directly below the offer.
-FORM: Continuity-room match cut staged as a four-scene sequence; seed ec0103e2.
-FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md
--->`;
+import { downloadurl, releaseurl, repositoryurl } from "./deploy";
 
 const body = `
 <main id="content">
-  <section class="hero" data-take="Scene 01">
-    <div class="filmgrain" aria-hidden="true"></div>
-    <div class="heroindex" aria-hidden="true">
-      <span>Roll S-001</span>
-      <span data-scene>Scene 01</span>
-      <span>On this machine</span>
-    </div>
-    <div class="herogrid">
-      <div class="herocopy">
-        <h1>Stop repeating yourself to coding agents.</h1>
-        <p>Carry project memory and skills between Claude Code, Codex, pi, and Ainz. Save a correction once, then recall it from another connected tool. Your memory stays on your machine.</p>
-        <div class="heroactions">
-          <a class="button" href="${downloadurl}">Download for macOS <span aria-hidden="true">↓</span></a>
-          <a class="button secondary" href="tutorials/continuity/">Try a handoff</a>
-        </div>
-        <span class="heronote">macOS and Windows desktop · Linux CLI &amp; MCP · <a href="docs/install/">Install options</a></span>
-      </div>
-      <div class="matchcut" aria-label="Illustrative example: save a convention in Codex and recall it in Claude Code in the same project">
-        <div class="terminal codex">
-          <div class="terminalbar"><span>Codex</span><span>Example · save</span></div>
-          <pre><span class="prompt">›</span> Use Bun in this repo.
-Remember that for this project.
-
-<span class="result">✓ remembered by Synapse</span></pre>
-        </div>
-        <div class="terminal claude">
-          <div class="terminalbar"><span>Claude Code</span><span>Example · recall</span></div>
-          <pre><span class="prompt">›</span> Recall this project’s tooling.
-How do I install dependencies?
-
-<span class="result">Recalled: use Bun in this repo.</span>
-bun install</pre>
-        </div>
-        <div class="thread" aria-hidden="true"></div>
-        <div class="memorystrip">
-          <div class="stripcell"><span>Memory</span><strong>#24</strong></div>
-          <div class="stripcell"><span>Confirmed decision</span><strong>Use Bun in this repo.</strong></div>
-          <div class="stripcell striparrow" aria-hidden="true">→</div>
-          <div class="stripcell"><span>Recall from</span><strong>Connected tools</strong></div>
-          <div class="stripcell"><span>Stored</span><strong>Locally</strong></div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section class="proofbar" aria-label="What Synapse does">
-    <div><strong>Switch agents</strong><span>Recall the decisions you already made.</span></div>
-    <div><strong>Share skills</strong><span>Install one library into your connected tools.</span></div>
-    <div><strong>Keep memory local</strong><span>Inspect, correct, export, or delete it.</span></div>
-  </section>
-
-  <section class="sequence" data-take="Scene 02">
-    <div class="sectionhead">
-      <h2>Use another agent. Keep your decisions.</h2>
-      <p>Keep your conventions, corrections, and reusable skills available when you start a new session or change coding tools.</p>
-    </div>
-    <div class="takes">
-      <article class="take">
-        <span>Connect</span>
-        <h3>Connect the agents you use.</h3>
-        <p>Connect Claude Code, Codex, pi, or Ainz from the app or CLI. Use another harness? <a href="docs/harnesses/">Add it with a TOML descriptor</a>. PRs for additional harnesses are welcome.</p>
-      </article>
-      <article class="take">
-        <span>Import</span>
-        <h3>Bring useful history with you.</h3>
-        <p>Preview and import existing Claude and Codex memory. Choose what to keep, inspect the source, and undo an import batch if needed.</p>
-      </article>
-      <article class="take">
-        <span>Continue</span>
-        <h3>Recall before you start.</h3>
-        <p>Open another connected agent in the same project and recall its saved conventions, from any clone of the repository. Update a decision when it changes so future recall returns the current version.</p>
-      </article>
-      <article class="take">
-        <span>Skills</span>
-        <h3>Maintain one skill library.</h3>
-        <p>Write a reusable procedure once, install it into your connected tools, and check which copies need an update. <a href="tutorials/skills/">Set up shared skills</a>.</p>
-      </article>
-    </div>
-  </section>
-
-  <section class="vaultscene" data-take="Scene 03">
-    <div class="vaultcopy">
-      <h2>Credentials without the sprawl.</h2>
-      <p>Secret values are sealed in a store only you can open — Synapse's own, or macOS Keychain if you prefer it. Projects receive only the environment variables you approve for them.</p>
-      <p>Use the boundary for one command, or turn on shell integration in Settings to load an approved environment when you enter its folder.</p>
-      <a class="button" href="docs/vault/">See how scopes work</a>
-    </div>
-    <div class="scopeframe" aria-label="Two ways to use an approved project environment">
-      <pre><span class="yamlkey">Approved for this project</span>
-DATABASE_URL      → work.database
-SENTRY_AUTH_TOKEN → work.sentry
-PRODUCTION_TOKEN  → <span class="yamldeny">blocked</span>
-
-<span class="yamlkey">For one command</span>
-$ synapse run -- your-command
-
-<span class="yamlkey">Whenever you enter this folder</span>
-Settings → Shell integration → Enable</pre>
-    </div>
-  </section>
-
-  <section class="controlscene" data-take="Scene 04">
-    <div class="memoryledger" aria-label="Example project memory">
-      <div class="memoryrow"><span>#24</span><div><strong>Use Bun in this repo.</strong><small>project convention</small></div><time>10:42</time></div>
-      <div class="memoryrow"><span>#23</span><div><strong>Use one date format throughout the product.</strong><small>product decision</small></div><time>09:18</time></div>
-      <div class="memoryrow"><span>#22</span><div><strong>Never expose production credentials locally.</strong><small>security boundary</small></div><time>Yesterday</time></div>
-    </div>
-    <div class="controlcopy">
-      <h2>Nothing hidden.</h2>
-      <p>Your memory stays on your machine and remains visible in the app. Read the exact text, fix what changed, make a backup, or remove what no longer belongs.</p>
-      <a class="button secondary" href="docs/data/">Read about your data</a>
-    </div>
-  </section>
-
-  <section class="guidegate">
-    <div>
-      <h2>Start in minutes. Go deeper when you need to.</h2>
-      <p>Connect two tools, save a project convention, and recall it from the second tool. Follow the walkthrough to check the result yourself.</p>
-    </div>
-    <div class="guidelist">
-      <a href="docs/harnesses/"><span><strong>Supported and custom harnesses</strong><span>See the support list, add your harness, or contribute a connector.</span></span><b aria-hidden="true">→</b></a>
-      <a href="docs/install/"><span><strong>Install and connect</strong><span>Set up Synapse on macOS, Windows, or Linux and connect a tool.</span></span><b aria-hidden="true">→</b></a>
-      <a href="tutorials/continuity/"><span><strong>Try your first handoff</strong><span>Save a decision in one agent. Recall it in another.</span></span><b aria-hidden="true">→</b></a>
-      <a href="tutorials/skills/"><span><strong>Share your skills</strong><span>Install one skill library across your coding tools.</span></span><b aria-hidden="true">→</b></a>
-    </div>
-  </section>
-
-  <section class="closing">
-    <div>
-      <h2>Give your next session a head start.</h2>
-      <p>Download Synapse and try a handoff with one project decision. No account required. Open source under the MIT license.</p>
+  <section class="hero">
+    <div class="herocopy">
+      <h1>synapse<span class="cursor" aria-hidden="true"></span></h1>
+      <h2>Your tools change.<br>Your memory stays.</h2>
+      <p>Decisions, corrections, and skills that survive the next session. One local memory for every connected coding tool.</p>
       <div class="heroactions">
         <a class="button" href="${downloadurl}">Download for macOS</a>
-        <a class="button secondary" href="tutorials/connect/">Follow the setup guide</a>
+        <a class="button secondary" href="docs/install/">Install on your machine</a>
       </div>
+      <p class="heronote">macOS &amp; Windows desktop. Linux CLI &amp; MCP.<br>No account. No subscription. Your machine.</p>
+    </div>
+    <div class="console" aria-label="Illustrative memory handoff between two sessions">
+      <div class="consoletitle"><span>project / workshop</span><span>local memory</span></div>
+      <div class="buffer">
+        <p class="bufferlabel">session one / save a decision</p>
+        <p><span class="nick">you</span> Use Bun in this repository.<br><span class="indent">Remember that for this project.</span></p>
+        <p><span class="nick">synapse</span> Saved to project memory.</p>
+        <div class="savedmemory"><span>memory #24</span><strong>Use Bun in this repository.</strong><span>project scope · stored locally</span></div>
+        <p class="bufferlabel">session two / another connected tool</p>
+        <p><span class="nick">you</span> How do I install dependencies?</p>
+        <p><span class="nick">synapse</span> Recalled your project convention.</p>
+        <pre><code>$ bun install</code></pre>
+      </div>
+      <div class="consolestatus"><span>remember → recall → continue</span><span>illustrative example</span></div>
     </div>
   </section>
+  <div class="systemline"><span>LOCAL-FIRST MEMORY</span><span>SQLite · MCP · shared skills · scoped credentials</span><a href="${repositoryurl}">Open source / MIT</a></div>
+  <section class="workflows" aria-labelledby="workflowtitle">
+    <div class="sectionintro"><h2 id="workflowtitle">Pick up where<br>you left off.</h2><p>A new session shouldn’t mean explaining the project again. Keep what you settled, inspect what gets recalled, and change it when the decision changes.</p></div>
+    <div class="workflowrows">
+      <article><h3>Remember the decision.</h3><p>Keep confirmed conventions, corrections, and project context. Project memory follows the repository across clones and worktrees.</p><a href="docs/memory/">Memory &amp; recall</a></article>
+      <article><h3>Connect your tools.</h3><p>Use the built-in connectors or add a TOML descriptor for another harness. Launch one session, or make the connection permanent.</p><a href="docs/harnesses/">Supported &amp; custom tools</a></article>
+      <article><h3>Keep one skill library.</h3><p>Save a reusable procedure once. Review proposed skills, approve revisions, and update managed copies without overwriting your edits.</p><a href="docs/skills/">Skills &amp; learning</a></article>
+      <article><h3>Work together.</h3><p>Turn on the optional mesh for direct messages, roles, teams, and bounded background workers. Join the conversation from your terminal.</p><a href="docs/mesh/">The agent mesh</a></article>
+    </div>
+  </section>
+  <section class="boundary" aria-labelledby="boundarytitle">
+    <div><h2 id="boundarytitle">Local is the default.</h2><p>Memory lives in a local SQLite database. Secret values live in a separate encrypted vault or macOS Keychain. You choose which environment variables a project can receive.</p><a href="docs/security/">Read the security model</a></div>
+    <dl><div><dt>Memory</dt><dd>Searchable, inspectable, exportable.</dd></div><div><dt>Credentials</dt><dd>Approved scopes. Values stay out of memory.</dd></div><div><dt>Changes</dt><dd>Supersede a fact. Restore its history.</dd></div><div><dt>Connection</dt><dd>Useful offline. No hosted service required.</dd></div></dl>
+  </section>
+  <section class="guidegate" aria-labelledby="guidetitle">
+    <div class="sectionintro"><h2 id="guidetitle">Start with<br>something small.</h2><p>Connect a tool, save one convention, then recall it from the next session. The guides cover the rest.</p></div>
+    <div class="guidelist">
+      <a href="docs/install/"><strong>Install &amp; connect</strong><span>macOS, Windows, or Linux</span></a>
+      <a href="tutorials/continuity/"><strong>Try a handoff</strong><span>One decision, two sessions</span></a>
+      <a href="tutorials/secrets/"><strong>Scope a credential</strong><span>Give one project what it needs</span></a>
+      <a href="docs/"><strong>Read the manual</strong><span>Commands, tools, and guarantees</span></a>
+    </div>
+  </section>
+  <section class="closing"><h2>A little less starting over.</h2><div class="heroactions"><a class="button" href="${downloadurl}">Download for macOS</a><a href="${releaseurl}">All releases &amp; Windows installer</a></div></section>
 </main>`;
 
 export const home: Page = {
   path: "index.html",
   title: "Synapse",
-  description: "Share local project memory and skills between Claude Code, Codex, pi, and Ainz. Recall saved decisions across coding agents. Open source for macOS, Windows, and Linux.",
+  description: "Local memory, shared skills, scoped credentials, and an optional agent mesh. Carry decisions between coding tools without an account or hosted service.",
   kind: "home",
   body,
-  contract,
 };

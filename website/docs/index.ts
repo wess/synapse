@@ -14,7 +14,7 @@ export const overview: Page = {
   body: `
     <h2 id="model">The model</h2>
     <p>Synapse is a local service with two deliberately separate jobs. Its <strong>memory layer</strong> gives connected developer tools one durable, searchable context store. Its <strong>vault layer</strong> gives commands or opted-in shells carefully scoped environment variables while keeping secret values sealed in a store of their own.</p>
-    <p>The desktop app is the control surface. The CLI exposes the same memory, vault, scope, settings, and data-lifecycle operations. The MCP stdio server gives connected tools three narrow capabilities: remember durable context, recall it, and inspect value-free vault status. An optional <strong>agent mesh</strong> adds a fourth job on top of the same store: letting those connected tools coordinate with each other.</p>
+    <p>The desktop app is the control surface. The CLI exposes the same memory, vault, scope, settings, and data-lifecycle operations. The MCP stdio server exposes four core tools: <code>remember</code>, <code>recall</code>, <code>readmemory</code>, and value-free <code>vaultstatus</code>. Optional learning tools support reviewed skills and feedback; the <strong>agent mesh</strong> adds coordination, roles, teams, and bounded workers.</p>
 
     <h2 id="stores">What Synapse stores</h2>
     <table>
@@ -35,12 +35,12 @@ export const overview: Page = {
 
     <h2 id="limits">What Synapse does not do</h2>
     <ul>
-      <li>It does not sync memory or secrets to an account or hosted service.</li>
+      <li>Ordinary use requires no account or hosted service. An optional <a href="sync/">encrypted sync library and log server</a> exist for integrations; the app and CLI do not yet provide a sync setup flow. Credential values are outside that replication contract.</li>
       <li>It does not send secret values through MCP, write them to YAML, or accept them as command arguments.</li>
       <li>It cannot directly modify an already-running parent process. Use <code>synapse run -- &lt;command&gt;</code> for one child, or explicitly evaluate <code>synapse hook</code> so your shell applies quoted environment changes itself.</li>
       <li>It does not decide that every conversation detail deserves permanent memory. Connected tools receive instructions to keep stable, confirmed context.</li>
       <li>It does not continuously mirror native tool stores. Imports are explicit, previewed, and reversible; new shared memory belongs in Synapse.</li>
-      <li>Synapse provides a signed Apple-silicon desktop app for macOS 13 or later, plus a Linux CLI and MCP server. See <a href="install/#linux">Linux setup</a> to build from source.</li>
+      <li>Synapse provides a signed Apple-silicon desktop app for macOS 13 or later, a Windows x64 desktop installer, and a Linux CLI and MCP server. See <a href="install/#linux">Linux setup</a> to build from source.</li>
     </ul>
 
     <h2 id="paths">Choose a path</h2>
@@ -69,6 +69,8 @@ export const overview: Page = {
       <dd>Use the <a href="cli/">complete CLI reference</a> and <a href="mcp/">MCP tool reference</a>.</dd>
       <dt>I am planning backups or a recovery.</dt>
       <dd>Read <a href="data/">Data lifecycle</a> before exporting or restoring the database.</dd>
+      <dt>I want to build or embed Synapse.</dt>
+      <dd>Start with <a href="developing/">Developing Synapse</a> for repository checks, <a href="synapsecore/">the core library</a> for module boundaries, or <a href="embedding/">Embedding</a> for the integration choices.</dd>
     </dl>
   `,
 };

@@ -5,89 +5,50 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Data lifecycle — Synapse</title>
   <meta name="description" content="Locate the database, understand startup checks and automatic backups, export a consistent snapshot, and restore safely.">
-  <meta name="theme-color" content="#0a43c8">
+  <meta name="theme-color" content="#352879">
   <meta property="og:title" content="Data lifecycle — Synapse">
   <meta property="og:description" content="Locate the database, understand startup checks and automatic backups, export a consistent snapshot, and restore safely.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://wess.io/synapse/docs/data/">
   <link rel="canonical" href="https://wess.io/synapse/docs/data/">
   <link rel="icon" href="../../icon.svg" type="image/svg+xml">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Fragment+Mono&family=Manrope:wght@400;500;600;700&display=swap">
+  <link rel="preload" href="../../pixel.ttf" as="font" type="font/ttf" crossorigin>
   <link rel="stylesheet" href="../../style.css">
   <script type="module" src="../../site.js"></script>
 </head>
 <body class="docs" data-root="../../">
-  
+  <div class="shell">
   <a class="skip" href="#content">Skip to content</a>
+  <div class="windowbar"><a href="../../">synapse / manual</a><span>v1.14.2 · on your machine</span></div>
   <header class="topbar">
-    <a class="wordmark" href="../../" aria-label="Synapse home">
-      <img src="../../icon.svg" width="30" height="30" alt="">
-      <span>Synapse</span>
-    </a>
+    <a class="wordmark" href="../../" aria-label="Synapse home"><img src="../../icon.svg" width="28" height="28" alt=""><span>synapse</span></a>
     <button class="navtoggle" type="button" aria-expanded="false" aria-controls="topnav">Menu</button>
     <nav id="topnav" aria-label="Primary">
       <a href="../../docs/" aria-current="page">Docs</a>
       <a href="../../tutorials/">Tutorials</a>
-      <a href="https://github.com/wess/synapse">GitHub <span aria-hidden="true">↗</span></a>
-      <a class="navdownload" href="https://github.com/wess/synapse/releases/latest/download/synapse.zip">Download</a>
+      <a href="https://github.com/wess/synapse">Source</a>
+      <a class="navdownload" href="../../docs/install/">Install</a>
     </nav>
   </header>
-  
   <div class="doclayout">
-    
   <aside class="docsrail" aria-label="Documentation navigation">
     <div class="searchbox">
-      <label for="search">Search the guide</label>
-      <input id="search" type="search" placeholder="Memory, vaults, restore…" autocomplete="off">
-      <div class="searchresults" data-results hidden></div>
+      <label for="docssearch">Search docs &amp; tutorials</label>
+      <input id="docssearch" type="search" placeholder="Memory, vaults, restore…" autocomplete="off" aria-controls="searchresults">
+      <div id="searchresults" class="searchresults" data-results hidden></div>
       <span class="searchstatus" data-searchstatus role="status" aria-live="polite"></span>
     </div>
     <details class="railnav" open>
       <summary>Browse all guides</summary>
       <nav aria-label="All guides">
-        <h2>Documentation</h2>
-        <ul>
-        <li><a href="../../docs/">Start here</a></li>
-        <li><a href="../../docs/install/">Install and connect</a></li>
-        <li><a href="../../docs/harnesses/">Supported and custom harnesses</a></li>
-        <li><a href="../../docs/app/">Desktop app reference</a></li>
-        <li><a href="../../docs/memory/">Memory and recall</a></li>
-        <li><a href="../../docs/mcp/">MCP tool reference</a></li>
-        <li><a href="../../docs/mesh/">Agent mesh</a></li>
-        <li><a href="../../docs/skills/">Skills</a></li>
-        <li><a href="../../docs/servers/">MCP servers</a></li>
-        <li><a href="../../docs/sources/">Sources</a></li>
-        <li><a href="../../docs/vault/">Vaults and scopes</a></li>
-        <li><a href="../../docs/data/" aria-current="page">Data lifecycle</a></li>
-        <li><a href="../../docs/config/">Configuration and paths</a></li>
-        <li><a href="../../docs/security/">Security model</a></li>
-        <li><a href="../../docs/cli/">CLI reference</a></li>
-        <li><a href="../../docs/troubleshoot/">Troubleshooting</a></li></ul>
-        <h2>Tutorials</h2>
-        <ul>
-        <li><a href="../../tutorials/">Tutorials</a></li>
-        <li><a href="../../tutorials/connect/">Install and connect your first tools</a></li>
-        <li><a href="../../tutorials/continuity/">Carry one decision between tools</a></li>
-        <li><a href="../../tutorials/curate/">Curate and optimize memory</a></li>
-        <li><a href="../../tutorials/secrets/">Use a scoped secret in either shell mode</a></li>
-        <li><a href="../../tutorials/skills/">Keep one skill library across every tool</a></li>
-        <li><a href="../../tutorials/learn/">Let your agents write skills</a></li>
-        <li><a href="../../tutorials/launch/">Start a tool with everything in place</a></li>
-        <li><a href="../../tutorials/mesh/">Run a team of agents and drive it yourself</a></li>
-        <li><a href="../../tutorials/overseer/">Hand a job to one agent and watch it grow a team</a></li>
-        <li><a href="../../tutorials/recovery/">Export and restore safely</a></li>
-        <li><a href="../../tutorials/lifecycle/">Check, migrate, and remove Synapse</a></li></ul>
+        <h2>Start here</h2><ul><li><a href="../../docs/">Start here</a></li><li><a href="../../docs/install/">Install and connect</a></li><li><a href="../../docs/harnesses/">Supported and custom harnesses</a></li><li><a href="../../docs/app/">Desktop app reference</a></li></ul><h2>Reference</h2><ul><li><a href="../../docs/memory/">Memory and recall</a></li><li><a href="../../docs/mcp/">MCP tool reference</a></li><li><a href="../../docs/mesh/">Agent mesh</a></li><li><a href="../../docs/skills/">Skills</a></li><li><a href="../../docs/servers/">MCP servers</a></li><li><a href="../../docs/sources/">Sources</a></li></ul><h2>Your machine</h2><ul><li><a href="../../docs/vault/">Vaults and scopes</a></li><li><a href="../../docs/data/" aria-current="page">Data lifecycle</a></li><li><a href="../../docs/config/">Configuration and paths</a></li><li><a href="../../docs/security/">Security model</a></li><li><a href="../../docs/sync/">Encrypted sync</a></li><li><a href="../../docs/troubleshoot/">Troubleshooting</a></li></ul><h2>Build with it</h2><ul><li><a href="../../docs/cli/">CLI reference</a></li><li><a href="../../docs/developing/">Developing Synapse</a></li><li><a href="../../docs/synapsecore/">The core library</a></li><li><a href="../../docs/embedding/">Embedding Synapse</a></li><li><a href="../../docs/retrieval/">Retrieval checks</a></li><li><a href="../../docs/map/">The memory map</a></li><li><a href="../../docs/startup/">What launching costs</a></li><li><a href="../../docs/windows/">Windows</a></li><li><a href="../../docs/federation/">Federation proposal</a></li></ul>
+        <h2>Tutorials</h2><ul><li><a href="../../tutorials/">Tutorials</a></li><li><a href="../../tutorials/connect/">Install and connect your first tools</a></li><li><a href="../../tutorials/continuity/">Carry one decision between tools</a></li><li><a href="../../tutorials/curate/">Curate and optimize memory</a></li><li><a href="../../tutorials/secrets/">Use a scoped secret in either shell mode</a></li><li><a href="../../tutorials/skills/">Keep one skill library across every tool</a></li><li><a href="../../tutorials/learn/">Let your agents write skills</a></li><li><a href="../../tutorials/launch/">Start a tool with everything in place</a></li><li><a href="../../tutorials/mesh/">Run a team of agents and drive it yourself</a></li><li><a href="../../tutorials/overseer/">Hand a job to one agent and watch it grow a team</a></li><li><a href="../../tutorials/recovery/">Export and restore safely</a></li><li><a href="../../tutorials/lifecycle/">Check, migrate, and remove Synapse</a></li></ul>
       </nav>
     </details>
   </aside>
     <main class="article" id="content">
-      <header class="articlehead">
-        <h1>Data lifecycle</h1>
-        <span>Locate the database, understand startup checks and automatic backups, export a consistent snapshot, and restore safely.</span>
-      </header>
-      
+      <header class="articlehead"><nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../">Synapse</a><span aria-hidden="true">/</span><a href="../../docs/">Manual</a></nav><h1>Data lifecycle</h1><p>Locate the database, understand startup checks and automatic backups, export a consistent snapshot, and restore safely.</p></header>
+
     <h2 id="files">Files and permissions</h2>
     <p>On macOS, the default data directory is <code>~/Library/Application Support/synapse</code>. Run <code>synapse path</code> to print the resolved data, shared-guidance, and CLI paths for the current environment.</p>
     <table>
@@ -114,12 +75,12 @@
       <li>Move project memory filed under a repository's folder path to that repository's <code>origin</code> key, when the folder is still a repository with a remote. A store with nothing to move costs one indexed read.</li>
       <li>Reapply owner-only file permissions.</li>
     </ol>
-    
+
   <aside class="note">
     <strong>&lt;code&gt;quick_check&lt;/code&gt; reads every page, so its cost grows with everything you have stored. Synapse runs it once for a given file rather than once per handle, and reporting commands such as the status line skip it: they redraw constantly, and a whole-store scan there would cost far more than the number they print. &lt;code&gt;synapse data check&lt;/code&gt; always runs the full check.</strong>
     <p>undefined</p>
   </aside>
-    
+
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
@@ -135,7 +96,7 @@ synapse data check --json</code></pre>
     <p>These are complete snapshots created through SQLite <code>VACUUM INTO</code>, not copies of a live database file. Synapse does not currently rotate them; include the folder in your normal local backup policy and remove old snapshots deliberately.</p>
 
     <h2 id="export">Export a portable snapshot</h2>
-    
+
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
@@ -145,7 +106,7 @@ synapse data check --json</code></pre>
 synapse data check --json</code></pre>
   </div>
     <p>The destination must not already exist. Synapse opens the active database normally, writes a consistent compact snapshot, secures its permissions, then reopens it read-only and validates integrity before reporting success.</p>
-    
+
   <aside class="note">
     <strong>Secret values are separate</strong>
     <p>The export covers brain.db: memory, vault metadata, and account references, and never a value. Values live in their own store — vault.db beside it, or macOS Keychain — and neither is in the snapshot. Restoring on another machine restores the labels; the values are set again there, or vault.db and vault.key are carried across together and treated like the secret they are.</p>
@@ -157,7 +118,7 @@ synapse data check --json</code></pre>
       <li>Stop every connected MCP process by closing the relevant tool sessions.</li>
       <li>Run the restore command from a separate terminal.</li>
     </ol>
-    
+
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
@@ -172,26 +133,14 @@ synapse data check</code></pre>
     <h2 id="wipe">Memory wipe is not a reset</h2>
     <p><code>synapse memory wipe --confirm</code> removes every memory entry and import batch but leaves <code>SOUL.md</code>, settings, vault labels, stored values, global mappings, and scope approvals. Use it when you want a clean memory history without rebuilding guidance or credential setup.</p>
     <p>There is no one-command factory reset. To remove Synapse completely, first forget each secret through the app or CLI, then quit all processes and remove the application, installed launcher, and data directory deliberately. On the encrypted store the data directory <em>is</em> the credential store, so removing it takes every value with it — <code>synapse uninstall --data</code> says so before it acts.</p>
-  
+  <footer class="articlefoot"><div class="articlemeta"><a href="https://github.com/wess/synapse/blob/main/website/docs/data.ts">View page source</a><span>Synapse 1.14.2</span></div><nav class="pagenav" aria-label="Guide pages"><a href="../../docs/vault/"><small>Previous</small><strong>Vaults and scopes</strong></a><a href="../../docs/config/"><small>Next</small><strong>Configuration and paths</strong></a></nav></footer>
     </main>
-    <aside class="ontoc" aria-label="On this page">
-        <span>On this page</span>
-        <ol><li><a href="#files">Files and permissions</a></li><li><a href="#startup">Startup</a></li><li><a href="#backups">Automatic backups</a></li><li><a href="#export">Export</a></li><li><a href="#restore">Restore</a></li><li><a href="#wipe">Memory wipe</a></li></ol>
-      </aside>
+  <aside class="ontoc" aria-label="On this page"><span>Contents</span><ol><li><a href="#files">Files and permissions</a></li><li><a href="#startup">Startup</a></li><li><a href="#backups">Automatic backups</a></li><li><a href="#export">Export</a></li><li><a href="#restore">Restore</a></li><li><a href="#wipe">Memory wipe</a></li></ol></aside>
   </div>
-  
   <footer class="footer">
-    <div>
-      <a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">Synapse</a>
-      <p>Shared memory and skills for coding agents, kept on your machine.</p>
-    </div>
-    <nav aria-label="Footer">
-      <a href="../../docs/">Documentation</a>
-      <a href="../../tutorials/">Tutorials</a>
-      <a href="https://github.com/wess/synapse">Source</a>
-      <a href="https://github.com/wess/synapse/releases">Releases</a>
-    </nav>
-    <p class="footerfine">No account required. macOS desktop · Linux terminal, CLI &amp; MCP.</p>
-  </footer>
+    <div class="footerupper"><div><a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">synapse</a><p>A shared memory. A little less starting over.</p></div>
+      <nav aria-label="Footer"><a href="../../docs/">Manual</a><a href="../../tutorials/">Tutorials</a><a href="https://github.com/wess/synapse">Source</a><a href="https://github.com/wess/synapse/releases">Releases</a><a href="https://wess.io">By Wess</a></nav></div>
+    <p class="footerfine"><span>macOS &amp; Windows desktop · Linux CLI &amp; MCP</span><span>v1.14.2 · MIT · No account required</span></p>
+  </footer></div>
 </body>
 </html>

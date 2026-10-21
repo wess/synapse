@@ -5,92 +5,53 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Security model — Synapse</title>
   <meta name="description" content="Understand the trust boundary around local memory, stored secret values, MCP metadata, approved scopes, child processes, and configuration writes.">
-  <meta name="theme-color" content="#0a43c8">
+  <meta name="theme-color" content="#352879">
   <meta property="og:title" content="Security model — Synapse">
   <meta property="og:description" content="Understand the trust boundary around local memory, stored secret values, MCP metadata, approved scopes, child processes, and configuration writes.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://wess.io/synapse/docs/security/">
   <link rel="canonical" href="https://wess.io/synapse/docs/security/">
   <link rel="icon" href="../../icon.svg" type="image/svg+xml">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Fragment+Mono&family=Manrope:wght@400;500;600;700&display=swap">
+  <link rel="preload" href="../../pixel.ttf" as="font" type="font/ttf" crossorigin>
   <link rel="stylesheet" href="../../style.css">
   <script type="module" src="../../site.js"></script>
 </head>
 <body class="docs" data-root="../../">
-  
+  <div class="shell">
   <a class="skip" href="#content">Skip to content</a>
+  <div class="windowbar"><a href="../../">synapse / manual</a><span>v1.14.2 · on your machine</span></div>
   <header class="topbar">
-    <a class="wordmark" href="../../" aria-label="Synapse home">
-      <img src="../../icon.svg" width="30" height="30" alt="">
-      <span>Synapse</span>
-    </a>
+    <a class="wordmark" href="../../" aria-label="Synapse home"><img src="../../icon.svg" width="28" height="28" alt=""><span>synapse</span></a>
     <button class="navtoggle" type="button" aria-expanded="false" aria-controls="topnav">Menu</button>
     <nav id="topnav" aria-label="Primary">
       <a href="../../docs/" aria-current="page">Docs</a>
       <a href="../../tutorials/">Tutorials</a>
-      <a href="https://github.com/wess/synapse">GitHub <span aria-hidden="true">↗</span></a>
-      <a class="navdownload" href="https://github.com/wess/synapse/releases/latest/download/synapse.zip">Download</a>
+      <a href="https://github.com/wess/synapse">Source</a>
+      <a class="navdownload" href="../../docs/install/">Install</a>
     </nav>
   </header>
-  
   <div class="doclayout">
-    
   <aside class="docsrail" aria-label="Documentation navigation">
     <div class="searchbox">
-      <label for="search">Search the guide</label>
-      <input id="search" type="search" placeholder="Memory, vaults, restore…" autocomplete="off">
-      <div class="searchresults" data-results hidden></div>
+      <label for="docssearch">Search docs &amp; tutorials</label>
+      <input id="docssearch" type="search" placeholder="Memory, vaults, restore…" autocomplete="off" aria-controls="searchresults">
+      <div id="searchresults" class="searchresults" data-results hidden></div>
       <span class="searchstatus" data-searchstatus role="status" aria-live="polite"></span>
     </div>
     <details class="railnav" open>
       <summary>Browse all guides</summary>
       <nav aria-label="All guides">
-        <h2>Documentation</h2>
-        <ul>
-        <li><a href="../../docs/">Start here</a></li>
-        <li><a href="../../docs/install/">Install and connect</a></li>
-        <li><a href="../../docs/harnesses/">Supported and custom harnesses</a></li>
-        <li><a href="../../docs/app/">Desktop app reference</a></li>
-        <li><a href="../../docs/memory/">Memory and recall</a></li>
-        <li><a href="../../docs/mcp/">MCP tool reference</a></li>
-        <li><a href="../../docs/mesh/">Agent mesh</a></li>
-        <li><a href="../../docs/skills/">Skills</a></li>
-        <li><a href="../../docs/servers/">MCP servers</a></li>
-        <li><a href="../../docs/sources/">Sources</a></li>
-        <li><a href="../../docs/vault/">Vaults and scopes</a></li>
-        <li><a href="../../docs/data/">Data lifecycle</a></li>
-        <li><a href="../../docs/config/">Configuration and paths</a></li>
-        <li><a href="../../docs/security/" aria-current="page">Security model</a></li>
-        <li><a href="../../docs/cli/">CLI reference</a></li>
-        <li><a href="../../docs/troubleshoot/">Troubleshooting</a></li></ul>
-        <h2>Tutorials</h2>
-        <ul>
-        <li><a href="../../tutorials/">Tutorials</a></li>
-        <li><a href="../../tutorials/connect/">Install and connect your first tools</a></li>
-        <li><a href="../../tutorials/continuity/">Carry one decision between tools</a></li>
-        <li><a href="../../tutorials/curate/">Curate and optimize memory</a></li>
-        <li><a href="../../tutorials/secrets/">Use a scoped secret in either shell mode</a></li>
-        <li><a href="../../tutorials/skills/">Keep one skill library across every tool</a></li>
-        <li><a href="../../tutorials/learn/">Let your agents write skills</a></li>
-        <li><a href="../../tutorials/launch/">Start a tool with everything in place</a></li>
-        <li><a href="../../tutorials/mesh/">Run a team of agents and drive it yourself</a></li>
-        <li><a href="../../tutorials/overseer/">Hand a job to one agent and watch it grow a team</a></li>
-        <li><a href="../../tutorials/recovery/">Export and restore safely</a></li>
-        <li><a href="../../tutorials/lifecycle/">Check, migrate, and remove Synapse</a></li></ul>
+        <h2>Start here</h2><ul><li><a href="../../docs/">Start here</a></li><li><a href="../../docs/install/">Install and connect</a></li><li><a href="../../docs/harnesses/">Supported and custom harnesses</a></li><li><a href="../../docs/app/">Desktop app reference</a></li></ul><h2>Reference</h2><ul><li><a href="../../docs/memory/">Memory and recall</a></li><li><a href="../../docs/mcp/">MCP tool reference</a></li><li><a href="../../docs/mesh/">Agent mesh</a></li><li><a href="../../docs/skills/">Skills</a></li><li><a href="../../docs/servers/">MCP servers</a></li><li><a href="../../docs/sources/">Sources</a></li></ul><h2>Your machine</h2><ul><li><a href="../../docs/vault/">Vaults and scopes</a></li><li><a href="../../docs/data/">Data lifecycle</a></li><li><a href="../../docs/config/">Configuration and paths</a></li><li><a href="../../docs/security/" aria-current="page">Security model</a></li><li><a href="../../docs/sync/">Encrypted sync</a></li><li><a href="../../docs/troubleshoot/">Troubleshooting</a></li></ul><h2>Build with it</h2><ul><li><a href="../../docs/cli/">CLI reference</a></li><li><a href="../../docs/developing/">Developing Synapse</a></li><li><a href="../../docs/synapsecore/">The core library</a></li><li><a href="../../docs/embedding/">Embedding Synapse</a></li><li><a href="../../docs/retrieval/">Retrieval checks</a></li><li><a href="../../docs/map/">The memory map</a></li><li><a href="../../docs/startup/">What launching costs</a></li><li><a href="../../docs/windows/">Windows</a></li><li><a href="../../docs/federation/">Federation proposal</a></li></ul>
+        <h2>Tutorials</h2><ul><li><a href="../../tutorials/">Tutorials</a></li><li><a href="../../tutorials/connect/">Install and connect your first tools</a></li><li><a href="../../tutorials/continuity/">Carry one decision between tools</a></li><li><a href="../../tutorials/curate/">Curate and optimize memory</a></li><li><a href="../../tutorials/secrets/">Use a scoped secret in either shell mode</a></li><li><a href="../../tutorials/skills/">Keep one skill library across every tool</a></li><li><a href="../../tutorials/learn/">Let your agents write skills</a></li><li><a href="../../tutorials/launch/">Start a tool with everything in place</a></li><li><a href="../../tutorials/mesh/">Run a team of agents and drive it yourself</a></li><li><a href="../../tutorials/overseer/">Hand a job to one agent and watch it grow a team</a></li><li><a href="../../tutorials/recovery/">Export and restore safely</a></li><li><a href="../../tutorials/lifecycle/">Check, migrate, and remove Synapse</a></li></ul>
       </nav>
     </details>
   </aside>
     <main class="article" id="content">
-      <header class="articlehead">
-        <h1>Security model</h1>
-        <span>Understand the trust boundary around local memory, stored secret values, MCP metadata, approved scopes, child processes, and configuration writes.</span>
-      </header>
-      
+      <header class="articlehead"><nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../">Synapse</a><span aria-hidden="true">/</span><a href="../../docs/">Manual</a></nav><h1>Security model</h1><p>Understand the trust boundary around local memory, stored secret values, MCP metadata, approved scopes, child processes, and configuration writes.</p></header>
+
     <h2 id="boundary">Trust boundary</h2>
-    <p>Synapse is local-first, not a sandbox. It removes unnecessary network and file exposure from the memory-and-credential workflow, but it still runs as your macOS user. Any process already able to control your account, inspect your terminal, read your home directory, or access an unlocked Keychain may sit inside the same trust boundary.</p>
-    <p>The application requires no Synapse account or hosted service. MCP uses local stdio. Memory and metadata live in a local SQLite file. Synapse includes no telemetry, no remote synchronization, and no web server.</p>
+    <p>Synapse is local-first, not a sandbox. It removes unnecessary network and file exposure from the memory-and-credential workflow, but it still runs as your local user account. Any process already able to control your account, inspect your terminal, read your home directory, or access an unlocked Keychain may sit inside the same trust boundary.</p>
+    <p>The application requires no Synapse account or hosted service. MCP uses local stdio. Memory and metadata live in a local SQLite file. The desktop includes no telemetry or network recall server. The optional <a href="../sync/">sync library and separate opaque log server</a> replicate sealed memory operations only when configured by an integration; normal local use does not contact them.</p>
 
     <h2 id="memory">Memory</h2>
     <p>Memory bodies are plain text in SQLite and are available to connected MCP clients through recall. Global records are available in every project; project records are returned only with the matching project, which is the repository's <code>origin</code> remote when it has one and its root folder otherwise. A remote written with credentials, such as <code>https://user:token@host/…</code>, is stored without them. Do not store credentials, private keys, access tokens, or material you would not want an authorized connected tool to read.</p>
@@ -104,7 +65,7 @@
     <p>Be clear about what that protects. It protects a vault that has been <em>copied</em> — a backup, a synced folder, a disk image, a laptop somebody else now has. It does not protect you from a process already running as your user, which can read <code>vault.key</code> exactly the way Synapse reads it. This is encryption at rest, not an access control.</p>
     <p><strong>macOS Keychain</strong> is the other store, and on a Mac it is the stronger of the two: it adds per-application access control that the operating system enforces, which a key file cannot. It is one setting away in either direction, and <code>synapse vault migrate</code> moves every value across without a gap.</p>
     <p><code>secret set</code> does not accept a value argument. Interactive input uses a hidden prompt; piped input remains available for automation. <code>secret copy</code> is the only way a stored value comes back out, and it goes to the clipboard rather than to a screen, handed to <code>pbcopy</code> over stdin rather than as an argument that would be readable in <code>ps</code>. Anything on the clipboard is readable by every program that can ask for it, and Synapse does not clear it for you.</p>
-    
+
   <aside class="note">
     <strong>Metadata can still be sensitive</strong>
     <p>Names such as PRODUCTION_DATABASE_URL can reveal system structure even when the value is hidden. Choose scope files and variable names with the same care you apply to ordinary repository configuration.</p>
@@ -118,7 +79,7 @@
     <p><code>synapse run -- &lt;command&gt;</code> reads only the selected values out of the vault and places them in the environment of a new child process. That command and all of its descendants can read those values normally. Synapse cannot stop the child from logging, transmitting, or persisting them.</p>
     <p>The optional zsh, bash, or fish hook asks the shell to evaluate quoted environment changes. It activates only inside a directory with at least one approved discovered scope. Leaving, revoking approval, or changing any discovered scope unloads managed variables and restores values that existed before activation.</p>
     <p>Settings installs the hook inside a marked startup-file block using the absolute managed CLI path. It backs up and atomically replaces an existing file, refuses incomplete or duplicate Synapse blocks, and removes only the marked block when disabled.</p>
-    
+
   <aside class="note">
     <strong>Ambient access is broader</strong>
     <p>Every process launched from an activated shell inherits the values, including commands that do not need them. Use command-scoped mode for a smaller boundary, and do not enable shell tracing while environment changes are evaluated.</p>
@@ -143,26 +104,14 @@
       <li>A scope digest proves that you approved exact bytes at a path; it does not prove the commands launched from that folder are safe.</li>
       <li>There is no remote revocation system. Forget a secret in Synapse and rotate it at its issuer when exposure is possible.</li>
     </ul>
-  
+  <footer class="articlefoot"><div class="articlemeta"><a href="https://github.com/wess/synapse/blob/main/website/docs/security.ts">View page source</a><span>Synapse 1.14.2</span></div><nav class="pagenav" aria-label="Guide pages"><a href="../../docs/config/"><small>Previous</small><strong>Configuration and paths</strong></a><a href="../../docs/sync/"><small>Next</small><strong>Encrypted sync</strong></a></nav></footer>
     </main>
-    <aside class="ontoc" aria-label="On this page">
-        <span>On this page</span>
-        <ol><li><a href="#boundary">Trust boundary</a></li><li><a href="#memory">Memory</a></li><li><a href="#secrets">Secret values</a></li><li><a href="#scopes">Scope approval</a></li><li><a href="#children">Environment boundaries</a></li><li><a href="#limits">Operational limits</a></li></ol>
-      </aside>
+  <aside class="ontoc" aria-label="On this page"><span>Contents</span><ol><li><a href="#boundary">Trust boundary</a></li><li><a href="#memory">Memory</a></li><li><a href="#secrets">Secret values</a></li><li><a href="#scopes">Scope approval</a></li><li><a href="#children">Environment boundaries</a></li><li><a href="#limits">Operational limits</a></li></ol></aside>
   </div>
-  
   <footer class="footer">
-    <div>
-      <a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">Synapse</a>
-      <p>Shared memory and skills for coding agents, kept on your machine.</p>
-    </div>
-    <nav aria-label="Footer">
-      <a href="../../docs/">Documentation</a>
-      <a href="../../tutorials/">Tutorials</a>
-      <a href="https://github.com/wess/synapse">Source</a>
-      <a href="https://github.com/wess/synapse/releases">Releases</a>
-    </nav>
-    <p class="footerfine">No account required. macOS desktop · Linux terminal, CLI &amp; MCP.</p>
-  </footer>
+    <div class="footerupper"><div><a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">synapse</a><p>A shared memory. A little less starting over.</p></div>
+      <nav aria-label="Footer"><a href="../../docs/">Manual</a><a href="../../tutorials/">Tutorials</a><a href="https://github.com/wess/synapse">Source</a><a href="https://github.com/wess/synapse/releases">Releases</a><a href="https://wess.io">By Wess</a></nav></div>
+    <p class="footerfine"><span>macOS &amp; Windows desktop · Linux CLI &amp; MCP</span><span>v1.14.2 · MIT · No account required</span></p>
+  </footer></div>
 </body>
 </html>

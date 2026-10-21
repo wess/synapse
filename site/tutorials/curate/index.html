@@ -5,96 +5,57 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Curate and optimize memory — Synapse</title>
   <meta name="description" content="Build a small memory set, learn how search actually behaves, correct entries at the source, tune the recall budget, import existing notes reversibly, and remove only what you added.">
-  <meta name="theme-color" content="#0a43c8">
+  <meta name="theme-color" content="#352879">
   <meta property="og:title" content="Curate and optimize memory — Synapse">
   <meta property="og:description" content="Build a small memory set, learn how search actually behaves, correct entries at the source, tune the recall budget, import existing notes reversibly, and remove only what you added.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://wess.io/synapse/tutorials/curate/">
   <link rel="canonical" href="https://wess.io/synapse/tutorials/curate/">
   <link rel="icon" href="../../icon.svg" type="image/svg+xml">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Fragment+Mono&family=Manrope:wght@400;500;600;700&display=swap">
+  <link rel="preload" href="../../pixel.ttf" as="font" type="font/ttf" crossorigin>
   <link rel="stylesheet" href="../../style.css">
   <script type="module" src="../../site.js"></script>
 </head>
 <body class="tutorial" data-root="../../">
-  
+  <div class="shell">
   <a class="skip" href="#content">Skip to content</a>
+  <div class="windowbar"><a href="../../">synapse / tutorials</a><span>v1.14.2 · on your machine</span></div>
   <header class="topbar">
-    <a class="wordmark" href="../../" aria-label="Synapse home">
-      <img src="../../icon.svg" width="30" height="30" alt="">
-      <span>Synapse</span>
-    </a>
+    <a class="wordmark" href="../../" aria-label="Synapse home"><img src="../../icon.svg" width="28" height="28" alt=""><span>synapse</span></a>
     <button class="navtoggle" type="button" aria-expanded="false" aria-controls="topnav">Menu</button>
     <nav id="topnav" aria-label="Primary">
       <a href="../../docs/">Docs</a>
       <a href="../../tutorials/" aria-current="page">Tutorials</a>
-      <a href="https://github.com/wess/synapse">GitHub <span aria-hidden="true">↗</span></a>
-      <a class="navdownload" href="https://github.com/wess/synapse/releases/latest/download/synapse.zip">Download</a>
+      <a href="https://github.com/wess/synapse">Source</a>
+      <a class="navdownload" href="../../docs/install/">Install</a>
     </nav>
   </header>
-  
   <div class="doclayout">
-    
   <aside class="docsrail" aria-label="Documentation navigation">
     <div class="searchbox">
-      <label for="search">Search the guide</label>
-      <input id="search" type="search" placeholder="Memory, vaults, restore…" autocomplete="off">
-      <div class="searchresults" data-results hidden></div>
+      <label for="docssearch">Search docs &amp; tutorials</label>
+      <input id="docssearch" type="search" placeholder="Memory, vaults, restore…" autocomplete="off" aria-controls="searchresults">
+      <div id="searchresults" class="searchresults" data-results hidden></div>
       <span class="searchstatus" data-searchstatus role="status" aria-live="polite"></span>
     </div>
     <details class="railnav" open>
       <summary>Browse all guides</summary>
       <nav aria-label="All guides">
-        <h2>Documentation</h2>
-        <ul>
-        <li><a href="../../docs/">Start here</a></li>
-        <li><a href="../../docs/install/">Install and connect</a></li>
-        <li><a href="../../docs/harnesses/">Supported and custom harnesses</a></li>
-        <li><a href="../../docs/app/">Desktop app reference</a></li>
-        <li><a href="../../docs/memory/">Memory and recall</a></li>
-        <li><a href="../../docs/mcp/">MCP tool reference</a></li>
-        <li><a href="../../docs/mesh/">Agent mesh</a></li>
-        <li><a href="../../docs/skills/">Skills</a></li>
-        <li><a href="../../docs/servers/">MCP servers</a></li>
-        <li><a href="../../docs/sources/">Sources</a></li>
-        <li><a href="../../docs/vault/">Vaults and scopes</a></li>
-        <li><a href="../../docs/data/">Data lifecycle</a></li>
-        <li><a href="../../docs/config/">Configuration and paths</a></li>
-        <li><a href="../../docs/security/">Security model</a></li>
-        <li><a href="../../docs/cli/">CLI reference</a></li>
-        <li><a href="../../docs/troubleshoot/">Troubleshooting</a></li></ul>
-        <h2>Tutorials</h2>
-        <ul>
-        <li><a href="../../tutorials/">Tutorials</a></li>
-        <li><a href="../../tutorials/connect/">Install and connect your first tools</a></li>
-        <li><a href="../../tutorials/continuity/">Carry one decision between tools</a></li>
-        <li><a href="../../tutorials/curate/" aria-current="page">Curate and optimize memory</a></li>
-        <li><a href="../../tutorials/secrets/">Use a scoped secret in either shell mode</a></li>
-        <li><a href="../../tutorials/skills/">Keep one skill library across every tool</a></li>
-        <li><a href="../../tutorials/learn/">Let your agents write skills</a></li>
-        <li><a href="../../tutorials/launch/">Start a tool with everything in place</a></li>
-        <li><a href="../../tutorials/mesh/">Run a team of agents and drive it yourself</a></li>
-        <li><a href="../../tutorials/overseer/">Hand a job to one agent and watch it grow a team</a></li>
-        <li><a href="../../tutorials/recovery/">Export and restore safely</a></li>
-        <li><a href="../../tutorials/lifecycle/">Check, migrate, and remove Synapse</a></li></ul>
+        <h2>Start here</h2><ul><li><a href="../../docs/">Start here</a></li><li><a href="../../docs/install/">Install and connect</a></li><li><a href="../../docs/harnesses/">Supported and custom harnesses</a></li><li><a href="../../docs/app/">Desktop app reference</a></li></ul><h2>Reference</h2><ul><li><a href="../../docs/memory/">Memory and recall</a></li><li><a href="../../docs/mcp/">MCP tool reference</a></li><li><a href="../../docs/mesh/">Agent mesh</a></li><li><a href="../../docs/skills/">Skills</a></li><li><a href="../../docs/servers/">MCP servers</a></li><li><a href="../../docs/sources/">Sources</a></li></ul><h2>Your machine</h2><ul><li><a href="../../docs/vault/">Vaults and scopes</a></li><li><a href="../../docs/data/">Data lifecycle</a></li><li><a href="../../docs/config/">Configuration and paths</a></li><li><a href="../../docs/security/">Security model</a></li><li><a href="../../docs/sync/">Encrypted sync</a></li><li><a href="../../docs/troubleshoot/">Troubleshooting</a></li></ul><h2>Build with it</h2><ul><li><a href="../../docs/cli/">CLI reference</a></li><li><a href="../../docs/developing/">Developing Synapse</a></li><li><a href="../../docs/synapsecore/">The core library</a></li><li><a href="../../docs/embedding/">Embedding Synapse</a></li><li><a href="../../docs/retrieval/">Retrieval checks</a></li><li><a href="../../docs/map/">The memory map</a></li><li><a href="../../docs/startup/">What launching costs</a></li><li><a href="../../docs/windows/">Windows</a></li><li><a href="../../docs/federation/">Federation proposal</a></li></ul>
+        <h2>Tutorials</h2><ul><li><a href="../../tutorials/">Tutorials</a></li><li><a href="../../tutorials/connect/">Install and connect your first tools</a></li><li><a href="../../tutorials/continuity/">Carry one decision between tools</a></li><li><a href="../../tutorials/curate/" aria-current="page">Curate and optimize memory</a></li><li><a href="../../tutorials/secrets/">Use a scoped secret in either shell mode</a></li><li><a href="../../tutorials/skills/">Keep one skill library across every tool</a></li><li><a href="../../tutorials/learn/">Let your agents write skills</a></li><li><a href="../../tutorials/launch/">Start a tool with everything in place</a></li><li><a href="../../tutorials/mesh/">Run a team of agents and drive it yourself</a></li><li><a href="../../tutorials/overseer/">Hand a job to one agent and watch it grow a team</a></li><li><a href="../../tutorials/recovery/">Export and restore safely</a></li><li><a href="../../tutorials/lifecycle/">Check, migrate, and remove Synapse</a></li></ul>
       </nav>
     </details>
   </aside>
     <main class="article" id="content">
-      <header class="articlehead">
-        <h1>Curate and optimize memory</h1>
-        <span>Build a small memory set, learn how search actually behaves, correct entries at the source, tune the recall budget, import existing notes reversibly, and remove only what you added.</span>
-      </header>
-      
+      <header class="articlehead"><nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../">Synapse</a><span aria-hidden="true">/</span><a href="../../tutorials/">Tutorials</a></nav><h1>Curate and optimize memory</h1><p>Build a small memory set, learn how search actually behaves, correct entries at the source, tune the recall budget, import existing notes reversibly, and remove only what you added.</p></header>
+
     <h2 id="outcome">Outcome and prerequisites</h2>
     <p>You will build a small set of entries, understand why search returns what it returns, correct one at the source, compare what each recall budget actually sends to a model, import a Markdown file reversibly, and then undo it. This is the tutorial to read when recall is returning too much, too little, or the wrong thing.</p>
     <ul>
       <li>The <code>synapse</code> CLI installed and at least one tool connected.</li>
       <li>A project folder. Steps here create and delete entries under one source label.</li>
     </ul>
-    
+
   <aside class="note">
     <strong>Write down the IDs</strong>
     <p>Every add prints its new numeric ID. Keep those numbers for the cleanup step. Do not reach for <code>synapse memory wipe</code> in a store that has real context in it — it removes everything, and it is meant for starting over rather than tidying.</p>
@@ -104,7 +65,7 @@
       <li>
         <h3 id="add">Add focused entries</h3>
         <p>Content is read from stdin, never from an argument, so a memory can contain anything without shell quoting getting in the way:</p>
-        
+
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
@@ -114,7 +75,7 @@
 printf &#039;%s\n&#039; &#039;Tutorial commands use Bun.&#039; | synapse memory add synapsetutorial
 printf &#039;%s\n&#039; &#039;Tutorial backups go in the backups folder.&#039; | synapse memory add synapsetutorial</code></pre>
   </div>
-        
+
   <div class="codeblock">
     <div class="codebar">
       <span>text</span>
@@ -130,7 +91,7 @@ Stored memory #3</code></pre>
 
       <li>
         <h3 id="search">Search and inspect</h3>
-        
+
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
@@ -138,7 +99,7 @@ Stored memory #3</code></pre>
     </div>
     <pre><code>synapse memory list tutorial</code></pre>
   </div>
-        
+
   <div class="codeblock">
     <div class="codebar">
       <span>text</span>
@@ -148,7 +109,7 @@ Stored memory #3</code></pre>
 1	project:/Users/example/project	synapsetutorial	Tutorial apps use port 4100.</code></pre>
   </div>
         <p>The columns are the ID, the scope with its project, the source, and the body. For anything scripted, ask for JSON instead:</p>
-        
+
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
@@ -156,7 +117,7 @@ Stored memory #3</code></pre>
     </div>
     <pre><code>synapse memory list &quot;Bun&quot; --json</code></pre>
   </div>
-        
+
   <div class="codeblock">
     <div class="codebar">
       <span>text</span>
@@ -174,7 +135,7 @@ Stored memory #3</code></pre>
 ]</code></pre>
   </div>
         <p>And for one exact record, with nothing trimmed:</p>
-        
+
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
@@ -182,7 +143,7 @@ Stored memory #3</code></pre>
     </div>
     <pre><code>synapse memory show 2</code></pre>
   </div>
-        
+
   <div class="codeblock">
     <div class="codebar">
       <span>text</span>
@@ -202,7 +163,7 @@ Tutorial commands use Bun.</code></pre>
         <h3 id="behavior">Understand how search behaves</h3>
         <p>Recall is full-text search with a few behaviors worth knowing, because each explains results that otherwise look wrong.</p>
         <p><strong>Words match in other forms, and so do fragments.</strong> The query is searched twice: once by word, stemmed, so <em>deploying</em> finds a memory that says <em>deploys</em>; and once by three-character pieces, so <em>hashpw</em> finds <code>scripts/hashpw.sh</code>. A memory that matches both ways ranks above one that matches only one. Its source is searched too, at a lower weight, so the label you file a memory under helps find it.</p>
-        
+
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
@@ -212,7 +173,7 @@ Tutorial commands use Bun.</code></pre>
 synapse memory list synapsetutorial</code></pre>
   </div>
         <p><strong>Common words are dropped.</strong> A query is stripped of words that carry no meaning on their own. Try it:</p>
-        
+
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
@@ -222,7 +183,7 @@ synapse memory list synapsetutorial</code></pre>
   </div>
         <p>Nothing in that query survives, so instead of matching every memory containing <em>the</em>, Synapse answers the way it answers an empty query — with the most recent entries. That is deliberate. Matching on a common word is both wrong, because a memory that happens to contain <em>are</em> is not the answer to anything, and slow, because a common word makes the index rank most of the store.</p>
         <p><strong>An empty query is a real question.</strong> It means "what should I know here", and it returns the most recent memory in scope. This is exactly what a session opening asks, and it is what the Claude Code session hook uses.</p>
-        
+
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
@@ -232,7 +193,7 @@ synapse memory list synapsetutorial</code></pre>
   </div>
         <p><strong>Words that carry a preference are kept.</strong> <code>not</code>, <code>never</code>, and <code>use</code> look like function words but change the meaning of a convention completely, so they stay in the query. "Never use npm" and "use npm" must not search identically.</p>
         <p><strong>You can ask what it did.</strong> When a memory you know is stored does not come back, the fastest answer is to make the search show its working:</p>
-        
+
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
@@ -240,7 +201,7 @@ synapse memory list synapsetutorial</code></pre>
     </div>
     <pre><code>synapse memory list &quot;what are the credentials&quot; --explain</code></pre>
   </div>
-        
+
   <div class="codeblock">
     <div class="codebar">
       <span>text</span>
@@ -256,7 +217,7 @@ Matches:    0</code></pre>
   </div>
         <p>That distinguishes the two things that look identical from the outside: a query that lost its only real word, and a store that genuinely holds nothing.</p>
         <p><strong>And you can skip the ranking entirely.</strong> When you want an exact string — a flag, an identifier, a path — the ranked search is the wrong tool, because the thing you are looking for may be a word it drops:</p>
-        
+
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
@@ -265,7 +226,7 @@ Matches:    0</code></pre>
     <pre><code>synapse memory grep -- --no-verify</code></pre>
   </div>
         <p><strong>And you can measure it.</strong> Once a project has memory worth keeping, write down a few questions you expect it to answer, with text the right answer contains, and score recall against them. Run it again after a cleanup and the numbers say whether the store got easier to search or harder:</p>
-        
+
   <div class="codeblock">
     <div class="codebar">
       <span>toml</span>
@@ -276,7 +237,7 @@ query = &quot;which javascript runtime&quot;
 project = &quot;/Users/example/project&quot;
 expect = [&quot;bun&quot;]</code></pre>
   </div>
-        
+
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
@@ -285,7 +246,7 @@ expect = [&quot;bun&quot;]</code></pre>
     <pre><code>synapse memory eval cases.toml</code></pre>
   </div>
         <p><a href="../../docs/memory/#eval">Measuring recall</a> explains each number, including how often the answer survived the response budget.</p>
-        
+
   <aside class="note">
     <strong>Scope is applied in the query, not after it</strong>
     <p>Every search returns everything global plus everything for the current project, and nothing from any other project. That is enforced where the rows are selected rather than filtered afterwards, so there is no path where another project's memory is read and then discarded.</p>
@@ -295,7 +256,7 @@ expect = [&quot;bun&quot;]</code></pre>
       <li>
         <h3 id="correct">Correct at the source</h3>
         <p>A convention becomes more precise. Replace the record rather than adding a second one that disagrees with it:</p>
-        
+
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
@@ -305,7 +266,7 @@ expect = [&quot;bun&quot;]</code></pre>
   | synapse memory edit 2 synapsetutorial
 synapse memory show 2</code></pre>
   </div>
-        
+
   <div class="codeblock">
     <div class="codebar">
       <span>text</span>
@@ -315,7 +276,7 @@ synapse memory show 2</code></pre>
   </div>
         <p>The ID is stable, so anything referring to this memory still refers to the right thing, and future recall returns only the corrected text. Two entries that contradict each other are the single most common way a memory store gets worse as it grows: recall returns both and the model has to guess which is current.</p>
         <p>Editing is right when the old wording had nothing worth keeping. When the old version was <em>true and then stopped being true</em>, supersede it instead — the new memory becomes the one recall returns, and the old one stays readable as the record of what used to be the case:</p>
-        
+
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
@@ -325,7 +286,7 @@ synapse memory show 2</code></pre>
   | synapse memory add synapsetutorial
 synapse memory supersede 2 6</code></pre>
   </div>
-        
+
   <div class="codeblock">
     <div class="codebar">
       <span>text</span>
@@ -335,7 +296,7 @@ synapse memory supersede 2 6</code></pre>
 Undo with: synapse memory restore 2</code></pre>
   </div>
         <p>Check both. Memory 2 is still there, marked, and out of recall; memory 6 is what a tool now sees. If you decide you were wrong, <code>synapse memory restore 2</code> puts it straight back.</p>
-        
+
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
@@ -349,7 +310,7 @@ synapse memory list</code></pre>
       <li>
         <h3 id="budgets">Tune what recall actually sends</h3>
         <p>The budget controls how much a <code>recall</code> response costs a model in context. Look at where you are:</p>
-        
+
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
@@ -357,7 +318,7 @@ synapse memory list</code></pre>
     </div>
     <pre><code>synapse settings show</code></pre>
   </div>
-        
+
   <div class="codeblock">
     <div class="codebar">
       <span>text</span>
@@ -378,7 +339,7 @@ zsh hook	eval &quot;$(synapse hook zsh)&quot;</code></pre>
             <tr><td>Lean</td><td>4</td><td>2,800</td><td>A large store, a long session, or a model whose context you are protecting.</td></tr>
           </tbody>
         </table>
-        
+
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
@@ -386,7 +347,7 @@ zsh hook	eval &quot;$(synapse hook zsh)&quot;</code></pre>
     </div>
     <pre><code>synapse settings optimize lean</code></pre>
   </div>
-        
+
   <div class="codeblock">
     <div class="codebar">
       <span>text</span>
@@ -396,7 +357,7 @@ zsh hook	eval &quot;$(synapse hook zsh)&quot;</code></pre>
   </div>
         <p>Ask a connected tool to recall <code>synapsetutorial</code> and note how many entries come back. Switch to <code>full</code> and ask again. The stored bodies never change — <code>synapse memory show</code> returns the same text at every setting. The budget only shapes the response.</p>
         <p>A tool can request a smaller budget for one call, and that request can only ever shrink your configured ceiling. A session cannot talk its way into a larger response than you have allowed.</p>
-        
+
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
@@ -409,7 +370,7 @@ zsh hook	eval &quot;$(synapse hook zsh)&quot;</code></pre>
       <li>
         <h3 id="import">Import notes you already have</h3>
         <p>If you have been keeping conventions in a Markdown file, bring them in. Every import previews first:</p>
-        
+
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
@@ -417,7 +378,7 @@ zsh hook	eval &quot;$(synapse hook zsh)&quot;</code></pre>
     </div>
     <pre><code>synapse memory import markdown notes.md</code></pre>
   </div>
-        
+
   <div class="codeblock">
     <div class="codebar">
       <span>text</span>
@@ -428,7 +389,7 @@ ready	notes.md	# Conventions - Use Bun, never npm. - Deploys target Apple silico
 Preview only. Add --confirm to import safe entries.</code></pre>
   </div>
         <p>Now try one with a credential in it and watch what happens:</p>
-        
+
   <div class="codeblock">
     <div class="codebar">
       <span>text</span>
@@ -440,12 +401,12 @@ review	flagged.md	Content hidden until the source file is reviewed.
 Preview only. Add --confirm to import safe entries.</code></pre>
   </div>
         <p>Flagged content is not merely skipped — it is not even displayed, because printing it to your terminal to warn you about it would defeat the point. <code>--confirm</code> imports the ready entries and leaves flagged ones untouched.</p>
-        
+
   <aside class="note">
     <strong>The flagging is conservative, not exhaustive</strong>
     <p>It looks for private-key markers, credential-shaped variable names, assignments to password- and token-like keys, and bearer tokens. A secret that matches none of those patterns will not be caught. Read your own preview — the flag is a safety net, not a substitute for looking.</p>
   </aside>
-        
+
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
@@ -453,7 +414,7 @@ Preview only. Add --confirm to import safe entries.</code></pre>
     </div>
     <pre><code>synapse memory import markdown notes.md --confirm</code></pre>
   </div>
-        
+
   <div class="codeblock">
     <div class="codebar">
       <span>text</span>
@@ -468,7 +429,7 @@ Undo with: synapse memory undo 1 --confirm</code></pre>
 
       <li>
         <h3 id="undo">Undo the whole batch</h3>
-        
+
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
@@ -476,7 +437,7 @@ Undo with: synapse memory undo 1 --confirm</code></pre>
     </div>
     <pre><code>synapse memory imports</code></pre>
   </div>
-        
+
   <div class="codeblock">
     <div class="codebar">
       <span>text</span>
@@ -484,7 +445,7 @@ Undo with: synapse memory undo 1 --confirm</code></pre>
     </div>
     <pre><code>1	markdown	1 stored	0 linked	active</code></pre>
   </div>
-        
+
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
@@ -493,7 +454,7 @@ Undo with: synapse memory undo 1 --confirm</code></pre>
     <pre><code>synapse memory undo 1 --confirm
 synapse memory imports</code></pre>
   </div>
-        
+
   <div class="codeblock">
     <div class="codebar">
       <span>text</span>
@@ -501,7 +462,7 @@ synapse memory imports</code></pre>
     </div>
     <pre><code>Undid import batch #1; removed 1 imported memories</code></pre>
   </div>
-        
+
   <div class="codeblock">
     <div class="codebar">
       <span>text</span>
@@ -514,7 +475,7 @@ synapse memory imports</code></pre>
     </ol>
 
     <h2 id="cleanup">Delete only what you added</h2>
-    
+
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
@@ -525,7 +486,7 @@ synapse memory delete 1 --confirm
 synapse memory delete 2 --confirm
 synapse memory delete 3 --confirm</code></pre>
   </div>
-    
+
   <div class="codeblock">
     <div class="codebar">
       <span>text</span>
@@ -534,7 +495,7 @@ synapse memory delete 3 --confirm</code></pre>
     <pre><code>Deleted memory #1</code></pre>
   </div>
     <p>Both destructive commands refuse without <code>--confirm</code>, and say which record they mean:</p>
-    
+
   <div class="codeblock">
     <div class="codebar">
       <span>text</span>
@@ -547,26 +508,14 @@ Error: add --confirm to delete every memory</code></pre>
 
     <h2>Next step</h2>
     <p>Continue with <a href="../secrets/">Use a scoped secret in either shell mode</a>, which is the other half of what Synapse hands a tool — and the half where the boundaries matter most.</p>
-  
+  <footer class="articlefoot"><div class="articlemeta"><a href="https://github.com/wess/synapse/blob/main/website/tutorials/curate.ts">View page source</a><span>Synapse 1.14.2</span></div><nav class="pagenav" aria-label="Guide pages"><a href="../../tutorials/continuity/"><small>Previous</small><strong>Carry one decision between tools</strong></a><a href="../../tutorials/secrets/"><small>Next</small><strong>Use a scoped secret in either shell mode</strong></a></nav></footer>
     </main>
-    <aside class="ontoc" aria-label="On this page">
-        <span>On this page</span>
-        <ol><li><a href="#outcome">Outcome</a></li><li><a href="#add">Add entries</a></li><li><a href="#search">Search and inspect</a></li><li><a href="#behavior">How search behaves</a></li><li><a href="#correct">Correct at the source</a></li><li><a href="#budgets">Tune the budget</a></li><li><a href="#import">Import existing notes</a></li><li><a href="#undo">Undo an import</a></li><li><a href="#cleanup">Clean up</a></li></ol>
-      </aside>
+  <aside class="ontoc" aria-label="On this page"><span>Contents</span><ol><li><a href="#outcome">Outcome</a></li><li><a href="#add">Add entries</a></li><li><a href="#search">Search and inspect</a></li><li><a href="#behavior">How search behaves</a></li><li><a href="#correct">Correct at the source</a></li><li><a href="#budgets">Tune the budget</a></li><li><a href="#import">Import existing notes</a></li><li><a href="#undo">Undo an import</a></li><li><a href="#cleanup">Clean up</a></li></ol></aside>
   </div>
-  
   <footer class="footer">
-    <div>
-      <a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">Synapse</a>
-      <p>Shared memory and skills for coding agents, kept on your machine.</p>
-    </div>
-    <nav aria-label="Footer">
-      <a href="../../docs/">Documentation</a>
-      <a href="../../tutorials/">Tutorials</a>
-      <a href="https://github.com/wess/synapse">Source</a>
-      <a href="https://github.com/wess/synapse/releases">Releases</a>
-    </nav>
-    <p class="footerfine">No account required. macOS desktop · Linux terminal, CLI &amp; MCP.</p>
-  </footer>
+    <div class="footerupper"><div><a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">synapse</a><p>A shared memory. A little less starting over.</p></div>
+      <nav aria-label="Footer"><a href="../../docs/">Manual</a><a href="../../tutorials/">Tutorials</a><a href="https://github.com/wess/synapse">Source</a><a href="https://github.com/wess/synapse/releases">Releases</a><a href="https://wess.io">By Wess</a></nav></div>
+    <p class="footerfine"><span>macOS &amp; Windows desktop · Linux CLI &amp; MCP</span><span>v1.14.2 · MIT · No account required</span></p>
+  </footer></div>
 </body>
 </html>

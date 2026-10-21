@@ -12,5 +12,5 @@ export type Page = {
   kind: Kind;
   body: string;
   toc?: Toc[];
-  contract?: string;
+  source?: string;
 };

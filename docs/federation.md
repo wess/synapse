@@ -1,4 +1,9 @@
-# Federation
+# Federation proposal
+
+> Status: proposed, not implemented. The commands, types, and workflows below
+> describe a design, not released interfaces. Source paths and machine snapshots
+> are historical; non-drawing behavior now lives in `crates/synapsecore`.
+> See [Encrypted sync](sync.md) for the current replication boundary.
 
 A design for one Synapse node asking another node for memory it does not hold.
 
@@ -1168,13 +1173,13 @@ Verified on disk:
 | `~/Desktop/Dev/devops` | repo, no remote | the folder itself |
 | `~/Desktop/Dev/design` | none | the folder itself |
 | `~/Desktop/Dev/org` | none | the folder itself |
-| `~/Desktop/Dev/synaps` | `git@github.com:wess/synapse.git` | the folder itself |
+| `~/Desktop/Dev/synapse` | `git@github.com:wess/synapse.git` | the folder itself |
 
 Because none of the KB folders carry a `.synapse.yaml` and three carry no
 `.git`, `projectroot()` (`brain/scope.rs:13`) resolves each to itself and each
 becomes an ordinary project scope in one `brain.db`. Which means: a memory
 Devmon writes while working in a KB folder is filtered *out* of every recall
-in `guise/` or `synaps/` by the scope predicate in `store.rs:136` —
+in `guise/` or `synapse/` by the scope predicate in `store.rs:136` —
 `meta.scope = 'global' OR (meta.scope = 'project' AND meta.project = ?)`. The
 only escape hatch is global scope, which puts a KB fact into every project on
 the machine.
@@ -1200,7 +1205,7 @@ served on loopback.
 | `devops` | `…/synapse/nodes/devops` | `127.0.0.1:8804` | `runbooks`, `hosts` | `engineering` — **not** `design` |
 | `wess` (the laptop's own vault) | default data dir | not served | — | consumer only |
 
-Bindings are per working project. In `~/Desktop/Dev/synaps`:
+Bindings are per working project. In `~/Desktop/Dev/synapse`:
 
 ```sh
 synapse federation bind @org/charter --open

@@ -38,7 +38,7 @@ export PATH="$HOME/.local/bin:$PATH"
 synapse connect
 synapse status`)}
     <p>The install command copies the binary to <code>~/.local/bin/synapse</code>. Keep that directory on your shell's <code>PATH</code>. <code>synapse connect</code> connects tools installed on this machine; restart them to load the connection. Use <code>synapse status</code> for text status or <code>synapse mcp</code> to run the MCP server.</p>
-    <p>On Linux, credentials use Synapse's encrypted vault. The Keychain backend and the native desktop app are macOS-specific. Continue with <a href="#verify">Verify the connection</a>; the app and app-based setup steps below apply to macOS.</p>
+    <p>On Linux, credentials use Synapse's encrypted vault. The Keychain backend is macOS-specific; the native desktop app ships for macOS and Windows. Continue with <a href="#verify">Verify the connection</a>; the app and app-based setup steps below apply to macOS.</p>
 
     <h2 id="app">Install the macOS app</h2>
     <ol>
@@ -81,7 +81,7 @@ synapse version`)}
       <li>It creates <code>SOUL.md</code> when needed and appends or refreshes a small managed pointer in the tool’s global instruction file. Existing user content remains outside that block.</li>
     </ol>
     <p>The connected tool follows that pointer on launch, and the MCP server loads the same <code>SOUL.md</code> during initialization. The default guidance tells every connected tool to recall global plus current-project context, save confirmed reusable facts with project scope by default, use a Lean response first, and keep secrets out of memory.</p>
-    <p>It also tells them to make the link visible: the first reply of a session opens with a single line such as <code>Synapse connected · 3 memories recalled</code>, or <code>Synapse unavailable</code> with a short reason when a call fails. The MCP server supplies that instruction itself, so guidance written before this behavior existed still produces the line without editing <code>SOUL.md</code>.</p>
+    <p>It also tells them to make the link visible: the first reply of a session opens with a single line such as <code>Synapse connected</code>, or <code>Synapse unavailable</code> with a short reason when a call fails. That line has no count: a focused recall is not a store census. A session hook may show an actual scoped count before the first reply, in which case the reply does not repeat the notice. The MCP server supplies the instruction itself, so guidance written before this behavior existed still produces the line without editing <code>SOUL.md</code>.</p>
     <table>
       <thead><tr><th>Tool</th><th>MCP store</th><th>Instruction file</th></tr></thead>
       <tbody>

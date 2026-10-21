@@ -5,89 +5,50 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Skills — Synapse</title>
   <meta name="description" content="Keep your Agent Skills in one library, install them into every connected tool, and let a session write down a procedure it worked out — for you to approve before it reaches anything.">
-  <meta name="theme-color" content="#0a43c8">
+  <meta name="theme-color" content="#352879">
   <meta property="og:title" content="Skills — Synapse">
   <meta property="og:description" content="Keep your Agent Skills in one library, install them into every connected tool, and let a session write down a procedure it worked out — for you to approve before it reaches anything.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://wess.io/synapse/docs/skills/">
   <link rel="canonical" href="https://wess.io/synapse/docs/skills/">
   <link rel="icon" href="../../icon.svg" type="image/svg+xml">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Fragment+Mono&family=Manrope:wght@400;500;600;700&display=swap">
+  <link rel="preload" href="../../pixel.ttf" as="font" type="font/ttf" crossorigin>
   <link rel="stylesheet" href="../../style.css">
   <script type="module" src="../../site.js"></script>
 </head>
 <body class="docs" data-root="../../">
-  
+  <div class="shell">
   <a class="skip" href="#content">Skip to content</a>
+  <div class="windowbar"><a href="../../">synapse / manual</a><span>v1.14.2 · on your machine</span></div>
   <header class="topbar">
-    <a class="wordmark" href="../../" aria-label="Synapse home">
-      <img src="../../icon.svg" width="30" height="30" alt="">
-      <span>Synapse</span>
-    </a>
+    <a class="wordmark" href="../../" aria-label="Synapse home"><img src="../../icon.svg" width="28" height="28" alt=""><span>synapse</span></a>
     <button class="navtoggle" type="button" aria-expanded="false" aria-controls="topnav">Menu</button>
     <nav id="topnav" aria-label="Primary">
       <a href="../../docs/" aria-current="page">Docs</a>
       <a href="../../tutorials/">Tutorials</a>
-      <a href="https://github.com/wess/synapse">GitHub <span aria-hidden="true">↗</span></a>
-      <a class="navdownload" href="https://github.com/wess/synapse/releases/latest/download/synapse.zip">Download</a>
+      <a href="https://github.com/wess/synapse">Source</a>
+      <a class="navdownload" href="../../docs/install/">Install</a>
     </nav>
   </header>
-  
   <div class="doclayout">
-    
   <aside class="docsrail" aria-label="Documentation navigation">
     <div class="searchbox">
-      <label for="search">Search the guide</label>
-      <input id="search" type="search" placeholder="Memory, vaults, restore…" autocomplete="off">
-      <div class="searchresults" data-results hidden></div>
+      <label for="docssearch">Search docs &amp; tutorials</label>
+      <input id="docssearch" type="search" placeholder="Memory, vaults, restore…" autocomplete="off" aria-controls="searchresults">
+      <div id="searchresults" class="searchresults" data-results hidden></div>
       <span class="searchstatus" data-searchstatus role="status" aria-live="polite"></span>
     </div>
     <details class="railnav" open>
       <summary>Browse all guides</summary>
       <nav aria-label="All guides">
-        <h2>Documentation</h2>
-        <ul>
-        <li><a href="../../docs/">Start here</a></li>
-        <li><a href="../../docs/install/">Install and connect</a></li>
-        <li><a href="../../docs/harnesses/">Supported and custom harnesses</a></li>
-        <li><a href="../../docs/app/">Desktop app reference</a></li>
-        <li><a href="../../docs/memory/">Memory and recall</a></li>
-        <li><a href="../../docs/mcp/">MCP tool reference</a></li>
-        <li><a href="../../docs/mesh/">Agent mesh</a></li>
-        <li><a href="../../docs/skills/" aria-current="page">Skills</a></li>
-        <li><a href="../../docs/servers/">MCP servers</a></li>
-        <li><a href="../../docs/sources/">Sources</a></li>
-        <li><a href="../../docs/vault/">Vaults and scopes</a></li>
-        <li><a href="../../docs/data/">Data lifecycle</a></li>
-        <li><a href="../../docs/config/">Configuration and paths</a></li>
-        <li><a href="../../docs/security/">Security model</a></li>
-        <li><a href="../../docs/cli/">CLI reference</a></li>
-        <li><a href="../../docs/troubleshoot/">Troubleshooting</a></li></ul>
-        <h2>Tutorials</h2>
-        <ul>
-        <li><a href="../../tutorials/">Tutorials</a></li>
-        <li><a href="../../tutorials/connect/">Install and connect your first tools</a></li>
-        <li><a href="../../tutorials/continuity/">Carry one decision between tools</a></li>
-        <li><a href="../../tutorials/curate/">Curate and optimize memory</a></li>
-        <li><a href="../../tutorials/secrets/">Use a scoped secret in either shell mode</a></li>
-        <li><a href="../../tutorials/skills/">Keep one skill library across every tool</a></li>
-        <li><a href="../../tutorials/learn/">Let your agents write skills</a></li>
-        <li><a href="../../tutorials/launch/">Start a tool with everything in place</a></li>
-        <li><a href="../../tutorials/mesh/">Run a team of agents and drive it yourself</a></li>
-        <li><a href="../../tutorials/overseer/">Hand a job to one agent and watch it grow a team</a></li>
-        <li><a href="../../tutorials/recovery/">Export and restore safely</a></li>
-        <li><a href="../../tutorials/lifecycle/">Check, migrate, and remove Synapse</a></li></ul>
+        <h2>Start here</h2><ul><li><a href="../../docs/">Start here</a></li><li><a href="../../docs/install/">Install and connect</a></li><li><a href="../../docs/harnesses/">Supported and custom harnesses</a></li><li><a href="../../docs/app/">Desktop app reference</a></li></ul><h2>Reference</h2><ul><li><a href="../../docs/memory/">Memory and recall</a></li><li><a href="../../docs/mcp/">MCP tool reference</a></li><li><a href="../../docs/mesh/">Agent mesh</a></li><li><a href="../../docs/skills/" aria-current="page">Skills</a></li><li><a href="../../docs/servers/">MCP servers</a></li><li><a href="../../docs/sources/">Sources</a></li></ul><h2>Your machine</h2><ul><li><a href="../../docs/vault/">Vaults and scopes</a></li><li><a href="../../docs/data/">Data lifecycle</a></li><li><a href="../../docs/config/">Configuration and paths</a></li><li><a href="../../docs/security/">Security model</a></li><li><a href="../../docs/sync/">Encrypted sync</a></li><li><a href="../../docs/troubleshoot/">Troubleshooting</a></li></ul><h2>Build with it</h2><ul><li><a href="../../docs/cli/">CLI reference</a></li><li><a href="../../docs/developing/">Developing Synapse</a></li><li><a href="../../docs/synapsecore/">The core library</a></li><li><a href="../../docs/embedding/">Embedding Synapse</a></li><li><a href="../../docs/retrieval/">Retrieval checks</a></li><li><a href="../../docs/map/">The memory map</a></li><li><a href="../../docs/startup/">What launching costs</a></li><li><a href="../../docs/windows/">Windows</a></li><li><a href="../../docs/federation/">Federation proposal</a></li></ul>
+        <h2>Tutorials</h2><ul><li><a href="../../tutorials/">Tutorials</a></li><li><a href="../../tutorials/connect/">Install and connect your first tools</a></li><li><a href="../../tutorials/continuity/">Carry one decision between tools</a></li><li><a href="../../tutorials/curate/">Curate and optimize memory</a></li><li><a href="../../tutorials/secrets/">Use a scoped secret in either shell mode</a></li><li><a href="../../tutorials/skills/">Keep one skill library across every tool</a></li><li><a href="../../tutorials/learn/">Let your agents write skills</a></li><li><a href="../../tutorials/launch/">Start a tool with everything in place</a></li><li><a href="../../tutorials/mesh/">Run a team of agents and drive it yourself</a></li><li><a href="../../tutorials/overseer/">Hand a job to one agent and watch it grow a team</a></li><li><a href="../../tutorials/recovery/">Export and restore safely</a></li><li><a href="../../tutorials/lifecycle/">Check, migrate, and remove Synapse</a></li></ul>
       </nav>
     </details>
   </aside>
     <main class="article" id="content">
-      <header class="articlehead">
-        <h1>Skills</h1>
-        <span>Keep your Agent Skills in one library, install them into every connected tool, and let a session write down a procedure it worked out — for you to approve before it reaches anything.</span>
-      </header>
-      
+      <header class="articlehead"><nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../">Synapse</a><span aria-hidden="true">/</span><a href="../../docs/">Manual</a></nav><h1>Skills</h1><p>Keep your Agent Skills in one library, install them into every connected tool, and let a session write down a procedure it worked out — for you to approve before it reaches anything.</p></header>
+
     <h2 id="why">Why a library</h2>
     <p>Claude Code, Codex, pi, and Ainz all read the <a href="https://agentskills.io">Agent Skills</a> open format, and each reads it from its own folder. A skill you want in all of them gets copied by hand as many times, and the copies start drifting the first time you improve one of them.</p>
     <p>Synapse keeps one copy. You edit it in one place, install it into every connected tool, and the app tells you which copies have fallen behind.</p>
@@ -105,7 +66,7 @@
         <tr><td>A project's own</td><td><code>&lt;project&gt;/.claude/skills/</code>, <code>.agents/skills/</code>, <code>.pi/agent/skills/</code>, <code>.ainz/skills/</code></td></tr>
       </tbody>
     </table>
-    
+
   <aside class="note">
     <strong>Codex reads personal skills from the shared &lt;code&gt;~/.agents/skills&lt;/code&gt; folder rather than from its own home. &lt;code&gt;~/.codex/skills&lt;/code&gt; holds the set Codex ships with, and Synapse does not write there.</strong>
     <p>undefined</p>
@@ -113,7 +74,7 @@
 
     <h2 id="format">The format</h2>
     <p>A skill is a directory with a <code>SKILL.md</code> at its root. The frontmatter needs a <code>name</code> that matches the directory and a <code>description</code> saying what the skill does and when to reach for it. Everything after the frontmatter is the instructions.</p>
-    
+
   <div class="codeblock">
     <div class="codebar">
       <span>markdown</span>
@@ -131,7 +92,7 @@ description: Walk the release checklist for this project. Use when cutting a rel
 3. Write the release notes.</code></pre>
   </div>
     <p>A skill can carry more than its <code>SKILL.md</code> — <code>scripts/</code>, <code>references/</code>, and <code>assets/</code> travel with it, and Synapse copies the whole directory. Agents load only the name and description until a task calls for the skill, so a long reference file costs nothing until it is needed.</p>
-    
+
   <aside class="note">
     <strong>A description containing a colon followed by a space has to be quoted, or YAML reads it as a nested key. Synapse says so by name rather than passing the raw parser error through.</strong>
     <p>undefined</p>
@@ -139,7 +100,7 @@ description: Walk the release checklist for this project. Use when cutting a rel
     <p>Synapse ships one skill, <code>synapse-mesh</code>, covering how to actually run a team of agents. It lands in your library on first use and is an ordinary editable skill from then on.</p>
 
     <h2 id="installing">Installing</h2>
-    
+
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
@@ -173,7 +134,7 @@ synapse skill remove my-workflow       # take it back out</code></pre>
 
     <h2 id="adopting">Adopting what you already have</h2>
     <p>If a tool already has a skill you want managed, adopt it. That copies it into the library and records the tool it came from as already having it, so the original stops reading as somebody else's and starts staying in step.</p>
-    
+
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
@@ -186,7 +147,7 @@ synapse skill install humanize</code></pre>
 
     <h2 id="finding">Finding published skills</h2>
     <p>Other people publish skills too. <code>synapse skill search</code> asks <a href="https://skills.sh">skills.sh</a>, a public index of the skills on GitHub that weighs a match by how many people installed it, and <code>synapse skill get</code> brings one into your library.</p>
-    
+
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
@@ -200,7 +161,7 @@ synapse skill approve release-notes</code></pre>
     <p>A skill you get arrives <strong>proposed</strong>, exactly like one an agent wrote: it is in the library and in no tool until you approve it. It is somebody else's instructions, its description would be loaded into every session of every tool holding it, and a skill can carry scripts, so read it first. Every file is checked before anything is written — paths stay inside the skill, the frontmatter is valid, and a skill already in your library is never replaced.</p>
     <p>skills.sh is one source among any you add: a team's own GitHub repository, or another index. Every source is asked at once, and results are written <code>source:id</code>. See <a href="../sources/">Sources</a>.</p>
     <p>The app's Skills screen has the same thing as a second tab: <strong>Search</strong> lists the results down the left and shows the selected skill's whole <code>SKILL.md</code> beside them, with <strong>Add to library</strong>.</p>
-    
+
   <aside class="note">
     <strong>Searching is the one part of the skill library that reaches the network, and only when you search. The query and the skill you fetch go to skills.sh; nothing else about your machine or library does.</strong>
     <p>undefined</p>
@@ -208,7 +169,7 @@ synapse skill approve release-notes</code></pre>
 
     <h2 id="projects">Project skills</h2>
     <p>A procedure you work out in one repository is usually about that repository. A library where every skill is global costs every session on the machine to hold one project's checklist, so skills have <strong>shelves</strong>: the library root for what is true everywhere, and one shelf per project beside it.</p>
-    
+
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
@@ -220,7 +181,7 @@ synapse skill list --global                  # or just the shared ones</code></p
   </div>
     <p>A project skill installs into that project's own skills folders rather than into your home, so it is loaded when you work there and nowhere else. It also travels with the repository once it is installed, which is the point.</p>
     <p>Every command that takes a bare name looks at this project's shelf before the global one, so <code>synapse skill show release</code> run inside a repository shows that repository's version. A global skill and a project skill can share a name without colliding; <code>--global</code> and <code>--project [folder]</code> say which you mean when it matters.</p>
-    
+
   <aside class="note">
     <strong>Not every tool has a place for these</strong>
     <p>A project skill needs a project-local skills folder, and a tool described without one simply has nowhere to put it. Synapse leaves that pairing out of <code>skill status</code> rather than reporting it as something to fix.</p>
@@ -228,7 +189,7 @@ synapse skill list --global                  # or just the shared ones</code></p
 
     <h2 id="learning">Skills agents write</h2>
     <p>Switch this on and a session can write down a procedure it worked out, and correct one that turned out wrong:</p>
-    
+
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
@@ -240,7 +201,7 @@ synapse skill list --global                  # or just the shared ones</code></p
     <p>Synapse has no model and runs no loop, so it never reflects on a session. The session decides what it learned; Synapse decides where that lands and who has to agree to it.</p>
     <h3>Nothing reaches a tool until you say so</h3>
     <p>A skill an agent writes is <strong>proposed</strong>. It is in the library and in no tool, and it stays there until you approve it. The gate is on installing rather than on writing, because the library is Synapse's own folder while a skill's description is loaded into every session of every tool holding it — so writing one costs you a line in a list, and installing it is the decision.</p>
-    
+
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
@@ -304,26 +265,14 @@ synapse learn eval --budget lean --fail-under 0.9</code></pre>
       <li>A skill whose <code>SKILL.md</code> does not parse is reported and skipped rather than copied anywhere.</li>
       <li>A skill an agent writes is only ever a skill. It cannot install itself, cannot reach a tool, and cannot write anywhere except the library.</li>
     </ul>
-  
+  <footer class="articlefoot"><div class="articlemeta"><a href="https://github.com/wess/synapse/blob/main/website/docs/skills.ts">View page source</a><span>Synapse 1.14.2</span></div><nav class="pagenav" aria-label="Guide pages"><a href="../../docs/mesh/"><small>Previous</small><strong>Agent mesh</strong></a><a href="../../docs/servers/"><small>Next</small><strong>MCP servers</strong></a></nav></footer>
     </main>
-    <aside class="ontoc" aria-label="On this page">
-        <span>On this page</span>
-        <ol><li><a href="#why">Why a library</a></li><li><a href="#locations">Where skills go</a></li><li><a href="#format">The format</a></li><li><a href="#installing">Installing</a></li><li><a href="#states">What each state means</a></li><li><a href="#adopting">Adopting what you already have</a></li><li><a href="#finding">Finding published skills</a></li><li><a href="#projects">Project skills</a></li><li><a href="#learning">Skills agents write</a></li><li><a href="#limits">Limits</a></li></ol>
-      </aside>
+  <aside class="ontoc" aria-label="On this page"><span>Contents</span><ol><li><a href="#why">Why a library</a></li><li><a href="#locations">Where skills go</a></li><li><a href="#format">The format</a></li><li><a href="#installing">Installing</a></li><li><a href="#states">What each state means</a></li><li><a href="#adopting">Adopting what you already have</a></li><li><a href="#finding">Finding published skills</a></li><li><a href="#projects">Project skills</a></li><li><a href="#learning">Skills agents write</a></li><li><a href="#limits">Limits</a></li></ol></aside>
   </div>
-  
   <footer class="footer">
-    <div>
-      <a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">Synapse</a>
-      <p>Shared memory and skills for coding agents, kept on your machine.</p>
-    </div>
-    <nav aria-label="Footer">
-      <a href="../../docs/">Documentation</a>
-      <a href="../../tutorials/">Tutorials</a>
-      <a href="https://github.com/wess/synapse">Source</a>
-      <a href="https://github.com/wess/synapse/releases">Releases</a>
-    </nav>
-    <p class="footerfine">No account required. macOS desktop · Linux terminal, CLI &amp; MCP.</p>
-  </footer>
+    <div class="footerupper"><div><a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">synapse</a><p>A shared memory. A little less starting over.</p></div>
+      <nav aria-label="Footer"><a href="../../docs/">Manual</a><a href="../../tutorials/">Tutorials</a><a href="https://github.com/wess/synapse">Source</a><a href="https://github.com/wess/synapse/releases">Releases</a><a href="https://wess.io">By Wess</a></nav></div>
+    <p class="footerfine"><span>macOS &amp; Windows desktop · Linux CLI &amp; MCP</span><span>v1.14.2 · MIT · No account required</span></p>
+  </footer></div>
 </body>
 </html>

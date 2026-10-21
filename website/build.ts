@@ -17,7 +17,7 @@ await mkdir(output, { recursive: true });
 for (const page of pages) {
   const target = join(output, page.path);
   await mkdir(dirname(target), { recursive: true });
-  await Bun.write(target, render(page, pages));
+  await Bun.write(target, render(page, pages).replace(/^[ \t]+$/gm, ""));
 }
 
 const styles = await Promise.all(
@@ -27,7 +27,7 @@ const styles = await Promise.all(
 );
 await Bun.write(join(output, "style.css"), `${styles.join("\n")}\n`);
 
-for (const asset of ["site.js", "grain.jpg"]) {
+for (const asset of ["site.js", "pixel.ttf", "fontlicense.txt"]) {
   await Bun.write(join(output, asset), Bun.file(join(import.meta.dir, asset)));
 }
 

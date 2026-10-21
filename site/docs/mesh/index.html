@@ -5,93 +5,54 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Agent mesh — Synapse</title>
   <meta name="description" content="Let connected coding tools message each other, split up a job, and park for free between tasks, using the same local database as your memory.">
-  <meta name="theme-color" content="#0a43c8">
+  <meta name="theme-color" content="#352879">
   <meta property="og:title" content="Agent mesh — Synapse">
   <meta property="og:description" content="Let connected coding tools message each other, split up a job, and park for free between tasks, using the same local database as your memory.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://wess.io/synapse/docs/mesh/">
   <link rel="canonical" href="https://wess.io/synapse/docs/mesh/">
   <link rel="icon" href="../../icon.svg" type="image/svg+xml">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Fragment+Mono&family=Manrope:wght@400;500;600;700&display=swap">
+  <link rel="preload" href="../../pixel.ttf" as="font" type="font/ttf" crossorigin>
   <link rel="stylesheet" href="../../style.css">
   <script type="module" src="../../site.js"></script>
 </head>
 <body class="docs" data-root="../../">
-  
+  <div class="shell">
   <a class="skip" href="#content">Skip to content</a>
+  <div class="windowbar"><a href="../../">synapse / manual</a><span>v1.14.2 · on your machine</span></div>
   <header class="topbar">
-    <a class="wordmark" href="../../" aria-label="Synapse home">
-      <img src="../../icon.svg" width="30" height="30" alt="">
-      <span>Synapse</span>
-    </a>
+    <a class="wordmark" href="../../" aria-label="Synapse home"><img src="../../icon.svg" width="28" height="28" alt=""><span>synapse</span></a>
     <button class="navtoggle" type="button" aria-expanded="false" aria-controls="topnav">Menu</button>
     <nav id="topnav" aria-label="Primary">
       <a href="../../docs/" aria-current="page">Docs</a>
       <a href="../../tutorials/">Tutorials</a>
-      <a href="https://github.com/wess/synapse">GitHub <span aria-hidden="true">↗</span></a>
-      <a class="navdownload" href="https://github.com/wess/synapse/releases/latest/download/synapse.zip">Download</a>
+      <a href="https://github.com/wess/synapse">Source</a>
+      <a class="navdownload" href="../../docs/install/">Install</a>
     </nav>
   </header>
-  
   <div class="doclayout">
-    
   <aside class="docsrail" aria-label="Documentation navigation">
     <div class="searchbox">
-      <label for="search">Search the guide</label>
-      <input id="search" type="search" placeholder="Memory, vaults, restore…" autocomplete="off">
-      <div class="searchresults" data-results hidden></div>
+      <label for="docssearch">Search docs &amp; tutorials</label>
+      <input id="docssearch" type="search" placeholder="Memory, vaults, restore…" autocomplete="off" aria-controls="searchresults">
+      <div id="searchresults" class="searchresults" data-results hidden></div>
       <span class="searchstatus" data-searchstatus role="status" aria-live="polite"></span>
     </div>
     <details class="railnav" open>
       <summary>Browse all guides</summary>
       <nav aria-label="All guides">
-        <h2>Documentation</h2>
-        <ul>
-        <li><a href="../../docs/">Start here</a></li>
-        <li><a href="../../docs/install/">Install and connect</a></li>
-        <li><a href="../../docs/harnesses/">Supported and custom harnesses</a></li>
-        <li><a href="../../docs/app/">Desktop app reference</a></li>
-        <li><a href="../../docs/memory/">Memory and recall</a></li>
-        <li><a href="../../docs/mcp/">MCP tool reference</a></li>
-        <li><a href="../../docs/mesh/" aria-current="page">Agent mesh</a></li>
-        <li><a href="../../docs/skills/">Skills</a></li>
-        <li><a href="../../docs/servers/">MCP servers</a></li>
-        <li><a href="../../docs/sources/">Sources</a></li>
-        <li><a href="../../docs/vault/">Vaults and scopes</a></li>
-        <li><a href="../../docs/data/">Data lifecycle</a></li>
-        <li><a href="../../docs/config/">Configuration and paths</a></li>
-        <li><a href="../../docs/security/">Security model</a></li>
-        <li><a href="../../docs/cli/">CLI reference</a></li>
-        <li><a href="../../docs/troubleshoot/">Troubleshooting</a></li></ul>
-        <h2>Tutorials</h2>
-        <ul>
-        <li><a href="../../tutorials/">Tutorials</a></li>
-        <li><a href="../../tutorials/connect/">Install and connect your first tools</a></li>
-        <li><a href="../../tutorials/continuity/">Carry one decision between tools</a></li>
-        <li><a href="../../tutorials/curate/">Curate and optimize memory</a></li>
-        <li><a href="../../tutorials/secrets/">Use a scoped secret in either shell mode</a></li>
-        <li><a href="../../tutorials/skills/">Keep one skill library across every tool</a></li>
-        <li><a href="../../tutorials/learn/">Let your agents write skills</a></li>
-        <li><a href="../../tutorials/launch/">Start a tool with everything in place</a></li>
-        <li><a href="../../tutorials/mesh/">Run a team of agents and drive it yourself</a></li>
-        <li><a href="../../tutorials/overseer/">Hand a job to one agent and watch it grow a team</a></li>
-        <li><a href="../../tutorials/recovery/">Export and restore safely</a></li>
-        <li><a href="../../tutorials/lifecycle/">Check, migrate, and remove Synapse</a></li></ul>
+        <h2>Start here</h2><ul><li><a href="../../docs/">Start here</a></li><li><a href="../../docs/install/">Install and connect</a></li><li><a href="../../docs/harnesses/">Supported and custom harnesses</a></li><li><a href="../../docs/app/">Desktop app reference</a></li></ul><h2>Reference</h2><ul><li><a href="../../docs/memory/">Memory and recall</a></li><li><a href="../../docs/mcp/">MCP tool reference</a></li><li><a href="../../docs/mesh/" aria-current="page">Agent mesh</a></li><li><a href="../../docs/skills/">Skills</a></li><li><a href="../../docs/servers/">MCP servers</a></li><li><a href="../../docs/sources/">Sources</a></li></ul><h2>Your machine</h2><ul><li><a href="../../docs/vault/">Vaults and scopes</a></li><li><a href="../../docs/data/">Data lifecycle</a></li><li><a href="../../docs/config/">Configuration and paths</a></li><li><a href="../../docs/security/">Security model</a></li><li><a href="../../docs/sync/">Encrypted sync</a></li><li><a href="../../docs/troubleshoot/">Troubleshooting</a></li></ul><h2>Build with it</h2><ul><li><a href="../../docs/cli/">CLI reference</a></li><li><a href="../../docs/developing/">Developing Synapse</a></li><li><a href="../../docs/synapsecore/">The core library</a></li><li><a href="../../docs/embedding/">Embedding Synapse</a></li><li><a href="../../docs/retrieval/">Retrieval checks</a></li><li><a href="../../docs/map/">The memory map</a></li><li><a href="../../docs/startup/">What launching costs</a></li><li><a href="../../docs/windows/">Windows</a></li><li><a href="../../docs/federation/">Federation proposal</a></li></ul>
+        <h2>Tutorials</h2><ul><li><a href="../../tutorials/">Tutorials</a></li><li><a href="../../tutorials/connect/">Install and connect your first tools</a></li><li><a href="../../tutorials/continuity/">Carry one decision between tools</a></li><li><a href="../../tutorials/curate/">Curate and optimize memory</a></li><li><a href="../../tutorials/secrets/">Use a scoped secret in either shell mode</a></li><li><a href="../../tutorials/skills/">Keep one skill library across every tool</a></li><li><a href="../../tutorials/learn/">Let your agents write skills</a></li><li><a href="../../tutorials/launch/">Start a tool with everything in place</a></li><li><a href="../../tutorials/mesh/">Run a team of agents and drive it yourself</a></li><li><a href="../../tutorials/overseer/">Hand a job to one agent and watch it grow a team</a></li><li><a href="../../tutorials/recovery/">Export and restore safely</a></li><li><a href="../../tutorials/lifecycle/">Check, migrate, and remove Synapse</a></li></ul>
       </nav>
     </details>
   </aside>
     <main class="article" id="content">
-      <header class="articlehead">
-        <h1>Agent mesh</h1>
-        <span>Let connected coding tools message each other, split up a job, and park for free between tasks, using the same local database as your memory.</span>
-      </header>
-      
+      <header class="articlehead"><nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../">Synapse</a><span aria-hidden="true">/</span><a href="../../docs/">Manual</a></nav><h1>Agent mesh</h1><p>Let connected coding tools message each other, split up a job, and park for free between tasks, using the same local database as your memory.</p></header>
+
     <h2 id="what">What the mesh is</h2>
     <p>Every tool you connect to Synapse already runs its own copy of the same local server. The mesh gives those sessions a way to reach each other: a supervisor breaks a job into tasks, hands them out by name or by channel, and collects the results, while every idle agent waits at almost no cost.</p>
     <p>There is no daemon, no port, and no token. The message bus is the same local database that holds your memory, so a message between two agents never leaves your Mac and is inspectable with the same tools as everything else Synapse stores.</p>
-    
+
   <aside class="note">
     <strong>The mesh is off until you turn it on. Its tools are loaded into every connected session, and that costs context in each one, so Synapse does not add them to a setup that will not use them.</strong>
     <p>undefined</p>
@@ -99,7 +60,7 @@
 
     <h2 id="enable">Turn it on</h2>
     <p>Use <strong>Settings → Agent mesh</strong> in the app, or the command line:</p>
-    
+
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
@@ -128,7 +89,7 @@
 
     <h2 id="roles">Roles</h2>
     <p>A role is the durable identity an agent launches with: a brief describing what it owns and how it coordinates, plus optional defaults. It is separate from a task, which is the one-off assignment. Synapse ships with <code>supervisor</code>, <code>overseer</code>, <code>worker</code>, <code>frontend</code>, <code>backend</code>, <code>reviewer</code>, <code>devops</code>, and <code>qa</code>.</p>
-    
+
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
@@ -140,7 +101,7 @@ synapse relay role create reviewer          # writes into this project
 synapse relay role create reviewer --user   # writes into your own layer</code></pre>
   </div>
     <p>Roles resolve from the project first, then your own layer, then the built-ins. A role saved into a project lives in <code>.synapse/roles/</code> and travels with the checkout. Editing a built-in copies it down into a layer you own, so the shipped templates stay intact.</p>
-    
+
   <div class="codeblock">
     <div class="codebar">
       <span>toml</span>
@@ -159,7 +120,7 @@ blockers to the supervisor.
 
     <h2 id="teams">Teams</h2>
     <p>A team is a named roster. Opening one launches every member at once: the first is the lead and runs in your terminal so you have someone to steer, and the rest run in the background.</p>
-    
+
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
@@ -169,7 +130,7 @@ blockers to the supervisor.
 synapse relay team open web</code></pre>
   </div>
     <p>Closing the lead stops its team. The command that opened the team is the process supervising it, so nothing is left running behind you.</p>
-    
+
   <div class="codeblock">
     <div class="codebar">
       <span>toml</span>
@@ -187,7 +148,7 @@ role = &quot;backend&quot;</code></pre>
     <h2 id="workers">Background workers</h2>
     <p>A supervisor can also grow its own team as it works, by calling <code>spawn</code>. A worker started that way runs headless, registers itself, and parks on <code>wait</code> until it is given something to do. Because nobody is watching a headless session, it runs with its own tool's permission prompts bypassed.</p>
     <p>Workers belong to the session that started them, for as long as that session lives. A worker that exits is restarted with a backoff that grows, and one that never manages a healthy run is retired rather than restarted forever. At most eight run at once.</p>
-    
+
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
@@ -197,7 +158,7 @@ role = &quot;backend&quot;</code></pre>
 synapse relay ps
 synapse relay kill backend</code></pre>
   </div>
-    
+
   <aside class="note">
     <strong>A launched agent is given the project folder it should work in, and reaches Synapse through the same connection it already has. Nothing generates a credential, and no secret value is ever passed to a launched agent.</strong>
     <p>undefined</p>
@@ -206,7 +167,7 @@ synapse relay kill backend</code></pre>
     <h2 id="mux">Driving a team yourself</h2>
     <p>Everything above puts a lead agent between you and the work: you brief the lead, the lead hands out tasks and relays the answers back. That costs the lead's context on every message and makes it a bottleneck for a job it is not doing.</p>
     <p><code>synapse mux</code> puts <em>you</em> on the mesh instead. You get a name on the roster and the same messaging every agent already has, so you can address any agent directly.</p>
-    
+
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
@@ -224,7 +185,7 @@ and the index too</code></pre>
 
     <h3>Or hand it to one agent</h3>
     <p>Picking a roster before you understand the job is its own small chore, and most jobs do not need four agents. The <code>overseer</code> team is one agent and nothing else:</p>
-    
+
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
@@ -237,12 +198,12 @@ and the index too</code></pre>
     <p>You are still on the roster as yourself, so nothing is interposed — you can address any worker it starts without going through it. What changes is that you describe an outcome rather than handing out the pieces, and it grows a team with <code>spawn</code> only when the work turns out to want one. Its brief is explicit that starting a worker is not free and that eight is the ceiling.</p>
     <p>It launches with Claude Code unless you say otherwise. <code>synapse relay team create overseer --user</code> copies the file into your own layer, where a <code>tool</code> line names any connected tool instead.</p>
     <p>The more useful direction is the other one. A headless worker runs with its permission prompts bypassed, so when it reaches a decision it should not make alone, it has had nobody to ask — and has had to guess. With a person on the roster it can send you the question, report itself blocked, and wait for the answer.</p>
-    
+
   <aside class="note">
     <strong>Agents can tell a person from an agent. A roster entry for a human is marked as one, and connected tools are told to ask them questions and never delegate work to them.</strong>
     <p>undefined</p>
   </aside>
-    
+
   <aside class="note">
     <strong>Messages reach an agent at its next check, not as an interrupt. One parked between tasks answers in about a second; one in the middle of a long build sees you when it comes back. The roster shows which is which.</strong>
     <p>undefined</p>
@@ -250,7 +211,7 @@ and the index too</code></pre>
 
     <h2 id="watching">Watching the mesh</h2>
     <p>The <strong>Mesh</strong> page in the app shows who has joined, what each one last reported, which workers are running, and the recent traffic between them. The same is available from the terminal:</p>
-    
+
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
@@ -265,7 +226,7 @@ synapse relay feed --follow</code></pre>
 
     <h3 id="notes">What an agent is doing</h3>
     <p>A state on its own tells you an agent has not stalled. It does not tell you what it is working on, and for a headless worker there is no terminal to look at. So <code>reportstatus</code> takes a note as well as a state, and that note is what the roster shows:</p>
-    
+
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
@@ -279,7 +240,7 @@ frontend  frontend    online   working  rewriting the auth middleware           
   </div>
     <p>The note is one line, bounded, and kept when a later report does not carry one — an agent that says <code>working</code> twice has not stopped doing the thing it described the first time. Reporting an empty note clears it, which is how an agent going idle drops a note about work it has finished.</p>
     <p><code>waitstatus</code> returns the note with the state, so a supervisor blocking until a worker reaches <code>blocked</code> is told what it is blocked on in the same reply. Without that it would have to go and read the worker's log to find out, which is the thing the note exists to avoid.</p>
-    
+
   <aside class="note">
     <strong>Notes are guidance, not a guarantee</strong>
     <p>Writing one is something connected tools are told to do, not something Synapse can enforce inside another tool's session. An agent that reports a state without a note leaves the previous one standing, so a stale note is possible; the roster's last-seen time is what tells you whether the agent itself is still live.</p>
@@ -293,26 +254,14 @@ frontend  frontend    online   working  rewriting the auth middleware           
       <li>An agent that stops answering leaves the roster within about a minute and a half, and a session that closes takes its name with it.</li>
       <li>Agents work on your real machine with your real files. A background worker runs with its permission prompts bypassed, because there is no terminal in which to answer one.</li>
     </ul>
-  
+  <footer class="articlefoot"><div class="articlemeta"><a href="https://github.com/wess/synapse/blob/main/website/docs/mesh.ts">View page source</a><span>Synapse 1.14.2</span></div><nav class="pagenav" aria-label="Guide pages"><a href="../../docs/mcp/"><small>Previous</small><strong>MCP tool reference</strong></a><a href="../../docs/skills/"><small>Next</small><strong>Skills</strong></a></nav></footer>
     </main>
-    <aside class="ontoc" aria-label="On this page">
-        <span>On this page</span>
-        <ol><li><a href="#what">What the mesh is</a></li><li><a href="#enable">Turn it on</a></li><li><a href="#join">How agents join</a></li><li><a href="#roles">Roles</a></li><li><a href="#teams">Teams</a></li><li><a href="#workers">Background workers</a></li><li><a href="#mux">Driving a team yourself</a></li><li><a href="#watching">Watching the mesh</a></li><li><a href="#limits">Limits</a></li></ol>
-      </aside>
+  <aside class="ontoc" aria-label="On this page"><span>Contents</span><ol><li><a href="#what">What the mesh is</a></li><li><a href="#enable">Turn it on</a></li><li><a href="#join">How agents join</a></li><li><a href="#roles">Roles</a></li><li><a href="#teams">Teams</a></li><li><a href="#workers">Background workers</a></li><li><a href="#mux">Driving a team yourself</a></li><li><a href="#watching">Watching the mesh</a></li><li><a href="#limits">Limits</a></li></ol></aside>
   </div>
-  
   <footer class="footer">
-    <div>
-      <a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">Synapse</a>
-      <p>Shared memory and skills for coding agents, kept on your machine.</p>
-    </div>
-    <nav aria-label="Footer">
-      <a href="../../docs/">Documentation</a>
-      <a href="../../tutorials/">Tutorials</a>
-      <a href="https://github.com/wess/synapse">Source</a>
-      <a href="https://github.com/wess/synapse/releases">Releases</a>
-    </nav>
-    <p class="footerfine">No account required. macOS desktop · Linux terminal, CLI &amp; MCP.</p>
-  </footer>
+    <div class="footerupper"><div><a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">synapse</a><p>A shared memory. A little less starting over.</p></div>
+      <nav aria-label="Footer"><a href="../../docs/">Manual</a><a href="../../tutorials/">Tutorials</a><a href="https://github.com/wess/synapse">Source</a><a href="https://github.com/wess/synapse/releases">Releases</a><a href="https://wess.io">By Wess</a></nav></div>
+    <p class="footerfine"><span>macOS &amp; Windows desktop · Linux CLI &amp; MCP</span><span>v1.14.2 · MIT · No account required</span></p>
+  </footer></div>
 </body>
 </html>

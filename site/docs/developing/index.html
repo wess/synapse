@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Developing Synapse — Synapse</title>
+  <meta name="description" content="Build, test, document, and publish each Synapse surface from its own workspace.">
+  <meta name="theme-color" content="#352879">
+  <meta property="og:title" content="Developing Synapse — Synapse">
+  <meta property="og:description" content="Build, test, document, and publish each Synapse surface from its own workspace.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://wess.io/synapse/docs/developing/">
+  <link rel="canonical" href="https://wess.io/synapse/docs/developing/">
+  <link rel="icon" href="../../icon.svg" type="image/svg+xml">
+  <link rel="preload" href="../../pixel.ttf" as="font" type="font/ttf" crossorigin>
+  <link rel="stylesheet" href="../../style.css">
+  <script type="module" src="../../site.js"></script>
+</head>
+<body class="docs" data-root="../../">
+  <div class="shell">
+  <a class="skip" href="#content">Skip to content</a>
+  <div class="windowbar"><a href="../../">synapse / manual</a><span>v1.14.2 · on your machine</span></div>
+  <header class="topbar">
+    <a class="wordmark" href="../../" aria-label="Synapse home"><img src="../../icon.svg" width="28" height="28" alt=""><span>synapse</span></a>
+    <button class="navtoggle" type="button" aria-expanded="false" aria-controls="topnav">Menu</button>
+    <nav id="topnav" aria-label="Primary">
+      <a href="../../docs/" aria-current="page">Docs</a>
+      <a href="../../tutorials/">Tutorials</a>
+      <a href="https://github.com/wess/synapse">Source</a>
+      <a class="navdownload" href="../../docs/install/">Install</a>
+    </nav>
+  </header>
+  <div class="doclayout">
+  <aside class="docsrail" aria-label="Documentation navigation">
+    <div class="searchbox">
+      <label for="docssearch">Search docs &amp; tutorials</label>
+      <input id="docssearch" type="search" placeholder="Memory, vaults, restore…" autocomplete="off" aria-controls="searchresults">
+      <div id="searchresults" class="searchresults" data-results hidden></div>
+      <span class="searchstatus" data-searchstatus role="status" aria-live="polite"></span>
+    </div>
+    <details class="railnav" open>
+      <summary>Browse all guides</summary>
+      <nav aria-label="All guides">
+        <h2>Start here</h2><ul><li><a href="../../docs/">Start here</a></li><li><a href="../../docs/install/">Install and connect</a></li><li><a href="../../docs/harnesses/">Supported and custom harnesses</a></li><li><a href="../../docs/app/">Desktop app reference</a></li></ul><h2>Reference</h2><ul><li><a href="../../docs/memory/">Memory and recall</a></li><li><a href="../../docs/mcp/">MCP tool reference</a></li><li><a href="../../docs/mesh/">Agent mesh</a></li><li><a href="../../docs/skills/">Skills</a></li><li><a href="../../docs/servers/">MCP servers</a></li><li><a href="../../docs/sources/">Sources</a></li></ul><h2>Your machine</h2><ul><li><a href="../../docs/vault/">Vaults and scopes</a></li><li><a href="../../docs/data/">Data lifecycle</a></li><li><a href="../../docs/config/">Configuration and paths</a></li><li><a href="../../docs/security/">Security model</a></li><li><a href="../../docs/sync/">Encrypted sync</a></li><li><a href="../../docs/troubleshoot/">Troubleshooting</a></li></ul><h2>Build with it</h2><ul><li><a href="../../docs/cli/">CLI reference</a></li><li><a href="../../docs/developing/" aria-current="page">Developing Synapse</a></li><li><a href="../../docs/synapsecore/">The core library</a></li><li><a href="../../docs/embedding/">Embedding Synapse</a></li><li><a href="../../docs/retrieval/">Retrieval checks</a></li><li><a href="../../docs/map/">The memory map</a></li><li><a href="../../docs/startup/">What launching costs</a></li><li><a href="../../docs/windows/">Windows</a></li><li><a href="../../docs/federation/">Federation proposal</a></li></ul>
+        <h2>Tutorials</h2><ul><li><a href="../../tutorials/">Tutorials</a></li><li><a href="../../tutorials/connect/">Install and connect your first tools</a></li><li><a href="../../tutorials/continuity/">Carry one decision between tools</a></li><li><a href="../../tutorials/curate/">Curate and optimize memory</a></li><li><a href="../../tutorials/secrets/">Use a scoped secret in either shell mode</a></li><li><a href="../../tutorials/skills/">Keep one skill library across every tool</a></li><li><a href="../../tutorials/learn/">Let your agents write skills</a></li><li><a href="../../tutorials/launch/">Start a tool with everything in place</a></li><li><a href="../../tutorials/mesh/">Run a team of agents and drive it yourself</a></li><li><a href="../../tutorials/overseer/">Hand a job to one agent and watch it grow a team</a></li><li><a href="../../tutorials/recovery/">Export and restore safely</a></li><li><a href="../../tutorials/lifecycle/">Check, migrate, and remove Synapse</a></li></ul>
+      </nav>
+    </details>
+  </aside>
+    <main class="article" id="content">
+      <header class="articlehead"><nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../">Synapse</a><span aria-hidden="true">/</span><a href="../../docs/">Manual</a></nav><h1>Developing Synapse</h1><p>Build, test, document, and publish each Synapse surface from its own workspace.</p></header>
+      <p>The website, terminal bridge, core engine, native window, and optional sync server
+have separate checks. Run the gates for every surface a change touches.</p>
+<h2 id="repository-map">Repository map</h2>
+<table>
+<thead>
+<tr><th>Path</th><th>What lives here</th></tr>
+</thead>
+<tbody>
+<tr><td><code>crates/synapsecore</code></td><td>Library, CLI, terminal dashboard, MCP, memory, credentials, mesh, skills, setup, imports</td></tr>
+<tr><td><code>crates/synapse</code></td><td>Native desktop window over core</td></tr>
+<tr><td><code>crates/synapsesync</code></td><td>Shared encrypted sync wire types</td></tr>
+<tr><td><code>crates/synapseserve</code></td><td>Optional opaque sync log server</td></tr>
+<tr><td><code>pi</code></td><td>Terminal bridge package embedded by the core build</td></tr>
+<tr><td><code>website</code></td><td>Static site templates, styles, browser behavior, and manual content</td></tr>
+<tr><td><code>docs</code></td><td>Technical documentation, rendered into the public manual</td></tr>
+<tr><td><code>site</code></td><td>Generated site, committed for GitHub Pages</td></tr>
+</tbody>
+</table>
+<p>The root, core, and server are independent Cargo workspaces. Core and server must
+resolve without the desktop dependency graph. The desktop pins its released UI
+dependency exactly. Desktop and core versions must agree.</p>
+<h2 id="build-and-test">Build and test</h2>
+<p>From the repository root:</p>
+<div class="codeblock"><div class="codebar"><span>sh</span><button type="button" data-copy aria-live="polite">Copy</button></div><pre><code>cargo build --locked
+cargo test --locked
+cargo fmt --check
+cargo test --locked --manifest-path crates/synapsecore/Cargo.toml
+cargo check --locked --manifest-path crates/synapsecore/Cargo.toml --no-default-features
+cargo test --locked --manifest-path crates/synapsecore/Cargo.toml --test cli --test mcp
+cargo test --locked --manifest-path crates/synapseserve/Cargo.toml
+</code></pre></div>
+<p>For the terminal bridge:</p>
+<div class="codeblock"><div class="codebar"><span>sh</span><button type="button" data-copy aria-live="polite">Copy</button></div><pre><code>cd pi
+bun install
+bun run check
+</code></pre></div>
+<p>See <a href="../windows/">Windows</a> for the installer toolchain and platform smoke check.</p>
+<h2 id="work-on-the-website">Work on the website</h2>
+<p>Use Bun 1.4.3 or later. Technical Markdown uses Bun's built-in renderer; the site
+has no package dependency or runtime service. Build before starting the preview:</p>
+<div class="codeblock"><div class="codebar"><span>sh</span><button type="button" data-copy aria-live="polite">Copy</button></div><pre><code>bun run site
+bun run sitecheck
+bun run serve
+</code></pre></div>
+<p>Open <code>http://127.0.0.1:4173/synapse/</code>. The prefix matters: GitHub Pages publishes
+under <code>/synapse/</code>, and every local link and asset must work from nested routes.
+Rebuild after source changes. <code>PORT</code> changes the preview port.</p>
+<ul>
+<li><code>website/home.ts</code> owns the landing page.</li>
+<li><code>website/template.ts</code> owns the shared frame, navigation, and article layout.</li>
+<li><code>website/navigation.ts</code> groups the manual.</li>
+<li><code>website/docs</code> and <code>website/tutorials</code> hold task and reference pages.</li>
+<li>Every Markdown file under <code>docs</code> becomes a searchable manual page automatically.</li>
+<li><code>website/technical.ts</code> adds titles, source links, code controls, and contents.</li>
+<li><code>website/deploy.ts</code> is the source for canonical and release URLs. The displayed
+release version comes from the desktop manifest.</li>
+</ul>
+<p>The checker verifies local links and fragments, metadata, landmarks, navigation
+coverage, command coverage, search indexing, and documentation sources. Inspect
+both desktop and mobile in a browser as well: source checks cannot verify layout,
+keyboard navigation, search interaction, or clipboard behavior.</p>
+<p>Commit source and regenerated <code>site</code> together. The Pages workflow builds and
+checks again on <code>main</code>, then publishes the artifact. Confirm the workflow and the
+live page after pushing.</p>
+<h2 id="documentation-boundaries">Documentation boundaries</h2>
+<p>Document released behavior as released behavior. Label proposals and snapshots
+explicitly. Do not turn a library module into a promised CLI setup flow, or a
+performance fixture into a product-wide benchmark.</p>
+<p><a href="../synapsecore/">The core library</a>, <a href="../embedding/">Embedding</a>,
+<a href="../retrieval/">Retrieval checks</a>, <a href="../map/">The memory map</a>,
+<a href="../startup/">What launching costs</a>, and <a href="../sync/">Encrypted sync</a> describe the
+implementation and its checks. The <a href="../federation/">Federation proposal</a> is a
+design record and does not establish available commands.</p>
+<h2 id="contributions">Contributions</h2>
+<p>Public command, MCP, descriptor, and storage surfaces are compatibility promises.
+Preserve user-owned configuration and instructions. Managed writes need backups,
+atomic replacement, and selective removal. Memory corrections retain a restore
+path; proposed skills reach no tool before approval. Keep credential values out
+of memory, scope YAML, protocol responses, logs, and command arguments.</p>
+<p>For a tool connector, add a descriptor rather than extending a closed product
+enum. Include detection, connection, repair, and selective cleanup checks. Update
+the supported-tool table and the manual with the platforms actually tested.</p>
+<footer class="articlefoot"><div class="articlemeta"><a href="https://github.com/wess/synapse/blob/main/docs/developing.md">View page source</a><span>Synapse 1.14.2</span></div><nav class="pagenav" aria-label="Guide pages"><a href="../../docs/cli/"><small>Previous</small><strong>CLI reference</strong></a><a href="../../docs/synapsecore/"><small>Next</small><strong>The core library</strong></a></nav></footer>
+    </main>
+  <aside class="ontoc" aria-label="On this page"><span>Contents</span><ol><li><a href="#repository-map">Repository map</a></li><li><a href="#build-and-test">Build and test</a></li><li><a href="#work-on-the-website">Work on the website</a></li><li><a href="#documentation-boundaries">Documentation boundaries</a></li><li><a href="#contributions">Contributions</a></li></ol></aside>
+  </div>
+  <footer class="footer">
+    <div class="footerupper"><div><a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">synapse</a><p>A shared memory. A little less starting over.</p></div>
+      <nav aria-label="Footer"><a href="../../docs/">Manual</a><a href="../../tutorials/">Tutorials</a><a href="https://github.com/wess/synapse">Source</a><a href="https://github.com/wess/synapse/releases">Releases</a><a href="https://wess.io">By Wess</a></nav></div>
+    <p class="footerfine"><span>macOS &amp; Windows desktop · Linux CLI &amp; MCP</span><span>v1.14.2 · MIT · No account required</span></p>
+  </footer></div>
+</body>
+</html>

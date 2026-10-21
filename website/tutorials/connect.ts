@@ -1,5 +1,6 @@
 import { code, note } from "../markup";
 import type { Page } from "../types";
+import { version } from "../deploy";
 
 export const connect: Page = {
   path: "tutorials/connect/index.html",
@@ -43,7 +44,7 @@ Add /Users/example/.local/bin to PATH to use synapse from your shell.`)}
         <p>Open a new terminal and confirm the shell can find it:</p>
         ${code("shell", `synapse version
 synapse path`)}
-        ${code("text", `synapse 0.1.0-beta.24`)}
+        ${code("text", `synapse ${version}`)}
         ${code("text", `data	/Users/example/Library/Application Support/synapse
 soul	/Users/example/Library/Application Support/synapse/SOUL.md
 cli	/Users/example/.local/bin/synapse`)}

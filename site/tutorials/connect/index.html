@@ -5,89 +5,50 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Install and connect your first tools — Synapse</title>
   <meta name="description" content="Go from the signed release archive to a working local MCP connection, and verify the same memory from the desktop app, the terminal, and the coding tool itself.">
-  <meta name="theme-color" content="#0a43c8">
+  <meta name="theme-color" content="#352879">
   <meta property="og:title" content="Install and connect your first tools — Synapse">
   <meta property="og:description" content="Go from the signed release archive to a working local MCP connection, and verify the same memory from the desktop app, the terminal, and the coding tool itself.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://wess.io/synapse/tutorials/connect/">
   <link rel="canonical" href="https://wess.io/synapse/tutorials/connect/">
   <link rel="icon" href="../../icon.svg" type="image/svg+xml">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Fragment+Mono&family=Manrope:wght@400;500;600;700&display=swap">
+  <link rel="preload" href="../../pixel.ttf" as="font" type="font/ttf" crossorigin>
   <link rel="stylesheet" href="../../style.css">
   <script type="module" src="../../site.js"></script>
 </head>
 <body class="tutorial" data-root="../../">
-  
+  <div class="shell">
   <a class="skip" href="#content">Skip to content</a>
+  <div class="windowbar"><a href="../../">synapse / tutorials</a><span>v1.14.2 · on your machine</span></div>
   <header class="topbar">
-    <a class="wordmark" href="../../" aria-label="Synapse home">
-      <img src="../../icon.svg" width="30" height="30" alt="">
-      <span>Synapse</span>
-    </a>
+    <a class="wordmark" href="../../" aria-label="Synapse home"><img src="../../icon.svg" width="28" height="28" alt=""><span>synapse</span></a>
     <button class="navtoggle" type="button" aria-expanded="false" aria-controls="topnav">Menu</button>
     <nav id="topnav" aria-label="Primary">
       <a href="../../docs/">Docs</a>
       <a href="../../tutorials/" aria-current="page">Tutorials</a>
-      <a href="https://github.com/wess/synapse">GitHub <span aria-hidden="true">↗</span></a>
-      <a class="navdownload" href="https://github.com/wess/synapse/releases/latest/download/synapse.zip">Download</a>
+      <a href="https://github.com/wess/synapse">Source</a>
+      <a class="navdownload" href="../../docs/install/">Install</a>
     </nav>
   </header>
-  
   <div class="doclayout">
-    
   <aside class="docsrail" aria-label="Documentation navigation">
     <div class="searchbox">
-      <label for="search">Search the guide</label>
-      <input id="search" type="search" placeholder="Memory, vaults, restore…" autocomplete="off">
-      <div class="searchresults" data-results hidden></div>
+      <label for="docssearch">Search docs &amp; tutorials</label>
+      <input id="docssearch" type="search" placeholder="Memory, vaults, restore…" autocomplete="off" aria-controls="searchresults">
+      <div id="searchresults" class="searchresults" data-results hidden></div>
       <span class="searchstatus" data-searchstatus role="status" aria-live="polite"></span>
     </div>
     <details class="railnav" open>
       <summary>Browse all guides</summary>
       <nav aria-label="All guides">
-        <h2>Documentation</h2>
-        <ul>
-        <li><a href="../../docs/">Start here</a></li>
-        <li><a href="../../docs/install/">Install and connect</a></li>
-        <li><a href="../../docs/harnesses/">Supported and custom harnesses</a></li>
-        <li><a href="../../docs/app/">Desktop app reference</a></li>
-        <li><a href="../../docs/memory/">Memory and recall</a></li>
-        <li><a href="../../docs/mcp/">MCP tool reference</a></li>
-        <li><a href="../../docs/mesh/">Agent mesh</a></li>
-        <li><a href="../../docs/skills/">Skills</a></li>
-        <li><a href="../../docs/servers/">MCP servers</a></li>
-        <li><a href="../../docs/sources/">Sources</a></li>
-        <li><a href="../../docs/vault/">Vaults and scopes</a></li>
-        <li><a href="../../docs/data/">Data lifecycle</a></li>
-        <li><a href="../../docs/config/">Configuration and paths</a></li>
-        <li><a href="../../docs/security/">Security model</a></li>
-        <li><a href="../../docs/cli/">CLI reference</a></li>
-        <li><a href="../../docs/troubleshoot/">Troubleshooting</a></li></ul>
-        <h2>Tutorials</h2>
-        <ul>
-        <li><a href="../../tutorials/">Tutorials</a></li>
-        <li><a href="../../tutorials/connect/" aria-current="page">Install and connect your first tools</a></li>
-        <li><a href="../../tutorials/continuity/">Carry one decision between tools</a></li>
-        <li><a href="../../tutorials/curate/">Curate and optimize memory</a></li>
-        <li><a href="../../tutorials/secrets/">Use a scoped secret in either shell mode</a></li>
-        <li><a href="../../tutorials/skills/">Keep one skill library across every tool</a></li>
-        <li><a href="../../tutorials/learn/">Let your agents write skills</a></li>
-        <li><a href="../../tutorials/launch/">Start a tool with everything in place</a></li>
-        <li><a href="../../tutorials/mesh/">Run a team of agents and drive it yourself</a></li>
-        <li><a href="../../tutorials/overseer/">Hand a job to one agent and watch it grow a team</a></li>
-        <li><a href="../../tutorials/recovery/">Export and restore safely</a></li>
-        <li><a href="../../tutorials/lifecycle/">Check, migrate, and remove Synapse</a></li></ul>
+        <h2>Start here</h2><ul><li><a href="../../docs/">Start here</a></li><li><a href="../../docs/install/">Install and connect</a></li><li><a href="../../docs/harnesses/">Supported and custom harnesses</a></li><li><a href="../../docs/app/">Desktop app reference</a></li></ul><h2>Reference</h2><ul><li><a href="../../docs/memory/">Memory and recall</a></li><li><a href="../../docs/mcp/">MCP tool reference</a></li><li><a href="../../docs/mesh/">Agent mesh</a></li><li><a href="../../docs/skills/">Skills</a></li><li><a href="../../docs/servers/">MCP servers</a></li><li><a href="../../docs/sources/">Sources</a></li></ul><h2>Your machine</h2><ul><li><a href="../../docs/vault/">Vaults and scopes</a></li><li><a href="../../docs/data/">Data lifecycle</a></li><li><a href="../../docs/config/">Configuration and paths</a></li><li><a href="../../docs/security/">Security model</a></li><li><a href="../../docs/sync/">Encrypted sync</a></li><li><a href="../../docs/troubleshoot/">Troubleshooting</a></li></ul><h2>Build with it</h2><ul><li><a href="../../docs/cli/">CLI reference</a></li><li><a href="../../docs/developing/">Developing Synapse</a></li><li><a href="../../docs/synapsecore/">The core library</a></li><li><a href="../../docs/embedding/">Embedding Synapse</a></li><li><a href="../../docs/retrieval/">Retrieval checks</a></li><li><a href="../../docs/map/">The memory map</a></li><li><a href="../../docs/startup/">What launching costs</a></li><li><a href="../../docs/windows/">Windows</a></li><li><a href="../../docs/federation/">Federation proposal</a></li></ul>
+        <h2>Tutorials</h2><ul><li><a href="../../tutorials/">Tutorials</a></li><li><a href="../../tutorials/connect/" aria-current="page">Install and connect your first tools</a></li><li><a href="../../tutorials/continuity/">Carry one decision between tools</a></li><li><a href="../../tutorials/curate/">Curate and optimize memory</a></li><li><a href="../../tutorials/secrets/">Use a scoped secret in either shell mode</a></li><li><a href="../../tutorials/skills/">Keep one skill library across every tool</a></li><li><a href="../../tutorials/learn/">Let your agents write skills</a></li><li><a href="../../tutorials/launch/">Start a tool with everything in place</a></li><li><a href="../../tutorials/mesh/">Run a team of agents and drive it yourself</a></li><li><a href="../../tutorials/overseer/">Hand a job to one agent and watch it grow a team</a></li><li><a href="../../tutorials/recovery/">Export and restore safely</a></li><li><a href="../../tutorials/lifecycle/">Check, migrate, and remove Synapse</a></li></ul>
       </nav>
     </details>
   </aside>
     <main class="article" id="content">
-      <header class="articlehead">
-        <h1>Install and connect your first tools</h1>
-        <span>Go from the signed release archive to a working local MCP connection, and verify the same memory from the desktop app, the terminal, and the coding tool itself.</span>
-      </header>
-      
+      <header class="articlehead"><nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../">Synapse</a><span aria-hidden="true">/</span><a href="../../tutorials/">Tutorials</a></nav><h1>Install and connect your first tools</h1><p>Go from the signed release archive to a working local MCP connection, and verify the same memory from the desktop app, the terminal, and the coding tool itself.</p></header>
+
     <h2 id="outcome">Outcome and prerequisites</h2>
     <p>You will install Synapse, install its command-line tool, connect at least one coding tool, store one harmless memory, and see that same record through three separate surfaces. By the end you will also know exactly which files were touched and how to take every one of them back.</p>
     <ul>
@@ -101,7 +62,7 @@
       <li>
         <h3 id="install">Move the app somewhere permanent, then open it</h3>
         <p>Extract <code>synapse.zip</code>, move <strong>synapse.app</strong> to Applications, and open it. The app is Developer ID signed and notarized, so it opens without a security override and without a right-click workaround.</p>
-        
+
   <aside class="note">
     <strong>Choose the location before the next step</strong>
     <p>The CLI installed from a packaged app launches the executable inside that signed bundle. Install the CLI only after the app is where you intend to keep it, or the command will point at a path that no longer exists. If you move the app later, the dashboard offers <strong>Repair</strong> — it recognizes a stale executable path rather than reporting a healthy connection.</p>
@@ -111,7 +72,7 @@
       <li>
         <h3 id="cli">Install the CLI</h3>
         <p>Open Synapse Settings and choose <strong>Install CLI</strong>, or run the installer from inside the bundle. Either way it reports where it landed:</p>
-        
+
   <div class="codeblock">
     <div class="codebar">
       <span>text</span>
@@ -121,7 +82,7 @@
 Add /Users/example/.local/bin to PATH to use synapse from your shell.</code></pre>
   </div>
         <p>Open a new terminal and confirm the shell can find it:</p>
-        
+
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
@@ -130,15 +91,15 @@ Add /Users/example/.local/bin to PATH to use synapse from your shell.</code></pr
     <pre><code>synapse version
 synapse path</code></pre>
   </div>
-        
+
   <div class="codeblock">
     <div class="codebar">
       <span>text</span>
       <button type="button" data-copy aria-live="polite">Copy</button>
     </div>
-    <pre><code>synapse 0.1.0-beta.24</code></pre>
+    <pre><code>synapse 1.14.2</code></pre>
   </div>
-        
+
   <div class="codeblock">
     <div class="codebar">
       <span>text</span>
@@ -170,7 +131,7 @@ cli	/Users/example/.local/bin/synapse</code></pre>
           </tbody>
         </table>
         <p>Every changed file gets a <code>.synapsebackup</code> sibling before it is replaced, and the whole operation rolls back if any step fails. Check the shared guidance file was created:</p>
-        
+
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
@@ -178,7 +139,7 @@ cli	/Users/example/.local/bin/synapse</code></pre>
     </div>
     <pre><code>synapse guidance show</code></pre>
   </div>
-        
+
   <div class="codeblock">
     <div class="codebar">
       <span>text</span>
@@ -196,7 +157,7 @@ consolidated	false</code></pre>
         <h3 id="restart">Restart the tool and read its first line</h3>
         <p>Close and reopen the connected tool so it loads the new MCP server. A running session keeps the tool list it started with, so this step is not optional.</p>
         <p>Claude Code will print a line beside its welcome box before the model has written anything:</p>
-        
+
   <div class="codeblock">
     <div class="codebar">
       <span>text</span>
@@ -218,7 +179,7 @@ consolidated	false</code></pre>
       <li>
         <h3 id="verify">Verify the same record three ways</h3>
         <p>One store, three surfaces. Check all of them, because a mismatch here is the clearest signal that something is pointed at the wrong place.</p>
-        
+
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
@@ -226,7 +187,7 @@ consolidated	false</code></pre>
     </div>
     <pre><code>synapse memory list synapsetutorial</code></pre>
   </div>
-        
+
   <div class="codeblock">
     <div class="codebar">
       <span>text</span>
@@ -235,7 +196,7 @@ consolidated	false</code></pre>
     <pre><code>1	project:/Users/example/project	synapsetutorial	Documentation examples use the source label synapsetutorial.</code></pre>
   </div>
         <p>The columns are the ID, the scope and project it belongs to, the source label, and the body. Now the exact record:</p>
-        
+
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
@@ -243,7 +204,7 @@ consolidated	false</code></pre>
     </div>
     <pre><code>synapse memory show 1</code></pre>
   </div>
-        
+
   <div class="codeblock">
     <div class="codebar">
       <span>text</span>
@@ -272,7 +233,7 @@ Documentation examples use the source label synapsetutorial.</code></pre>
         <tr><td>The tool reports a connection that is not there</td><td>Run <code>synapse doctor</code>. It reports what is actually configured rather than what should be.</td></tr>
       </tbody>
     </table>
-    
+
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
@@ -283,7 +244,7 @@ Documentation examples use the source label synapsetutorial.</code></pre>
     <p>That one command is also what to attach to a bug report. It carries no memory contents and no secret names, so it is safe to paste into a public issue.</p>
 
     <h2>Undoing all of it</h2>
-    
+
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
@@ -295,26 +256,14 @@ Documentation examples use the source label synapsetutorial.</code></pre>
 
     <h2>Next step</h2>
     <p>Continue with <a href="../continuity/">Carry one decision between tools</a> to prove a real handoff across a session boundary and a tool boundary.</p>
-  
+  <footer class="articlefoot"><div class="articlemeta"><a href="https://github.com/wess/synapse/blob/main/website/tutorials/connect.ts">View page source</a><span>Synapse 1.14.2</span></div><nav class="pagenav" aria-label="Guide pages"><a href="../../tutorials/"><small>Previous</small><strong>Tutorials</strong></a><a href="../../tutorials/continuity/"><small>Next</small><strong>Carry one decision between tools</strong></a></nav></footer>
     </main>
-    <aside class="ontoc" aria-label="On this page">
-        <span>On this page</span>
-        <ol><li><a href="#outcome">Outcome</a></li><li><a href="#install">Install the app</a></li><li><a href="#cli">Install the CLI</a></li><li><a href="#connect">Connect a tool</a></li><li><a href="#wrote">What connecting wrote</a></li><li><a href="#restart">Restart the tool</a></li><li><a href="#store">Store a memory</a></li><li><a href="#verify">Verify three ways</a></li><li><a href="#wrong">If something is wrong</a></li></ol>
-      </aside>
+  <aside class="ontoc" aria-label="On this page"><span>Contents</span><ol><li><a href="#outcome">Outcome</a></li><li><a href="#install">Install the app</a></li><li><a href="#cli">Install the CLI</a></li><li><a href="#connect">Connect a tool</a></li><li><a href="#wrote">What connecting wrote</a></li><li><a href="#restart">Restart the tool</a></li><li><a href="#store">Store a memory</a></li><li><a href="#verify">Verify three ways</a></li><li><a href="#wrong">If something is wrong</a></li></ol></aside>
   </div>
-  
   <footer class="footer">
-    <div>
-      <a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">Synapse</a>
-      <p>Shared memory and skills for coding agents, kept on your machine.</p>
-    </div>
-    <nav aria-label="Footer">
-      <a href="../../docs/">Documentation</a>
-      <a href="../../tutorials/">Tutorials</a>
-      <a href="https://github.com/wess/synapse">Source</a>
-      <a href="https://github.com/wess/synapse/releases">Releases</a>
-    </nav>
-    <p class="footerfine">No account required. macOS desktop · Linux terminal, CLI &amp; MCP.</p>
-  </footer>
+    <div class="footerupper"><div><a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">synapse</a><p>A shared memory. A little less starting over.</p></div>
+      <nav aria-label="Footer"><a href="../../docs/">Manual</a><a href="../../tutorials/">Tutorials</a><a href="https://github.com/wess/synapse">Source</a><a href="https://github.com/wess/synapse/releases">Releases</a><a href="https://wess.io">By Wess</a></nav></div>
+    <p class="footerfine"><span>macOS &amp; Windows desktop · Linux CLI &amp; MCP</span><span>v1.14.2 · MIT · No account required</span></p>
+  </footer></div>
 </body>
 </html>

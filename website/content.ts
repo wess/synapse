@@ -1,3 +1,4 @@
+import { technical } from "./technical";
 import { home } from "./home";
 import { app } from "./docs/app";
 import { cli } from "./docs/cli";
@@ -47,6 +48,7 @@ export const pages: Page[] = [
   security,
   cli,
   troubleshoot,
+  ...technical,
   tutorials,
   connect,
   continuity,

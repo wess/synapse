@@ -5,89 +5,50 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Carry one decision between tools — Synapse</title>
   <meta name="description" content="Make a real project convention durable in one session, recover it in another tool after closing the first, correct it at the source, and see the scope rule keep other projects out.">
-  <meta name="theme-color" content="#0a43c8">
+  <meta name="theme-color" content="#352879">
   <meta property="og:title" content="Carry one decision between tools — Synapse">
   <meta property="og:description" content="Make a real project convention durable in one session, recover it in another tool after closing the first, correct it at the source, and see the scope rule keep other projects out.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://wess.io/synapse/tutorials/continuity/">
   <link rel="canonical" href="https://wess.io/synapse/tutorials/continuity/">
   <link rel="icon" href="../../icon.svg" type="image/svg+xml">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Fragment+Mono&family=Manrope:wght@400;500;600;700&display=swap">
+  <link rel="preload" href="../../pixel.ttf" as="font" type="font/ttf" crossorigin>
   <link rel="stylesheet" href="../../style.css">
   <script type="module" src="../../site.js"></script>
 </head>
 <body class="tutorial" data-root="../../">
-  
+  <div class="shell">
   <a class="skip" href="#content">Skip to content</a>
+  <div class="windowbar"><a href="../../">synapse / tutorials</a><span>v1.14.2 · on your machine</span></div>
   <header class="topbar">
-    <a class="wordmark" href="../../" aria-label="Synapse home">
-      <img src="../../icon.svg" width="30" height="30" alt="">
-      <span>Synapse</span>
-    </a>
+    <a class="wordmark" href="../../" aria-label="Synapse home"><img src="../../icon.svg" width="28" height="28" alt=""><span>synapse</span></a>
     <button class="navtoggle" type="button" aria-expanded="false" aria-controls="topnav">Menu</button>
     <nav id="topnav" aria-label="Primary">
       <a href="../../docs/">Docs</a>
       <a href="../../tutorials/" aria-current="page">Tutorials</a>
-      <a href="https://github.com/wess/synapse">GitHub <span aria-hidden="true">↗</span></a>
-      <a class="navdownload" href="https://github.com/wess/synapse/releases/latest/download/synapse.zip">Download</a>
+      <a href="https://github.com/wess/synapse">Source</a>
+      <a class="navdownload" href="../../docs/install/">Install</a>
     </nav>
   </header>
-  
   <div class="doclayout">
-    
   <aside class="docsrail" aria-label="Documentation navigation">
     <div class="searchbox">
-      <label for="search">Search the guide</label>
-      <input id="search" type="search" placeholder="Memory, vaults, restore…" autocomplete="off">
-      <div class="searchresults" data-results hidden></div>
+      <label for="docssearch">Search docs &amp; tutorials</label>
+      <input id="docssearch" type="search" placeholder="Memory, vaults, restore…" autocomplete="off" aria-controls="searchresults">
+      <div id="searchresults" class="searchresults" data-results hidden></div>
       <span class="searchstatus" data-searchstatus role="status" aria-live="polite"></span>
     </div>
     <details class="railnav" open>
       <summary>Browse all guides</summary>
       <nav aria-label="All guides">
-        <h2>Documentation</h2>
-        <ul>
-        <li><a href="../../docs/">Start here</a></li>
-        <li><a href="../../docs/install/">Install and connect</a></li>
-        <li><a href="../../docs/harnesses/">Supported and custom harnesses</a></li>
-        <li><a href="../../docs/app/">Desktop app reference</a></li>
-        <li><a href="../../docs/memory/">Memory and recall</a></li>
-        <li><a href="../../docs/mcp/">MCP tool reference</a></li>
-        <li><a href="../../docs/mesh/">Agent mesh</a></li>
-        <li><a href="../../docs/skills/">Skills</a></li>
-        <li><a href="../../docs/servers/">MCP servers</a></li>
-        <li><a href="../../docs/sources/">Sources</a></li>
-        <li><a href="../../docs/vault/">Vaults and scopes</a></li>
-        <li><a href="../../docs/data/">Data lifecycle</a></li>
-        <li><a href="../../docs/config/">Configuration and paths</a></li>
-        <li><a href="../../docs/security/">Security model</a></li>
-        <li><a href="../../docs/cli/">CLI reference</a></li>
-        <li><a href="../../docs/troubleshoot/">Troubleshooting</a></li></ul>
-        <h2>Tutorials</h2>
-        <ul>
-        <li><a href="../../tutorials/">Tutorials</a></li>
-        <li><a href="../../tutorials/connect/">Install and connect your first tools</a></li>
-        <li><a href="../../tutorials/continuity/" aria-current="page">Carry one decision between tools</a></li>
-        <li><a href="../../tutorials/curate/">Curate and optimize memory</a></li>
-        <li><a href="../../tutorials/secrets/">Use a scoped secret in either shell mode</a></li>
-        <li><a href="../../tutorials/skills/">Keep one skill library across every tool</a></li>
-        <li><a href="../../tutorials/learn/">Let your agents write skills</a></li>
-        <li><a href="../../tutorials/launch/">Start a tool with everything in place</a></li>
-        <li><a href="../../tutorials/mesh/">Run a team of agents and drive it yourself</a></li>
-        <li><a href="../../tutorials/overseer/">Hand a job to one agent and watch it grow a team</a></li>
-        <li><a href="../../tutorials/recovery/">Export and restore safely</a></li>
-        <li><a href="../../tutorials/lifecycle/">Check, migrate, and remove Synapse</a></li></ul>
+        <h2>Start here</h2><ul><li><a href="../../docs/">Start here</a></li><li><a href="../../docs/install/">Install and connect</a></li><li><a href="../../docs/harnesses/">Supported and custom harnesses</a></li><li><a href="../../docs/app/">Desktop app reference</a></li></ul><h2>Reference</h2><ul><li><a href="../../docs/memory/">Memory and recall</a></li><li><a href="../../docs/mcp/">MCP tool reference</a></li><li><a href="../../docs/mesh/">Agent mesh</a></li><li><a href="../../docs/skills/">Skills</a></li><li><a href="../../docs/servers/">MCP servers</a></li><li><a href="../../docs/sources/">Sources</a></li></ul><h2>Your machine</h2><ul><li><a href="../../docs/vault/">Vaults and scopes</a></li><li><a href="../../docs/data/">Data lifecycle</a></li><li><a href="../../docs/config/">Configuration and paths</a></li><li><a href="../../docs/security/">Security model</a></li><li><a href="../../docs/sync/">Encrypted sync</a></li><li><a href="../../docs/troubleshoot/">Troubleshooting</a></li></ul><h2>Build with it</h2><ul><li><a href="../../docs/cli/">CLI reference</a></li><li><a href="../../docs/developing/">Developing Synapse</a></li><li><a href="../../docs/synapsecore/">The core library</a></li><li><a href="../../docs/embedding/">Embedding Synapse</a></li><li><a href="../../docs/retrieval/">Retrieval checks</a></li><li><a href="../../docs/map/">The memory map</a></li><li><a href="../../docs/startup/">What launching costs</a></li><li><a href="../../docs/windows/">Windows</a></li><li><a href="../../docs/federation/">Federation proposal</a></li></ul>
+        <h2>Tutorials</h2><ul><li><a href="../../tutorials/">Tutorials</a></li><li><a href="../../tutorials/connect/">Install and connect your first tools</a></li><li><a href="../../tutorials/continuity/" aria-current="page">Carry one decision between tools</a></li><li><a href="../../tutorials/curate/">Curate and optimize memory</a></li><li><a href="../../tutorials/secrets/">Use a scoped secret in either shell mode</a></li><li><a href="../../tutorials/skills/">Keep one skill library across every tool</a></li><li><a href="../../tutorials/learn/">Let your agents write skills</a></li><li><a href="../../tutorials/launch/">Start a tool with everything in place</a></li><li><a href="../../tutorials/mesh/">Run a team of agents and drive it yourself</a></li><li><a href="../../tutorials/overseer/">Hand a job to one agent and watch it grow a team</a></li><li><a href="../../tutorials/recovery/">Export and restore safely</a></li><li><a href="../../tutorials/lifecycle/">Check, migrate, and remove Synapse</a></li></ul>
       </nav>
     </details>
   </aside>
     <main class="article" id="content">
-      <header class="articlehead">
-        <h1>Carry one decision between tools</h1>
-        <span>Make a real project convention durable in one session, recover it in another tool after closing the first, correct it at the source, and see the scope rule keep other projects out.</span>
-      </header>
-      
+      <header class="articlehead"><nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../">Synapse</a><span aria-hidden="true">/</span><a href="../../tutorials/">Tutorials</a></nav><h1>Carry one decision between tools</h1><p>Make a real project convention durable in one session, recover it in another tool after closing the first, correct it at the source, and see the scope rule keep other projects out.</p></header>
+
     <h2 id="outcome">Outcome and prerequisites</h2>
     <p>You will prove that durable context survives two boundaries a conversation cannot: the end of a session, and the move to a different tool. Then you will correct it at the source and confirm that another project cannot see it.</p>
     <ul>
@@ -109,7 +70,7 @@
           </tbody>
         </table>
         <p>The right-hand column is transient. It is true today and misleading next week, and a memory store full of it makes recall worse rather than better.</p>
-        
+
   <aside class="note">
     <strong>Never stage a fake secret</strong>
     <p>Memory is plain text available to every connected tool. Use an ordinary project convention, never a token, credential, or private key — not even a made-up one, because a habit formed here is a habit that shows up in a real store.</p>
@@ -143,7 +104,7 @@
       <li>
         <h3 id="correct">Inspect the source of truth and correct it</h3>
         <p>What the tool reported is a rendering. Go and look at the record itself:</p>
-        
+
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
@@ -151,7 +112,7 @@
     </div>
     <pre><code>synapse memory list &quot;Bun JavaScript&quot;</code></pre>
   </div>
-        
+
   <div class="codeblock">
     <div class="codebar">
       <span>text</span>
@@ -159,7 +120,7 @@
     </div>
     <pre><code>4	project:github.com/example/project	synapsetutorial	We confirmed together that this repository uses Bun for JavaScript tasks rather than npm, after discussing…</code></pre>
   </div>
-        
+
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
@@ -168,7 +129,7 @@
     <pre><code>synapse memory show 4</code></pre>
   </div>
         <p>If the body is a paragraph of conversation rather than a durable statement, replace it. Editing keeps the same ID, so nothing else has to change and no contradicting second record is created:</p>
-        
+
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
@@ -177,7 +138,7 @@
     <pre><code>printf &#039;%s\n&#039; &#039;Use Bun for JavaScript tasks in this repository.&#039; \
   | synapse memory edit 4 synapsetutorial</code></pre>
   </div>
-        
+
   <div class="codeblock">
     <div class="codebar">
       <span>text</span>
@@ -186,7 +147,7 @@
     <pre><code>Updated memory #4</code></pre>
   </div>
         <p>Start one more new session and ask again. The answer should now reflect the corrected text — which proves that editing changed the durable source rather than layering a correction on top of a wrong record.</p>
-        
+
   <aside class="note">
     <strong>Correcting beats appending</strong>
     <p>Two memories that disagree are worse than one that is slightly wrong, because recall returns both and the model has to guess which is current. When the wording was bad, edit the record. When the old version was true and stopped being true, add the new one with synapse memory supersede so the old text stays readable but out of recall. Add a plain second memory only when it is genuinely a new fact.</p>
@@ -198,7 +159,7 @@
         <p>This is the property that makes a shared store usable. Open a session in an unrelated project and ask the same question:</p>
         <blockquote>What command should I use to install dependencies here?</blockquote>
         <p>It must not answer with the first project's convention. Confirm from the terminal that the record is scoped where you think it is:</p>
-        
+
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
@@ -206,7 +167,7 @@
     </div>
     <pre><code>synapse memory show 4</code></pre>
   </div>
-        
+
   <div class="codeblock">
     <div class="codebar">
       <span>text</span>
@@ -224,7 +185,7 @@ Source: synapsetutorial</code></pre>
       <li>
         <h3 id="global">Store one thing globally, and see the difference</h3>
         <p>Some things belong everywhere. A preference about how you like to work is not a fact about one repository:</p>
-        
+
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
@@ -233,7 +194,7 @@ Source: synapsetutorial</code></pre>
     <pre><code>printf &#039;%s\n&#039; &#039;Prefer small, focused commits with imperative subject lines.&#039; \
   | synapse memory add synapsetutorial --global</code></pre>
   </div>
-        
+
   <div class="codeblock">
     <div class="codebar">
       <span>text</span>
@@ -247,7 +208,7 @@ Source: synapsetutorial</code></pre>
 
     <h2 id="cleanup">Keep or clean up</h2>
     <p>If the convention is real, keep it — you have just made your tools better at this repository. If it was tutorial-only, remove the exact IDs:</p>
-    
+
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
@@ -261,26 +222,14 @@ synapse memory delete 5 --confirm</code></pre>
 
     <h2>Next step</h2>
     <p>You have finished the newcomer level. Continue with <a href="../curate/">Curate and optimize memory</a>, which is about keeping a store useful once it has more than a handful of entries in it.</p>
-  
+  <footer class="articlefoot"><div class="articlemeta"><a href="https://github.com/wess/synapse/blob/main/website/tutorials/continuity.ts">View page source</a><span>Synapse 1.14.2</span></div><nav class="pagenav" aria-label="Guide pages"><a href="../../tutorials/connect/"><small>Previous</small><strong>Install and connect your first tools</strong></a><a href="../../tutorials/curate/"><small>Next</small><strong>Curate and optimize memory</strong></a></nav></footer>
     </main>
-    <aside class="ontoc" aria-label="On this page">
-        <span>On this page</span>
-        <ol><li><a href="#outcome">Outcome</a></li><li><a href="#choose">Choose a decision</a></li><li><a href="#remember">Remember it</a></li><li><a href="#close">Close the session</a></li><li><a href="#recall">Recall elsewhere</a></li><li><a href="#correct">Inspect and correct</a></li><li><a href="#scope">Prove the scope rule</a></li><li><a href="#global">Global versus project</a></li><li><a href="#cleanup">Keep or clean up</a></li></ol>
-      </aside>
+  <aside class="ontoc" aria-label="On this page"><span>Contents</span><ol><li><a href="#outcome">Outcome</a></li><li><a href="#choose">Choose a decision</a></li><li><a href="#remember">Remember it</a></li><li><a href="#close">Close the session</a></li><li><a href="#recall">Recall elsewhere</a></li><li><a href="#correct">Inspect and correct</a></li><li><a href="#scope">Prove the scope rule</a></li><li><a href="#global">Global versus project</a></li><li><a href="#cleanup">Keep or clean up</a></li></ol></aside>
   </div>
-  
   <footer class="footer">
-    <div>
-      <a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">Synapse</a>
-      <p>Shared memory and skills for coding agents, kept on your machine.</p>
-    </div>
-    <nav aria-label="Footer">
-      <a href="../../docs/">Documentation</a>
-      <a href="../../tutorials/">Tutorials</a>
-      <a href="https://github.com/wess/synapse">Source</a>
-      <a href="https://github.com/wess/synapse/releases">Releases</a>
-    </nav>
-    <p class="footerfine">No account required. macOS desktop · Linux terminal, CLI &amp; MCP.</p>
-  </footer>
+    <div class="footerupper"><div><a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">synapse</a><p>A shared memory. A little less starting over.</p></div>
+      <nav aria-label="Footer"><a href="../../docs/">Manual</a><a href="../../tutorials/">Tutorials</a><a href="https://github.com/wess/synapse">Source</a><a href="https://github.com/wess/synapse/releases">Releases</a><a href="https://wess.io">By Wess</a></nav></div>
+    <p class="footerfine"><span>macOS &amp; Windows desktop · Linux CLI &amp; MCP</span><span>v1.14.2 · MIT · No account required</span></p>
+  </footer></div>
 </body>
 </html>

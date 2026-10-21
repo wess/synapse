@@ -16,14 +16,14 @@ Developers who move between multiple coding tools and want decisions, preference
 4. The user can inspect health, usage, connections, and the mesh from a small native dashboard.
 5. The user grants credential names to one command or an opted-in shell through explicit global or YAML-backed scopes.
 
-## First release
+## Current capabilities
 
 - A local SQLite memory store.
 - Search, inspection, editing, deletion, and guarded wipe controls for stored memory. Search ranks a stemmed word index and a trigram fragment index and fuses the two, and `synapse memory eval` scores it against labeled questions.
 - Enforced global and project memory scopes shared by every connected tool. A repository is one project wherever it is checked out, keyed by its `origin` remote.
 - Redaction of credentials and `<private>` sections before any memory is stored.
 - Previewed, idempotent, reversible imports from Claude, Codex, and selected Markdown.
-- An MCP stdio server exposing `remember`, `recall`, and value-free vault status.
+- An MCP stdio server exposing `remember`, `recall`, exact paged `readmemory`, and value-free vault status.
 - An opt-in agent mesh over the same local database: register, direct messages, channels, broadcasts, free parking on `wait`, reported work state, and supervised background workers. Off by default, because its tools cost context in every session that loads them.
 - Reusable agent roles and team rosters as layered TOML, resolved project, then user, then built-in.
 - One Agent Skills library installed into every connected tool, so a skill is written once instead of copied by hand into each one and left to drift. Skills Synapse did not install are reported, never overwritten.
@@ -39,7 +39,7 @@ Developers who move between multiple coding tools and want decisions, preference
 - Light and dark themes that follow the operating system by default.
 - Clear detection, connected, missing, success, and error states.
 - Numbered migrations, integrity checks, owner-only data permissions, backups, export, and restore.
-- A signed Apple-silicon macOS 13+ beta archive with a user-installable CLI launcher.
+- A signed and notarized Apple-silicon macOS 13+ archive, a Windows x64 desktop installer, and an independent Linux CLI/MCP build.
 
 ## Operating context
 

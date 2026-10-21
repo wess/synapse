@@ -1,6 +1,8 @@
 import { readdir } from "node:fs/promises";
 import { extname, join, relative } from "node:path";
-import { downloadurl, repositoryurl, siteurl } from "./deploy";
+import { pages } from "./content";
+import { route, sections, sourcepath } from "./navigation";
+import { downloadurl, repositoryurl, siteurl, version } from "./deploy";
 
 const project = join(import.meta.dir, "..");
 const output = join(project, "site");
@@ -76,20 +78,13 @@ for (const file of htmlfiles) {
 }
 
 const home = await Bun.file(join(output, "index.html")).text();
-if (!home.startsWith("<!--\nTHESIS:")) fail("landing page is missing its direction contract");
-for (const phrase of [
-  "Stop repeating yourself to coding agents.",
-  "Download for macOS",
-  "Switch agents",
-  "Share skills",
-  "Keep memory local",
-]) {
-  if (!home.includes(phrase)) fail(`landing page is missing: ${phrase}`);
+for (const target of ["docs/install/", "docs/memory/", "docs/skills/", "docs/mesh/", "docs/security/", "tutorials/continuity/"]) {
+  if (!home.includes(`href="${target}"`)) fail(`landing page is missing entry point: ${target}`);
 }
+if (!home.includes(downloadurl)) fail("landing page is missing its release download");
 
-const corpus = await Promise.all(htmlfiles.map((file) => Bun.file(file).text())).then((items) =>
-  items.join("\n"),
-);
+const documents = await Promise.all(htmlfiles.map((file) => Bun.file(file).text()));
+const corpus = documents.join("\n");
 const stylesheet = await Bun.file(join(output, "style.css")).text();
 const robots = await Bun.file(join(output, "robots.txt")).text();
 const sitemap = await Bun.file(join(output, "sitemap.xml")).text();
@@ -142,7 +137,7 @@ for (const phrase of [
   if (!app.includes(phrase)) fail(`desktop app reference is missing: ${phrase}`);
 }
 
-// Every command family in `HELP` (src/cli/command.rs). When a command is added
+// every command family in `HELP` (src/cli/command.rs). When a command is added
 // there it has to appear here too, or the site can quietly ship without it —
 // which is how `launch`, `mux`, `relay`, and `skill` were all documented but
 // unverified for four releases.
@@ -180,7 +175,7 @@ for (const command of [
   if (!corpus.includes(command)) fail(`documentation is missing command family: ${command}`);
 }
 
-// The subcommands that do something a reader cannot guess from the family name.
+// the subcommands that do something a reader cannot guess from the family name.
 for (const command of [
   "synapse tool create",
   "synapse relay team",
@@ -293,6 +288,34 @@ const tutorialindex = await Bun.file(join(output, "tutorials", "index.html")).te
 for (const level of ["Newcomer", "Daily driver", "Team operator", "Maintainer"]) {
   if (!tutorialindex.includes(level)) fail(`tutorial index is missing the ${level} level`);
 }
+
+const search = await Bun.file(join(output, "search.json")).json();
+const routes = new Set(pages.map(route));
+const navigation = new Set(sections.flatMap((section) => section.paths));
+for (const page of pages) {
+  const html = await Bun.file(join(output, page.path)).text();
+  if ((html.match(/<h1(?:\s[^>]*)?>/g) ?? []).length !== 1) fail(`${page.path}: expected one page heading`);
+  const allids = [...html.matchAll(/\bid="([^"]+)"/g)].map((match) => match[1]);
+  if (new Set(allids).size !== allids.length) fail(`${page.path}: duplicate document ids`);
+  if (!html.includes(`v${version}`)) fail(`${page.path}: missing current release version`);
+  if (page.kind === "home") continue;
+  if (!(await Bun.file(join(project, sourcepath(page))).exists())) fail(`${page.path}: missing page source`);
+  if (!search.some((entry: { path: string }) => entry.path === route(page))) fail(`${page.path}: absent from search index`);
+  if (page.kind === "docs" && !navigation.has(route(page))) fail(`${page.path}: absent from manual navigation`);
+}
+for (const path of navigation) if (!routes.has(path)) fail(`navigation points to missing route: ${path}`);
+for (const name of await readdir(join(project, "docs"))) {
+  if (name.endsWith(".md") && !pages.some((page) => page.source === `docs/${name}`)) fail(`technical doc is not published: ${name}`);
+}
+const help = await Bun.file(join(project, "crates/synapsecore/src/cli/command.rs")).text();
+const commands = help.match(/const HELP: &str = "([\s\S]*?)";/)?.[1] ?? "";
+if (!commands) fail("could not read CLI help for command coverage");
+for (const match of commands.matchAll(/^  ([a-z]+)(?: ([a-z]+))?/gm)) {
+  const command = `synapse ${match[1]}${match[2] ? ` ${match[2]}` : ""}`;
+  if (!corpus.includes(command)) fail(`released CLI command is undocumented: ${command}`);
+}
+if (/fonts\.googleapis|fonts\.gstatic/.test(corpus)) fail("site fonts must be self-hosted");
+if (!relativefiles.has("pixel.ttf") || !relativefiles.has("fontlicense.txt")) fail("missing font or license");
 
 if (failures.length) {
   console.error(failures.join("\n"));

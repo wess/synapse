@@ -5,99 +5,60 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>CLI reference — Synapse</title>
   <meta name="description" content="The complete Synapse command surface, including inputs, output modes, confirmation guards, and process behavior.">
-  <meta name="theme-color" content="#0a43c8">
+  <meta name="theme-color" content="#352879">
   <meta property="og:title" content="CLI reference — Synapse">
   <meta property="og:description" content="The complete Synapse command surface, including inputs, output modes, confirmation guards, and process behavior.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://wess.io/synapse/docs/cli/">
   <link rel="canonical" href="https://wess.io/synapse/docs/cli/">
   <link rel="icon" href="../../icon.svg" type="image/svg+xml">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Fragment+Mono&family=Manrope:wght@400;500;600;700&display=swap">
+  <link rel="preload" href="../../pixel.ttf" as="font" type="font/ttf" crossorigin>
   <link rel="stylesheet" href="../../style.css">
   <script type="module" src="../../site.js"></script>
 </head>
 <body class="docs" data-root="../../">
-  
+  <div class="shell">
   <a class="skip" href="#content">Skip to content</a>
+  <div class="windowbar"><a href="../../">synapse / manual</a><span>v1.14.2 · on your machine</span></div>
   <header class="topbar">
-    <a class="wordmark" href="../../" aria-label="Synapse home">
-      <img src="../../icon.svg" width="30" height="30" alt="">
-      <span>Synapse</span>
-    </a>
+    <a class="wordmark" href="../../" aria-label="Synapse home"><img src="../../icon.svg" width="28" height="28" alt=""><span>synapse</span></a>
     <button class="navtoggle" type="button" aria-expanded="false" aria-controls="topnav">Menu</button>
     <nav id="topnav" aria-label="Primary">
       <a href="../../docs/" aria-current="page">Docs</a>
       <a href="../../tutorials/">Tutorials</a>
-      <a href="https://github.com/wess/synapse">GitHub <span aria-hidden="true">↗</span></a>
-      <a class="navdownload" href="https://github.com/wess/synapse/releases/latest/download/synapse.zip">Download</a>
+      <a href="https://github.com/wess/synapse">Source</a>
+      <a class="navdownload" href="../../docs/install/">Install</a>
     </nav>
   </header>
-  
   <div class="doclayout">
-    
   <aside class="docsrail" aria-label="Documentation navigation">
     <div class="searchbox">
-      <label for="search">Search the guide</label>
-      <input id="search" type="search" placeholder="Memory, vaults, restore…" autocomplete="off">
-      <div class="searchresults" data-results hidden></div>
+      <label for="docssearch">Search docs &amp; tutorials</label>
+      <input id="docssearch" type="search" placeholder="Memory, vaults, restore…" autocomplete="off" aria-controls="searchresults">
+      <div id="searchresults" class="searchresults" data-results hidden></div>
       <span class="searchstatus" data-searchstatus role="status" aria-live="polite"></span>
     </div>
     <details class="railnav" open>
       <summary>Browse all guides</summary>
       <nav aria-label="All guides">
-        <h2>Documentation</h2>
-        <ul>
-        <li><a href="../../docs/">Start here</a></li>
-        <li><a href="../../docs/install/">Install and connect</a></li>
-        <li><a href="../../docs/harnesses/">Supported and custom harnesses</a></li>
-        <li><a href="../../docs/app/">Desktop app reference</a></li>
-        <li><a href="../../docs/memory/">Memory and recall</a></li>
-        <li><a href="../../docs/mcp/">MCP tool reference</a></li>
-        <li><a href="../../docs/mesh/">Agent mesh</a></li>
-        <li><a href="../../docs/skills/">Skills</a></li>
-        <li><a href="../../docs/servers/">MCP servers</a></li>
-        <li><a href="../../docs/sources/">Sources</a></li>
-        <li><a href="../../docs/vault/">Vaults and scopes</a></li>
-        <li><a href="../../docs/data/">Data lifecycle</a></li>
-        <li><a href="../../docs/config/">Configuration and paths</a></li>
-        <li><a href="../../docs/security/">Security model</a></li>
-        <li><a href="../../docs/cli/" aria-current="page">CLI reference</a></li>
-        <li><a href="../../docs/troubleshoot/">Troubleshooting</a></li></ul>
-        <h2>Tutorials</h2>
-        <ul>
-        <li><a href="../../tutorials/">Tutorials</a></li>
-        <li><a href="../../tutorials/connect/">Install and connect your first tools</a></li>
-        <li><a href="../../tutorials/continuity/">Carry one decision between tools</a></li>
-        <li><a href="../../tutorials/curate/">Curate and optimize memory</a></li>
-        <li><a href="../../tutorials/secrets/">Use a scoped secret in either shell mode</a></li>
-        <li><a href="../../tutorials/skills/">Keep one skill library across every tool</a></li>
-        <li><a href="../../tutorials/learn/">Let your agents write skills</a></li>
-        <li><a href="../../tutorials/launch/">Start a tool with everything in place</a></li>
-        <li><a href="../../tutorials/mesh/">Run a team of agents and drive it yourself</a></li>
-        <li><a href="../../tutorials/overseer/">Hand a job to one agent and watch it grow a team</a></li>
-        <li><a href="../../tutorials/recovery/">Export and restore safely</a></li>
-        <li><a href="../../tutorials/lifecycle/">Check, migrate, and remove Synapse</a></li></ul>
+        <h2>Start here</h2><ul><li><a href="../../docs/">Start here</a></li><li><a href="../../docs/install/">Install and connect</a></li><li><a href="../../docs/harnesses/">Supported and custom harnesses</a></li><li><a href="../../docs/app/">Desktop app reference</a></li></ul><h2>Reference</h2><ul><li><a href="../../docs/memory/">Memory and recall</a></li><li><a href="../../docs/mcp/">MCP tool reference</a></li><li><a href="../../docs/mesh/">Agent mesh</a></li><li><a href="../../docs/skills/">Skills</a></li><li><a href="../../docs/servers/">MCP servers</a></li><li><a href="../../docs/sources/">Sources</a></li></ul><h2>Your machine</h2><ul><li><a href="../../docs/vault/">Vaults and scopes</a></li><li><a href="../../docs/data/">Data lifecycle</a></li><li><a href="../../docs/config/">Configuration and paths</a></li><li><a href="../../docs/security/">Security model</a></li><li><a href="../../docs/sync/">Encrypted sync</a></li><li><a href="../../docs/troubleshoot/">Troubleshooting</a></li></ul><h2>Build with it</h2><ul><li><a href="../../docs/cli/" aria-current="page">CLI reference</a></li><li><a href="../../docs/developing/">Developing Synapse</a></li><li><a href="../../docs/synapsecore/">The core library</a></li><li><a href="../../docs/embedding/">Embedding Synapse</a></li><li><a href="../../docs/retrieval/">Retrieval checks</a></li><li><a href="../../docs/map/">The memory map</a></li><li><a href="../../docs/startup/">What launching costs</a></li><li><a href="../../docs/windows/">Windows</a></li><li><a href="../../docs/federation/">Federation proposal</a></li></ul>
+        <h2>Tutorials</h2><ul><li><a href="../../tutorials/">Tutorials</a></li><li><a href="../../tutorials/connect/">Install and connect your first tools</a></li><li><a href="../../tutorials/continuity/">Carry one decision between tools</a></li><li><a href="../../tutorials/curate/">Curate and optimize memory</a></li><li><a href="../../tutorials/secrets/">Use a scoped secret in either shell mode</a></li><li><a href="../../tutorials/skills/">Keep one skill library across every tool</a></li><li><a href="../../tutorials/learn/">Let your agents write skills</a></li><li><a href="../../tutorials/launch/">Start a tool with everything in place</a></li><li><a href="../../tutorials/mesh/">Run a team of agents and drive it yourself</a></li><li><a href="../../tutorials/overseer/">Hand a job to one agent and watch it grow a team</a></li><li><a href="../../tutorials/recovery/">Export and restore safely</a></li><li><a href="../../tutorials/lifecycle/">Check, migrate, and remove Synapse</a></li></ul>
       </nav>
     </details>
   </aside>
     <main class="article" id="content">
-      <header class="articlehead">
-        <h1>CLI reference</h1>
-        <span>The complete Synapse command surface, including inputs, output modes, confirmation guards, and process behavior.</span>
-      </header>
-      
+      <header class="articlehead"><nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../">Synapse</a><span aria-hidden="true">/</span><a href="../../docs/">Manual</a></nav><h1>CLI reference</h1><p>The complete Synapse command surface, including inputs, output modes, confirmation guards, and process behavior.</p></header>
+
     <h2 id="invocation">Invocation</h2>
     <p>Run <code>synapse help</code> for the built-in summary. Every command answers <code>--help</code> and <code>-h</code> with its own entries — <code>synapse vault --help</code>, or <code>synapse secret set --help</code> for one line of it — and <code>synapse help &lt;command&gt;</code> is the same answer typed the other way round. After a <code>--</code> the flag belongs to the child, so <code>synapse run -- mytool --help</code> asks <code>mytool</code>. Commands print human-readable output unless a documented <code>--json</code> option is present. Errors go to stderr and return a non-zero exit status.</p>
-    
+
   <aside class="note">
     <strong>Secret and memory input</strong>
     <p>Secret values are never accepted as arguments. Secret set uses a hidden prompt or stdin. Memory add and edit always read their body from stdin.</p>
   </aside>
 
     <h2 id="application">Application and server</h2>
-    
+
   <section class="command" id="app">
     <div>
       <h3>app</h3>
@@ -105,7 +66,7 @@
     </div>
     <p>Open the native desktop application. Running <code>synapse</code with no command has the same result.</p>
   </section>
-    
+
   <section class="command" id="mcp">
     <div>
       <h3>mcp</h3>
@@ -113,7 +74,7 @@
     </div>
     <p>Run the MCP stdio server until the client closes the connection. The process holds a shared database lifecycle lock.</p>
   </section>
-    
+
   <section class="command" id="run">
     <div>
       <h3>run</h3>
@@ -121,7 +82,7 @@
     </div>
     <p>Resolve global, project, and folder vault mappings for the current directory, refuse on any scope warning, read the selected values out of the vault, and launch the child. Synapse returns the child exit code, or 1 when the operating system reports no code.</p>
   </section>
-    
+
   <section class="command" id="launch">
     <div>
       <h3>launch</h3>
@@ -129,7 +90,7 @@
     </div>
     <p>Start a coding tool with Synapse already in place: memory and the vault reachable over MCP, this folder's vault variables in its environment, and the project root it should treat as home. Everything after a bare <code>--</code> is passed to the tool untouched. A tool Synapse is not connected to is wired for the life of the process, so this works before setup has ever run and writes nothing into the tool's own configuration. Options: <code>--directory</code>, <code>--model</code>, <code>--allow-tool</code> (repeatable), <code>--strict</code>, <code>--no-vault</code>, <code>--skip-permissions</code>, <code>--as &lt;name&gt;</code> with <code>--role</code>, <code>--task</code>, and <code>--channel</code> to join the mesh as well, and <code>--print</code> to show the resolved command and environment names without running anything. Refuses on any scope warning, and never prints a secret value.</p>
   </section>
-    
+
   <section class="command" id="status">
     <div>
       <h3>status</h3>
@@ -139,7 +100,7 @@
   </section>
 
     <h2 id="shell">Shell environments</h2>
-    
+
   <section class="command" id="hook">
     <div>
       <h3>hook</h3>
@@ -147,7 +108,7 @@
     </div>
     <p>Print the integration script for a shell. Evaluate or source it from that shell’s startup file. The hook reevaluates approved directory scopes after directory changes and before prompts.</p>
   </section>
-    
+
   <section class="command" id="allow">
     <div>
       <h3>allow</h3>
@@ -155,7 +116,7 @@
     </div>
     <p>Inspect and approve the exact contents of the closest <code>.synapse.yaml</code> at or above the folder. The folder defaults to the current directory.</p>
   </section>
-    
+
   <section class="command" id="deny">
     <div>
       <h3>deny</h3>
@@ -163,7 +124,7 @@
     </div>
     <p>Revoke approval for the closest discovered scope. An installed hook unloads its managed values at the next prompt or directory change.</p>
   </section>
-    
+
   <section class="command" id="export">
     <div>
       <h3>export</h3>
@@ -171,14 +132,14 @@
     </div>
     <p>Internal hook protocol. Emits a shell-quoted environment diff that the installed hook evaluates. Users normally invoke <code>hook</code>, <code>allow</code>, and <code>deny</code> instead.</p>
   </section>
-    
+
   <aside class="note">
     <strong>Two boundaries</strong>
     <p>synapse run gives one child process the resolved environment. The shell hook exposes the environment to every process launched from an activated shell until the scope unloads.</p>
   </aside>
 
     <h2 id="vault">Vault and scope</h2>
-    
+
   <section class="command" id="vaultlist">
     <div>
       <h3>vault list</h3>
@@ -186,7 +147,7 @@
     </div>
     <p>List vault names alphabetically.</p>
   </section>
-    
+
   <section class="command" id="vaultcreate">
     <div>
       <h3>vault create</h3>
@@ -194,7 +155,7 @@
     </div>
     <p>Create a unique vault. Names may contain ASCII letters, numbers, and hyphens.</p>
   </section>
-    
+
   <section class="command" id="vaultdelete">
     <div>
       <h3>vault delete</h3>
@@ -202,7 +163,7 @@
     </div>
     <p>Delete an empty vault. Forget every contained secret first.</p>
   </section>
-    
+
   <section class="command" id="vaultbackend">
     <div>
       <h3>vault backend</h3>
@@ -210,7 +171,7 @@
     </div>
     <p>Print which store holds this machine's secret values, or choose one. Choosing moves nothing, so it refuses once secrets exist and points at <code>vault migrate</code>. The encrypted store is the default on a new installation and the only one off macOS.</p>
   </section>
-    
+
   <section class="command" id="vaultmigrate">
     <div>
       <h3>vault migrate</h3>
@@ -218,7 +179,7 @@
     </div>
     <p>Move every value into the other store: copy them all, read each one back, switch the setting, then remove the originals. <code>--keep</code> leaves the originals in place. A source that cannot be read stops the migration with nothing moved and nothing switched.</p>
   </section>
-    
+
   <section class="command" id="secretlist">
     <div>
       <h3>secret list</h3>
@@ -226,7 +187,7 @@
     </div>
     <p>List each <code>vault.name</code> reference, environment name, and whether it is global or scoped. Never prints a value.</p>
   </section>
-    
+
   <section class="command" id="secretset">
     <div>
       <h3>secret set</h3>
@@ -234,7 +195,7 @@
     </div>
     <p>Read a value from a hidden terminal prompt or stdin and save it in the vault. Creates metadata when the label is new; replaces the stored value when the environment name matches. <code>--global</code> also enables the mapping.</p>
   </section>
-    
+
   <section class="command" id="secretcopy">
     <div>
       <h3>secret copy</h3>
@@ -242,7 +203,7 @@
     </div>
     <p>Put one value on the clipboard. The only way a stored value comes back out, and it never reaches the terminal: the command prints the reference and nothing else. Set <code>SYNAPSE_CLIPBOARD</code> to use something other than <code>pbcopy</code>.</p>
   </section>
-    
+
   <section class="command" id="secretforget">
     <div>
       <h3>secret forget</h3>
@@ -250,7 +211,7 @@
     </div>
     <p>Delete the stored value, its metadata, and any global mapping. The value is removed from both stores, so a machine that has switched backends leaves nothing behind in the one it stopped reading.</p>
   </section>
-    
+
   <section class="command" id="secretglobal">
     <div>
       <h3>secret global</h3>
@@ -258,7 +219,7 @@
     </div>
     <p>Enable or disable a secret’s global environment mapping. Enabling replaces the current global source for that environment name.</p>
   </section>
-    
+
   <section class="command" id="scopeinit">
     <div>
       <h3>scope init</h3>
@@ -266,7 +227,7 @@
     </div>
     <p>Create a new <code>.synapse.yaml</code>. The folder defaults to the current directory. Use <code>--folder</code> for a folder-kind template; the command refuses when the file already exists.</p>
   </section>
-    
+
   <section class="command" id="scopetrust">
     <div>
       <h3>scope trust</h3>
@@ -274,7 +235,7 @@
     </div>
     <p>Approve an exact scope path directly by parsing it, calculating its content digest, and storing that digest with its canonical path. <code>synapse allow</code> is the directory-oriented shortcut.</p>
   </section>
-    
+
   <section class="command" id="scopestatus">
     <div>
       <h3>scope status</h3>
@@ -284,7 +245,7 @@
   </section>
 
     <h2 id="memory">Memory</h2>
-    
+
   <section class="command" id="memorylist">
     <div>
       <h3>memory list</h3>
@@ -292,7 +253,7 @@
     </div>
     <p>Search the body and source with the joined query words, by word in any form and by fragment, or list recent memory when empty. Returns up to 100 entries. Text mode prints ID, scope, source, and a compact preview, and marks any memory that has been superseded. With <code>--explain</code>, print what the search actually did first: the full-text expression the query became, the words it searched for, the words it dropped for matching nearly everything, and the fused score behind each hit, higher being better.</p>
   </section>
-    
+
   <section class="command" id="memorygrep">
     <div>
       <h3>memory grep</h3>
@@ -300,7 +261,7 @@
     </div>
     <p>Find memories containing an exact string, most recent first. Nothing is tokenized, ranked, or dropped — the characters given have to appear, in that order — which is what makes it the right tool for an identifier, a flag, a path, or a word the ranked search treats as noise. Matching is case-insensitive for ASCII, and a pattern after a bare <code>--</code> is taken literally, so <code>memory grep -- --no-verify</code> searches for the flag.</p>
   </section>
-    
+
   <section class="command" id="memoryeval">
     <div>
       <h3>memory eval</h3>
@@ -308,7 +269,7 @@
     </div>
     <p>Score recall against a file of labeled questions. Each <code>[[case]]</code> has a <code>query</code>, an optional <code>project</code> folder, and <code>expect</code>: text a useful memory contains, matched case-insensitively, or nothing when no stored memory answers it. Reports how often the answer ranked first, how often it came back at all, mean reciprocal rank, how often the answer text survived the response budget, how many memories came back beside the answer, and how many came back where none answer. <code>--limit</code> defaults to 5; <code>--budget</code> sets the response budget for the run and defaults to the configured one. <code>--fail-under</code> exits 1 when the found share is below the floor.</p>
   </section>
-    
+
   <section class="command" id="memorydrift">
     <div>
       <h3>memory drift</h3>
@@ -316,7 +277,7 @@
     </div>
     <p>Check everything a folder's sessions can see for memory that no longer holds: a file path that is gone from the checkout, two memories that say opposite things or carry different numbers, and two that say the same thing. Each finding comes with the command that settles it. Nothing is changed. <code>--strict</code> exits 1 when anything is found. Recall and the session hook run the same check on what they hand over.</p>
   </section>
-    
+
   <section class="command" id="memoryshow">
     <div>
       <h3>memory show</h3>
@@ -324,7 +285,7 @@
     </div>
     <p>Print one exact memory with scope, project, source, and timestamp, or return structured JSON. The project is a repository key such as <code>github.com/owner/repo</code>, or a folder path for a project with no remote.</p>
   </section>
-    
+
   <section class="command" id="memoryadd">
     <div>
       <h3>memory add</h3>
@@ -332,7 +293,7 @@
     </div>
     <p>Read a non-empty body from stdin. Project scope is the default and resolves from the current folder; use global only for context that belongs everywhere. Credentials and <code>&lt;private&gt;</code> sections are removed before storing, and the command says how many were.</p>
   </section>
-    
+
   <section class="command" id="memoryedit">
     <div>
       <h3>memory edit</h3>
@@ -340,7 +301,7 @@
     </div>
     <p>Read the replacement body from stdin and replace one existing memory. The optional source replaces the source label. The memory keeps its project, and the new body is redacted the same way <code>memory add</code> redacts.</p>
   </section>
-    
+
   <section class="command" id="memorysupersede">
     <div>
       <h3>memory supersede</h3>
@@ -348,7 +309,7 @@
     </div>
     <p>Stop recalling one memory in favour of another. The old one is not deleted: it keeps its id, stays listed and readable, says what replaced it, and comes back with <code>memory restore</code>. Use this instead of leaving a correction to argue with what it corrects.</p>
   </section>
-    
+
   <section class="command" id="memoryrestore">
     <div>
       <h3>memory restore</h3>
@@ -380,7 +341,7 @@
     </div>
     <p>Remove memories created only by that import batch. Preserve manually edited memories and records linked to another origin.</p>
   </section>
-    
+
   <section class="command" id="memorydelete">
     <div>
       <h3>memory delete</h3>
@@ -388,7 +349,7 @@
     </div>
     <p>Delete one memory. The exact <code>--confirm</code> guard is required.</p>
   </section>
-    
+
   <section class="command" id="memorywipe">
     <div>
       <h3>memory wipe</h3>
@@ -530,7 +491,7 @@
 
     <h2 id="mesh">Agent mesh</h2>
     <p>These commands need the mesh switched on with <code>synapse settings mesh on</code>. See the <a href="../mesh/">agent mesh guide</a> for what each part is for.</p>
-    
+
   <section class="command" id="relaystatus">
     <div>
       <h3>relay status</h3>
@@ -538,7 +499,7 @@
     </div>
     <p>Show whether the mesh is on, how many agents are reachable, and how many background workers are running.</p>
   </section>
-    
+
   <section class="command" id="relayagents">
     <div>
       <h3>relay agents</h3>
@@ -546,7 +507,7 @@
     </div>
     <p>List every agent with its role, reachability, last reported work state, and the project it is working in.</p>
   </section>
-    
+
   <section class="command" id="relaychannels">
     <div>
       <h3>relay channels</h3>
@@ -554,7 +515,7 @@
     </div>
     <p>List the channels in use and how many agents subscribe to each.</p>
   </section>
-    
+
   <section class="command" id="relayfeed">
     <div>
       <h3>relay feed</h3>
@@ -562,7 +523,7 @@
     </div>
     <p>Print the messages agents have sent each other. With <code>--follow</code> the command keeps printing new ones until interrupted.</p>
   </section>
-    
+
   <section class="command" id="relaylaunch">
     <div>
       <h3>relay launch</h3>
@@ -570,7 +531,7 @@
     </div>
     <p>Open one agent in this terminal, wired into the mesh with a role. Options: <code>--role</code>, <code>--tool claude|codex|pi</code>, <code>--task</code>, <code>--channel</code> (repeatable), <code>--allow-tool</code> (repeatable), <code>--model</code>, <code>--directory</code>, <code>--lead</code>, <code>--optimize</code>, <code>--strict</code>, <code>--skip-permissions</code>, <code>--command &lt;template&gt;</code>, and <code>--print</code> to show the resolved command without running it.</p>
   </section>
-    
+
   <section class="command" id="relayteamopen">
     <div>
       <h3>relay team open</h3>
@@ -578,7 +539,7 @@
     </div>
     <p>Open a whole roster. The first member runs in this terminal as the lead; the rest run in the background and stop when the lead closes.</p>
   </section>
-    
+
   <section class="command" id="mux">
     <div>
       <h3>mux</h3>
@@ -586,7 +547,7 @@
     </div>
     <p>Join the mesh as yourself and drive a team from one terminal. You get a name on the roster and the same messaging every agent has, so you can address any agent directly instead of relaying through a lead — and an agent that gets stuck can ask <em>you</em>. With <code>--team</code> the whole roster starts in the background with you as the lead. Type <code>@name text</code> for one agent, <code>#channel text</code> for a channel, <code>!text</code> for everyone, or a bare line to whoever is focused. <code>/help</code> lists the commands; <code>/quit</code> leaves and stops the workers it started. The name defaults to your login name.</p>
   </section>
-    
+
   <section class="command" id="relayrole">
     <div>
       <h3>relay role</h3>
@@ -594,7 +555,7 @@
     </div>
     <p>Manage reusable agent roles. Create, edit, and delete write into the project by default, or into your own layer with <code>--user</code>. Editing a built-in copies it down first, and a file that does not parse is never saved.</p>
   </section>
-    
+
   <section class="command" id="relayteam">
     <div>
       <h3>relay team</h3>
@@ -602,7 +563,7 @@
     </div>
     <p>Manage team rosters, resolved and edited exactly like roles.</p>
   </section>
-    
+
   <section class="command" id="relayps">
     <div>
       <h3>relay ps</h3>
@@ -610,7 +571,7 @@
     </div>
     <p>List background workers with their state, process id, and log path.</p>
   </section>
-    
+
   <section class="command" id="relaykill">
     <div>
       <h3>relay kill</h3>
@@ -618,7 +579,7 @@
     </div>
     <p>Stop a background worker. A worker owned by a Synapse session that is still running has to be stopped from there.</p>
   </section>
-    
+
   <section class="command" id="session">
     <div>
       <h3>session</h3>
@@ -626,7 +587,7 @@
     </div>
     <p>Report this session's Synapse connection as Claude Code session-hook output. Synapse installs this for you when you connect Claude Code; run it by hand to see exactly what a session will be told. When the input's <code>source</code> is <code>compact</code>, it prints no notice and hands the session's memory back instead, because the compaction dropped it. Reads the calling tool's JSON on stdin.</p>
   </section>
-    
+
   <section class="command" id="compact">
     <div>
       <h3>compact</h3>
@@ -634,7 +595,7 @@
     </div>
     <p>Answer a tool's pre-compaction hook. Asks the session to write down anything durable it settled before its context is compressed away, and recalls nothing — the window is being reclaimed. Synapse installs this for you when you connect Claude Code. Never blocks or rewrites the compaction. Reads the calling tool's JSON on stdin.</p>
   </section>
-    
+
   <section class="command" id="statusline">
     <div>
       <h3>statusline</h3>
@@ -645,7 +606,7 @@
 
     <h2 id="skills">Skills</h2>
     <p>One Agent Skills library, installed into every connected tool. See the <a href="../skills/">skills guide</a> for the format and the folders involved.</p>
-    
+
   <section class="command" id="skilllist">
     <div>
       <h3>skill list</h3>
@@ -653,7 +614,7 @@
     </div>
     <p>List the library with each skill's file count and description. A skill whose <code>SKILL.md</code> does not parse is reported on stderr and skipped.</p>
   </section>
-    
+
   <section class="command" id="skillshow">
     <div>
       <h3>skill show</h3>
@@ -661,7 +622,7 @@
     </div>
     <p>Print one skill's <code>SKILL.md</code>.</p>
   </section>
-    
+
   <section class="command" id="skillcreate">
     <div>
       <h3>skill create</h3>
@@ -669,7 +630,7 @@
     </div>
     <p>Start a skill from a template. Names follow the standard: lowercase letters, digits, and single inner hyphens.</p>
   </section>
-    
+
   <section class="command" id="skilledit">
     <div>
       <h3>skill edit</h3>
@@ -677,7 +638,7 @@
     </div>
     <p>Open a skill in <code>$VISUAL</code> or <code>$EDITOR</code>. A draft that does not parse is never saved over the working one.</p>
   </section>
-    
+
   <section class="command" id="skilldelete">
     <div>
       <h3>skill delete</h3>
@@ -685,7 +646,7 @@
     </div>
     <p>Remove a skill from the library. Copies already installed in tools are left alone.</p>
   </section>
-    
+
   <section class="command" id="skillinstall">
     <div>
       <h3>skill install</h3>
@@ -693,7 +654,7 @@
     </div>
     <p>Copy the library into your tools. Without a name it installs everything; without <code>--tool</code> it installs into every connected tool. A copy that was edited in place, or a skill Synapse never wrote, is refused unless <code>--replace</code> is given.</p>
   </section>
-    
+
   <section class="command" id="skillremove">
     <div>
       <h3>skill remove</h3>
@@ -701,7 +662,7 @@
     </div>
     <p>Take a skill back out of a tool. Only a copy Synapse installed and nobody has changed is removed; <code>--force</code> overrides that.</p>
   </section>
-    
+
   <section class="command" id="skillstatus">
     <div>
       <h3>skill status</h3>
@@ -709,7 +670,7 @@
     </div>
     <p>Show where each skill stands in each tool, and any skill a tool has that the library does not.</p>
   </section>
-    
+
   <section class="command" id="skilladopt">
     <div>
       <h3>skill adopt</h3>
@@ -718,7 +679,7 @@
     <p>Copy a skill a tool already has into the library and record that tool as having it, so it stops reading as unmanaged.</p>
   </section>
     <p>Every command that takes a bare name resolves this project's shelf before the global one, so a repository's own <code>release</code> shadows the shared one rather than colliding with it. Pass <code>--global</code> or <code>--project [folder]</code> to say which you mean.</p>
-    
+
   <section class="command" id="skillproposed">
     <div>
       <h3>skill proposed</h3>
@@ -726,7 +687,7 @@
     </div>
     <p>List the skills agents have written that nobody has looked at yet, oldest first, with the tool that wrote each one and the line it left saying why. A proposed skill is in the library and in no tool.</p>
   </section>
-    
+
   <section class="command" id="skillapprove">
     <div>
       <h3>skill approve</h3>
@@ -734,7 +695,7 @@
     </div>
     <p>Install a proposed skill where it belongs and stop calling it proposed. A global skill goes into every connected tool's personal skills folder; a project skill goes into that project's.</p>
   </section>
-    
+
   <section class="command" id="skillreject">
     <div>
       <h3>skill reject</h3>
@@ -742,7 +703,7 @@
     </div>
     <p>Turn a proposed skill down. It leaves the library with its history, and nothing else on the machine ever knew about it. Only a skill still waiting for review can be rejected — once one is approved it is an ordinary skill, and <code>skill delete</code> is what removes it.</p>
   </section>
-    
+
   <section class="command" id="skillhistory">
     <div>
       <h3>skill history</h3>
@@ -750,7 +711,7 @@
     </div>
     <p>Show what a skill used to say, newest first, with the line saying what was wrong with each version. The newest twenty are kept.</p>
   </section>
-    
+
   <section class="command" id="mcpadd">
     <div>
       <h3>mcp add</h3>
@@ -758,7 +719,7 @@
     </div>
     <p>Describe an MCP server for the library. Everything after the bare <code>--</code> is its command. Nothing reaches a tool until <code>mcp install</code>.</p>
   </section>
-    
+
   <section class="command" id="mcplist">
     <div>
       <h3>mcp list</h3>
@@ -766,7 +727,7 @@
     </div>
     <p>List the library's servers, the command each runs, and anything one still needs before it can start.</p>
   </section>
-    
+
   <section class="command" id="mcpshow">
     <div>
       <h3>mcp show</h3>
@@ -774,7 +735,7 @@
     </div>
     <p>Print one server's description. Secrets appear as vault references, never values.</p>
   </section>
-    
+
   <section class="command" id="mcpedit">
     <div>
       <h3>mcp edit</h3>
@@ -782,7 +743,7 @@
     </div>
     <p>Edit a server in <code>$EDITOR</code>. A draft that is not a valid server is kept rather than saved. Tools pick the change up the next time they start it.</p>
   </section>
-    
+
   <section class="command" id="mcpdelete">
     <div>
       <h3>mcp delete</h3>
@@ -790,7 +751,7 @@
     </div>
     <p>Take a server out of every tool Synapse gave it to, forget its vault, and remove it from the library. A tool's own entry by that name is left alone.</p>
   </section>
-    
+
   <section class="command" id="mcpsecret">
     <div>
       <h3>mcp secret</h3>
@@ -798,7 +759,7 @@
     </div>
     <p>Store one of a server's secrets in its own vault, read from a prompt or stdin, and point the server at it.</p>
   </section>
-    
+
   <section class="command" id="mcpinstall">
     <div>
       <h3>mcp install</h3>
@@ -806,7 +767,7 @@
     </div>
     <p>Give library servers to connected tools through each tool's own <code>mcp add</code>, as <code>synapse mcp run &lt;name&gt;</code>. A tool's own server by the same name is left alone unless <code>--replace</code> is given; a server that still needs something is skipped.</p>
   </section>
-    
+
   <section class="command" id="mcpuninstall">
     <div>
       <h3>mcp uninstall</h3>
@@ -814,7 +775,7 @@
     </div>
     <p>Take a server back out of the tools Synapse gave it to. It stays in the library.</p>
   </section>
-    
+
   <section class="command" id="mcpstatus">
     <div>
       <h3>mcp status</h3>
@@ -822,7 +783,7 @@
     </div>
     <p>Show where each server stands in each tool — installed, update available, not ours, not installed — and the servers tools have that the library does not.</p>
   </section>
-    
+
   <section class="command" id="mcpadopt">
     <div>
       <h3>mcp adopt</h3>
@@ -830,7 +791,7 @@
     </div>
     <p>Move a tool's own server into the library, every value it carries into the vault. The tool's entry is unchanged until you install over it with <code>--replace</code>.</p>
   </section>
-    
+
   <section class="command" id="mcpsearch">
     <div>
       <h3>mcp search</h3>
@@ -838,7 +799,7 @@
     </div>
     <p>Search every source that holds MCP servers — registries and repositories — with what Synapse can run first. A registry is slow; allow half a minute.</p>
   </section>
-    
+
   <section class="command" id="mcpget">
     <div>
       <h3>mcp get</h3>
@@ -846,7 +807,7 @@
     </div>
     <p>Add a registry entry to the library as the command that runs it — <code>npx</code>, <code>uvx</code>, or <code>docker run</code> — with anything it needs left to fill in.</p>
   </section>
-    
+
   <section class="command" id="mcprun">
     <div>
       <h3>mcp run</h3>
@@ -854,7 +815,7 @@
     </div>
     <p>What a tool starts. Reads the library and the vault, then replaces itself with the server. Writes nothing to stdout of its own.</p>
   </section>
-    
+
   <section class="command" id="skillsearch">
     <div>
       <h3>skill search</h3>
@@ -862,7 +823,7 @@
     </div>
     <p>Search every source that holds skills at once — skills.sh and any repository you added — and print each result as <code>source:id</code> with its installs or description and its page. A source that cannot answer is reported beside the rest.</p>
   </section>
-    
+
   <section class="command" id="skillget">
     <div>
       <h3>skill get</h3>
@@ -870,7 +831,7 @@
     </div>
     <p>Bring a published skill into the library, proposed. It reaches no tool until <code>skill approve</code>. A bare <code>owner/repo/skill</code> means the first skills index. Refused if the library already has a skill by that name.</p>
   </section>
-    
+
   <section class="command" id="sourcelist">
     <div>
       <h3>source list</h3>
@@ -878,7 +839,7 @@
     </div>
     <p>List where skill and MCP searches look: each source's kind, what it holds, where it is, and whether it is built in, yours, or this project's — and whether that project's file is approved.</p>
   </section>
-    
+
   <section class="command" id="sourceadd">
     <div>
       <h3>source add</h3>
@@ -886,7 +847,7 @@
     </div>
     <p>Add a skills index, MCP registry, or GitHub repository. The kind is worked out — a repository needs no request, an address is asked — unless <code>--kind</code> says. A private repository names its token in the vault.</p>
   </section>
-    
+
   <section class="command" id="sourceremove">
     <div>
       <h3>source remove</h3>
@@ -894,7 +855,7 @@
     </div>
     <p>Stop searching a source, built-in or yours. A project's sources are edited in its <code>.synapse/sources.toml</code>.</p>
   </section>
-    
+
   <section class="command" id="sourceallow">
     <div>
       <h3>source allow</h3>
@@ -902,7 +863,7 @@
     </div>
     <p>Approve this project's <code>.synapse/sources.toml</code> as it reads now. Until then its sources are listed and not searched, and editing it takes the approval away.</p>
   </section>
-    
+
   <section class="command" id="sourcerefresh">
     <div>
       <h3>source refresh</h3>
@@ -910,7 +871,7 @@
     </div>
     <p>Read a repository source's catalogue again now rather than within the hour.</p>
   </section>
-    
+
   <section class="command" id="skillrevert">
     <div>
       <h3>skill revert</h3>
@@ -920,7 +881,7 @@
   </section>
 
     <h2 id="data">Data and settings</h2>
-    
+
   <section class="command" id="datacheck">
     <div>
       <h3>data check</h3>
@@ -928,7 +889,7 @@
     </div>
     <p>Open the database, run page and foreign-key integrity checks, apply supported migrations, and report the path, schema version, and <code>ok</code> integrity state.</p>
   </section>
-    
+
   <section class="command" id="dataexport">
     <div>
       <h3>data export</h3>
@@ -936,7 +897,7 @@
     </div>
     <p>Create and validate a consistent SQLite snapshot of <code>brain.db</code> at a destination that does not already exist. Secret values live in a separate store — Keychain, or <code>vault.db</code> beside it — and are never in the snapshot.</p>
   </section>
-    
+
   <section class="command" id="datarestore">
     <div>
       <h3>data restore</h3>
@@ -944,7 +905,7 @@
     </div>
     <p>Validate a current-version snapshot and restore it while the app and MCP servers are closed. Preserves the previous database as a recovery backup and refuses without the exclusive lock.</p>
   </section>
-    
+
   <section class="command" id="settingsshow">
     <div>
       <h3>settings show</h3>
@@ -952,7 +913,7 @@
     </div>
     <p>Print the active recall optimization, result limit, character budget, supported shell modes, and zsh hook example.</p>
   </section>
-    
+
   <section class="command" id="settingsoptimize">
     <div>
       <h3>settings optimize</h3>
@@ -960,7 +921,7 @@
     </div>
     <p>Change the shared MCP recall response budget. Stored memory is not modified.</p>
   </section>
-    
+
   <section class="command" id="settingsmesh">
     <div>
       <h3>settings mesh</h3>
@@ -968,7 +929,7 @@
     </div>
     <p>Turn the agent mesh tools on or off. Connected tools pick the change up the next time they start.</p>
   </section>
-    
+
   <section class="command" id="settingsprice">
     <div>
       <h3>settings price</h3>
@@ -976,7 +937,7 @@
     </div>
     <p>The price per million input tokens that <code>synapse savings</code> and the Stats page use for the dollar figure. Defaults to $2.</p>
   </section>
-    
+
   <section class="command" id="settingsworkers">
     <div>
       <h3>settings workers</h3>
@@ -984,7 +945,7 @@
     </div>
     <p>The most background workers one session may run at once. Every worker is a separate session on the account you already pay for, so this is a spending limit as much as a performance one. Clamped to a built-in ceiling, so a mistyped number cannot buy an unbounded fleet. A supervisor already running picks the change up on its next spawn.</p>
   </section>
-    
+
   <section class="command" id="settingslearn">
     <div>
       <h3>settings learn</h3>
@@ -1030,7 +991,7 @@
       shared guidance, the skill library, and the mesh.
     </p>
     <p>Follow the <a href="../harnesses/">custom harness guide</a> for a descriptor example, setup verification, and contribution instructions.</p>
-    
+
   <section class="command" id="toollist">
     <div>
       <h3>tool list</h3>
@@ -1038,7 +999,7 @@
     </div>
     <p>Every tool this machine can connect to, with the layer each one resolves from.</p>
   </section>
-    
+
   <section class="command" id="toolshow">
     <div>
       <h3>tool show</h3>
@@ -1046,7 +1007,7 @@
     </div>
     <p>Print one descriptor and where it came from.</p>
   </section>
-    
+
   <section class="command" id="toolcreate">
     <div>
       <h3>tool create</h3>
@@ -1054,7 +1015,7 @@
     </div>
     <p>Describe a tool Synapse does not ship. Opens a commented template in your editor and refuses to save a file that would not load. The name becomes the descriptor's file name and what you pass to <code>--tool</code>.</p>
   </section>
-    
+
   <section class="command" id="tooledit">
     <div>
       <h3>tool edit</h3>
@@ -1062,7 +1023,7 @@
     </div>
     <p>Edit a descriptor. Editing one Synapse ships copies it into a layer you own first, so the shipped file stays as it was.</p>
   </section>
-    
+
   <section class="command" id="tooldelete">
     <div>
       <h3>tool delete</h3>
@@ -1071,8 +1032,8 @@
     <p>Remove a descriptor you added. Deleting a copy that overrides a built-in returns you to the shipped one.</p>
   </section>
 
-    <h2 id="install">Installation and paths</h2>
-    
+    <h2 id="installation">Installation and paths</h2>
+
   <section class="command" id="install">
     <div>
       <h3>install</h3>
@@ -1080,7 +1041,7 @@
     </div>
     <p>Install the current executable for this user. A packaged app creates a launcher into the signed bundle; a development binary is copied atomically. Unrelated destination files are never overwritten.</p>
   </section>
-    
+
   <section class="command" id="path">
     <div>
       <h3>path</h3>
@@ -1088,7 +1049,15 @@
     </div>
     <p>Print the resolved data directory, SOUL.md, and CLI destination.</p>
   </section>
-    
+
+  <section class="command" id="tokens">
+    <div>
+      <h3>tokens</h3>
+      <code>synapse tokens [--json]</code>
+    </div>
+    <p>Measure the context cost of Synapse tool definitions, shared guidance, and managed skills before the first turn. Reads local files and the built-in schema without starting a model or modifying configuration. Reports characters and estimated tokens, with JSON available for comparison.</p>
+  </section>
+
   <section class="command" id="savings">
     <div>
       <h3>savings</h3>
@@ -1096,7 +1065,7 @@
     </div>
     <p>Tokens and dollars Synapse kept out of your sessions, compared with keeping the same memory in an instruction file every session loads. Counts what each session could reach, what recall and the session hook actually sent, and what Synapse's own tool definitions and guidance cost. Defaults to the last 30 days. Usage older than 730 days is pruned as new activity is recorded. Figures are characters divided by four, counted once per session, so they understate.</p>
   </section>
-    
+
   <section class="command" id="doctor">
     <div>
       <h3>doctor</h3>
@@ -1104,7 +1073,7 @@
     </div>
     <p>Report everything a bug report needs: version, store state and size, drift found from the current folder, connected tools and what each is set up with, skill and mesh state, shell and CLI integration, resolved paths, and recent crashes. Every check reports rather than fails, so a broken store is described instead of stopping the report. Nothing is sent anywhere.</p>
   </section>
-    
+
   <section class="command" id="connect">
     <div>
       <h3>connect</h3>
@@ -1112,7 +1081,7 @@
     </div>
     <p>Wire a tool into memory and the vault: register the Synapse MCP server through that tool's own CLI, and point its global instruction file at SOUL.md. With no name it connects every tool this machine has. An existing registration that already points at Synapse is left alone. Synapse never edits a tool's configuration itself — it asks the tool to.</p>
   </section>
-    
+
   <section class="command" id="connect--refresh">
     <div>
       <h3>connect --refresh</h3>
@@ -1120,7 +1089,7 @@
     </div>
     <p>Apply this release's descriptor to a tool that is already connected, writing its registration again. Detection cannot tell a descriptor that moved from one that did not, so a tool set up under an older release keeps that release's answer until this is run. Nothing is removed and the tool stays connected throughout. <code>synapse doctor</code> reports <em>update available</em> when it is worth running.</p>
   </section>
-    
+
   <section class="command" id="connect--reset">
     <div>
       <h3>connect --reset</h3>
@@ -1128,7 +1097,7 @@
     </div>
     <p>Disconnect the tool and connect it again. Costs more than <code>--refresh</code>: disconnecting takes back the skills Synapse installed for that tool, and this restores the connection rather than the library. For when what is on disk has to go before the new answer can land.</p>
   </section>
-    
+
   <section class="command" id="disconnect">
     <div>
       <h3>disconnect</h3>
@@ -1136,7 +1105,7 @@
     </div>
     <p>Undo one tool's connection, or every tool's when no name is given: the MCP registration or installed package, the managed block in its instruction file, the Claude Code hooks and status line, and any skill Synapse installed for it. A skill you wrote, or a status line somebody else configured, is left alone.</p>
   </section>
-    
+
   <section class="command" id="uninstall">
     <div>
       <h3>uninstall</h3>
@@ -1144,7 +1113,7 @@
     </div>
     <p>Remove everything Synapse installed: every tool connection, the shell hook, and the command line tool. Without <code>--confirm</code> it prints what it would remove and stops. Your memory is left alone unless you also pass <code>--data</code>, which cannot be undone.</p>
   </section>
-    
+
   <section class="command" id="version">
     <div>
       <h3>version</h3>
@@ -1152,7 +1121,7 @@
     </div>
     <p>Print the application version. <code>--version</code> and <code>-V</code> are aliases.</p>
   </section>
-    
+
   <section class="command" id="help">
     <div>
       <h3>help</h3>
@@ -1160,26 +1129,14 @@
     </div>
     <p>Print the command summary, or one command’s entries. <code>--help</code> and <code>-h</code> do the same thing wherever they appear before a <code>--</code>.</p>
   </section>
-  
+  <footer class="articlefoot"><div class="articlemeta"><a href="https://github.com/wess/synapse/blob/main/website/docs/cli.ts">View page source</a><span>Synapse 1.14.2</span></div><nav class="pagenav" aria-label="Guide pages"><a href="../../docs/troubleshoot/"><small>Previous</small><strong>Troubleshooting</strong></a><a href="../../docs/developing/"><small>Next</small><strong>Developing Synapse</strong></a></nav></footer>
     </main>
-    <aside class="ontoc" aria-label="On this page">
-        <span>On this page</span>
-        <ol><li><a href="#invocation">Invocation</a></li><li><a href="#application">Application and server</a></li><li><a href="#shell">Shell environments</a></li><li><a href="#vault">Vault and scope</a></li><li><a href="#memory">Memory</a></li><li><a href="#learning">Learning</a></li><li><a href="#mesh">Agent mesh</a></li><li><a href="#skills">Skills</a></li><li><a href="#data">Data and settings</a></li><li><a href="#install">Installation and paths</a></li></ol>
-      </aside>
+  <aside class="ontoc" aria-label="On this page"><span>Contents</span><ol><li><a href="#invocation">Invocation</a></li><li><a href="#application">Application and server</a></li><li><a href="#shell">Shell environments</a></li><li><a href="#vault">Vault and scope</a></li><li><a href="#memory">Memory</a></li><li><a href="#learning">Learning</a></li><li><a href="#mesh">Agent mesh</a></li><li><a href="#skills">Skills</a></li><li><a href="#data">Data and settings</a></li><li><a href="#installation">Installation and paths</a></li></ol></aside>
   </div>
-  
   <footer class="footer">
-    <div>
-      <a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">Synapse</a>
-      <p>Shared memory and skills for coding agents, kept on your machine.</p>
-    </div>
-    <nav aria-label="Footer">
-      <a href="../../docs/">Documentation</a>
-      <a href="../../tutorials/">Tutorials</a>
-      <a href="https://github.com/wess/synapse">Source</a>
-      <a href="https://github.com/wess/synapse/releases">Releases</a>
-    </nav>
-    <p class="footerfine">No account required. macOS desktop · Linux terminal, CLI &amp; MCP.</p>
-  </footer>
+    <div class="footerupper"><div><a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">synapse</a><p>A shared memory. A little less starting over.</p></div>
+      <nav aria-label="Footer"><a href="../../docs/">Manual</a><a href="../../tutorials/">Tutorials</a><a href="https://github.com/wess/synapse">Source</a><a href="https://github.com/wess/synapse/releases">Releases</a><a href="https://wess.io">By Wess</a></nav></div>
+    <p class="footerfine"><span>macOS &amp; Windows desktop · Linux CLI &amp; MCP</span><span>v1.14.2 · MIT · No account required</span></p>
+  </footer></div>
 </body>
 </html>

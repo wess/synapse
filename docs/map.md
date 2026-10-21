@@ -8,6 +8,9 @@ It is built by `synapsecore::brain::map`, which reads and lays out; both
 dashboards draw the result. No model, no network service, no second index, and
 no state of its own.
 
+The display reads at most the newest 160 memories and reports that limit when
+the store is larger. It is an inspection view, not a complete relevance ranking.
+
 ## What is on it
 
 **Nodes.** One per memory, plus one hub per project and one for global memory.

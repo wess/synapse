@@ -1,5 +1,9 @@
 # What launching costs
 
+> Measurement snapshot, not a release benchmark or latency guarantee. The figures
+> below describe the measured setup at the time of that investigation. Re-run the
+> fixtures on the release and machine being compared before quoting new results.
+
 Numbers from an Apple silicon Mac, release build, a store of 220 memories, with
 Claude Code, Codex and Ainz installed and connected. They are here so that a
 change can be compared against something rather than described.

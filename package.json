@@ -5,5 +5,8 @@
     "site": "bun run website/build.ts",
     "sitecheck": "bun run website/check.ts",
     "serve": "bun run website/serve.ts"
+  },
+  "engines": {
+    "bun": ">=1.4.3"
   }
 }

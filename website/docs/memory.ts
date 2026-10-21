@@ -11,6 +11,8 @@ export const memory: Page = {
     { label: "Global and project scope", id: "scope" },
     { label: "Import existing memory", id: "import" },
     { label: "Search and recall", id: "recall" },
+    { label: "Exact reading", id: "reading" },
+    { label: "Drift and relevance", id: "drift" },
     { label: "Inspect and correct", id: "control" },
     { label: "See the whole store", id: "map" },
     { label: "Correcting a memory", id: "supersede" },
@@ -99,6 +101,17 @@ Matches:    1
 
 0.0328	31	global	vault	Credentials live in the vault, never in the repository.`)}
     <p>The score is the fused rank, and higher is better. A memory ranked first by both indexes scores about 0.033; one ranked first by only one of them scores about half that.</p>
+
+    <h2 id="reading">Read exact evidence</h2>
+    <p>Recall discovers relevant records within a response budget. When a hit is <code>abridged</code>, call <a href="../mcp/#readmemory"><code>readmemory</code></a> with its id and the same project. Start at offset zero, then pass each returned <code>next</code> offset until it is null. Offsets and totals count UTF-8 bytes. Lean pages hold at most 2,800 body bytes; Balanced and Full hold at most 6,000. Source labels have a separate 240-byte allowance.</p>
+    <p>Missing, superseded, and out-of-scope ids return a null memory. Pages read the current text, so restart from zero if it changes while reading. An exact read is evidence from one record, not a larger recall or a way around project scope.</p>
+
+    <h2 id="drift">Drift and relevance</h2>
+    <p>Recall compares candidates by how many query terms they cover and removes weak matches below half the best candidate's coverage. The best match survives. Owner-facing <code>memory list</code> and <code>--explain</code> remain available to inspect all matches.</p>
+    <p>Drift checks flag missing project paths, conflicting claims, and duplicates. A warning does not delete or supersede anything. Recall includes findings in <code>drift</code>; session-start context leaves stale records and older conflicting or duplicate records out and reports that decision. Review the evidence before correcting or resolving it.</p>
+    ${code("shell", `synapse memory drift . --json
+synapse memory list "project tooling" --explain`)}
+    <p><a href="../retrieval/">Retrieval checks</a> documents the fixtures, exact-read edge cases, and measurement limits.</p>
 
     <h2 id="control">Inspect and correct</h2>
     <p>The desktop <strong>Memories</strong> screen searches the same store and lets you inspect, edit, or delete individual entries. CLI edits replace the body and optionally the source:</p>

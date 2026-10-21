@@ -5,89 +5,50 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Export and restore safely — Synapse</title>
   <meta name="description" content="Create a validated snapshot, make one reversible change, stop every database user, restore, and prove the previous state came back — including what a snapshot deliberately does not carry.">
-  <meta name="theme-color" content="#0a43c8">
+  <meta name="theme-color" content="#352879">
   <meta property="og:title" content="Export and restore safely — Synapse">
   <meta property="og:description" content="Create a validated snapshot, make one reversible change, stop every database user, restore, and prove the previous state came back — including what a snapshot deliberately does not carry.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://wess.io/synapse/tutorials/recovery/">
   <link rel="canonical" href="https://wess.io/synapse/tutorials/recovery/">
   <link rel="icon" href="../../icon.svg" type="image/svg+xml">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Fragment+Mono&family=Manrope:wght@400;500;600;700&display=swap">
+  <link rel="preload" href="../../pixel.ttf" as="font" type="font/ttf" crossorigin>
   <link rel="stylesheet" href="../../style.css">
   <script type="module" src="../../site.js"></script>
 </head>
 <body class="tutorial" data-root="../../">
-  
+  <div class="shell">
   <a class="skip" href="#content">Skip to content</a>
+  <div class="windowbar"><a href="../../">synapse / tutorials</a><span>v1.14.2 · on your machine</span></div>
   <header class="topbar">
-    <a class="wordmark" href="../../" aria-label="Synapse home">
-      <img src="../../icon.svg" width="30" height="30" alt="">
-      <span>Synapse</span>
-    </a>
+    <a class="wordmark" href="../../" aria-label="Synapse home"><img src="../../icon.svg" width="28" height="28" alt=""><span>synapse</span></a>
     <button class="navtoggle" type="button" aria-expanded="false" aria-controls="topnav">Menu</button>
     <nav id="topnav" aria-label="Primary">
       <a href="../../docs/">Docs</a>
       <a href="../../tutorials/" aria-current="page">Tutorials</a>
-      <a href="https://github.com/wess/synapse">GitHub <span aria-hidden="true">↗</span></a>
-      <a class="navdownload" href="https://github.com/wess/synapse/releases/latest/download/synapse.zip">Download</a>
+      <a href="https://github.com/wess/synapse">Source</a>
+      <a class="navdownload" href="../../docs/install/">Install</a>
     </nav>
   </header>
-  
   <div class="doclayout">
-    
   <aside class="docsrail" aria-label="Documentation navigation">
     <div class="searchbox">
-      <label for="search">Search the guide</label>
-      <input id="search" type="search" placeholder="Memory, vaults, restore…" autocomplete="off">
-      <div class="searchresults" data-results hidden></div>
+      <label for="docssearch">Search docs &amp; tutorials</label>
+      <input id="docssearch" type="search" placeholder="Memory, vaults, restore…" autocomplete="off" aria-controls="searchresults">
+      <div id="searchresults" class="searchresults" data-results hidden></div>
       <span class="searchstatus" data-searchstatus role="status" aria-live="polite"></span>
     </div>
     <details class="railnav" open>
       <summary>Browse all guides</summary>
       <nav aria-label="All guides">
-        <h2>Documentation</h2>
-        <ul>
-        <li><a href="../../docs/">Start here</a></li>
-        <li><a href="../../docs/install/">Install and connect</a></li>
-        <li><a href="../../docs/harnesses/">Supported and custom harnesses</a></li>
-        <li><a href="../../docs/app/">Desktop app reference</a></li>
-        <li><a href="../../docs/memory/">Memory and recall</a></li>
-        <li><a href="../../docs/mcp/">MCP tool reference</a></li>
-        <li><a href="../../docs/mesh/">Agent mesh</a></li>
-        <li><a href="../../docs/skills/">Skills</a></li>
-        <li><a href="../../docs/servers/">MCP servers</a></li>
-        <li><a href="../../docs/sources/">Sources</a></li>
-        <li><a href="../../docs/vault/">Vaults and scopes</a></li>
-        <li><a href="../../docs/data/">Data lifecycle</a></li>
-        <li><a href="../../docs/config/">Configuration and paths</a></li>
-        <li><a href="../../docs/security/">Security model</a></li>
-        <li><a href="../../docs/cli/">CLI reference</a></li>
-        <li><a href="../../docs/troubleshoot/">Troubleshooting</a></li></ul>
-        <h2>Tutorials</h2>
-        <ul>
-        <li><a href="../../tutorials/">Tutorials</a></li>
-        <li><a href="../../tutorials/connect/">Install and connect your first tools</a></li>
-        <li><a href="../../tutorials/continuity/">Carry one decision between tools</a></li>
-        <li><a href="../../tutorials/curate/">Curate and optimize memory</a></li>
-        <li><a href="../../tutorials/secrets/">Use a scoped secret in either shell mode</a></li>
-        <li><a href="../../tutorials/skills/">Keep one skill library across every tool</a></li>
-        <li><a href="../../tutorials/learn/">Let your agents write skills</a></li>
-        <li><a href="../../tutorials/launch/">Start a tool with everything in place</a></li>
-        <li><a href="../../tutorials/mesh/">Run a team of agents and drive it yourself</a></li>
-        <li><a href="../../tutorials/overseer/">Hand a job to one agent and watch it grow a team</a></li>
-        <li><a href="../../tutorials/recovery/" aria-current="page">Export and restore safely</a></li>
-        <li><a href="../../tutorials/lifecycle/">Check, migrate, and remove Synapse</a></li></ul>
+        <h2>Start here</h2><ul><li><a href="../../docs/">Start here</a></li><li><a href="../../docs/install/">Install and connect</a></li><li><a href="../../docs/harnesses/">Supported and custom harnesses</a></li><li><a href="../../docs/app/">Desktop app reference</a></li></ul><h2>Reference</h2><ul><li><a href="../../docs/memory/">Memory and recall</a></li><li><a href="../../docs/mcp/">MCP tool reference</a></li><li><a href="../../docs/mesh/">Agent mesh</a></li><li><a href="../../docs/skills/">Skills</a></li><li><a href="../../docs/servers/">MCP servers</a></li><li><a href="../../docs/sources/">Sources</a></li></ul><h2>Your machine</h2><ul><li><a href="../../docs/vault/">Vaults and scopes</a></li><li><a href="../../docs/data/">Data lifecycle</a></li><li><a href="../../docs/config/">Configuration and paths</a></li><li><a href="../../docs/security/">Security model</a></li><li><a href="../../docs/sync/">Encrypted sync</a></li><li><a href="../../docs/troubleshoot/">Troubleshooting</a></li></ul><h2>Build with it</h2><ul><li><a href="../../docs/cli/">CLI reference</a></li><li><a href="../../docs/developing/">Developing Synapse</a></li><li><a href="../../docs/synapsecore/">The core library</a></li><li><a href="../../docs/embedding/">Embedding Synapse</a></li><li><a href="../../docs/retrieval/">Retrieval checks</a></li><li><a href="../../docs/map/">The memory map</a></li><li><a href="../../docs/startup/">What launching costs</a></li><li><a href="../../docs/windows/">Windows</a></li><li><a href="../../docs/federation/">Federation proposal</a></li></ul>
+        <h2>Tutorials</h2><ul><li><a href="../../tutorials/">Tutorials</a></li><li><a href="../../tutorials/connect/">Install and connect your first tools</a></li><li><a href="../../tutorials/continuity/">Carry one decision between tools</a></li><li><a href="../../tutorials/curate/">Curate and optimize memory</a></li><li><a href="../../tutorials/secrets/">Use a scoped secret in either shell mode</a></li><li><a href="../../tutorials/skills/">Keep one skill library across every tool</a></li><li><a href="../../tutorials/learn/">Let your agents write skills</a></li><li><a href="../../tutorials/launch/">Start a tool with everything in place</a></li><li><a href="../../tutorials/mesh/">Run a team of agents and drive it yourself</a></li><li><a href="../../tutorials/overseer/">Hand a job to one agent and watch it grow a team</a></li><li><a href="../../tutorials/recovery/" aria-current="page">Export and restore safely</a></li><li><a href="../../tutorials/lifecycle/">Check, migrate, and remove Synapse</a></li></ul>
       </nav>
     </details>
   </aside>
     <main class="article" id="content">
-      <header class="articlehead">
-        <h1>Export and restore safely</h1>
-        <span>Create a validated snapshot, make one reversible change, stop every database user, restore, and prove the previous state came back — including what a snapshot deliberately does not carry.</span>
-      </header>
-      
+      <header class="articlehead"><nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../">Synapse</a><span aria-hidden="true">/</span><a href="../../tutorials/">Tutorials</a></nav><h1>Export and restore safely</h1><p>Create a validated snapshot, make one reversible change, stop every database user, restore, and prove the previous state came back — including what a snapshot deliberately does not carry.</p></header>
+
     <h2 id="outcome">Outcome and prerequisites</h2>
     <p>You will take a consistent snapshot of the whole store, make a change you can see, restore over it, and prove the change is gone. Then you will understand exactly what a snapshot contains, what it deliberately leaves out, and how that affects moving to another machine.</p>
     <ul>
@@ -95,7 +56,7 @@
       <li>A destination path that does not already exist.</li>
       <li>A terminal you can keep open, to record one memory ID.</li>
     </ul>
-    
+
   <aside class="note">
     <strong>This really does replace the active database</strong>
     <p>The tutorial is designed to be reversible and Synapse writes a pre-restore snapshot of its own before it does anything. But restore is a genuine database replacement. Read each step before running it, and do not substitute a production backup you have not separately preserved.</p>
@@ -104,7 +65,7 @@
     <ol class="steps">
       <li>
         <h3 id="check">Check the store before you trust a copy of it</h3>
-        
+
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
@@ -113,7 +74,7 @@
     <pre><code>synapse path
 synapse data check</code></pre>
   </div>
-        
+
   <div class="codeblock">
     <div class="codebar">
       <span>text</span>
@@ -129,7 +90,7 @@ Integrity: ok</code></pre>
 
       <li>
         <h3 id="export">Create a fresh export</h3>
-        
+
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
@@ -139,7 +100,7 @@ Integrity: ok</code></pre>
 test ! -e &quot;$backup&quot;
 synapse data export &quot;$backup&quot;</code></pre>
   </div>
-        
+
   <div class="codeblock">
     <div class="codebar">
       <span>text</span>
@@ -153,7 +114,7 @@ synapse data export &quot;$backup&quot;</code></pre>
 
       <li>
         <h3 id="change">Add one marker after the export</h3>
-        
+
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
@@ -163,7 +124,7 @@ synapse data export &quot;$backup&quot;</code></pre>
   | synapse memory add synapserecovery
 synapse memory list synapserecovery</code></pre>
   </div>
-        
+
   <div class="codeblock">
     <div class="codebar">
       <span>text</span>
@@ -178,7 +139,7 @@ synapse memory list synapserecovery</code></pre>
         <h3 id="stop">Stop every database user</h3>
         <p>Quit the Synapse desktop app. Close every connected session so its <code>synapse mcp</code> child process exits. A plain CLI command releases its lock when it finishes, so nothing needs doing about those.</p>
         <p>Reading the database takes a shared lock; restoring requires an exclusive one. If you deliberately leave a session open, the next step will refuse and tell you to close the app and connected tools.</p>
-        
+
   <aside class="note">
     <strong>Do not work around the lock</strong>
     <p>The refusal is not a formality. Replacing a database file underneath a process that has it open is how a store gets corrupted in a way no integrity check can undo. If restore refuses, find the process that is still holding it.</p>
@@ -187,7 +148,7 @@ synapse memory list synapserecovery</code></pre>
 
       <li>
         <h3 id="restore">Restore</h3>
-        
+
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
@@ -195,7 +156,7 @@ synapse memory list synapserecovery</code></pre>
     </div>
     <pre><code>synapse data restore &quot;$backup&quot;</code></pre>
   </div>
-        
+
   <div class="codeblock">
     <div class="codebar">
       <span>text</span>
@@ -210,7 +171,7 @@ Previous database: /Users/example/Library/Application Support/synapse/backups/br
 
       <li>
         <h3 id="verify">Verify the earlier state actually returned</h3>
-        
+
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
@@ -220,7 +181,7 @@ Previous database: /Users/example/Library/Application Support/synapse/backups/br
 synapse memory list synapserecovery</code></pre>
   </div>
         <p>Integrity should read <code>ok</code>, and the marker must be absent — an empty result is the success condition. Confirm something you expect to still be there as well, so you are testing that the right state returned rather than that the database is merely empty:</p>
-        
+
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
@@ -244,7 +205,7 @@ synapse memory list synapserecovery</code></pre>
         <tr><td>Tool configuration</td><td>Belongs to the tools themselves. Reconnect on the new machine rather than copying their files.</td></tr>
       </tbody>
     </table>
-    
+
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
@@ -256,7 +217,7 @@ cp -R ~/Library/Application\ Support/synapse ~/Desktop/synapse-full-copy</code><
 
     <h2 id="automatic">Backups you did not ask for</h2>
     <p>Synapse writes snapshots on its own at two moments: before any schema migration, and before any restore. Both land in the same place:</p>
-    
+
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
@@ -272,7 +233,7 @@ cp -R ~/Library/Application\ Support/synapse ~/Desktop/synapse-full-copy</code><
       <li><h3>On the new machine</h3><p>Install Synapse, install the CLI, then restore the export <em>before</em> connecting any tools. Put <code>SOUL.md</code> and <code>skills/</code> back in the data folder.</p></li>
       <li><h3>Then</h3><p>Recreate each secret with <code>synapse secret set</code>, re-approve each project scope with <code>synapse allow</code> — approval is per machine, because it is a statement about a file you have read — connect your tools, and run <code>synapse skill install</code>.</p></li>
     </ol>
-    
+
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
@@ -284,26 +245,14 @@ cp -R ~/Library/Application\ Support/synapse ~/Desktop/synapse-full-copy</code><
 
     <h2>Next step</h2>
     <p>Finish the maintainer level with <a href="../lifecycle/">Check, migrate, and remove Synapse</a>, which covers the health report in full and both removal paths.</p>
-  
+  <footer class="articlefoot"><div class="articlemeta"><a href="https://github.com/wess/synapse/blob/main/website/tutorials/recovery.ts">View page source</a><span>Synapse 1.14.2</span></div><nav class="pagenav" aria-label="Guide pages"><a href="../../tutorials/overseer/"><small>Previous</small><strong>Hand a job to one agent and watch it grow a team</strong></a><a href="../../tutorials/lifecycle/"><small>Next</small><strong>Check, migrate, and remove Synapse</strong></a></nav></footer>
     </main>
-    <aside class="ontoc" aria-label="On this page">
-        <span>On this page</span>
-        <ol><li><a href="#outcome">Outcome</a></li><li><a href="#check">Check first</a></li><li><a href="#export">Export</a></li><li><a href="#change">Make a change</a></li><li><a href="#stop">Stop every user</a></li><li><a href="#restore">Restore</a></li><li><a href="#verify">Verify</a></li><li><a href="#notmoved">What did not move</a></li><li><a href="#automatic">Automatic backups</a></li><li><a href="#newmac">Moving to a new Mac</a></li></ol>
-      </aside>
+  <aside class="ontoc" aria-label="On this page"><span>Contents</span><ol><li><a href="#outcome">Outcome</a></li><li><a href="#check">Check first</a></li><li><a href="#export">Export</a></li><li><a href="#change">Make a change</a></li><li><a href="#stop">Stop every user</a></li><li><a href="#restore">Restore</a></li><li><a href="#verify">Verify</a></li><li><a href="#notmoved">What did not move</a></li><li><a href="#automatic">Automatic backups</a></li><li><a href="#newmac">Moving to a new Mac</a></li></ol></aside>
   </div>
-  
   <footer class="footer">
-    <div>
-      <a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">Synapse</a>
-      <p>Shared memory and skills for coding agents, kept on your machine.</p>
-    </div>
-    <nav aria-label="Footer">
-      <a href="../../docs/">Documentation</a>
-      <a href="../../tutorials/">Tutorials</a>
-      <a href="https://github.com/wess/synapse">Source</a>
-      <a href="https://github.com/wess/synapse/releases">Releases</a>
-    </nav>
-    <p class="footerfine">No account required. macOS desktop · Linux terminal, CLI &amp; MCP.</p>
-  </footer>
+    <div class="footerupper"><div><a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">synapse</a><p>A shared memory. A little less starting over.</p></div>
+      <nav aria-label="Footer"><a href="../../docs/">Manual</a><a href="../../tutorials/">Tutorials</a><a href="https://github.com/wess/synapse">Source</a><a href="https://github.com/wess/synapse/releases">Releases</a><a href="https://wess.io">By Wess</a></nav></div>
+    <p class="footerfine"><span>macOS &amp; Windows desktop · Linux CLI &amp; MCP</span><span>v1.14.2 · MIT · No account required</span></p>
+  </footer></div>
 </body>
 </html>

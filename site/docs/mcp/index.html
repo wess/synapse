@@ -5,92 +5,53 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>MCP tool reference — Synapse</title>
   <meta name="description" content="Run the local stdio server and understand the exact request, response, and value boundary of every exposed tool.">
-  <meta name="theme-color" content="#0a43c8">
+  <meta name="theme-color" content="#352879">
   <meta property="og:title" content="MCP tool reference — Synapse">
   <meta property="og:description" content="Run the local stdio server and understand the exact request, response, and value boundary of every exposed tool.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://wess.io/synapse/docs/mcp/">
   <link rel="canonical" href="https://wess.io/synapse/docs/mcp/">
   <link rel="icon" href="../../icon.svg" type="image/svg+xml">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Fragment+Mono&family=Manrope:wght@400;500;600;700&display=swap">
+  <link rel="preload" href="../../pixel.ttf" as="font" type="font/ttf" crossorigin>
   <link rel="stylesheet" href="../../style.css">
   <script type="module" src="../../site.js"></script>
 </head>
 <body class="docs" data-root="../../">
-  
+  <div class="shell">
   <a class="skip" href="#content">Skip to content</a>
+  <div class="windowbar"><a href="../../">synapse / manual</a><span>v1.14.2 · on your machine</span></div>
   <header class="topbar">
-    <a class="wordmark" href="../../" aria-label="Synapse home">
-      <img src="../../icon.svg" width="30" height="30" alt="">
-      <span>Synapse</span>
-    </a>
+    <a class="wordmark" href="../../" aria-label="Synapse home"><img src="../../icon.svg" width="28" height="28" alt=""><span>synapse</span></a>
     <button class="navtoggle" type="button" aria-expanded="false" aria-controls="topnav">Menu</button>
     <nav id="topnav" aria-label="Primary">
       <a href="../../docs/" aria-current="page">Docs</a>
       <a href="../../tutorials/">Tutorials</a>
-      <a href="https://github.com/wess/synapse">GitHub <span aria-hidden="true">↗</span></a>
-      <a class="navdownload" href="https://github.com/wess/synapse/releases/latest/download/synapse.zip">Download</a>
+      <a href="https://github.com/wess/synapse">Source</a>
+      <a class="navdownload" href="../../docs/install/">Install</a>
     </nav>
   </header>
-  
   <div class="doclayout">
-    
   <aside class="docsrail" aria-label="Documentation navigation">
     <div class="searchbox">
-      <label for="search">Search the guide</label>
-      <input id="search" type="search" placeholder="Memory, vaults, restore…" autocomplete="off">
-      <div class="searchresults" data-results hidden></div>
+      <label for="docssearch">Search docs &amp; tutorials</label>
+      <input id="docssearch" type="search" placeholder="Memory, vaults, restore…" autocomplete="off" aria-controls="searchresults">
+      <div id="searchresults" class="searchresults" data-results hidden></div>
       <span class="searchstatus" data-searchstatus role="status" aria-live="polite"></span>
     </div>
     <details class="railnav" open>
       <summary>Browse all guides</summary>
       <nav aria-label="All guides">
-        <h2>Documentation</h2>
-        <ul>
-        <li><a href="../../docs/">Start here</a></li>
-        <li><a href="../../docs/install/">Install and connect</a></li>
-        <li><a href="../../docs/harnesses/">Supported and custom harnesses</a></li>
-        <li><a href="../../docs/app/">Desktop app reference</a></li>
-        <li><a href="../../docs/memory/">Memory and recall</a></li>
-        <li><a href="../../docs/mcp/" aria-current="page">MCP tool reference</a></li>
-        <li><a href="../../docs/mesh/">Agent mesh</a></li>
-        <li><a href="../../docs/skills/">Skills</a></li>
-        <li><a href="../../docs/servers/">MCP servers</a></li>
-        <li><a href="../../docs/sources/">Sources</a></li>
-        <li><a href="../../docs/vault/">Vaults and scopes</a></li>
-        <li><a href="../../docs/data/">Data lifecycle</a></li>
-        <li><a href="../../docs/config/">Configuration and paths</a></li>
-        <li><a href="../../docs/security/">Security model</a></li>
-        <li><a href="../../docs/cli/">CLI reference</a></li>
-        <li><a href="../../docs/troubleshoot/">Troubleshooting</a></li></ul>
-        <h2>Tutorials</h2>
-        <ul>
-        <li><a href="../../tutorials/">Tutorials</a></li>
-        <li><a href="../../tutorials/connect/">Install and connect your first tools</a></li>
-        <li><a href="../../tutorials/continuity/">Carry one decision between tools</a></li>
-        <li><a href="../../tutorials/curate/">Curate and optimize memory</a></li>
-        <li><a href="../../tutorials/secrets/">Use a scoped secret in either shell mode</a></li>
-        <li><a href="../../tutorials/skills/">Keep one skill library across every tool</a></li>
-        <li><a href="../../tutorials/learn/">Let your agents write skills</a></li>
-        <li><a href="../../tutorials/launch/">Start a tool with everything in place</a></li>
-        <li><a href="../../tutorials/mesh/">Run a team of agents and drive it yourself</a></li>
-        <li><a href="../../tutorials/overseer/">Hand a job to one agent and watch it grow a team</a></li>
-        <li><a href="../../tutorials/recovery/">Export and restore safely</a></li>
-        <li><a href="../../tutorials/lifecycle/">Check, migrate, and remove Synapse</a></li></ul>
+        <h2>Start here</h2><ul><li><a href="../../docs/">Start here</a></li><li><a href="../../docs/install/">Install and connect</a></li><li><a href="../../docs/harnesses/">Supported and custom harnesses</a></li><li><a href="../../docs/app/">Desktop app reference</a></li></ul><h2>Reference</h2><ul><li><a href="../../docs/memory/">Memory and recall</a></li><li><a href="../../docs/mcp/" aria-current="page">MCP tool reference</a></li><li><a href="../../docs/mesh/">Agent mesh</a></li><li><a href="../../docs/skills/">Skills</a></li><li><a href="../../docs/servers/">MCP servers</a></li><li><a href="../../docs/sources/">Sources</a></li></ul><h2>Your machine</h2><ul><li><a href="../../docs/vault/">Vaults and scopes</a></li><li><a href="../../docs/data/">Data lifecycle</a></li><li><a href="../../docs/config/">Configuration and paths</a></li><li><a href="../../docs/security/">Security model</a></li><li><a href="../../docs/sync/">Encrypted sync</a></li><li><a href="../../docs/troubleshoot/">Troubleshooting</a></li></ul><h2>Build with it</h2><ul><li><a href="../../docs/cli/">CLI reference</a></li><li><a href="../../docs/developing/">Developing Synapse</a></li><li><a href="../../docs/synapsecore/">The core library</a></li><li><a href="../../docs/embedding/">Embedding Synapse</a></li><li><a href="../../docs/retrieval/">Retrieval checks</a></li><li><a href="../../docs/map/">The memory map</a></li><li><a href="../../docs/startup/">What launching costs</a></li><li><a href="../../docs/windows/">Windows</a></li><li><a href="../../docs/federation/">Federation proposal</a></li></ul>
+        <h2>Tutorials</h2><ul><li><a href="../../tutorials/">Tutorials</a></li><li><a href="../../tutorials/connect/">Install and connect your first tools</a></li><li><a href="../../tutorials/continuity/">Carry one decision between tools</a></li><li><a href="../../tutorials/curate/">Curate and optimize memory</a></li><li><a href="../../tutorials/secrets/">Use a scoped secret in either shell mode</a></li><li><a href="../../tutorials/skills/">Keep one skill library across every tool</a></li><li><a href="../../tutorials/learn/">Let your agents write skills</a></li><li><a href="../../tutorials/launch/">Start a tool with everything in place</a></li><li><a href="../../tutorials/mesh/">Run a team of agents and drive it yourself</a></li><li><a href="../../tutorials/overseer/">Hand a job to one agent and watch it grow a team</a></li><li><a href="../../tutorials/recovery/">Export and restore safely</a></li><li><a href="../../tutorials/lifecycle/">Check, migrate, and remove Synapse</a></li></ul>
       </nav>
     </details>
   </aside>
     <main class="article" id="content">
-      <header class="articlehead">
-        <h1>MCP tool reference</h1>
-        <span>Run the local stdio server and understand the exact request, response, and value boundary of every exposed tool.</span>
-      </header>
-      
+      <header class="articlehead"><nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../">Synapse</a><span aria-hidden="true">/</span><a href="../../docs/">Manual</a></nav><h1>MCP tool reference</h1><p>Run the local stdio server and understand the exact request, response, and value boundary of every exposed tool.</p></header>
+
     <h2 id="server">Server</h2>
     <p>Synapse implements an MCP stdio server. A tool launches the same signed or installed executable with the <code>mcp</code> argument:</p>
-    
+
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
@@ -102,7 +63,7 @@
 
     <h2 id="sessionstart">Session start</h2>
     <p>Connecting Claude Code also installs a <code>SessionStart</code> hook that runs <code>synapse session</code>. It does two things a tool cannot do for itself: it prints a line in the terminal before the model has written anything, and it puts this project's memory into the session's context before the first turn. A connected pi runs the same command from its extension and shows the same two halves.</p>
-    
+
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
@@ -110,7 +71,7 @@
     </div>
     <pre><code>synapse session --json</code></pre>
   </div>
-    
+
   <div class="codeblock">
     <div class="codebar">
       <span>json</span>
@@ -137,12 +98,12 @@
         <tr><td>After compaction</td><td>The hook runs again with <code>source</code> set to <code>compact</code>. It prints no notice and hands the memory back, since the compaction dropped it. See <a href="#compaction">Before compaction</a>.</td></tr>
       </tbody>
     </table>
-    
+
   <aside class="note">
     <strong>Codex has no equivalent hook</strong>
     <p>Codex does not expose a session-start hook, so a Codex session still opens by calling recall itself as the shared guidance in SOUL.md asks. Everything else — the tools, the scope rule, the response budget — is identical.</p>
   </aside>
-    
+
   <aside class="note">
     <strong>pi reaches the server through a package</strong>
     <p>pi has no MCP client, so its connection is the synapse-pi package. The extension in it starts the same server, registers whatever tools that server advertises, runs the same session-start recall, and shows the same status line. Turn the mesh on and its sixteen tools appear in pi too, on the next start.</p>
@@ -150,7 +111,7 @@
 
     <h2 id="compaction">Before compaction</h2>
     <p>The other end of the same session. When a long session is about to be compacted, everything it worked out that nobody wrote down is about to stop existing — and it is the only moment where not having written something down costs immediately. Connecting Claude Code installs a <code>PreCompact</code> hook that runs <code>synapse compact</code>; a connected pi runs the same command from <code>session_before_compact</code>.</p>
-    
+
   <div class="codeblock">
     <div class="codebar">
       <span>shell</span>
@@ -158,7 +119,7 @@
     </div>
     <pre><code>synapse compact</code></pre>
   </div>
-    
+
   <div class="codeblock">
     <div class="codebar">
       <span>json</span>
@@ -177,7 +138,7 @@
 
     <h2 id="remember">remember</h2>
     <p>Stores a durable fact, decision, preference, convention, or correction.</p>
-    
+
   <div class="codeblock">
     <div class="codebar">
       <span>json</span>
@@ -201,7 +162,7 @@
         <tr><td><code>supersedes</code></td><td>array of integers or null</td><td>No</td><td>Ids of memories this one replaces — usually ids that came back from an earlier <code>recall</code>. Each stops being recalled. Nothing is deleted. An id that no longer resolves is skipped rather than failing the write.</td></tr>
       </tbody>
     </table>
-    
+
   <div class="codeblock">
     <div class="codebar">
       <span>json</span>
@@ -218,7 +179,7 @@
 
     <h2 id="recall">recall</h2>
     <p>Returns durable context relevant to a query. A word matches in any form, so <em>deploying</em> finds <em>deploys</em>; part of an identifier matches too, so <em>hashpw</em> finds <code>scripts/hashpw.sh</code>; and a memory's source is searched at a lower weight than its body. An empty query returns recent memory. <a href="../memory/#recall">Search and recall</a> has the details.</p>
-    
+
   <div class="codeblock">
     <div class="codebar">
       <span>json</span>
@@ -240,7 +201,7 @@
         <tr><td><code>project</code></td><td>string or null</td><td>No</td><td>Absolute working-project path. Results include global memory plus this project, in any checkout of the same repository, and exclude other projects.</td></tr>
       </tbody>
     </table>
-    
+
   <div class="codeblock">
     <div class="codebar">
       <span>json</span>
@@ -314,7 +275,7 @@
 
     <h2 id="vaultstatus">vaultstatus</h2>
     <p>Lists active environment-variable names and scope trust state for a folder. It never returns secret values and cannot inject them into the connected tool.</p>
-    
+
   <div class="codeblock">
     <div class="codebar">
       <span>json</span>
@@ -325,7 +286,7 @@
 }</code></pre>
   </div>
     <p><code>path</code> is optional. Resolution falls back to <code>SYNAPSE_PROJECT_DIR</code>, then the server process’s current directory.</p>
-    
+
   <div class="codeblock">
     <div class="codebar">
       <span>json</span>
@@ -354,7 +315,7 @@
   &quot;note&quot;: &quot;Values stay in the vault and never in a response. A name under available resolves for this folder; one under unavailable is named by a scope file here and needs it approved first. elsewhere counts secrets held for other folders, which are never named.&quot;
 }</code></pre>
   </div>
-    
+
   <aside class="note">
     <strong>Metadata, not a secret channel</strong>
     <p>The names in available tell a tool what a scoped command or activated shell could receive. vaultstatus never reads the corresponding values and cannot change a connected tool’s environment. backend names the store this machine keeps them in, which is a fact about the machine and not a way to reach one. Nothing here reports a credential belonging to a folder other than the one asked about.</p>
@@ -368,7 +329,7 @@
     <p><code>revise</code> takes the <code>name</code>, corrected <code>instructions</code> in full, and a <code>note</code> saying what was wrong. It queues the exact replacement for review and returns <code>proposed: true</code>, a <code>proposal</code> id, <code>revision: 0</code>, and an empty <code>updated</code> list. Use <code>synapse learn proposal &lt;id&gt;</code> to review and <code>synapse learn approve &lt;id&gt; --confirm</code> to apply it. Approval retains the original in skill history and preserves copies edited by hand.</p>
     <p><code>feedback</code> takes a <code>feedback</code> object and the absolute <code>project</code> folder. The object names a memory target (<code>kind: memory, id</code>) or a skill (<code>kind: skill, name, scope</code>), an <code>outcome</code> of helpful, failed, or unresolved, a <code>problem</code>, a repeatable <code>correction</code>, and a short <code>evidence</code> summary. Optional <code>query</code> and <code>expected</code> strings propose a regression case. It returns the receipt id, outcome, verification state, and compact qualified/unstable flags. The server assigns session identity; repeated reports in one session count once. Protocol callers cannot mark their own reports checked or user-confirmed. User judgments and observed check results are retained separately; a passing retry cannot erase a rejection or explain an unknown failure.</p>
     <p><code>resolvedrift</code> takes an exact <code>finding</code>, <code>disposition</code>, a reason in <code>note</code>, and the <code>project</code> folder. Contextual and falsepositive assessments silence that exact warning until content changes or the resolution is restored. Corrected requires a superseded memory. Records are local and project scoped; no memory is deleted.</p>
-    
+
   <aside class="note">
     <strong>Approval is tied to the exact content</strong>
     <p>A replacement procedure can add permissions even when its name stays the same. Agent-written replacements therefore wait for review against the original fingerprint. See the <a href="../skills/#learning">skills guide</a> and <a href="../cli/#learning">learning commands</a>.</p>
@@ -386,26 +347,14 @@
       <li>A running MCP process holds a shared database lock. <code>synapse data restore</code> requires an exclusive lock and therefore refuses while any connected server or the desktop app is using the database.</li>
       <li>Connected tools should recall before decisions that depend on project history and remember only stable confirmed context after it is established. A Claude Code session starts with that memory already in context; see <a href="#sessionstart">Session start</a>.</li>
     </ul>
-  
+  <footer class="articlefoot"><div class="articlemeta"><a href="https://github.com/wess/synapse/blob/main/website/docs/mcp.ts">View page source</a><span>Synapse 1.14.2</span></div><nav class="pagenav" aria-label="Guide pages"><a href="../../docs/memory/"><small>Previous</small><strong>Memory and recall</strong></a><a href="../../docs/mesh/"><small>Next</small><strong>Agent mesh</strong></a></nav></footer>
     </main>
-    <aside class="ontoc" aria-label="On this page">
-        <span>On this page</span>
-        <ol><li><a href="#server">Server</a></li><li><a href="#sessionstart">Session start</a></li><li><a href="#compaction">Before compaction</a></li><li><a href="#remember">remember</a></li><li><a href="#recall">recall</a></li><li><a href="#readmemory">readmemory</a></li><li><a href="#vaultstatus">vaultstatus</a></li><li><a href="#learning">Learning tools</a></li><li><a href="#mesh">Mesh tools</a></li><li><a href="#behavior">Operational behavior</a></li></ol>
-      </aside>
+  <aside class="ontoc" aria-label="On this page"><span>Contents</span><ol><li><a href="#server">Server</a></li><li><a href="#sessionstart">Session start</a></li><li><a href="#compaction">Before compaction</a></li><li><a href="#remember">remember</a></li><li><a href="#recall">recall</a></li><li><a href="#readmemory">readmemory</a></li><li><a href="#vaultstatus">vaultstatus</a></li><li><a href="#learning">Learning tools</a></li><li><a href="#mesh">Mesh tools</a></li><li><a href="#behavior">Operational behavior</a></li></ol></aside>
   </div>
-  
   <footer class="footer">
-    <div>
-      <a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">Synapse</a>
-      <p>Shared memory and skills for coding agents, kept on your machine.</p>
-    </div>
-    <nav aria-label="Footer">
-      <a href="../../docs/">Documentation</a>
-      <a href="../../tutorials/">Tutorials</a>
-      <a href="https://github.com/wess/synapse">Source</a>
-      <a href="https://github.com/wess/synapse/releases">Releases</a>
-    </nav>
-    <p class="footerfine">No account required. macOS desktop · Linux terminal, CLI &amp; MCP.</p>
-  </footer>
+    <div class="footerupper"><div><a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">synapse</a><p>A shared memory. A little less starting over.</p></div>
+      <nav aria-label="Footer"><a href="../../docs/">Manual</a><a href="../../tutorials/">Tutorials</a><a href="https://github.com/wess/synapse">Source</a><a href="https://github.com/wess/synapse/releases">Releases</a><a href="https://wess.io">By Wess</a></nav></div>
+    <p class="footerfine"><span>macOS &amp; Windows desktop · Linux CLI &amp; MCP</span><span>v1.14.2 · MIT · No account required</span></p>
+  </footer></div>
 </body>
 </html>

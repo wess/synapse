@@ -215,3 +215,14 @@ Everything a connection means elsewhere arrives with that package: the tools, th
 - [Memory and recall](https://wess.io/synapse/docs/memory/)
 - [Credentials and project scopes](https://wess.io/synapse/docs/vault/)
 - [Complete tutorials](https://wess.io/synapse/tutorials/)
+- [Build and contribute](https://wess.io/synapse/docs/developing/)
+- [Embed the core library](https://wess.io/synapse/docs/embedding/)
+- [Encrypted sync availability](https://wess.io/synapse/docs/sync/)
+
+## Website
+
+The manual includes every technical document in [`docs/`](docs/). Use Bun 1.4.3 or
+later, run `bun run site` and `bun run sitecheck`, then `bun run serve` to preview
+`http://127.0.0.1:4173/synapse/`. Commit the regenerated `site/` with its sources.
+The Pages workflow rebuilds and publishes on `main`. See the
+[development guide](docs/developing.md) for the workspace gates.

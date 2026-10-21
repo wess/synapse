@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Encrypted sync — Synapse</title>
+  <meta name="description" content="The optional encrypted replication library and opaque log server, with current setup limitations.">
+  <meta name="theme-color" content="#352879">
+  <meta property="og:title" content="Encrypted sync — Synapse">
+  <meta property="og:description" content="The optional encrypted replication library and opaque log server, with current setup limitations.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://wess.io/synapse/docs/sync/">
+  <link rel="canonical" href="https://wess.io/synapse/docs/sync/">
+  <link rel="icon" href="../../icon.svg" type="image/svg+xml">
+  <link rel="preload" href="../../pixel.ttf" as="font" type="font/ttf" crossorigin>
+  <link rel="stylesheet" href="../../style.css">
+  <script type="module" src="../../site.js"></script>
+</head>
+<body class="docs" data-root="../../">
+  <div class="shell">
+  <a class="skip" href="#content">Skip to content</a>
+  <div class="windowbar"><a href="../../">synapse / manual</a><span>v1.14.2 · on your machine</span></div>
+  <header class="topbar">
+    <a class="wordmark" href="../../" aria-label="Synapse home"><img src="../../icon.svg" width="28" height="28" alt=""><span>synapse</span></a>
+    <button class="navtoggle" type="button" aria-expanded="false" aria-controls="topnav">Menu</button>
+    <nav id="topnav" aria-label="Primary">
+      <a href="../../docs/" aria-current="page">Docs</a>
+      <a href="../../tutorials/">Tutorials</a>
+      <a href="https://github.com/wess/synapse">Source</a>
+      <a class="navdownload" href="../../docs/install/">Install</a>
+    </nav>
+  </header>
+  <div class="doclayout">
+  <aside class="docsrail" aria-label="Documentation navigation">
+    <div class="searchbox">
+      <label for="docssearch">Search docs &amp; tutorials</label>
+      <input id="docssearch" type="search" placeholder="Memory, vaults, restore…" autocomplete="off" aria-controls="searchresults">
+      <div id="searchresults" class="searchresults" data-results hidden></div>
+      <span class="searchstatus" data-searchstatus role="status" aria-live="polite"></span>
+    </div>
+    <details class="railnav" open>
+      <summary>Browse all guides</summary>
+      <nav aria-label="All guides">
+        <h2>Start here</h2><ul><li><a href="../../docs/">Start here</a></li><li><a href="../../docs/install/">Install and connect</a></li><li><a href="../../docs/harnesses/">Supported and custom harnesses</a></li><li><a href="../../docs/app/">Desktop app reference</a></li></ul><h2>Reference</h2><ul><li><a href="../../docs/memory/">Memory and recall</a></li><li><a href="../../docs/mcp/">MCP tool reference</a></li><li><a href="../../docs/mesh/">Agent mesh</a></li><li><a href="../../docs/skills/">Skills</a></li><li><a href="../../docs/servers/">MCP servers</a></li><li><a href="../../docs/sources/">Sources</a></li></ul><h2>Your machine</h2><ul><li><a href="../../docs/vault/">Vaults and scopes</a></li><li><a href="../../docs/data/">Data lifecycle</a></li><li><a href="../../docs/config/">Configuration and paths</a></li><li><a href="../../docs/security/">Security model</a></li><li><a href="../../docs/sync/" aria-current="page">Encrypted sync</a></li><li><a href="../../docs/troubleshoot/">Troubleshooting</a></li></ul><h2>Build with it</h2><ul><li><a href="../../docs/cli/">CLI reference</a></li><li><a href="../../docs/developing/">Developing Synapse</a></li><li><a href="../../docs/synapsecore/">The core library</a></li><li><a href="../../docs/embedding/">Embedding Synapse</a></li><li><a href="../../docs/retrieval/">Retrieval checks</a></li><li><a href="../../docs/map/">The memory map</a></li><li><a href="../../docs/startup/">What launching costs</a></li><li><a href="../../docs/windows/">Windows</a></li><li><a href="../../docs/federation/">Federation proposal</a></li></ul>
+        <h2>Tutorials</h2><ul><li><a href="../../tutorials/">Tutorials</a></li><li><a href="../../tutorials/connect/">Install and connect your first tools</a></li><li><a href="../../tutorials/continuity/">Carry one decision between tools</a></li><li><a href="../../tutorials/curate/">Curate and optimize memory</a></li><li><a href="../../tutorials/secrets/">Use a scoped secret in either shell mode</a></li><li><a href="../../tutorials/skills/">Keep one skill library across every tool</a></li><li><a href="../../tutorials/learn/">Let your agents write skills</a></li><li><a href="../../tutorials/launch/">Start a tool with everything in place</a></li><li><a href="../../tutorials/mesh/">Run a team of agents and drive it yourself</a></li><li><a href="../../tutorials/overseer/">Hand a job to one agent and watch it grow a team</a></li><li><a href="../../tutorials/recovery/">Export and restore safely</a></li><li><a href="../../tutorials/lifecycle/">Check, migrate, and remove Synapse</a></li></ul>
+      </nav>
+    </details>
+  </aside>
+    <main class="article" id="content">
+      <header class="articlehead"><nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../">Synapse</a><span aria-hidden="true">/</span><a href="../../docs/">Manual</a></nav><h1>Encrypted sync</h1><p>The optional encrypted replication library and opaque log server, with current setup limitations.</p></header>
+      <p>Synapse includes an optional encrypted replication client in <code>synapsecore::sync</code>,
+wire types in <code>synapsesync</code>, and an opaque log server in <code>synapseserve</code>. Ordinary
+memory, recall, skills, and credential scopes work without any of them configured.</p>
+<h2 id="current-availability">Current availability</h2>
+<p>The replication code is a library capability. The app and public CLI currently
+provide no sync setup, pairing, or background-sync flow. Running a log server
+alone does not connect your desktop to it. Do not edit the live SQLite settings
+to simulate a setup flow.</p>
+<p>Rust integrations can use the <code>sync</code> module's <code>Config</code>, <code>push</code>, <code>pull</code>, and <code>once</code>
+functions. <code>once</code> returns no summary when the store has no complete configuration.
+An integration is responsible for configuring and protecting its client state.</p>
+<h2 id="what-crosses-the-network">What crosses the network</h2>
+<p>Clients seal memory operations before they leave the machine. The server stores
+opaque envelopes in an append-only sequence; it cannot search memory, inspect
+its contents, or resolve conflicts. Clients apply received operations locally.
+The wire contract calls for a stable repository key rather than an absolute
+checkout path. An integration must verify its project identities before syncing;
+the library push operates on the configured store. Use a store whose project
+memories have portable repository identities. Path-keyed folders are not portable
+project data.</p>
+<p>Secret values, local scope approvals, installed tool configuration, worker state,
+and learning evidence are outside this memory replication contract. The content
+key protects memory from the server. It does not encrypt the local memory store,
+which remains plaintext to the local account.</p>
+<h2 id="server-configuration">Server configuration</h2>
+<p>Build the server from its own workspace:</p>
+<div class="codeblock"><div class="codebar"><span>sh</span><button type="button" data-copy aria-live="polite">Copy</button></div><pre><code>cargo build --release --locked --manifest-path crates/synapseserve/Cargo.toml
+</code></pre></div>
+<p>Provide configuration through the service manager's environment. Never put the
+token in a command argument, repository, or log.</p>
+<table>
+<thead>
+<tr><th>Variable</th><th>Meaning</th><th>Default</th></tr>
+</thead>
+<tbody>
+<tr><td><code>SYNAPSESERVE_TOKEN</code></td><td>Required shared access token</td><td>None; startup refuses an empty token</td></tr>
+<tr><td><code>SYNAPSESERVE_DATA</code></td><td>SQLite log file</td><td><code>synapseserve.db</code></td></tr>
+<tr><td><code>SYNAPSESERVE_ADDR</code></td><td>Listen address</td><td><code>127.0.0.1:8787</code></td></tr>
+</tbody>
+</table>
+<p>Run <code>crates/synapseserve/target/release/synapseserve</code> under that configured service.
+<code>GET /health</code> returns <code>ok</code>. <code>POST /push</code> and <code>POST /pull</code> authenticate access to a
+tenant's log. The protocol number is independent of package versions; requests
+must match it. Repeated operations are idempotent within their log.</p>
+<p>The binary serves plain HTTP on loopback. Terminate TLS before exposing it to a
+network: encrypted envelopes protect memory bodies, but the bearer access token
+still needs transport protection. The server has request and batch limits;
+plan retention and disk capacity for its append-only log.</p>
+<h2 id="recovery-and-limitations">Recovery and limitations</h2>
+<p>A server outage leaves local memory available. Keep independent local backups;
+the log is replication infrastructure, not a complete backup of the installation.
+A database export excludes credential values and other files needed to rebuild
+an installation.</p>
+<p>Supersession relationships currently remain local. A memory superseded on one
+machine may still be live on another; the wire format does not carry the
+replacement relation. Review corrections on every participating device.</p>
+<h2 id="sync-and-federation">Sync and federation</h2>
+<p>Sync moves one person's memory between their own devices. Federation would query
+another party's explicitly published knowledge. It is a separate proposal, not a
+shipped command or a feature of the blind log server. See the
+<a href="../federation/">Federation proposal</a> for that design's status and trust model.</p>
+<h2 id="verification">Verification</h2>
+<div class="codeblock"><div class="codebar"><span>sh</span><button type="button" data-copy aria-live="polite">Copy</button></div><pre><code>cargo test --locked --manifest-path crates/synapseserve/Cargo.toml
+cargo test --locked --manifest-path crates/synapsecore/Cargo.toml --test sync
+</code></pre></div>
+<p>The protocol and encryption fixtures live in <code>crates/synapsesync</code>; root Cargo
+tests cover that workspace member.</p>
+<footer class="articlefoot"><div class="articlemeta"><a href="https://github.com/wess/synapse/blob/main/docs/sync.md">View page source</a><span>Synapse 1.14.2</span></div><nav class="pagenav" aria-label="Guide pages"><a href="../../docs/security/"><small>Previous</small><strong>Security model</strong></a><a href="../../docs/troubleshoot/"><small>Next</small><strong>Troubleshooting</strong></a></nav></footer>
+    </main>
+  <aside class="ontoc" aria-label="On this page"><span>Contents</span><ol><li><a href="#current-availability">Current availability</a></li><li><a href="#what-crosses-the-network">What crosses the network</a></li><li><a href="#server-configuration">Server configuration</a></li><li><a href="#recovery-and-limitations">Recovery and limitations</a></li><li><a href="#sync-and-federation">Sync and federation</a></li><li><a href="#verification">Verification</a></li></ol></aside>
+  </div>
+  <footer class="footer">
+    <div class="footerupper"><div><a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">synapse</a><p>A shared memory. A little less starting over.</p></div>
+      <nav aria-label="Footer"><a href="../../docs/">Manual</a><a href="../../tutorials/">Tutorials</a><a href="https://github.com/wess/synapse">Source</a><a href="https://github.com/wess/synapse/releases">Releases</a><a href="https://wess.io">By Wess</a></nav></div>
+    <p class="footerfine"><span>macOS &amp; Windows desktop · Linux CLI &amp; MCP</span><span>v1.14.2 · MIT · No account required</span></p>
+  </footer></div>
+</body>
+</html>

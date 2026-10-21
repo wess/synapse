@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>What launching costs — Synapse</title>
+  <meta name="description" content="A measured startup snapshot and the fixtures needed to make a fresh comparison.">
+  <meta name="theme-color" content="#352879">
+  <meta property="og:title" content="What launching costs — Synapse">
+  <meta property="og:description" content="A measured startup snapshot and the fixtures needed to make a fresh comparison.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://wess.io/synapse/docs/startup/">
+  <link rel="canonical" href="https://wess.io/synapse/docs/startup/">
+  <link rel="icon" href="../../icon.svg" type="image/svg+xml">
+  <link rel="preload" href="../../pixel.ttf" as="font" type="font/ttf" crossorigin>
+  <link rel="stylesheet" href="../../style.css">
+  <script type="module" src="../../site.js"></script>
+</head>
+<body class="docs" data-root="../../">
+  <div class="shell">
+  <a class="skip" href="#content">Skip to content</a>
+  <div class="windowbar"><a href="../../">synapse / manual</a><span>v1.14.2 · on your machine</span></div>
+  <header class="topbar">
+    <a class="wordmark" href="../../" aria-label="Synapse home"><img src="../../icon.svg" width="28" height="28" alt=""><span>synapse</span></a>
+    <button class="navtoggle" type="button" aria-expanded="false" aria-controls="topnav">Menu</button>
+    <nav id="topnav" aria-label="Primary">
+      <a href="../../docs/" aria-current="page">Docs</a>
+      <a href="../../tutorials/">Tutorials</a>
+      <a href="https://github.com/wess/synapse">Source</a>
+      <a class="navdownload" href="../../docs/install/">Install</a>
+    </nav>
+  </header>
+  <div class="doclayout">
+  <aside class="docsrail" aria-label="Documentation navigation">
+    <div class="searchbox">
+      <label for="docssearch">Search docs &amp; tutorials</label>
+      <input id="docssearch" type="search" placeholder="Memory, vaults, restore…" autocomplete="off" aria-controls="searchresults">
+      <div id="searchresults" class="searchresults" data-results hidden></div>
+      <span class="searchstatus" data-searchstatus role="status" aria-live="polite"></span>
+    </div>
+    <details class="railnav" open>
+      <summary>Browse all guides</summary>
+      <nav aria-label="All guides">
+        <h2>Start here</h2><ul><li><a href="../../docs/">Start here</a></li><li><a href="../../docs/install/">Install and connect</a></li><li><a href="../../docs/harnesses/">Supported and custom harnesses</a></li><li><a href="../../docs/app/">Desktop app reference</a></li></ul><h2>Reference</h2><ul><li><a href="../../docs/memory/">Memory and recall</a></li><li><a href="../../docs/mcp/">MCP tool reference</a></li><li><a href="../../docs/mesh/">Agent mesh</a></li><li><a href="../../docs/skills/">Skills</a></li><li><a href="../../docs/servers/">MCP servers</a></li><li><a href="../../docs/sources/">Sources</a></li></ul><h2>Your machine</h2><ul><li><a href="../../docs/vault/">Vaults and scopes</a></li><li><a href="../../docs/data/">Data lifecycle</a></li><li><a href="../../docs/config/">Configuration and paths</a></li><li><a href="../../docs/security/">Security model</a></li><li><a href="../../docs/sync/">Encrypted sync</a></li><li><a href="../../docs/troubleshoot/">Troubleshooting</a></li></ul><h2>Build with it</h2><ul><li><a href="../../docs/cli/">CLI reference</a></li><li><a href="../../docs/developing/">Developing Synapse</a></li><li><a href="../../docs/synapsecore/">The core library</a></li><li><a href="../../docs/embedding/">Embedding Synapse</a></li><li><a href="../../docs/retrieval/">Retrieval checks</a></li><li><a href="../../docs/map/">The memory map</a></li><li><a href="../../docs/startup/" aria-current="page">What launching costs</a></li><li><a href="../../docs/windows/">Windows</a></li><li><a href="../../docs/federation/">Federation proposal</a></li></ul>
+        <h2>Tutorials</h2><ul><li><a href="../../tutorials/">Tutorials</a></li><li><a href="../../tutorials/connect/">Install and connect your first tools</a></li><li><a href="../../tutorials/continuity/">Carry one decision between tools</a></li><li><a href="../../tutorials/curate/">Curate and optimize memory</a></li><li><a href="../../tutorials/secrets/">Use a scoped secret in either shell mode</a></li><li><a href="../../tutorials/skills/">Keep one skill library across every tool</a></li><li><a href="../../tutorials/learn/">Let your agents write skills</a></li><li><a href="../../tutorials/launch/">Start a tool with everything in place</a></li><li><a href="../../tutorials/mesh/">Run a team of agents and drive it yourself</a></li><li><a href="../../tutorials/overseer/">Hand a job to one agent and watch it grow a team</a></li><li><a href="../../tutorials/recovery/">Export and restore safely</a></li><li><a href="../../tutorials/lifecycle/">Check, migrate, and remove Synapse</a></li></ul>
+      </nav>
+    </details>
+  </aside>
+    <main class="article" id="content">
+      <header class="articlehead"><nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../">Synapse</a><span aria-hidden="true">/</span><a href="../../docs/">Manual</a></nav><h1>What launching costs</h1><p>A measured startup snapshot and the fixtures needed to make a fresh comparison.</p></header>
+      <blockquote>
+<p>Measurement snapshot, not a release benchmark or latency guarantee. The figures
+below describe the measured setup at the time of that investigation. Re-run the
+fixtures on the release and machine being compared before quoting new results.</p>
+</blockquote>
+<p>Numbers from an Apple silicon Mac, release build, a store of 220 memories, with
+Claude Code, Codex and Ainz installed and connected. They are here so that a
+change can be compared against something rather than described.</p>
+<h2 id="the-window">The window</h2>
+<p>Time from <code>exec</code> to the first painted frame: <strong>about 200ms</strong>, of which Synapse's
+own reads are <strong>about 6ms</strong>.</p>
+<table>
+<thead>
+<tr><th>Phase</th><th>Cost</th><th>Whose</th></tr>
+</thead>
+<tbody>
+<tr><td>Process start, dyld, gpui framework init</td><td>~85ms</td><td>the platform</td></tr>
+<tr><td><code>Dashboard::new</code> — one <code>Brain::glance</code>, every setting, one memory list</td><td>~6ms</td><td>ours</td></tr>
+<tr><td>Window creation, Metal pipeline setup</td><td>~75ms</td><td>the platform</td></tr>
+<tr><td>First frame</td><td>~35ms</td><td>the platform</td></tr>
+<tr><td><strong>After the frame:</strong> tool detection, import scan, integrity check</td><td>~60ms</td><td>ours, deferred</td></tr>
+</tbody>
+</table>
+<p>The split is the design. <code>Dashboard::new</code> reads only what the first frame needs.
+Everything whose cost belongs to another program runs in <code>Dashboard::opened</code>,
+scheduled by <code>window.on_next_frame</code>:</p>
+<ul>
+<li><strong>Tool detection.</strong> Every installed coding agent is asked for its <code>--version</code>,
+and several start a Node or Bun process to answer. This is unbounded from
+Synapse's side — it is somebody else's startup time — and it used to be the
+first thing that happened.</li>
+<li><strong>The import scan</strong>, which walks Claude's and Codex's own memory folders and
+previews them against this store. Only the Memory page shows the result.</li>
+<li><strong>The skill survey</strong>, which walks the library and every tool's skill folder.</li>
+<li><strong>One <code>Brain::open</code></strong>, whose whole-file integrity check is worth paying once a
+session and not before there is a window.</li>
+</ul>
+<p>Detection also runs one thread per descriptor. The work is waiting, not
+computing, so waiting in sequence adds the answers up; <code>synapse status</code> and the
+the terminal fallback is now text-only.</p>
+<p>A page that has not looked yet has to say so. An empty tool list reads as <em>no
+tools found</em>, which is a different and much worse statement than <em>not looked
+yet</em> — hence <code>probed</code>, the &quot;Looking for your tools…&quot; line, and the dash in place
+of a count.</p>
+<p>One runtime, one worker, made on first use (<code>ui/runtime.rs</code>). A
+<code>Runtime::new()</code> per call site builds a multi-threaded runtime — a worker per
+core, spawned and joined again — and the window did that eight times before it
+existed, for a handful of SQLite queries.</p>
+<h2 id="the-hooks">The hooks</h2>
+<p><code>statusline</code> runs on every turn of every session and <code>session</code> on every start,
+so both are measured with a real payload on stdin — the shape a tool actually
+sends:</p>
+<table>
+<thead>
+<tr><th>Command</th><th>Cost</th></tr>
+</thead>
+<tbody>
+<tr><td><code>synapse version</code> (the process floor)</td><td>9ms</td></tr>
+<tr><td><code>synapse statusline</code></td><td>11ms</td></tr>
+<tr><td><code>synapse session</code></td><td>13ms</td></tr>
+<tr><td><code>synapse status</code></td><td>13ms</td></tr>
+</tbody>
+</table>
+<p>Two to four milliseconds of work over the cost of starting a process at all.
+They read through <code>glance</code>, so no launch reads the whole database to check it.</p>
+<p>Measure with stdin closed and you will see two seconds: that is <code>INPUTWAIT</code>,
+the deliberate wait for a client that opened the pipe and has not written yet.
+It is not the hook being slow, and a benchmark that forgets it is measuring its
+own test harness.</p>
+<h2 id="doing-this-again">Doing this again</h2>
+<div class="codeblock"><div class="codebar"><span>sh</span><button type="button" data-copy aria-live="polite">Copy</button></div><pre><code>cargo build --release
+# window, from a scratch store
+SYNAPSE_DATA=/tmp/scratch/data SYNAPSE_HOME=$HOME ./target/release/synapse
+# hooks, with the payload a tool sends
+echo '{&quot;cwd&quot;:&quot;'$PWD'&quot;}' | ./target/release/synapse-cli statusline
+</code></pre></div>
+<p>Never point a dev build at the real data directory: it migrates the store to
+whatever schema that build carries, and every older Synapse on the machine then
+refuses to open it.</p>
+<footer class="articlefoot"><div class="articlemeta"><a href="https://github.com/wess/synapse/blob/main/docs/startup.md">View page source</a><span>Synapse 1.14.2</span></div><nav class="pagenav" aria-label="Guide pages"><a href="../../docs/map/"><small>Previous</small><strong>The memory map</strong></a><a href="../../docs/windows/"><small>Next</small><strong>Windows</strong></a></nav></footer>
+    </main>
+  <aside class="ontoc" aria-label="On this page"><span>Contents</span><ol><li><a href="#the-window">The window</a></li><li><a href="#the-hooks">The hooks</a></li><li><a href="#doing-this-again">Doing this again</a></li></ol></aside>
+  </div>
+  <footer class="footer">
+    <div class="footerupper"><div><a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">synapse</a><p>A shared memory. A little less starting over.</p></div>
+      <nav aria-label="Footer"><a href="../../docs/">Manual</a><a href="../../tutorials/">Tutorials</a><a href="https://github.com/wess/synapse">Source</a><a href="https://github.com/wess/synapse/releases">Releases</a><a href="https://wess.io">By Wess</a></nav></div>
+    <p class="footerfine"><span>macOS &amp; Windows desktop · Linux CLI &amp; MCP</span><span>v1.14.2 · MIT · No account required</span></p>
+  </footer></div>
+</body>
+</html>

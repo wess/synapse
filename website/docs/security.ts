@@ -16,8 +16,8 @@ export const security: Page = {
   ],
   body: `
     <h2 id="boundary">Trust boundary</h2>
-    <p>Synapse is local-first, not a sandbox. It removes unnecessary network and file exposure from the memory-and-credential workflow, but it still runs as your macOS user. Any process already able to control your account, inspect your terminal, read your home directory, or access an unlocked Keychain may sit inside the same trust boundary.</p>
-    <p>The application requires no Synapse account or hosted service. MCP uses local stdio. Memory and metadata live in a local SQLite file. Synapse includes no telemetry, no remote synchronization, and no web server.</p>
+    <p>Synapse is local-first, not a sandbox. It removes unnecessary network and file exposure from the memory-and-credential workflow, but it still runs as your local user account. Any process already able to control your account, inspect your terminal, read your home directory, or access an unlocked Keychain may sit inside the same trust boundary.</p>
+    <p>The application requires no Synapse account or hosted service. MCP uses local stdio. Memory and metadata live in a local SQLite file. The desktop includes no telemetry or network recall server. The optional <a href="../sync/">sync library and separate opaque log server</a> replicate sealed memory operations only when configured by an integration; normal local use does not contact them.</p>
 
     <h2 id="memory">Memory</h2>
     <p>Memory bodies are plain text in SQLite and are available to connected MCP clients through recall. Global records are available in every project; project records are returned only with the matching project, which is the repository's <code>origin</code> remote when it has one and its root folder otherwise. A remote written with credentials, such as <code>https://user:token@host/…</code>, is stored without them. Do not store credentials, private keys, access tokens, or material you would not want an authorized connected tool to read.</p>
