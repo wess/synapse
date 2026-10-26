@@ -1969,18 +1969,24 @@ fn every_subcommand_answers_help_instead_of_failing() {
 /// `synapse run` hands everything after `--` to the child, and a child asking
 /// for its own help is not Synapse being asked for its.
 ///
-/// The child is `printf` rather than `echo` because the flag has to arrive as
-/// an argument and not as a question: GNU coreutils' `echo` answers `--help`
-/// with its own manual, so the same assertion passed on a Mac and failed on
-/// Linux. `printf` treats `--help` specially only in the format slot, which
-/// this is not.
+/// On Unix, the shell command prints its first positional argument so the
+/// behavior does not depend on whether the platform's `echo` or `printf`
+/// implementation reserves `--help`.
 #[test]
 fn a_help_flag_meant_for_the_child_still_reaches_it() {
     let root = tempfile::tempdir().unwrap();
     let arguments: &[&str] = if cfg!(windows) {
         &["run", "--", "cmd.exe", "/D", "/C", "echo", "--help"]
     } else {
-        &["run", "--", "printf", "%s", "--help"]
+        &[
+            "run",
+            "--",
+            "sh",
+            "-c",
+            "printf '%s' \"$1\"",
+            "synapse-test",
+            "--help",
+        ]
     };
     let printed = success(run(root.path(), arguments, None));
     assert_eq!(printed.trim(), "--help");
