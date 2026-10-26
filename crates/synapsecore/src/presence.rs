@@ -1,12 +1,15 @@
-//! Transport presence is independent of opting into agent coordination.
+//! transport presence is independent of opting into agent coordination.
 mod tests;
 
 use anyhow::Result;
 use serde::Serialize;
-use sqlx::{Connection, FromRow, SqlitePool};
+use sqlx::{Connection, FromRow, QueryBuilder, Sqlite, SqlitePool};
+use std::collections::{HashMap, HashSet};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 pub const LIVESECONDS: i64 = 45;
+const AVATARLIMIT: i64 = 4096;
+const AVATARRETENTION: i64 = 365 * 86400;
 
 #[derive(Clone, Debug, FromRow, Serialize)]
 pub struct Session {
@@ -54,6 +57,7 @@ impl Session {
     pub fn identity(&self) -> String {
         identity(&self.tool, &self.project, self.slot)
     }
+
     pub fn label(&self) -> &str {
         if self.name.is_empty() {
             &self.tool
@@ -76,17 +80,19 @@ pub fn now() -> i64 {
 
 pub async fn join(pool: &SqlitePool, id: &str, tool: &str, project: &str) -> Result<()> {
     let time = now();
-    // Reserve the lowest free room atomically across simultaneous MCP processes.
+    // reserve the lowest free room atomically across simultaneous MCP processes
     let mut connection = pool.acquire().await?;
     let mut transaction = connection.begin_with("BEGIN IMMEDIATE").await?;
-    let slots: Vec<i64> = sqlx::query_scalar(
+    let slots: HashSet<i64> = sqlx::query_scalar(
         "SELECT slot FROM presence WHERE tool = ? AND project = ? AND ended = 0 AND seen > ?",
     )
     .bind(tool)
     .bind(project)
     .bind(time - LIVESECONDS)
     .fetch_all(&mut *transaction)
-    .await?;
+    .await?
+    .into_iter()
+    .collect();
     let slot = (0..).find(|slot| !slots.contains(slot)).unwrap_or(0);
     sqlx::query(
         "INSERT OR IGNORE INTO presence(id,tool,project,slot,started,seen) VALUES(?,?,?,?,?,?)",
@@ -103,11 +109,21 @@ pub async fn join(pool: &SqlitePool, id: &str, tool: &str, project: &str) -> Res
         .bind(time - 86400)
         .execute(&mut *transaction)
         .await?;
+    sqlx::query("DELETE FROM sceneavatar WHERE updated < ?")
+        .bind(time - AVATARRETENTION)
+        .execute(&mut *transaction)
+        .await?;
+    sqlx::query(
+        "DELETE FROM sceneavatar WHERE identity NOT IN (SELECT identity FROM sceneavatar ORDER BY updated DESC LIMIT ?)",
+    )
+    .bind(AVATARLIMIT)
+    .execute(&mut *transaction)
+    .await?;
     transaction.commit().await?;
     Ok(())
 }
 
-/// Harnesses that start MCP outside the checkout can identify it on their first scoped call.
+/// harnesses that start MCP outside the checkout can identify it on their first scoped call
 pub async fn relocate(pool: &SqlitePool, id: &str, project: &str) -> Result<()> {
     let previous: Option<String> =
         sqlx::query_scalar("SELECT project FROM presence WHERE id = ? AND ended = 0")
@@ -127,8 +143,17 @@ pub async fn relocate(pool: &SqlitePool, id: &str, project: &str) -> Result<()> 
     if let Some((tool, old)) = current
         && old != project
     {
-        let slots:Vec<i64>=sqlx::query_scalar("SELECT slot FROM presence WHERE tool = ? AND project = ? AND ended = 0 AND seen > ? AND id != ?")
-                .bind(&tool).bind(project).bind(now()-LIVESECONDS).bind(id).fetch_all(&mut *transaction).await?;
+        let slots: HashSet<i64> = sqlx::query_scalar(
+            "SELECT slot FROM presence WHERE tool = ? AND project = ? AND ended = 0 AND seen > ? AND id != ?",
+        )
+        .bind(&tool)
+        .bind(project)
+        .bind(now() - LIVESECONDS)
+        .bind(id)
+        .fetch_all(&mut *transaction)
+        .await?
+        .into_iter()
+        .collect();
         let slot = (0..).find(|slot| !slots.contains(slot)).unwrap_or(0);
         sqlx::query("UPDATE presence SET project = ?, slot = ? WHERE id = ?")
             .bind(project)
@@ -151,9 +176,18 @@ pub async fn touch(pool: &SqlitePool, id: &str) -> Result<()> {
             .fetch_optional(&mut *transaction)
             .await?;
     if let Some((tool, project, slot)) = current {
-        let used:Vec<i64>=sqlx::query_scalar("SELECT slot FROM presence WHERE tool = ? AND project = ? AND ended = 0 AND seen > ? AND id != ?")
-            .bind(tool).bind(project).bind(time-LIVESECONDS).bind(id).fetch_all(&mut *transaction).await?;
-        // A suspended transport can return after another session reclaimed its room.
+        let used: HashSet<i64> = sqlx::query_scalar(
+            "SELECT slot FROM presence WHERE tool = ? AND project = ? AND ended = 0 AND seen > ? AND id != ?",
+        )
+        .bind(tool)
+        .bind(project)
+        .bind(time - LIVESECONDS)
+        .bind(id)
+        .fetch_all(&mut *transaction)
+        .await?
+        .into_iter()
+        .collect();
+        // a suspended transport can return after another session reclaimed its room
         let slot = if used.contains(&slot) {
             (0..).find(|slot| !used.contains(slot)).unwrap_or(0)
         } else {
@@ -201,20 +235,39 @@ pub async fn leave(pool: &SqlitePool, id: &str) -> Result<()> {
 }
 
 pub async fn sessions(pool: &SqlitePool) -> Result<Vec<Session>> {
-    let mut sessions: Vec<Session> = sqlx::query_as("SELECT *, 0 AS appearance FROM (SELECT rowid AS ordinal, * FROM presence WHERE seen > ? ORDER BY (ended = 0 AND seen > ?) DESC, seen DESC, rowid DESC LIMIT 256) ORDER BY tool,project,slot,(ended = 0 AND seen > ?) DESC,started DESC,ordinal DESC")
-        .bind(now() - 86400).bind(now() - LIVESECONDS).bind(now() - LIVESECONDS).fetch_all(pool).await?;
-    // A reconnect reuses its room. A still-live previous transport keeps its own.
+    let time = now();
+    let mut sessions: Vec<Session> = sqlx::query_as(
+        "SELECT *, 0 AS appearance FROM (SELECT rowid AS ordinal, * FROM presence WHERE seen > ? ORDER BY (ended = 0 AND seen > ?) DESC, seen DESC, rowid DESC LIMIT 256) ORDER BY tool,project,slot,(ended = 0 AND seen > ?) DESC,started DESC,ordinal DESC",
+    )
+    .bind(time - 86400)
+    .bind(time - LIVESECONDS)
+    .bind(time - LIVESECONDS)
+    .fetch_all(pool)
+    .await?;
+    // a reconnect reuses its room; a still-live previous transport keeps its own
     let mut identities = std::collections::HashSet::new();
     sessions.retain(|session| identities.insert(session.identity()));
-    let avatars: Vec<(String, i64)> =
-        sqlx::query_as("SELECT identity, appearance FROM sceneavatar")
+    let mut avatars = HashMap::new();
+    if !sessions.is_empty() {
+        let mut query = QueryBuilder::<Sqlite>::new(
+            "SELECT identity, appearance FROM sceneavatar WHERE identity IN (",
+        );
+        let mut values = query.separated(", ");
+        for session in &sessions {
+            values.push_bind(session.identity());
+        }
+        values.push_unseparated(")");
+        avatars = query
+            .build_query_as::<(String, i64)>()
             .fetch_all(pool)
-            .await?;
+            .await?
+            .into_iter()
+            .collect();
+    }
     for session in &mut sessions {
         session.appearance = avatars
-            .iter()
-            .find(|(id, _)| *id == session.identity())
-            .map(|(_, n)| *n)
+            .get(&session.identity())
+            .copied()
             .unwrap_or_else(|| {
                 session.identity().bytes().fold(0u64, |hash, byte| {
                     hash.wrapping_mul(31).wrapping_add(byte as u64)
@@ -230,7 +283,13 @@ pub async fn appearance(pool: &SqlitePool, identity: &str, value: i64) -> Result
         (0..32).contains(&value),
         "appearance must be between 0 and 31"
     );
-    sqlx::query("INSERT INTO sceneavatar(identity,appearance) VALUES(?,?) ON CONFLICT(identity) DO UPDATE SET appearance=excluded.appearance")
-        .bind(identity).bind(value).execute(pool).await?;
+    sqlx::query(
+        "INSERT INTO sceneavatar(identity,appearance,updated) VALUES(?,?,?) ON CONFLICT(identity) DO UPDATE SET appearance=excluded.appearance,updated=excluded.updated",
+    )
+    .bind(identity)
+    .bind(value)
+    .bind(now())
+    .execute(pool)
+    .await?;
     Ok(())
 }

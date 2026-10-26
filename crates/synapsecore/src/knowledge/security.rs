@@ -25,7 +25,7 @@ fn overview_redacts_complete_tokens_before_truncating() {
     write(dir.path(), &request()).unwrap();
     let path = dir.path().join(".synapse/knowledge/overview.md");
     let original = fs::read_to_string(&path).unwrap();
-    // The start of the opening tag falls across the old 1,800-byte boundary.
+    // the opening tag starts across the old 1,800-byte boundary
     let body = format!(
         "{}<private>{}</private>",
         " ".repeat(1795),

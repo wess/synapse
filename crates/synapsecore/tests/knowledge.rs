@@ -134,6 +134,17 @@ fn cli_mcp_and_session_hooks_share_the_knowledge_setting_and_guides() {
     assert!(listed.to_string().contains("writeknowledge"));
     let index = client.tool("knowledge", json!({"project":project}));
     assert_eq!(index["catalog"]["guides"].as_array().unwrap().len(), 0);
+    let outside = root.join("outside");
+    std::fs::create_dir_all(outside.join(".git")).unwrap();
+    std::fs::write(outside.join("source.txt"), "outside").unwrap();
+    let rejected = client.call(
+        "tools/call",
+        json!({"name":"writeknowledge","arguments":{"project":outside,
+            "name":"overview", "description":"outside", "content":"outside",
+            "sources":["source.txt"]}}),
+    );
+    assert_eq!(rejected["result"]["isError"], true);
+    assert!(!outside.join(".synapse").exists());
     let guide = client.tool("writeknowledge", json!({"project":project,
         "name":"overview", "description":"Rust fixture", "content":"# Fixture\nUses Rust; see Cargo.toml.",
         "sources":["Cargo.toml"]}));

@@ -1,4 +1,4 @@
-//! Repository guides shared by connected agents. The agent authors the text;
+//! repository guides shared by connected agents. The agent authors the text;
 //! Synapse stores it, checks its sources, and serves only the requested pages.
 mod check;
 mod io;

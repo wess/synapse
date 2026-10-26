@@ -7,10 +7,12 @@ Reviewed on 2026-10-26. Scope: Project Knowledge, its MCP/session integration, a
 - Redact the complete overview before taking an excerpt. Truncating first could expose the beginning of a credential or cut a private marker in half.
 - Return generic metadata errors instead of parser diagnostics containing document text. Bound invalid-file warnings and serialized index size.
 - On Unix, open guides, sources, and locks through pinned directory handles with no-follow and regular-file checks. Atomic replacement and directory enumeration use those same handles. A directory replaced by a symlink cannot redirect the operation. Pipes cannot block file reads. On Windows, retain ancestor directory handles without delete sharing, reject reparse points, and check the opened file's metadata.
+- Restrict knowledge reads and writes to the MCP process's project root. A connected client cannot use Synapse's filesystem authority to reach another checkout.
 - Use a nonblocking exclusive writer lock. Contention returns a retry response rather than tying up a session indefinitely. Existing revision checks remain in place.
 - Stream source hashes through a 64 KiB buffer, deduplicate hashes within each request, and cap total source reads at 16 MiB. There is no cache across calls, so same-size edits are rechecked. Guides with unverified sources report `unchecked` instead of `current`.
 - Limit index inspection to 128 directory entries and 32 guides; cap serialized catalog output at 32 KiB. Keep full guide reads paginated.
 - Execute knowledge filesystem work on the blocking pool, with at most two jobs per process and no unbounded waiting queue. No watcher or periodic scan was added. Disabled knowledge does not inspect guide files.
+- Bound scene packs to 128 within a 256-entry scan, stream manifest reads under 64 KiB, and recheck an opened image asset before decoding it. Presence slot selection uses sets, avatar polling fetches only visible identities, and avatar preferences expire after one year with a 4,096-row hard cap.
 
 ## Dependency updates
 

@@ -1,8 +1,13 @@
-//! Versioned, local scene packs. Plugins are data, never executable code.
+//! versioned, local scene packs. Plugins are data, never executable code.
 mod tests;
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
+use std::io::Read;
 use std::path::{Component, Path, PathBuf};
+
+const ENTRYLIMIT: usize = 256;
+const PLUGINLIMIT: usize = 128;
+const MANIFESTLIMIT: u64 = 64 * 1024;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -75,11 +80,29 @@ pub fn catalog(root: &Path) -> Catalog {
             return result;
         }
     };
-    let mut paths: Vec<_> = entries
-        .filter_map(Result::ok)
-        .map(|entry| entry.path())
-        .filter(|path| path.is_dir())
-        .collect();
+    let mut paths = Vec::new();
+    let mut truncated = false;
+    for (number, entry) in entries.enumerate() {
+        if number == ENTRYLIMIT {
+            truncated = true;
+            break;
+        }
+        let Ok(entry) = entry else { continue };
+        let path = entry.path();
+        if path.is_dir() {
+            if paths.len() == PLUGINLIMIT {
+                truncated = true;
+                break;
+            }
+            paths.push(path);
+        }
+    }
+    if truncated {
+        result.problems.push(
+            "plugin scan stopped at 256 entries or 128 scene packs; remove unused entries"
+                .to_owned(),
+        );
+    }
     paths.sort();
     for path in paths {
         match load(&path) {
@@ -104,12 +127,18 @@ pub fn catalog(root: &Path) -> Catalog {
 
 pub fn load(root: &Path) -> Result<Plugin> {
     let path = root.join("plugin.toml");
+    let file = std::fs::File::open(&path)?;
     ensure!(
-        std::fs::metadata(&path)?.len() <= 64 * 1024,
+        file.metadata()?.len() <= MANIFESTLIMIT,
         "manifest exceeds 64 KiB"
     );
-    let manifest: Manifest =
-        toml::from_str(&std::fs::read_to_string(path)?).context("invalid manifest")?;
+    let mut text = String::new();
+    file.take(MANIFESTLIMIT + 1).read_to_string(&mut text)?;
+    ensure!(
+        text.len() <= MANIFESTLIMIT as usize,
+        "manifest exceeds 64 KiB"
+    );
+    let manifest: Manifest = toml::from_str(&text).context("invalid manifest")?;
     ensure!(
         manifest.api == 1,
         "unsupported plugin API {}; expected 1",

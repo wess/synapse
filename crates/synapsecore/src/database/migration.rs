@@ -3,7 +3,7 @@ use anyhow::{Context, Result};
 use sqlx::SqlitePool;
 use std::path::Path;
 
-pub const LATEST: i64 = 16;
+pub const LATEST: i64 = 17;
 
 /// The vault's own schema, in its own file. One table today, with the numbered
 /// migration around it anyway: the day it grows a column is not the day to
@@ -384,6 +384,14 @@ const MIGRATIONS: &[Migration] = &[
             "CREATE TABLE sceneavatar(identity TEXT PRIMARY KEY, appearance INTEGER NOT NULL)",
         ],
     },
+    Migration {
+        version: 17,
+        statements: &[
+            "ALTER TABLE sceneavatar ADD COLUMN updated INTEGER NOT NULL DEFAULT 0",
+            "UPDATE sceneavatar SET updated = CAST(strftime('%s', 'now') AS INTEGER)",
+            "CREATE INDEX sceneavatarupdated ON sceneavatar(updated)",
+        ],
+    },
 ];
 
 /// `vault.db`. One row per secret, holding a sealed envelope and nothing else:
@@ -556,6 +564,10 @@ mod tests {
         .execute(&pool)
         .await
         .unwrap();
+        sqlx::query("INSERT INTO sceneavatar(identity, appearance) VALUES ('session', 12)")
+            .execute(&pool)
+            .await
+            .unwrap();
 
         run(&pool, &path, false, Schema::Brain).await.unwrap();
 
@@ -575,5 +587,13 @@ mod tests {
             0,
             "a memory written before the column existed still stands"
         );
+        let avatar: (i64, i64) = sqlx::query_as(
+            "SELECT appearance, updated FROM sceneavatar WHERE identity = 'session'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(avatar.0, 12);
+        assert!(avatar.1 > 0);
     }
 }

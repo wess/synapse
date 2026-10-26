@@ -116,9 +116,6 @@ impl Scene {
                                     Some(format!("Could not read connected sessions: {error}"))
                             }
                         }
-                        if this.cache.len() > 128 {
-                            this.cache.clear();
-                        }
                         cx.notify();
                     });
                 }
@@ -217,15 +214,18 @@ impl Scene {
     }
 
     fn picture(&mut self, appearance: usize, state: State, inhabited: bool) -> Arc<RenderImage> {
-        if self.cache.len() >= 128 {
-            self.cache.clear();
-        }
         let frame = if self.paused || state == State::Disconnected {
             0
         } else {
             self.tick % 4
         };
         let key = (appearance, state as u8, frame, inhabited);
+        if let Some(image) = self.cache.get(&key) {
+            return image.clone();
+        }
+        if self.cache.len() >= 128 {
+            self.cache.clear();
+        }
         self.cache
             .entry(key)
             .or_insert_with(|| {

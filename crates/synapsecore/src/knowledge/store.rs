@@ -32,7 +32,7 @@ fn decode(text: &str) -> Result<(Header, &str)> {
         toml::from_str(header).map_err(|_| anyhow::anyhow!("guide metadata is invalid TOML"))?;
     ensure!(
         !header.sources.is_empty() && header.sources.len() <= 64,
-        "guide needs 1–64 sources"
+        "guide needs 1-64 sources"
     );
     ensure!(
         header.description.len() <= 240 && !header.description.contains(['\n', '\r']),
@@ -82,8 +82,14 @@ pub fn catalog(project: &Path) -> Result<Catalog> {
     let root = paths::root(project)?;
     let rootfolder = Folder::open(&root)?;
     let mut check = Check::new();
-    let mut result = Catalog { project: root.display().to_string(), guides: Vec::new(), overview: None,
-        sourcebytes: 0, warnings: Vec::new(), note: "No guides yet. When asked to learn this project, inspect the code and use writeknowledge to create overview and focused guides. Read guides on demand; verify changed sources before relying on them.".to_owned() };
+    let mut result = Catalog {
+        project: root.display().to_string(),
+        guides: Vec::new(),
+        overview: None,
+        sourcebytes: 0,
+        warnings: Vec::new(),
+        note: "No guides yet. When asked to learn this project, inspect the code and use writeknowledge to create overview and focused guides. Read guides on demand; verify changed sources before relying on them.".to_owned(),
+    };
     let directory = match io::knowledge(&rootfolder, false) {
         Ok(directory) => directory,
         Err(error)
@@ -221,15 +227,15 @@ pub fn write(project: &Path, request: &WriteRequest) -> Result<Guide> {
         !request.description.trim().is_empty()
             && request.description.len() <= 240
             && !request.description.contains(['\n', '\r']),
-        "description must be one line of 1–240 bytes"
+        "description must be one line of 1-240 bytes"
     );
     ensure!(
         !request.content.trim().is_empty() && request.content.len() <= FILELIMIT / 2,
-        "guide body must contain 1–131072 bytes"
+        "guide body must contain 1-131072 bytes"
     );
     ensure!(
         !request.sources.is_empty() && request.sources.len() <= 64,
-        "supply 1–64 inspected source files"
+        "supply 1-64 inspected source files"
     );
     ensure!(
         crate::brain::redact(&request.content).count == 0

@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Project Knowledge — Synapse</title>
+  <meta name="description" content="Technical documentation for Project Knowledge.">
+  <meta name="theme-color" content="#352879">
+  <meta property="og:title" content="Project Knowledge — Synapse">
+  <meta property="og:description" content="Technical documentation for Project Knowledge.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://wess.io/synapse/docs/knowledge/">
+  <link rel="canonical" href="https://wess.io/synapse/docs/knowledge/">
+  <link rel="icon" href="../../icon.svg" type="image/svg+xml">
+  <link rel="preload" href="../../pixel.ttf" as="font" type="font/ttf" crossorigin>
+  <link rel="stylesheet" href="../../style.css">
+  <script type="module" src="../../site.js"></script>
+</head>
+<body class="docs" data-root="../../">
+  <div class="shell">
+  <a class="skip" href="#content">Skip to content</a>
+  <div class="windowbar"><a href="../../">synapse / manual</a><span>v1.14.3 · on your machine</span></div>
+  <header class="topbar">
+    <a class="wordmark" href="../../" aria-label="Synapse home"><img src="../../icon.svg" width="28" height="28" alt=""><span>synapse</span></a>
+    <button class="navtoggle" type="button" aria-expanded="false" aria-controls="topnav">Menu</button>
+    <nav id="topnav" aria-label="Primary">
+      <a href="../../docs/" aria-current="page">Docs</a>
+      <a href="../../tutorials/">Tutorials</a>
+      <a href="https://github.com/wess/synapse">Source</a>
+      <a class="navdownload" href="../../docs/install/">Install</a>
+    </nav>
+  </header>
+  <div class="doclayout">
+  <aside class="docsrail" aria-label="Documentation navigation">
+    <div class="searchbox">
+      <label for="docssearch">Search docs &amp; tutorials</label>
+      <input id="docssearch" type="search" placeholder="Memory, vaults, restore…" autocomplete="off" aria-controls="searchresults">
+      <div id="searchresults" class="searchresults" data-results hidden></div>
+      <span class="searchstatus" data-searchstatus role="status" aria-live="polite"></span>
+    </div>
+    <details class="railnav" open>
+      <summary>Browse all guides</summary>
+      <nav aria-label="All guides">
+        <h2>Start here</h2><ul><li><a href="../../docs/">Start here</a></li><li><a href="../../docs/install/">Install and connect</a></li><li><a href="../../docs/harnesses/">Supported and custom harnesses</a></li><li><a href="../../docs/app/">Desktop app reference</a></li></ul><h2>Reference</h2><ul><li><a href="../../docs/memory/">Memory and recall</a></li><li><a href="../../docs/knowledge/" aria-current="page">Project Knowledge</a></li><li><a href="../../docs/mcp/">MCP tool reference</a></li><li><a href="../../docs/mesh/">Agent mesh</a></li><li><a href="../../docs/scenes/">Scenes and plugins</a></li><li><a href="../../docs/skills/">Skills</a></li><li><a href="../../docs/servers/">MCP servers</a></li><li><a href="../../docs/sources/">Sources</a></li></ul><h2>Your machine</h2><ul><li><a href="../../docs/vault/">Vaults and scopes</a></li><li><a href="../../docs/data/">Data lifecycle</a></li><li><a href="../../docs/config/">Configuration and paths</a></li><li><a href="../../docs/security/">Security model</a></li><li><a href="../../docs/sync/">Encrypted sync</a></li><li><a href="../../docs/troubleshoot/">Troubleshooting</a></li></ul><h2>Build with it</h2><ul><li><a href="../../docs/cli/">CLI reference</a></li><li><a href="../../docs/developing/">Developing Synapse</a></li><li><a href="../../docs/synapsecore/">The core library</a></li><li><a href="../../docs/embedding/">Embedding Synapse</a></li><li><a href="../../docs/retrieval/">Retrieval checks</a></li><li><a href="../../docs/map/">The memory map</a></li><li><a href="../../docs/startup/">What launching costs</a></li><li><a href="../../docs/review/">Security, stability, and resource review</a></li><li><a href="../../docs/windows/">Windows</a></li><li><a href="../../docs/federation/">Federation proposal</a></li></ul>
+        <h2>Tutorials</h2><ul><li><a href="../../tutorials/">Tutorials</a></li><li><a href="../../tutorials/connect/">Install and connect your first tools</a></li><li><a href="../../tutorials/continuity/">Carry one decision between tools</a></li><li><a href="../../tutorials/curate/">Curate and optimize memory</a></li><li><a href="../../tutorials/secrets/">Use a scoped secret in either shell mode</a></li><li><a href="../../tutorials/skills/">Keep one skill library across every tool</a></li><li><a href="../../tutorials/learn/">Let your agents write skills</a></li><li><a href="../../tutorials/launch/">Start a tool with everything in place</a></li><li><a href="../../tutorials/mesh/">Run a team of agents and drive it yourself</a></li><li><a href="../../tutorials/overseer/">Hand a job to one agent and watch it grow a team</a></li><li><a href="../../tutorials/recovery/">Export and restore safely</a></li><li><a href="../../tutorials/lifecycle/">Check, migrate, and remove Synapse</a></li></ul>
+      </nav>
+    </details>
+  </aside>
+    <main class="article" id="content">
+      <header class="articlehead"><nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../">Synapse</a><span aria-hidden="true">/</span><a href="../../docs/">Manual</a></nav><h1>Project Knowledge</h1><p>Technical documentation for Project Knowledge.</p></header>
+      <p>Project Knowledge gives connected coding agents a shared, repository-local guide to an application. The agent examines the code and writes Markdown; Synapse makes the guides available across sessions and tools. There is no model training, background agent, or additional model provider to configure.</p>
+<h2 id="enable">Enable</h2>
+<p>In the desktop app, open <strong>Settings → Project Knowledge → On</strong>, or run:</p>
+<div class="codeblock"><div class="codebar"><span>sh</span><button type="button" data-copy aria-live="polite">Copy</button></div><pre><code>synapse settings knowledge on
+</code></pre></div>
+<p>The feature is off by default. Restart connected tools after enabling so they load the two knowledge tools. pi receives the same tools through its existing Synapse extension.</p>
+<p>From a connected agent working in your repository, ask:</p>
+<blockquote>
+<p>Have Synapse learn this project. Inspect its stack, architecture, conventions, database, and tests. Create an overview and focused guides, cite the source files, and tell me what remains uncertain.</p>
+</blockquote>
+<p>The agent uses its existing source-reading tools and model. Synapse supplies the authoring guidance and stores the resulting guides. It does not independently scan your repository or launch another agent.</p>
+<h2 id="files-and-session-behavior">Files and session behavior</h2>
+<p>Guides live in <code>.synapse/knowledge/</code>, for example:</p>
+<div class="codeblock"><div class="codebar"><span>text</span><button type="button" data-copy aria-live="polite">Copy</button></div><pre><code>.synapse/knowledge/overview.md
+.synapse/knowledge/architecture.md
+.synapse/knowledge/database.md
+.synapse/knowledge/testing.md
+</code></pre></div>
+<p>Each file has TOML frontmatter containing a short description and SHA-256 hashes of the inspected source files, followed by its Markdown body. You can edit the Markdown in your usual editor and include the guides in normal code review. Synapse also creates <code>write.lock</code> in that directory to coordinate concurrent saves; it contains no project content and does not need to be versioned.</p>
+<p>Session hooks deliver a compact guide index and an excerpt of the overview, including after compaction. Agents using MCP without a session hook are instructed to request the index at startup; ordinary memory recall also includes the index while the feature is enabled. Complete guide bodies are read on demand through <code>knowledge</code>, in pages of at most 6,000 UTF-8 bytes. The index includes at most 32 guides and an overview excerpt of at most 1,800 bytes.</p>
+<p>Guides describe the checkout being used. They are not stored as global memories or shared by repository identity across different worktrees. Existing project decisions still belong in memory, and repeatable procedures still belong in skills.</p>
+<h2 id="refresh">Refresh</h2>
+<p>Ask your connected agent:</p>
+<blockquote>
+<p>Refresh Synapse's database guide against the current migrations. Preserve my edits and summarize the changes.</p>
+</blockquote>
+<p>Synapse compares tracked source hashes whenever the index or a guide is requested. A guide marked <code>needsreview</code> has changed, missing, or unreadable source files. A guide marked <code>unchecked</code> reached the per-request source budget; its <code>unchecked</code> count tells you how many sources remain unverified. Treat both states as requiring source inspection. <code>current</code> means those tracked files match; it does not prove the explanation is accurate or account for newly added files that were never tracked. Source code remains authoritative.</p>
+<p>Refresh is explicit. Synapse does not rewrite guides when a source changes. The agent must read the existing guide and supply its revision when saving. If another agent or a person edited it in the meantime, Synapse refuses the save until the agent rereads and reconciles the changes. The revision protects against an intervening edit; review the agent's diff to confirm it preserved the intent of your text.</p>
+<p>Names contain lowercase letters and digits. Guides require 1–64 inspected repository-relative source files, with a 2 MiB limit per source and a 16 MiB aggregate source-read budget per request. Guide bodies are limited to 128 KiB. Credential files and Synapse metadata cannot be tracked sources, and recognized credentials in generated text are rejected. These checks do not replace reviewing what an agent writes.</p>
+<h2 id="resource-use-and-filesystem-access">Resource use and filesystem access</h2>
+<p>Knowledge work runs only when requested or handed over at session startup. There is no watcher, polling loop, background model, or persistent source cache. Disabling the setting skips guide access entirely.</p>
+<p>Each request streams source hashes through a 64 KiB buffer and hashes shared files once, even when multiple guides reference them. The index examines at most 128 directory entries and 32 guide files, caps source reads at 16 MiB, and limits serialized index output to 32 KiB. Oversized or unverified input is reported instead of silently being treated as current. At most two knowledge jobs run at once per process; additional requests receive a retry message. Filesystem work runs outside the async executor. A busy writer also returns a retry message rather than waiting indefinitely.</p>
+<p>Knowledge access is restricted to the project root supplied to the MCP process through <code>SYNAPSE_PROJECT_DIR</code>, falling back to its starting directory. A tool may pass that root or a folder inside it, but it cannot use Synapse to read or write guides in another checkout. Guide paths and source components cannot be symlinks. On Unix, access and atomic writes use pinned directory handles, so replacing a directory with a symlink during a request cannot redirect that operation outside the opened repository. On Windows, directory handles are held without delete sharing and reparse-point files are rejected. Source files must be regular files; pipes and other special files are rejected. Metadata errors do not echo document contents, and overview excerpts are redacted before truncation.</p>
+<p>To repeat the synthetic performance check in a disposable repository:</p>
+<div class="codeblock"><div class="codebar"><span>sh</span><button type="button" data-copy aria-live="polite">Copy</button></div><pre><code>CARGO_PROFILE_RELEASE_BUILD_OVERRIDE_STRIP=none CARGO_PROFILE_RELEASE_STRIP=none \
+  cargo run --manifest-path crates/synapsecore/Cargo.toml --release --example knowledge
+</code></pre></div>
+<p>It measures an empty index and 32 guides referencing the same 64 source files (4 MiB total), reporting median and 95th-percentile latency, bytes read, and response size. These are local synthetic measurements, not a guarantee for slow or remote filesystems.</p>
+<h2 id="disable">Disable</h2>
+<p>Choose <strong>Settings → Project Knowledge → Off</strong>, or run:</p>
+<div class="codeblock"><div class="codebar"><span>sh</span><button type="button" data-copy aria-live="polite">Copy</button></div><pre><code>synapse settings knowledge off
+</code></pre></div>
+<p>Synapse immediately refuses further knowledge-tool calls and stops including guides in new session handoffs and memory recall. Restart connected tools to remove the tool definitions and guidance from their next session. Context already delivered to an active agent cannot be withdrawn. Existing Markdown files remain in the repository and are still available through ordinary file access.</p>
+<footer class="articlefoot"><div class="articlemeta"><a href="https://github.com/wess/synapse/blob/main/docs/knowledge.md">View page source</a><span>Synapse 1.14.3</span></div><nav class="pagenav" aria-label="Guide pages"><a href="../../docs/memory/"><small>Previous</small><strong>Memory and recall</strong></a><a href="../../docs/mcp/"><small>Next</small><strong>MCP tool reference</strong></a></nav></footer>
+    </main>
+  <aside class="ontoc" aria-label="On this page"><span>Contents</span><ol><li><a href="#enable">Enable</a></li><li><a href="#files-and-session-behavior">Files and session behavior</a></li><li><a href="#refresh">Refresh</a></li><li><a href="#resource-use-and-filesystem-access">Resource use and filesystem access</a></li><li><a href="#disable">Disable</a></li></ol></aside>
+  </div>
+  <footer class="footer">
+    <div class="footerupper"><div><a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">synapse</a><p>A shared memory. A little less starting over.</p></div>
+      <nav aria-label="Footer"><a href="../../docs/">Manual</a><a href="../../tutorials/">Tutorials</a><a href="https://github.com/wess/synapse">Source</a><a href="https://github.com/wess/synapse/releases">Releases</a><a href="https://wess.io">By Wess</a></nav></div>
+    <p class="footerfine"><span>macOS &amp; Windows desktop · Linux CLI &amp; MCP</span><span>v1.14.3 · MIT · No account required</span></p>
+  </footer></div>
+</body>
+</html>

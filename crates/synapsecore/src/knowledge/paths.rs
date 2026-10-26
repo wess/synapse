@@ -12,7 +12,7 @@ pub(super) fn name(value: &str) -> Result<()> {
             && value
                 .bytes()
                 .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit()),
-        "guide names must contain 1–48 lowercase letters or digits"
+        "guide names must contain 1-48 lowercase letters or digits"
     );
     Ok(())
 }

@@ -1,5 +1,6 @@
 use gpui::RenderImage;
 use image::{Frame, Rgba, RgbaImage, imageops};
+use std::io::BufReader;
 use std::sync::Arc;
 use synapsecore::{
     plugins::{Plugin, colorvalue},
@@ -20,7 +21,13 @@ pub fn load(plugin: &Plugin) -> anyhow::Result<Art> {
         match (&plugin.root, name) {
             (Some(root), Some(name)) => {
                 let path = synapsecore::plugins::asset(root, name)?;
-                let mut reader = image::ImageReader::open(path)?;
+                let file = std::fs::File::open(path)?;
+                anyhow::ensure!(
+                    file.metadata()?.len() <= 16 * 1024 * 1024,
+                    "asset exceeds 16 MiB"
+                );
+                let mut reader =
+                    image::ImageReader::new(BufReader::new(file)).with_guessed_format()?;
                 let mut limits = image::Limits::default();
                 limits.max_image_width = Some(4096);
                 limits.max_image_height = Some(4096);
@@ -88,7 +95,7 @@ pub fn room(
     let mut image = art.background.clone().unwrap_or_else(|| {
         let mut image = RgbaImage::from_pixel(WIDTH, HEIGHT, Rgba([31, 30, 38, 255]));
         rect(&mut image, 4, 4, 136, 91, wall);
-        // Stone courses, timber cap, and alternating wooden floorboards.
+        // stone courses, timber cap, and alternating wooden floorboards
         for row in 0..4 {
             for column in 0..9 {
                 let x = 4 + column * 17 + (row % 2) * 8;
@@ -124,7 +131,7 @@ pub fn room(
             rect(&mut image, x + 1, 6, 1, 89, shade(wood, 20));
         }
         rect(&mut image, 2, 95, 140, 6, shade(wood, -16));
-        // Window and a small herb on the sill.
+        // window and a small herb on the sill
         rect(&mut image, 21, 12, 26, 23, wood);
         rect(&mut image, 24, 14, 20, 17, [104, 151, 164, 255]);
         rect(&mut image, 33, 14, 2, 18, wood);
@@ -133,13 +140,13 @@ pub fn room(
         rect(&mut image, 43, 29, 5, 6, [154, 93, 70, 255]);
         rect(&mut image, 44, 23, 3, 7, [94, 127, 77, 255]);
         rect(&mut image, 41, 25, 8, 3, [114, 145, 84, 255]);
-        // Fireplace and chimney.
+        // fireplace and chimney
         rect(&mut image, 104, 7, 19, 26, shade(wall, 20));
         rect(&mut image, 99, 27, 29, 21, shade(wall, 30));
         rect(&mut image, 105, 31, 16, 15, [38, 31, 36, 255]);
         rect(&mut image, 97, 46, 33, 4, shade(wall, -15));
         rect(&mut image, 102, 42, 22, 3, shade(wood, -10));
-        // Rug, workbench, tools, and a bookshelf.
+        // rug, workbench, tools, and a bookshelf
         rect(&mut image, 43, 62, 55, 26, [114, 67, 69, 255]);
         rect(&mut image, 46, 65, 49, 20, [155, 95, 83, 255]);
         rect(&mut image, 48, 67, 45, 1, accent);
@@ -172,7 +179,7 @@ pub fn room(
             }
             rect(&mut image, 15, 60 + row * 12, 18, 3, wood);
         }
-        // Stool and delivery chest.
+        // stool and delivery chest
         rect(&mut image, 109, 75, 3, 10, wood);
         rect(&mut image, 121, 75, 3, 10, wood);
         rect(&mut image, 107, 72, 19, 5, shade(wood, 15));
@@ -224,7 +231,7 @@ pub fn room(
             .to_image();
             imageops::overlay(&mut image, &sprite, x, y);
         } else {
-            // Original tiny sprite for source builds without the optional paid pack.
+            // original tiny sprite for source builds without the optional paid pack
             let coat = [
                 [91, 129, 121, 255],
                 [117, 100, 151, 255],
@@ -293,39 +300,4 @@ pub fn room(
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn all_character_and_state_frames_render_and_work_animates() {
-        let plugin = synapsecore::plugins::builtin();
-        let art = load(&plugin).unwrap();
-        for appearance in 0..32 {
-            for state in [
-                State::Connected,
-                State::Working,
-                State::Waiting,
-                State::Blocked,
-                State::Done,
-                State::Disconnected,
-            ] {
-                let rendered = room(&plugin, &art, appearance, state, 0, true);
-                assert_eq!(
-                    rendered.as_bytes(0).unwrap().len(),
-                    (WIDTH * HEIGHT * 16 * 4) as usize
-                );
-            }
-        }
-        let first = room(&plugin, &art, 0, State::Working, 0, true);
-        let next = room(&plugin, &art, 0, State::Working, 1, true);
-        assert_ne!(first.as_bytes(0), next.as_bytes(0));
-        let fallback = Art {
-            characters: Vec::new(),
-            background: None,
-        };
-        assert!(
-            room(&plugin, &fallback, 0, State::Waiting, 0, true)
-                .as_bytes(0)
-                .is_some()
-        );
-    }
-}
+mod tests;

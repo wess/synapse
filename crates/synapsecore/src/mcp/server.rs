@@ -261,6 +261,25 @@ pub(super) fn projectpath(requested: Option<&str>) -> Option<std::path::PathBuf>
         .or_else(|| std::env::current_dir().ok())
 }
 
+pub(super) fn knowledgepath(requested: Option<&str>) -> Result<std::path::PathBuf, String> {
+    let trusted = std::env::var_os("SYNAPSE_PROJECT_DIR")
+        .map(Into::into)
+        .or_else(|| std::env::current_dir().ok())
+        .ok_or_else(|| "could not determine the session project folder".to_owned())?;
+    let trusted = crate::brain::projectroot(&trusted)
+        .map_err(|error| error.to_string())?
+        .ok_or_else(|| "session project folder does not exist".to_owned())?;
+    let requested =
+        projectpath(requested).ok_or_else(|| "project folder is required".to_owned())?;
+    let requested = crate::brain::projectroot(&requested)
+        .map_err(|error| error.to_string())?
+        .ok_or_else(|| "project folder does not exist".to_owned())?;
+    if requested != trusted {
+        return Err("project knowledge is limited to this session's project folder".to_owned());
+    }
+    Ok(requested)
+}
+
 #[tool_handler(router = self.toolrouter)]
 impl ServerHandler for Server {
     fn get_info(&self) -> ServerInfo {

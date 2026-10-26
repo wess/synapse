@@ -71,3 +71,35 @@ async fn a_suspended_session_returns_to_its_own_room_after_reclamation() {
     assert!(rows.iter().all(|row| row.online(now())));
     assert_ne!(rows[0].slot, rows[1].slot);
 }
+
+#[tokio::test]
+async fn joining_prunes_old_avatars_and_bounds_the_rest() {
+    let folder = tempfile::tempdir().unwrap();
+    let brain = Brain::open(folder.path().join("brain.db")).await.unwrap();
+    let pool = brain.pool();
+    sqlx::query(
+        "WITH RECURSIVE ids(value) AS (SELECT 0 UNION ALL SELECT value + 1 FROM ids WHERE value < 4200) INSERT INTO sceneavatar(identity,appearance,updated) SELECT 'avatar' || value, 0, ? FROM ids",
+    )
+    .bind(now())
+    .execute(pool)
+    .await
+    .unwrap();
+    sqlx::query("INSERT INTO sceneavatar(identity,appearance,updated) VALUES('old',0,?)")
+        .bind(now() - AVATARRETENTION - 1)
+        .execute(pool)
+        .await
+        .unwrap();
+
+    join(pool, "session", "test", "/work").await.unwrap();
+
+    let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM sceneavatar")
+        .fetch_one(pool)
+        .await
+        .unwrap();
+    assert_eq!(count, AVATARLIMIT);
+    let old: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM sceneavatar WHERE identity = 'old'")
+        .fetch_one(pool)
+        .await
+        .unwrap();
+    assert_eq!(old, 0);
+}

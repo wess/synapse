@@ -1,4 +1,4 @@
-use super::server::{Server, projectpath};
+use super::server::{Server, knowledgepath};
 use crate::knowledge::{self, Catalog, Guide, Page, ReadRequest, WriteRequest};
 use rmcp::handler::server::wrapper::Parameters;
 use rmcp::{Json, tool, tool_router};
@@ -23,7 +23,7 @@ impl Server {
         Parameters(request): Parameters<ReadRequest>,
     ) -> Result<Json<KnowledgeResponse>, String> {
         self.requireknowledge().await?;
-        let path = projectpath(request.project.as_deref()).ok_or("project folder is required")?;
+        let path = knowledgepath(request.project.as_deref())?;
         let response = knowledge::work::run(move || {
             Ok(match request.name {
                 Some(name) => KnowledgeResponse {
@@ -49,7 +49,7 @@ impl Server {
         Parameters(request): Parameters<WriteRequest>,
     ) -> Result<Json<Guide>, String> {
         self.requireknowledge().await?;
-        let path = projectpath(request.project.as_deref()).ok_or("project folder is required")?;
+        let path = knowledgepath(request.project.as_deref())?;
         knowledge::work::run(move || knowledge::write(&path, &request))
             .await
             .map(Json)

@@ -1,4 +1,5 @@
 use std::{env, fs, path::PathBuf};
+
 fn main() {
     let root = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap())
         .join("../../assets/scene/characters");
