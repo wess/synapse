@@ -1,0 +1,13 @@
+api = 1
+id = "workshop"
+name = "The workshop"
+version = "1.0.0"
+kind = "scene"
+
+[scene]
+floor = "#b48a60"
+wall = "#525965"
+wood = "#73513d"
+accent = "#e9b45c"
+framewidth = 26
+frameheight = 36

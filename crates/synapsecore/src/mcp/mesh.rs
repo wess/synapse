@@ -48,7 +48,27 @@ impl Server {
             human: false,
         };
         mesh.register(&registration).await.map_err(text)?;
+        if request
+            .project
+            .as_deref()
+            .is_some_and(|project| !project.trim().is_empty())
+        {
+            let _ = crate::presence::relocate(
+                self.brain.pool(),
+                &self.learningid,
+                &registration.project,
+            )
+            .await;
+        }
         *self.identity.lock().await = Some(registration.name.clone());
+        let _ = crate::presence::report(
+            self.brain.pool(),
+            &self.learningid,
+            &registration.name,
+            "",
+            "",
+        )
+        .await;
         Ok(Json(RegisterResponse {
             name: registration.name,
             roster: mesh.agents().await.map_err(text)?,
@@ -188,6 +208,8 @@ impl Server {
         // bounded line, and an agent that reads back what it sent should see
         // what the roster will show.
         let (status, note) = mesh.statusof(&me).await.map_err(text)?;
+        let _ =
+            crate::presence::report(self.brain.pool(), &self.learningid, &me, &status, &note).await;
         Ok(Json(StatusResponse {
             name: me,
             status,

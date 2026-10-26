@@ -1,3 +1,6 @@
+#[path = "mcp/presence.rs"]
+mod presence;
+
 #[path = "mcp/learning.rs"]
 mod learning;
 

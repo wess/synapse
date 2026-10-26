@@ -1,7 +1,7 @@
 use crate::ui::buffer::{self, Buffer, Format};
 use crate::ui::{
     Document, Notice, Page, Row, SaveDocument, agentrow, clibanner, document, graph, memories,
-    mesh, servers, settings, sidebar, skills, sources, stats, summary, vaults,
+    mesh, scene, servers, settings, sidebar, skills, sources, stats, summary, vaults,
 };
 use gpui::prelude::*;
 use gpui::{Context, Entity, IntoElement, Window, div, px};
@@ -21,6 +21,7 @@ const CLIPROMPT: &str = "cliprompt";
 
 pub struct Dashboard {
     rows: Vec<Row>,
+    scene: Entity<scene::Scene>,
     stats: Stats,
     database: PathBuf,
     notice: Notice,
@@ -79,6 +80,7 @@ pub struct Dashboard {
     optimization: Optimization,
     meshenabled: bool,
     learnenabled: bool,
+    knowledgeenabled: bool,
     meshagents: Vec<synapsecore::relay::AgentView>,
     meshworkers: Vec<synapsecore::relay::WorkerView>,
     meshfeed: Vec<synapsecore::relay::Message>,
@@ -324,8 +326,11 @@ impl Dashboard {
             notice = Notice::Error(format!("Could not create SOUL.md: {error}"));
         }
         let learnenabled = settings.learn;
+        let knowledgeenabled = settings.knowledge;
         let workerlimit = settings.workers;
+        let scene = cx.new(|cx| scene::Scene::new(brain.clone(), cx));
         Self {
+            scene,
             // Filled by `opened`, once there is a window to fill.
             rows: Vec::new(),
             stats,
@@ -372,6 +377,7 @@ impl Dashboard {
             optimization,
             meshenabled: meshdata.enabled,
             learnenabled,
+            knowledgeenabled,
             meshagents: meshdata.agents,
             meshworkers: meshdata.workers,
             meshfeed: meshdata.feed,
@@ -458,6 +464,10 @@ impl Dashboard {
             stats: Box::new(cx.listener(|this, _, _, cx| this.showstats(cx))),
             memories: Box::new(cx.listener(|this, _, _, cx| this.showmemories(cx))),
             mesh: Box::new(cx.listener(|this, _, _, cx| this.showmesh(cx))),
+            scenes: Box::new(cx.listener(|this, _, _, cx| {
+                this.page = Page::Scenes;
+                cx.notify();
+            })),
             skills: Box::new(cx.listener(|this, _, _, cx| this.showskills(cx))),
             servers: Box::new(cx.listener(|this, _, _, cx| this.showservers(cx))),
             vaults: Box::new(cx.listener(|this, _, _, cx| this.showvaults(cx))),
@@ -1628,6 +1638,26 @@ impl Dashboard {
         cx.notify();
     }
 
+    fn setknowledge(&mut self, enabled: bool, cx: &mut Context<Self>) {
+        let database = self.database.clone();
+        let result = block(async {
+            let brain = synapsecore::brain::Brain::open(database).await?;
+            brain.setknowledge(enabled).await
+        });
+        self.notice = match result {
+            Ok(()) => {
+                self.knowledgeenabled = enabled;
+                Notice::Success(if enabled {
+                    "Project Knowledge on. Restart connected tools, then ask your agent to learn this project."
+                } else {
+                    "Project Knowledge off. Existing guides stay in the repository."
+                }.to_owned())
+            }
+            Err(error) => Notice::Error(format!("Could not change Project Knowledge: {error}")),
+        };
+        cx.notify();
+    }
+
     fn setlearn(&mut self, enabled: bool, cx: &mut Context<Self>) {
         let database = self.database.clone();
         let result = block(async {
@@ -2701,6 +2731,8 @@ impl Render for Dashboard {
 
 impl Dashboard {
     fn body(&mut self, cx: &mut Context<Self>) -> gpui::AnyElement {
+        let active = self.page == Page::Scenes && self.document.is_none();
+        self.scene.update(cx, |scene, _| scene.active = active);
         let theme = guise::theme(cx);
         let border = theme.border().hsla();
         let surface = theme.surface().hsla();
@@ -2751,6 +2783,10 @@ impl Dashboard {
             .flex()
             .flex_col()
             .children(banner);
+
+        if self.page == Page::Scenes {
+            return shell.child(self.scene.clone()).into_any_element();
+        }
 
         if self.page == Page::Map {
             let host = cx.entity().downgrade();
@@ -3221,6 +3257,7 @@ impl Dashboard {
                         optimization: self.optimization,
                         mesh: self.meshenabled,
                         learn: self.learnenabled,
+                        knowledge: self.knowledgeenabled,
                         workers: self.workerlimit,
                         thememode: crate::ui::theme::mode(cx),
                         clistatus,
@@ -3251,6 +3288,12 @@ impl Dashboard {
                                 })
                             })
                         },
+                        knowledgeon: Box::new(
+                            cx.listener(|this, _, _, cx| this.setknowledge(true, cx)),
+                        ),
+                        knowledgeoff: Box::new(
+                            cx.listener(|this, _, _, cx| this.setknowledge(false, cx)),
+                        ),
                         learnon: Box::new(cx.listener(|this, _, _, cx| this.setlearn(true, cx))),
                         learnoff: Box::new(cx.listener(|this, _, _, cx| this.setlearn(false, cx))),
                         full: Box::new(cx.listener(|this, _, _, cx| {
@@ -3521,6 +3564,7 @@ fn initialpage() -> Page {
         Ok("stats" | "savings") => Page::Stats,
         Ok("memory") => Page::Memories,
         Ok("mesh") => Page::Mesh,
+        Ok("scenes") => Page::Scenes,
         Ok("skills") => Page::Skills,
         Ok("mcp") => Page::Servers,
         Ok("vaults") => Page::Vaults,
@@ -3757,6 +3801,7 @@ struct Startup {
     optimization: Optimization,
     mesh: bool,
     learn: bool,
+    knowledge: bool,
     workers: usize,
 }
 
@@ -3770,6 +3815,7 @@ impl Default for Startup {
             optimization: Optimization::default(),
             mesh: false,
             learn: false,
+            knowledge: false,
             workers: synapsecore::relay::DEFAULTWORKERS,
         }
     }
@@ -3793,6 +3839,7 @@ fn readsettings(brain: Option<&Brain>) -> Startup {
             optimization: settings.optimization,
             mesh: brain.mesh().await.unwrap_or(false),
             learn: brain.learn().await.unwrap_or(false),
+            knowledge: brain.knowledge().await.unwrap_or(false),
             workers: brain
                 .maxworkers()
                 .await

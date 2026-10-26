@@ -13,6 +13,7 @@ pub struct View {
     pub optimization: Optimization,
     pub mesh: bool,
     pub learn: bool,
+    pub knowledge: bool,
     /// Most background workers one session may run at once.
     pub workers: usize,
     pub thememode: Mode,
@@ -28,6 +29,8 @@ pub struct View {
 pub struct Actions {
     pub meshon: Click,
     pub meshoff: Click,
+    pub knowledgeon: Click,
+    pub knowledgeoff: Click,
     pub learnon: Click,
     pub learnoff: Click,
     /// Set the worker limit, by count.
@@ -53,6 +56,8 @@ pub fn render(view: View, actions: Actions, cx: &App) -> AnyElement {
     let Actions {
         meshon,
         meshoff,
+        knowledgeon,
+        knowledgeoff,
         learnon,
         learnoff,
         setworkers,
@@ -204,6 +209,7 @@ pub fn render(view: View, actions: Actions, cx: &App) -> AnyElement {
                         ),
                 )
                 .child(meshpanel(view.mesh, meshon, meshoff, border, surface))
+                .child(knowledgepanel(view.knowledge, knowledgeon, knowledgeoff, border, surface))
                 .child(learnpanel(view.learn, learnon, learnoff, border, surface))
                 .child(workerpanel(view.workers, &setworkers, border, surface))
                 .child(guidancepanel(
@@ -421,9 +427,88 @@ fn meshpanel(
         .into_any_element()
 }
 
-/// The self-improvement switch. Same shape as the mesh, and the same bargain:
-/// two more tools in every session, plus agents writing into a library. What
-/// makes it safe to leave on is on the Skills page, so this says so.
+fn knowledgepanel(
+    enabled: bool,
+    on: Click,
+    off: Click,
+    border: gpui::Hsla,
+    surface: gpui::Hsla,
+) -> AnyElement {
+    div()
+        .rounded(px(6.0))
+        .border_1()
+        .border_color(border)
+        .bg(surface)
+        .p(px(16.0))
+        .flex()
+        .flex_col()
+        .gap(px(13.0))
+        .child(
+            div()
+                .flex()
+                .items_start()
+                .justify_between()
+                .gap(px(24.0))
+                .child(
+                    div()
+                        .flex_1()
+                        .min_w(px(0.0))
+                        .flex()
+                        .flex_col()
+                        .gap(px(4.0))
+                        .child(
+                            div()
+                                .flex()
+                                .items_center()
+                                .gap(px(8.0))
+                                .child(Icon::new(IconName::Sparkles).size(Size::Sm))
+                                .child(Text::new("Project Knowledge").size(Size::Sm).bold()),
+                        )
+                        .child(
+                            Text::new(
+                                "Shares repository guides with connected agents, quietly at session start and on demand.",
+                            )
+                            .size(Size::Xs)
+                            .dimmed(),
+                        ),
+                )
+                .child(
+                    Badge::new(if enabled { "On" } else { "Off" }).color(if enabled {
+                        ColorName::Teal
+                    } else {
+                        ColorName::Gray
+                    }),
+                ),
+        )
+        .child(
+            div()
+                .flex()
+                .gap(px(10.0))
+                .child(option(
+                    "knowledge",
+                    "Off",
+                    "Guides stay on disk; agents receive no knowledge tools.",
+                    !enabled,
+                    off,
+                ))
+                .child(option(
+                    "knowledge",
+                    "On",
+                    "Agents can read guides and update them when you ask.",
+                    enabled,
+                    on,
+                )),
+        )
+        .child(
+            Text::new(
+                "Ask your connected agent to learn this project. Guides live in .synapse/knowledge/ and stay editable in your editor. Restart connected tools after enabling. Disabling stops Synapse from serving guides; files are retained.",
+            )
+            .size(Size::Xs)
+            .dimmed(),
+        )
+        .into_any_element()
+}
+
 fn learnpanel(
     enabled: bool,
     on: Click,

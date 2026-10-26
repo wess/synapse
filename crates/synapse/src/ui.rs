@@ -10,6 +10,7 @@ mod menu;
 mod mesh;
 mod model;
 mod runtime;
+mod scene;
 mod servers;
 mod settings;
 mod sidebar;

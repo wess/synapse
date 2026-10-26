@@ -13,6 +13,7 @@ pub mod database;
 pub mod files;
 pub mod imports;
 pub mod instructions;
+pub mod knowledge;
 pub mod learning;
 pub mod mcp;
 pub mod relay;
@@ -23,3 +24,6 @@ pub mod sources;
 pub mod sync;
 pub mod usage;
 pub mod vault;
+
+pub mod plugins;
+pub mod presence;

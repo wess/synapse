@@ -48,6 +48,7 @@ async fn main() -> Result<()> {
                     .recallscoped(query, 4, Some(Optimization::Lean), None)
                     .await?;
                 let response = RecallResponse {
+                    knowledge: None,
                     optimization: settings.optimization,
                     memories: memories.into_iter().map(Into::into).collect(),
                     drift: Vec::new(),
@@ -69,6 +70,7 @@ async fn main() -> Result<()> {
                 .await?;
             let drift = brain.drifted(&memories, None).await?;
             let response = RecallResponse {
+                knowledge: None,
                 optimization: settings.optimization,
                 memories: memories.into_iter().map(Into::into).collect(),
                 drift,

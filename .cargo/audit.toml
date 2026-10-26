@@ -1,4 +1,6 @@
 [advisories]
-# xcb is a Linux-only transitive dependency of GPUI. Synaps 0.1 is released only
-# for Apple silicon macOS, so its quick-xml build dependency is not shipped.
+# quick-xml 0.30 is retained for GPUI's optional xcb build dependency. It is not
+# in the current enabled graph (`cargo tree --target all -i quick-xml@0.30.0`).
+# The headless core and sync server do not depend on GPUI. Keep these exceptions
+# explicit until the upstream optional dependency supports quick-xml >=0.41.
 ignore = ["RUSTSEC-2026-0194", "RUSTSEC-2026-0195"]

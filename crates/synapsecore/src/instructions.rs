@@ -21,10 +21,11 @@ const ABRIDGED: &str = "For an abridged recall, use `readmemory` with the hit's 
 /// running release rather than carried forward — which is what lets wording
 /// that turned out to be wrong reach a machine whose SOUL.md was written a
 /// version ago, without editing somebody's file to do it.
-const MANAGED: [&str; 3] = [
+const MANAGED: [&str; 4] = [
     "## Connection notice",
     "## Agent mesh",
     "## Self-improvement",
+    "## Project knowledge",
 ];
 
 pub fn template() -> String {
@@ -35,7 +36,7 @@ pub fn template() -> String {
 /// Synapse's own sections replaced by this release's. Mesh and self-improvement
 /// guidance are appended only while their settings are on, matching the tools
 /// actually in the router.
-pub fn modelfacing(guidance: &str, mesh: bool, learn: bool) -> String {
+pub fn modelfacing(guidance: &str, mesh: bool, learn: bool, knowledge: bool) -> String {
     let mut merged = format!("{}\n\n{CONNECTION}", ours(guidance).trim_end());
     if !merged.contains("`readmemory`") {
         merged.push_str(&format!("\n{ABRIDGED}"));
@@ -46,12 +47,17 @@ pub fn modelfacing(guidance: &str, mesh: bool, learn: bool) -> String {
     if learn {
         merged = format!("{}\n\n{LEARN}", merged.trim_end());
     }
+    if knowledge {
+        merged = format!("{}\n\n{}", merged.trim_end(), crate::knowledge::GUIDANCE);
+    }
     merged
 }
 
 /// Characters of [`modelfacing`] that Synapse adds on top of the user's text.
-pub fn added(guidance: &str, mesh: bool, learn: bool) -> usize {
-    let sent = modelfacing(guidance, mesh, learn).chars().count();
+pub fn added(guidance: &str, mesh: bool, learn: bool, knowledge: bool) -> usize {
+    let sent = modelfacing(guidance, mesh, learn, knowledge)
+        .chars()
+        .count();
     sent.saturating_sub(ours(guidance).trim_end().chars().count())
 }
 
@@ -173,12 +179,12 @@ mod tests {
     #[test]
     fn new_guidance_already_announces_the_connection() {
         assert!(template().contains("Synapse connected"));
-        assert_eq!(modelfacing(&template(), false, false), template());
+        assert_eq!(modelfacing(&template(), false, false, false), template());
     }
 
     #[test]
     fn older_guidance_gains_the_connection_notice() {
-        let merged = modelfacing("# Mine\n\nKeep this.\n", false, false);
+        let merged = modelfacing("# Mine\n\nKeep this.\n", false, false, false);
         assert!(merged.starts_with("# Mine\n\nKeep this."));
         assert!(merged.contains("Synapse connected"));
         assert_eq!(merged.matches("## Connection notice").count(), 1);
@@ -192,7 +198,7 @@ mod tests {
     fn a_connection_notice_from_an_older_release_is_replaced_rather_than_kept() {
         let stale = "# Mine\n\n## Connection notice\n\n- Write `Synapse connected · <count> \
                      memories recalled` in your first reply.\n";
-        let merged = modelfacing(stale, false, false);
+        let merged = modelfacing(stale, false, false, false);
         assert!(merged.starts_with("# Mine"));
         assert!(!merged.contains("memories recalled"));
         assert_eq!(merged.matches("## Connection notice").count(), 1);
@@ -215,7 +221,7 @@ mod tests {
     #[test]
     fn a_heading_named_in_a_sentence_is_not_a_section() {
         let mine = "# Mine\n\nThe ## Agent mesh section explains delegation.\n\nKeep this too.\n";
-        let merged = modelfacing(mine, false, false);
+        let merged = modelfacing(mine, false, false, false);
         assert!(merged.contains("explains delegation"), "{merged}");
         assert!(merged.contains("Keep this too"), "{merged}");
     }
@@ -225,7 +231,7 @@ mod tests {
     #[test]
     fn a_heading_inside_a_fence_is_left_alone() {
         let mine = "# Mine\n\n```markdown\n## Agent mesh\n\nnot a real section\n```\n\nAfter.\n";
-        let merged = modelfacing(mine, false, false);
+        let merged = modelfacing(mine, false, false, false);
         assert!(merged.contains("not a real section"), "{merged}");
         assert!(merged.contains("After."), "{merged}");
     }
@@ -235,7 +241,7 @@ mod tests {
     #[test]
     fn a_heading_that_merely_starts_the_same_is_a_different_section() {
         let mine = "## Connection notices I like\n\nMine.\n";
-        let merged = modelfacing(mine, false, false);
+        let merged = modelfacing(mine, false, false, false);
         assert!(merged.contains("Connection notices I like"), "{merged}");
         assert!(merged.contains("Mine."), "{merged}");
     }
@@ -246,7 +252,7 @@ mod tests {
     fn every_copy_of_a_managed_section_goes() {
         let stale =
             "## Connection notice\n\nold one\n\n# Elsewhere\n\n## Connection notice\n\nolder one\n";
-        let merged = modelfacing(stale, false, false);
+        let merged = modelfacing(stale, false, false, false);
         assert!(!merged.contains("old one"), "{merged}");
         assert!(!merged.contains("older one"), "{merged}");
         assert_eq!(merged.matches("## Connection notice").count(), 1);
@@ -258,7 +264,7 @@ mod tests {
     #[test]
     fn a_subsection_goes_with_its_section_and_a_level_up_ends_it() {
         let mine = "## Agent mesh\n\n### How I delegate\n\ndropped\n\n# Mine\n\nkept\n";
-        let merged = modelfacing(mine, false, false);
+        let merged = modelfacing(mine, false, false, false);
         assert!(!merged.contains("How I delegate"), "{merged}");
         assert!(!merged.contains("dropped"), "{merged}");
         assert!(merged.contains("# Mine"), "{merged}");
@@ -270,15 +276,19 @@ mod tests {
     #[test]
     fn replacing_the_managed_sections_is_idempotent() {
         for (mesh, learn) in [(false, false), (true, false), (false, true), (true, true)] {
-            let once = modelfacing(&template(), mesh, learn);
-            assert_eq!(modelfacing(&once, mesh, learn), once, "{mesh} {learn}");
+            let once = modelfacing(&template(), mesh, learn, false);
+            assert_eq!(
+                modelfacing(&once, mesh, learn, false),
+                once,
+                "{mesh} {learn}"
+            );
         }
     }
 
     #[test]
     fn mesh_guidance_appears_only_while_the_mesh_is_on() {
-        let off = modelfacing(&template(), false, false);
-        let on = modelfacing(&template(), true, false);
+        let off = modelfacing(&template(), false, false, false);
+        let on = modelfacing(&template(), true, false, false);
         assert!(!off.contains("## Agent mesh"));
         assert!(on.contains("## Agent mesh"));
         assert!(on.contains("call `wait` again"));
@@ -287,8 +297,8 @@ mod tests {
 
     #[test]
     fn self_improvement_guidance_appears_only_while_learning_is_on() {
-        let off = modelfacing(&template(), false, false);
-        let on = modelfacing(&template(), false, true);
+        let off = modelfacing(&template(), false, false, false);
+        let on = modelfacing(&template(), false, true, false);
         assert!(!off.contains("## Self-improvement"));
         assert!(on.contains("## Self-improvement"));
         assert!(on.contains("into no tool until the user approves it"));
@@ -297,7 +307,7 @@ mod tests {
 
     #[test]
     fn both_switches_land_in_a_stable_order() {
-        let both = modelfacing(&template(), true, true);
+        let both = modelfacing(&template(), true, true, false);
         let mesh = both.find("## Agent mesh").unwrap();
         let learn = both.find("## Self-improvement").unwrap();
         assert!(mesh < learn, "the mesh block must stay above the newer one");

@@ -224,6 +224,8 @@ pub struct RecallRequest {
 
 #[derive(Debug, Serialize, JsonSchema)]
 pub struct RecallResponse {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub knowledge: Option<crate::knowledge::Catalog>,
     pub optimization: Optimization,
     pub memories: Vec<Recalled>,
     /// Memories here that look stale or are contradicted or repeated by another.

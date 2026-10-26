@@ -3,7 +3,7 @@ use anyhow::{Context, Result};
 use sqlx::SqlitePool;
 use std::path::Path;
 
-pub const LATEST: i64 = 15;
+pub const LATEST: i64 = 16;
 
 /// The vault's own schema, in its own file. One table today, with the numbered
 /// migration around it anyway: the day it grows a column is not the day to
@@ -374,6 +374,14 @@ const MIGRATIONS: &[Migration] = &[
              state TEXT NOT NULL DEFAULT 'proposed' CHECK(state IN ('proposed', 'approved', 'rejected')), \
              created INTEGER NOT NULL, UNIQUE(project, lesson))",
             "CREATE INDEX learningpromotionproject ON learningpromotion(project, state, id)",
+        ],
+    },
+    Migration {
+        version: 16,
+        statements: &[
+            "CREATE TABLE presence(id TEXT PRIMARY KEY, tool TEXT NOT NULL, project TEXT NOT NULL, name TEXT NOT NULL DEFAULT '', status TEXT NOT NULL DEFAULT '', note TEXT NOT NULL DEFAULT '', slot INTEGER NOT NULL, started INTEGER NOT NULL, seen INTEGER NOT NULL, ended INTEGER NOT NULL DEFAULT 0)",
+            "CREATE INDEX presenceseen ON presence(seen)",
+            "CREATE TABLE sceneavatar(identity TEXT PRIMARY KEY, appearance INTEGER NOT NULL)",
         ],
     },
 ];

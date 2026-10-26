@@ -52,6 +52,9 @@ pub struct Report {
     /// Whether agents may write skills. Nothing about self-improvement is said
     /// when it is off, including the count below.
     pub learn: bool,
+    pub knowledgeenabled: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub knowledge: Option<crate::knowledge::Catalog>,
     /// Skills agents have written that nobody has looked at yet.
     pub proposed: i64,
     pub vault: String,
@@ -258,6 +261,9 @@ fn context(report: &Report) -> String {
             report.proposed
         ));
     }
+    if let Some(knowledge) = &report.knowledge {
+        context.push_str(&knowledge.context());
+    }
     if report.recalled.is_empty() {
         context.push_str(
             " Nothing is stored for this project yet. Call `remember` once a durable decision, \
@@ -327,13 +333,21 @@ fn flagged(report: &Report) -> String {
 /// Silent when there is nothing to hand back or Synapse cannot be read. The
 /// user is mid-task, and neither is worth interrupting them or the model for.
 fn restored(report: &Report) -> String {
-    if report.problem.is_some() || report.recalled.is_empty() {
+    if report.problem.is_some() {
         return String::new();
+    }
+    let knowledge = report
+        .knowledge
+        .as_ref()
+        .map(|k| k.context())
+        .unwrap_or_default();
+    if report.recalled.is_empty() {
+        return knowledge;
     }
     format!(
         "This session was just compacted, which dropped the memory Synapse handed over when it \
          started. Here it is again, most recent first, including anything remembered earlier in \
-         this session:\n\n{}{}{}",
+         this session:\n\n{}{}{}{knowledge}",
         recalled(report),
         withheld(report),
         flagged(report)
@@ -425,6 +439,8 @@ fn collect(root: Option<&Path>, recall: Recall) -> Report {
             mesh: false,
             agents: 0,
             learn: false,
+            knowledgeenabled: false,
+            knowledge: None,
             proposed: 0,
             vault: "inactive".to_owned(),
             recalled: Vec::new(),
@@ -446,6 +462,12 @@ fn gather(root: Option<&Path>, recall: Recall) -> Result<Report> {
         let memories = brain.reach(root).await?;
         let mesh = brain.mesh().await?;
         let learn = brain.learn().await?;
+        let knowledgeenabled = brain.knowledge().await?;
+        let knowledge = if knowledgeenabled && matches!(recall, Recall::Yes(_)) {
+            crate::knowledge::work::catalog(root).await
+        } else {
+            None
+        };
         // Only while learning is on. With it off there is no self-improvement
         // surface at all, and the status line should not pay for a count it
         // would never show.
@@ -507,6 +529,8 @@ fn gather(root: Option<&Path>, recall: Recall) -> Result<Report> {
             mesh,
             agents,
             learn,
+            knowledgeenabled,
+            knowledge,
             proposed,
             vault: vault.to_owned(),
             recalled,
@@ -568,7 +592,12 @@ async fn count(
         .unwrap_or_default();
     let sent = crate::usage::bodies(&report.recalled);
     let framing = handed(report).chars().count().saturating_sub(sent);
-    let standing = crate::usage::standing(&guidance, report.mesh, report.learn);
+    let standing = crate::usage::standing(
+        &guidance,
+        report.mesh,
+        report.learn,
+        report.knowledgeenabled,
+    );
     let entry = Entry {
         memories: report.recalled.len(),
         matched,
@@ -640,6 +669,8 @@ mod tests {
             mesh: false,
             agents: 0,
             learn: false,
+            knowledgeenabled: false,
+            knowledge: None,
             proposed: 0,
             vault: "inactive".to_owned(),
             recalled: Vec::new(),
@@ -738,6 +769,29 @@ mod tests {
         assert!(empty.contains("`remember`"));
         assert!(!empty.contains("`supersedes`"));
         assert!(reminder(&report()).contains("`supersedes`"));
+    }
+
+    #[test]
+    fn knowledge_survives_compaction_even_without_any_memories() {
+        let root = tempfile::tempdir().unwrap();
+        std::fs::create_dir(root.path().join(".git")).unwrap();
+        let report = Report {
+            recalled: Vec::new(),
+            knowledgeenabled: true,
+            knowledge: Some(crate::knowledge::catalog(root.path()).unwrap()),
+            ..report()
+        };
+        assert!(context(&report).contains("Project Knowledge"));
+        assert!(restored(&report).contains("Project Knowledge"));
+        assert!(!notice(&report).contains("Knowledge"));
+        let compacted = payload(&serde_json::json!({"source": "compact"}), &report);
+        assert!(compacted.get("systemMessage").is_none());
+        assert!(
+            compacted["hookSpecificOutput"]["additionalContext"]
+                .as_str()
+                .unwrap()
+                .contains("Project Knowledge")
+        );
     }
 
     #[test]

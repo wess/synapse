@@ -7,11 +7,11 @@ fn reading_guidance_reaches_existing_sessions_without_rewriting_their_file() {
     let original = "# My guidance\n\nKeep this wording.\n";
     std::fs::write(&path, original).unwrap();
     let stored = synapsecore::instructions::ensure(&path).unwrap();
-    let merged = synapsecore::instructions::modelfacing(&stored, false, false);
+    let merged = synapsecore::instructions::modelfacing(&stored, false, false, false);
     assert!(merged.starts_with(original));
     assert!(merged.contains("`readmemory`"));
     assert_eq!(
-        synapsecore::instructions::modelfacing(&merged, false, false),
+        synapsecore::instructions::modelfacing(&merged, false, false, false),
         merged
     );
     assert_eq!(std::fs::read_to_string(path).unwrap(), original);

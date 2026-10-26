@@ -97,9 +97,11 @@ See the [installation guide](https://wess.io/synapse/docs/install/) for CLI setu
 | --- | --- |
 | Project memory | Save decisions, corrections, and conventions. Recall them in a later session or another connected agent, from any clone or worktree of the same repository. Credentials are stripped before anything is stored. |
 | Existing memory | Preview and import Claude and Codex memory without changing the originals. Undo an import batch when needed. |
+| Project Knowledge | Opt into repository Markdown guides for architecture, stack, database, and testing. Connected agents create and refresh them when asked; Synapse shares a compact index and flags changed sources. See [Project Knowledge](docs/knowledge.md). |
 | Shared guidance | Edit one `SOUL.md` and point your connected tools at it. |
 | Agent Skills | Maintain one library, install skills into connected tools, and check which copies have drifted. |
 | MCP servers | Keep one list of MCP servers and give it to every connected tool, with each token in the vault instead of in plaintext in every tool's config. |
+| Scenes | Watch connected sessions as characters in their own pixel-art workshop rooms. Choose appearances and add local scene packs. See [Scenes and plugins](docs/scenes.md). |
 | Agent coordination | Enable the optional mesh to let agents message each other and work together. Join them yourself with `synapse mux`. |
 | Scoped credentials | Approve which project folders may receive which environment variables, using the local encrypted vault or macOS Keychain. |
 | The Map | See every memory as a graph in three dimensions — projects as clusters, a correction as a line to what it replaced, and a memory nothing else touches looking like one. |

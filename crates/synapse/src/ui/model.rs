@@ -12,6 +12,7 @@ pub enum Page {
     Memories,
     Servers,
     Mesh,
+    Scenes,
     Skills,
     Vaults,
     Settings,

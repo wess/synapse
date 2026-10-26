@@ -28,6 +28,7 @@ pub struct Navigation {
     pub skills: Click,
     pub servers: Click,
     pub mesh: Click,
+    pub scenes: Click,
     pub vaults: Click,
     pub settings: Click,
 }
@@ -41,6 +42,7 @@ pub fn render(page: Page, go: Navigation, cx: &App) -> impl IntoElement {
         skills,
         servers,
         mesh,
+        scenes,
         vaults,
         settings,
     } = go;
@@ -124,6 +126,14 @@ pub fn render(page: Page, go: Navigation, cx: &App) -> impl IntoElement {
             page == Page::Mesh,
             &colours,
             mesh,
+        ))
+        .child(entry(
+            "navscenes",
+            "Scenes",
+            IconName::Sparkles,
+            page == Page::Scenes,
+            &colours,
+            scenes,
         ))
         .child(group("System"))
         .child(entry(

@@ -49,19 +49,31 @@ pub async fn surfaces(brain: &Brain, soul: &Path, root: Option<&Path>) -> Result
         .unwrap_or_default();
     let mesh = brain.mesh().await.unwrap_or(false);
     let learn = brain.learn().await.unwrap_or(false);
-    Ok(vec![
-        guidance(soul, mesh, learn)?,
-        tooldefinitions(mesh, learn),
+    let knowledge = brain.knowledge().await.unwrap_or(false);
+    let mut surfaces = vec![
+        guidance(soul, mesh, learn, knowledge)?,
+        tooldefinitions(mesh, learn, knowledge),
         skills()?,
         startuprecall(brain, optimization, root).await,
-    ])
+    ];
+    if knowledge && let Some(root) = root {
+        let root = root.to_owned();
+        let catalog = crate::knowledge::work::run(move || crate::knowledge::catalog(&root)).await?;
+        surfaces.push(Surface {
+            label: "Project Knowledge",
+            detail: format!("{} guides, bodies read on demand", catalog.guides.len()),
+            chars: catalog.context().chars().count(),
+            warning: None,
+        });
+    }
+    Ok(surfaces)
 }
 
 /// SOUL.md plus whatever blocks the current settings add, since those are sent
 /// too.
-fn guidance(soul: &Path, mesh: bool, learn: bool) -> Result<Surface> {
+fn guidance(soul: &Path, mesh: bool, learn: bool, knowledge: bool) -> Result<Surface> {
     let text = crate::instructions::ensure(soul)?;
-    let sent = crate::instructions::modelfacing(&text, mesh, learn);
+    let sent = crate::instructions::modelfacing(&text, mesh, learn, knowledge);
     let chars = sent.chars().count();
     let extra = match (mesh, learn) {
         (true, true) => " + mesh and learn guidance",
@@ -71,7 +83,14 @@ fn guidance(soul: &Path, mesh: bool, learn: bool) -> Result<Surface> {
     };
     Ok(Surface {
         label: "Guidance",
-        detail: format!("SOUL.md{extra}"),
+        detail: format!(
+            "SOUL.md{extra}{}",
+            if knowledge {
+                " + project knowledge guidance"
+            } else {
+                ""
+            }
+        ),
         chars,
         warning: (chars > GUIDANCEGUIDE).then(|| {
             format!(
@@ -88,10 +107,10 @@ fn guidance(soul: &Path, mesh: bool, learn: bool) -> Result<Surface> {
 
 /// Mesh and learn both gate the router, so switching one off takes its tools
 /// out of every session. The detail says what the mesh switch is worth.
-fn tooldefinitions(mesh: bool, learn: bool) -> Surface {
-    let tools = crate::mcp::toolcost(mesh, learn);
+fn tooldefinitions(mesh: bool, learn: bool, knowledge: bool) -> Surface {
+    let tools = crate::mcp::toolcost(mesh, learn, knowledge);
     let chars: usize = tools.iter().map(|(_, size)| size).sum();
-    let other: usize = crate::mcp::toolcost(!mesh, learn)
+    let other: usize = crate::mcp::toolcost(!mesh, learn, knowledge)
         .iter()
         .map(|(_, size)| size)
         .sum();
@@ -194,8 +213,8 @@ mod tests {
 
     #[test]
     fn the_mesh_is_the_biggest_switch_and_its_worth_is_named() {
-        let base = tooldefinitions(false, false);
-        let withmesh = tooldefinitions(true, false);
+        let base = tooldefinitions(false, false, false);
+        let withmesh = tooldefinitions(true, false, false);
         assert!(
             withmesh.chars > base.chars * 2,
             "{} vs {}",

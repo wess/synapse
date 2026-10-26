@@ -90,12 +90,12 @@ pub fn hooked(client: &str) -> bool {
 }
 
 /// Synapse's fixed cost per session: tool definitions plus its own guidance.
-pub fn standing(guidance: &str, mesh: bool, learn: bool) -> usize {
-    let tools: usize = crate::mcp::toolcost(mesh, learn)
+pub fn standing(guidance: &str, mesh: bool, learn: bool, knowledge: bool) -> usize {
+    let tools: usize = crate::mcp::toolcost(mesh, learn, knowledge)
         .iter()
         .map(|(_, size)| size)
         .sum();
-    tools + crate::instructions::added(guidance, mesh, learn)
+    tools + crate::instructions::added(guidance, mesh, learn, knowledge)
 }
 
 pub async fn record(brain: &Brain, entry: Entry) -> Result<()> {

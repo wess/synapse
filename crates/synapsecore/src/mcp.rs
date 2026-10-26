@@ -1,3 +1,4 @@
+mod knowledge;
 mod learn;
 mod mesh;
 mod model;
@@ -7,8 +8,8 @@ mod server;
 /// bytes of JSON. The mesh's sixteen and self-improvement's two are the whole
 /// reason those settings gate the router rather than the handler — this is how
 /// somebody sees what that saves them.
-pub fn toolcost(mesh: bool, learn: bool) -> Vec<(String, usize)> {
-    server::Server::definitions(mesh, learn)
+pub fn toolcost(mesh: bool, learn: bool, knowledge: bool) -> Vec<(String, usize)> {
+    server::Server::definitions(mesh, learn, knowledge)
 }
 
 pub async fn run() -> anyhow::Result<()> {
@@ -48,7 +49,17 @@ pub async fn run() -> anyhow::Result<()> {
         true => Some(crate::skill::Receipts::open(&database).await?),
         false => None,
     };
-    let instructions = crate::instructions::modelfacing(&guidance, enabled, learning);
-    let standing = crate::usage::standing(&guidance, enabled, learning);
-    server::run(brain, vaults, mesh, receipts, instructions, standing).await
+    let knowledge = brain.knowledge().await?;
+    let instructions = crate::instructions::modelfacing(&guidance, enabled, learning, knowledge);
+    let standing = crate::usage::standing(&guidance, enabled, learning, knowledge);
+    server::run(
+        brain,
+        vaults,
+        mesh,
+        receipts,
+        knowledge,
+        instructions,
+        standing,
+    )
+    .await
 }

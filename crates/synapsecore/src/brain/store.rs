@@ -638,6 +638,15 @@ impl Brain {
         crate::brain::settings::writemaxworkers(&self.pool, workers).await
     }
 
+    pub async fn knowledge(&self) -> Result<bool> {
+        Ok(self.preference("knowledge").await?.as_deref() == Some("on"))
+    }
+
+    pub async fn setknowledge(&self, enabled: bool) -> Result<()> {
+        self.setpreference("knowledge", if enabled { "on" } else { "off" })
+            .await
+    }
+
     pub async fn learn(&self) -> Result<bool> {
         crate::brain::settings::learn(&self.pool).await
     }

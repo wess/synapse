@@ -44,10 +44,14 @@ impl Server {
         vaults: VaultStore,
         mesh: Option<Mesh>,
         receipts: Option<Receipts>,
+        knowledge: bool,
         instructions: String,
         standing: usize,
     ) -> Self {
         let mut toolrouter = Self::memorytools();
+        if knowledge {
+            toolrouter += Self::knowledgetools();
+        }
         if mesh.is_some() {
             toolrouter += Self::meshtools();
         }
@@ -83,6 +87,7 @@ impl Server {
         Parameters(request): Parameters<RememberRequest>,
     ) -> Result<Json<RememberResponse>, String> {
         let project = projectpath(request.project.as_deref());
+        self.locate(request.project.as_deref()).await;
         let redacted = crate::brain::redact(&request.content).count;
         let (id, superseded) = self
             .brain
@@ -117,6 +122,7 @@ impl Server {
         Parameters(request): Parameters<RecallRequest>,
     ) -> Result<Json<RecallResponse>, String> {
         let project = projectpath(request.project.as_deref());
+        self.locate(request.project.as_deref()).await;
         let (settings, memories, matched) = self
             .brain
             .recallmeasured(
@@ -137,6 +143,11 @@ impl Server {
             optimization: settings.optimization,
             memories: memories.into_iter().map(Recalled::from).collect(),
             drift,
+            knowledge: if self.brain.knowledge().await.unwrap_or(false) {
+                crate::knowledge::work::catalog(project.as_deref()).await
+            } else {
+                None
+            },
         };
         self.count(Entry::recall(
             response.memories.len(),
@@ -156,6 +167,7 @@ impl Server {
         Parameters(request): Parameters<ReadRequest>,
     ) -> Result<Json<ReadResponse>, String> {
         let project = projectpath(request.project.as_deref());
+        self.locate(request.project.as_deref()).await;
         let response = self
             .brain
             .readscoped(
@@ -268,6 +280,10 @@ impl ServerHandler for Server {
             .peer_info()
             .map(|info| info.client_info.name.clone())
             .unwrap_or_default();
+        let project = projectpath(None)
+            .map(|path| path.display().to_string())
+            .unwrap_or_default();
+        let _ = crate::presence::join(self.brain.pool(), &self.learningid, &client, &project).await;
         if crate::usage::hooked(&client) {
             return;
         }
@@ -287,18 +303,43 @@ pub async fn run(
     vaults: VaultStore,
     mesh: Option<Mesh>,
     receipts: Option<Receipts>,
+    knowledge: bool,
     instructions: String,
     standing: usize,
 ) -> anyhow::Result<()> {
-    let server = Server::new(brain, vaults, mesh, receipts, instructions, standing);
+    let server = Server::new(
+        brain,
+        vaults,
+        mesh,
+        receipts,
+        knowledge,
+        instructions,
+        standing,
+    );
     let closing = server.clone();
     let service = server.serve(stdio()).await?;
-    service.waiting().await?;
+    let heartbeat = closing.clone();
+    let pulse = tokio::spawn(async move {
+        let mut timer = tokio::time::interval(std::time::Duration::from_secs(10));
+        loop {
+            timer.tick().await;
+            let _ = crate::presence::touch(heartbeat.brain.pool(), &heartbeat.learningid).await;
+        }
+    });
+    let result = service.waiting().await;
+    pulse.abort();
     closing.depart().await;
+    result?;
     Ok(())
 }
 
 impl Server {
+    async fn locate(&self, requested: Option<&str>) {
+        if let Some(project) = requested.filter(|project| !project.trim().is_empty()) {
+            let _ = crate::presence::relocate(self.brain.pool(), &self.learningid, project).await;
+        }
+    }
+
     /// Bookkeeping failures are ignored; they must never fail the call.
     async fn count(&self, entry: Entry) {
         let _ = crate::usage::record(&self.brain, entry).await;
@@ -308,6 +349,7 @@ impl Server {
     /// drop its roster row, so a closed session neither leaves headless agents
     /// running nor keeps answering as a live teammate.
     async fn depart(&self) {
+        let _ = crate::presence::leave(self.brain.pool(), &self.learningid).await;
         let Some(mesh) = &self.mesh else {
             return;
         };
@@ -327,8 +369,11 @@ impl Server {
     /// any other way is a count of what somebody believed the tool list was.
     /// Nothing is opened and no server is started: this is the shape of the
     /// context cost, not a session.
-    pub(super) fn definitions(mesh: bool, learn: bool) -> Vec<(String, usize)> {
+    pub(super) fn definitions(mesh: bool, learn: bool, knowledge: bool) -> Vec<(String, usize)> {
         let mut router = Self::memorytools();
+        if knowledge {
+            router += Self::knowledgetools();
+        }
         if mesh {
             router += Self::meshtools();
         }

@@ -156,6 +156,7 @@ Commands:
   settings optimize <full|balanced|lean>
                                    Set the MCP recall response budget
   settings mesh <on|off>           Turn the agent mesh tools on or off
+  settings knowledge <on|off>      Share repository guides with connected agents
   settings learn <on|off>          Let agents write and correct skills
   settings workers <count>         Most background workers one session may run
   settings price <dollars>         Price savings at this many dollars per million tokens
@@ -721,7 +722,7 @@ fn settings(arguments: &[OsString]) -> Result<Outcome> {
     let action = textarg(
         arguments,
         0,
-        "usage: synapse settings <show|optimize|mesh|learn|workers|price>",
+        "usage: synapse settings <show|optimize|mesh|learn|knowledge|workers|price>",
     )?;
     let runtime = runtime()?;
     let brain = runtime.block_on(crate::brain::Brain::open(crate::files::database()?))?;
@@ -753,6 +754,14 @@ fn settings(arguments: &[OsString]) -> Result<Outcome> {
                     "off"
                 }
             );
+            println!(
+                "knowledge\t{}",
+                if runtime.block_on(brain.knowledge())? {
+                    "on"
+                } else {
+                    "off"
+                }
+            );
             println!("max workers\t{}", runtime.block_on(brain.maxworkers())?);
             println!(
                 "price\t${:.2} per million input tokens",
@@ -771,6 +780,20 @@ fn settings(arguments: &[OsString]) -> Result<Outcome> {
             runtime.block_on(brain.setmesh(enabled))?;
             println!(
                 "Agent mesh {}. Connected tools pick this up the next time they start.",
+                if enabled { "on" } else { "off" }
+            );
+        }
+        "knowledge" => {
+            let enabled = match textarg(arguments, 1, "usage: synapse settings knowledge <on|off>")?
+                .as_str()
+            {
+                "on" => true,
+                "off" => false,
+                value => anyhow::bail!("expected `on` or `off`, got `{value}`"),
+            };
+            runtime.block_on(brain.setknowledge(enabled))?;
+            println!(
+                "Project Knowledge {}. Restart connected tools to update their tool list. Existing guides stay in the repository.",
                 if enabled { "on" } else { "off" }
             );
         }
