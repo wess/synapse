@@ -105,7 +105,7 @@ export const app: Page = {
 
     <h2 id="mesh">Mesh</h2>
     <p>The Mesh screen is off until you turn it on, here or in Settings. While it is off the screen explains the trade: the coordination tools are loaded by every connected tool, and that costs context in each session.</p>
-    <p>Once on, it lists the agents that have joined with their role, project, and last reported work state; the background workers running under a Synapse session; and the recent messages between them. Nothing on this screen changes what agents do — it reports. <strong>Refresh</strong> re-reads the database, which is also what opening the screen does.</p>
+    <p>Once on, supervised workers lead the screen and are grouped into working and needs-attention states. The side roster shows other agents that are online now; offline and expected rows stay collapsed until you ask for them. Recent messages remain below the live roster. Nothing on this screen changes what agents do — it reports. <strong>Refresh</strong> re-reads the database, which is also what opening the screen does.</p>
     <p>See <a href="../mesh/">Agent mesh</a> for roles, teams, and the command line.</p>
 
     <h2 id="skills">Skills</h2>

@@ -79,6 +79,7 @@ pub struct Dashboard {
     appmenu: Option<Entity<MenuBar>>,
     optimization: Optimization,
     meshenabled: bool,
+    meshshowoffline: bool,
     learnenabled: bool,
     knowledgeenabled: bool,
     meshagents: Vec<synapsecore::relay::AgentView>,
@@ -376,6 +377,7 @@ impl Dashboard {
             appmenu,
             optimization,
             meshenabled: meshdata.enabled,
+            meshshowoffline: false,
             learnenabled,
             knowledgeenabled,
             meshagents: meshdata.agents,
@@ -1605,6 +1607,11 @@ impl Dashboard {
     fn showmesh(&mut self, cx: &mut Context<Self>) {
         self.page = Page::Mesh;
         self.refreshmesh(cx);
+    }
+
+    fn togglemeshoffline(&mut self, cx: &mut Context<Self>) {
+        self.meshshowoffline = !self.meshshowoffline;
+        cx.notify();
     }
 
     /// Read the roster, the workers, and the tail of the feed in one pass. The
@@ -2976,6 +2983,7 @@ impl Dashboard {
                 .child(mesh::render(
                     mesh::View {
                         enabled: self.meshenabled,
+                        showoffline: self.meshshowoffline,
                         agents: self.meshagents.clone(),
                         workers: self.meshworkers.clone(),
                         feed: self.meshfeed.clone(),
@@ -2984,6 +2992,9 @@ impl Dashboard {
                     mesh::Actions {
                         enable: Box::new(cx.listener(|this, _, _, cx| this.setmesh(true, cx))),
                         refresh: Box::new(cx.listener(|this, _, _, cx| this.refreshmesh(cx))),
+                        toggleoffline: Box::new(
+                            cx.listener(|this, _, _, cx| this.togglemeshoffline(cx)),
+                        ),
                     },
                     cx,
                 ))
