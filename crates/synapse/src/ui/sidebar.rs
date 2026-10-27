@@ -18,8 +18,8 @@ type Click = Box<dyn Fn(&ClickEvent, &mut Window, &mut App) + 'static>;
 const WIDTH: f32 = 212.0;
 
 /// Where each navigation button goes. Named rather than passed in a row,
-/// because eight handlers of one type in sequence is eight chances to wire a
-/// button to the wrong page and have nothing about it look wrong.
+/// because a run of handlers with one type is easy to wire to the wrong page
+/// and have nothing about it look wrong.
 pub struct Navigation {
     pub map: Click,
     pub connections: Click,
@@ -65,8 +65,8 @@ pub fn render(page: Page, go: Navigation, cx: &App) -> impl IntoElement {
         .border_color(theme.border().hsla())
         .bg(theme.surface().hsla())
         .child(wordmark())
-        // Grouped because the three answer different questions: what is Synapse
-        // wired into, what is it holding, and what is running right now.
+        // Grouped by the thing users are managing: their workspace, installed
+        // extensions, or Synapse itself.
         .child(group("Workspace"))
         // First, because it is the only page that answers "what is in here"
         // rather than "what is in here that I searched for".
@@ -118,7 +118,6 @@ pub fn render(page: Page, go: Navigation, cx: &App) -> impl IntoElement {
             &colours,
             servers,
         ))
-        .child(group("Agents"))
         .child(entry(
             "navmesh",
             "Mesh",
@@ -127,6 +126,7 @@ pub fn render(page: Page, go: Navigation, cx: &App) -> impl IntoElement {
             &colours,
             mesh,
         ))
+        .child(group("Plugins"))
         .child(entry(
             "navscenes",
             "Scenes",

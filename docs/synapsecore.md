@@ -11,7 +11,7 @@ The repository has three independent Cargo workspaces:
 | Workspace | Responsibility | Validation |
 | --- | --- | --- |
 | Repository root | Native desktop and shared sync types | `cargo build --locked` |
-| `crates/synapsecore` | Memory, vaults, mesh, skills, setup, imports, CLI, MCP | `cargo test --locked` |
+| `crates/synapsecore` | Memory, vaults, mesh, plugins, skills, setup, imports, CLI, MCP | `cargo test --locked` |
 | `crates/synapseserve` | Optional opaque sync log server | `cargo test --locked` |
 
 A root test does not exercise the other workspaces. Core resolves independently
@@ -31,6 +31,7 @@ The library's public surface is declared in `crates/synapsecore/src/lib.rs`.
 | `agent`, `files`, `instructions` | Tool descriptors, managed configuration writes, shared guidance |
 | `skill`, `sources`, `servers` | Skill and MCP server libraries and their sources |
 | `relay` | Mesh messages, roles, teams, process supervision |
+| `plugins`, `presence` | Declarative scene packs and live MCP-session rooms |
 | `mcp`, `cli` | Protocol and command adapters |
 | `sync` | Client operations for the optional encrypted replication protocol |
 

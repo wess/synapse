@@ -19,7 +19,7 @@
 <body class="docs" data-root="../../">
   <div class="shell">
   <a class="skip" href="#content">Skip to content</a>
-  <div class="windowbar"><a href="../../">synapse / manual</a><span>v1.14.5 · on your machine</span></div>
+  <div class="windowbar"><a href="../../">synapse / manual</a><span>v1.15.0 · on your machine</span></div>
   <header class="topbar">
     <a class="wordmark" href="../../" aria-label="Synapse home"><img src="../../icon.svg" width="28" height="28" alt=""><span>synapse</span></a>
     <button class="navtoggle" type="button" aria-expanded="false" aria-controls="topnav">Menu</button>
@@ -48,12 +48,21 @@
   </aside>
     <main class="article" id="content">
       <header class="articlehead"><nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../">Synapse</a><span aria-hidden="true">/</span><a href="../../docs/">Manual</a></nav><h1>Scenes and plugins</h1><p>Technical documentation for Scenes and plugins.</p></header>
-      <p>Open <strong>Scenes</strong> in the desktop sidebar. Every MCP session connected to this build gets its own room, including sessions that have not joined the mesh. Restart existing harnesses after updating Synapse so their MCP processes can publish presence.</p>
+      <p>Open <strong>Scenes</strong> under <strong>Plugins</strong> in the desktop sidebar. Every MCP session connected to this build gets its own room, including sessions that have not joined the mesh. Restart existing harnesses after updating Synapse so their MCP processes can publish presence. Mesh lives under <strong>Workspace</strong>; Scenes does not require the mesh to be on.</p>
 <p>Connections indicate configured harnesses; scene rooms indicate running MCP transports. Two sessions using the same harness get separate rooms. The server sends a heartbeat every ten seconds; an ungraceful exit becomes disconnected after 45 seconds. Graceful exits dim the room immediately. Rooms remain visible for up to a day and are reused on reconnect by harness, project folder, and room slot. Character choices survive reconnects.</p>
 <p>Click a room to inspect its harness, project, last heartbeat, reported state, and task note. Previous and Next select its character. Filter by project or pause animation. A live connection with no work report displays <strong>Connected</strong>, not Working. Working, waiting, blocked, and finished poses follow mesh <code>reportstatus</code> calls. The mesh can remain off when only connection presence is needed. On macOS, Reduce Motion pauses animation by default unless you saved a different preference. Pause stops animation; presence continues updating every two seconds. Leaving Scenes stops its reads and animation.</p>
 <h2 id="add-a-scene-plugin">Add a scene plugin</h2>
 <p>Choose <strong>Open plugins folder</strong>. Create a lowercase directory for your pack and put a <code>plugin.toml</code> inside it. Choose <strong>Reload plugins</strong> to discover it. No rebuild or restart is required.</p>
 <p>The default location is the Synapse application data directory's <code>plugins</code> folder. <code>SYNAPSE_DATA</code> relocates it along with the rest of Synapse's data.</p>
+<p>The CLI provides a development loop that keeps a work-in-progress outside the data directory until it validates:</p>
+<div class="codeblock"><div class="codebar"><span>sh</span><button type="button" data-copy aria-live="polite">Copy</button></div><pre><code>mkdir moonforge
+synapse plugin init ./moonforge
+synapse plugin check ./moonforge
+synapse plugin install ./moonforge
+synapse plugin list
+</code></pre></div>
+<p><code>plugin init [folder]</code> adds a manifest to an existing art folder, derives its ID from the folder name, and accepts <code>--id &lt;id&gt;</code> when the folder name is not a valid plugin ID. It never overwrites <code>plugin.toml</code>. <code>plugin create &lt;id&gt; [folder]</code> is the convenience for making a brand-new folder and manifest together.</p>
+<p><code>plugin check</code> validates the manifest and every declared asset path without installing anything. <code>plugin install</code> repeats that validation and copies only <code>plugin.toml</code> and the assets it names into the local plugin folder. It refuses an existing ID unless you add <code>--replace</code>; a replacement keeps the previous installed directory as one bounded <code>.moonforge.synapsebackup</code> rollback copy. Run <code>synapse plugin path</code> to print the exact destination. If Scenes is already open, choose <strong>Reload plugins</strong> after an install.</p>
 <div class="codeblock"><div class="codebar"><span>toml</span><button type="button" data-copy aria-live="polite">Copy</button></div><pre><code>api = 1
 id = &quot;moonforge&quot;
 name = &quot;Moon forge&quot;
@@ -74,18 +83,18 @@ frameheight = 36
 </code></pre></div>
 <p>A character occupies three frame columns and four direction rows: down, left, right, up. The sheet therefore has twelve columns and eight rows of frames. Without a custom sheet, the renderer uses the bundled character set. A single custom sheet provides eight appearances repeated across the 32 character slots. Optional background artwork replaces the room's walls, floor, furniture, and props. The renderer overlays occupants and state effects; leave the central bench, fireplace at the upper right, and lower-left delivery area clear for these.</p>
 <p>API 1 scene plugins are declarative packs: palettes, room art, and character sheets. Synapse owns room layout, session identity, state, animation timing, and selection. Packs cannot execute scripts or read memories, credentials, or files outside their own directory. This is the first plugin capability; it is not a general-purpose code extension runtime.</p>
-<p>Plugin IDs must contain only lowercase letters and digits, be unique, and cannot replace the included <code>workshop</code>. Unknown fields, unsupported APIs or kinds, invalid colors, missing assets, path traversal, and symlinks outside a pack are rejected. Images must be PNG files up to 16 MiB and 4096 pixels per dimension; manifests are limited to 64 KiB. One invalid plugin does not prevent other scenes from loading. Image decoding errors appear when selecting the scene. The selected scene and animation preference are saved locally.</p>
+<p>Plugin IDs contain 1 to 64 lowercase letters and digits, must be unique, and cannot replace the included <code>workshop</code>. Unknown fields, unsupported APIs or kinds, invalid colors, missing assets, path traversal, and symlinks outside a pack are rejected. Images must be PNG files up to 16 MiB and 4096 pixels per dimension; manifests are limited to 64 KiB. The CLI validates paths and file bounds; image decoding and dimensions are checked when the app loads the art. One invalid plugin does not prevent other scenes from loading. The selected scene and animation preference are saved locally.</p>
 <h2 id="artwork-in-source-builds">Artwork in source builds</h2>
 <p>The default room is original procedural pixel art. The optional Time Fantasy character sheets are read at build time from <code>assets/scene/characters/chara2.png</code> through <code>chara5.png</code>, copied from the owner's Tink purchase. The build embeds the available sheets, so the executable does not depend on the original asset directory. Keep paid source artwork out of public source distributions. Attribution is finalbossblues, Time Fantasy RPG Sprites 1: https://finalbossblues.itch.io/tf-rpg-charactersprites-1.</p>
 <p>A checkout without the optional pack builds with a small original character sprite. No artwork is downloaded during build or rendering. Custom scene packs can provide their own appropriately licensed art.</p>
-<footer class="articlefoot"><div class="articlemeta"><a href="https://github.com/wess/synapse/blob/main/docs/scenes.md">View page source</a><span>Synapse 1.14.5</span></div><nav class="pagenav" aria-label="Guide pages"><a href="../../docs/mesh/"><small>Previous</small><strong>Agent mesh</strong></a><a href="../../docs/skills/"><small>Next</small><strong>Skills</strong></a></nav></footer>
+<footer class="articlefoot"><div class="articlemeta"><a href="https://github.com/wess/synapse/blob/main/docs/scenes.md">View page source</a><span>Synapse 1.15.0</span></div><nav class="pagenav" aria-label="Guide pages"><a href="../../docs/mesh/"><small>Previous</small><strong>Agent mesh</strong></a><a href="../../docs/skills/"><small>Next</small><strong>Skills</strong></a></nav></footer>
     </main>
   <aside class="ontoc" aria-label="On this page"><span>Contents</span><ol><li><a href="#add-a-scene-plugin">Add a scene plugin</a></li><li><a href="#artwork-in-source-builds">Artwork in source builds</a></li></ol></aside>
   </div>
   <footer class="footer">
     <div class="footerupper"><div><a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">synapse</a><p>A shared memory. A little less starting over.</p></div>
       <nav aria-label="Footer"><a href="../../docs/">Manual</a><a href="../../tutorials/">Tutorials</a><a href="https://github.com/wess/synapse">Source</a><a href="https://github.com/wess/synapse/releases">Releases</a><a href="https://wess.io">By Wess</a></nav></div>
-    <p class="footerfine"><span>macOS &amp; Windows desktop · Linux CLI &amp; MCP</span><span>v1.14.5 · MIT · No account required</span></p>
+    <p class="footerfine"><span>macOS &amp; Windows desktop · Linux CLI &amp; MCP</span><span>v1.15.0 · MIT · No account required</span></p>
   </footer></div>
 </body>
 </html>

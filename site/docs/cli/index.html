@@ -19,7 +19,7 @@
 <body class="docs" data-root="../../">
   <div class="shell">
   <a class="skip" href="#content">Skip to content</a>
-  <div class="windowbar"><a href="../../">synapse / manual</a><span>v1.14.5 · on your machine</span></div>
+  <div class="windowbar"><a href="../../">synapse / manual</a><span>v1.15.0 · on your machine</span></div>
   <header class="topbar">
     <a class="wordmark" href="../../" aria-label="Synapse home"><img src="../../icon.svg" width="28" height="28" alt=""><span>synapse</span></a>
     <button class="navtoggle" type="button" aria-expanded="false" aria-controls="topnav">Menu</button>
@@ -604,6 +604,57 @@
     <p>Print one status line for a connected tool, reading that tool's JSON on stdin.</p>
   </section>
 
+    <h2 id="plugins">Plugin development</h2>
+    <p>Plugins are local declarative packs, not executable extensions. API 1 supports scene palettes and PNG room or character art. See the <a href="../scenes/">Scenes and plugins guide</a> for the manifest and asset layout.</p>
+
+  <section class="command" id="plugininit">
+    <div>
+      <h3>plugin init</h3>
+      <code>synapse plugin init [folder] [--id &lt;id&gt;]</code>
+    </div>
+    <p>Add <code>plugin.toml</code> to an existing folder without replacing one already there. The folder defaults to the current directory and its name becomes the plugin ID. Use <code>--id</code> when that folder name is not 1 to 64 lowercase letters and digits.</p>
+  </section>
+
+  <section class="command" id="plugincreate">
+    <div>
+      <h3>plugin create</h3>
+      <code>synapse plugin create &lt;id&gt; [folder]</code>
+    </div>
+    <p>Create a scene-plugin manifest without overwriting anything. The folder defaults to <code>./&lt;id&gt;</code>. IDs contain 1 to 64 lowercase letters and digits; <code>workshop</code> is reserved for the built-in pack.</p>
+  </section>
+
+  <section class="command" id="plugincheck">
+    <div>
+      <h3>plugin check</h3>
+      <code>synapse plugin check [folder] [--json]</code>
+    </div>
+    <p>Validate a development folder without installing it. Checks the manifest, API and kind, colors, declared paths, file types, size bounds, and path containment. The folder defaults to the current directory. Image decoding and dimensions are checked by the desktop renderer when it loads the art.</p>
+  </section>
+
+  <section class="command" id="plugininstall">
+    <div>
+      <h3>plugin install</h3>
+      <code>synapse plugin install [folder] [--replace]</code>
+    </div>
+    <p>Validate, then copy only the manifest and assets it declares into the local plugin folder. Refuses an existing ID unless <code>--replace</code> is present. Replacement is staged first and keeps one hidden <code>.&lt;id&gt;.synapsebackup</code> rollback directory beside the installed copy.</p>
+  </section>
+
+  <section class="command" id="pluginlist">
+    <div>
+      <h3>plugin list</h3>
+      <code>synapse plugin list [--json]</code>
+    </div>
+    <p>List the built-in pack and every valid installed plugin with ID, version, source, and display name. Invalid plugin folders are isolated and reported as warnings.</p>
+  </section>
+
+  <section class="command" id="pluginpath">
+    <div>
+      <h3>plugin path</h3>
+      <code>synapse plugin path</code>
+    </div>
+    <p>Print the local plugin install folder. <code>SYNAPSE_DATA</code> relocates it for development and tests.</p>
+  </section>
+
     <h2 id="skills">Skills</h2>
     <p>One Agent Skills library, installed into every connected tool. See the <a href="../skills/">skills guide</a> for the format and the folders involved.</p>
 
@@ -1129,14 +1180,14 @@
     </div>
     <p>Print the command summary, or one command’s entries. <code>--help</code> and <code>-h</code> do the same thing wherever they appear before a <code>--</code>.</p>
   </section>
-  <footer class="articlefoot"><div class="articlemeta"><a href="https://github.com/wess/synapse/blob/main/website/docs/cli.ts">View page source</a><span>Synapse 1.14.5</span></div><nav class="pagenav" aria-label="Guide pages"><a href="../../docs/troubleshoot/"><small>Previous</small><strong>Troubleshooting</strong></a><a href="../../docs/developing/"><small>Next</small><strong>Developing Synapse</strong></a></nav></footer>
+  <footer class="articlefoot"><div class="articlemeta"><a href="https://github.com/wess/synapse/blob/main/website/docs/cli.ts">View page source</a><span>Synapse 1.15.0</span></div><nav class="pagenav" aria-label="Guide pages"><a href="../../docs/troubleshoot/"><small>Previous</small><strong>Troubleshooting</strong></a><a href="../../docs/developing/"><small>Next</small><strong>Developing Synapse</strong></a></nav></footer>
     </main>
-  <aside class="ontoc" aria-label="On this page"><span>Contents</span><ol><li><a href="#invocation">Invocation</a></li><li><a href="#application">Application and server</a></li><li><a href="#shell">Shell environments</a></li><li><a href="#vault">Vault and scope</a></li><li><a href="#memory">Memory</a></li><li><a href="#learning">Learning</a></li><li><a href="#mesh">Agent mesh</a></li><li><a href="#skills">Skills</a></li><li><a href="#data">Data and settings</a></li><li><a href="#installation">Installation and paths</a></li></ol></aside>
+  <aside class="ontoc" aria-label="On this page"><span>Contents</span><ol><li><a href="#invocation">Invocation</a></li><li><a href="#application">Application and server</a></li><li><a href="#shell">Shell environments</a></li><li><a href="#vault">Vault and scope</a></li><li><a href="#memory">Memory</a></li><li><a href="#learning">Learning</a></li><li><a href="#mesh">Agent mesh</a></li><li><a href="#plugins">Plugin development</a></li><li><a href="#skills">Skills</a></li><li><a href="#data">Data and settings</a></li><li><a href="#installation">Installation and paths</a></li></ol></aside>
   </div>
   <footer class="footer">
     <div class="footerupper"><div><a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">synapse</a><p>A shared memory. A little less starting over.</p></div>
       <nav aria-label="Footer"><a href="../../docs/">Manual</a><a href="../../tutorials/">Tutorials</a><a href="https://github.com/wess/synapse">Source</a><a href="https://github.com/wess/synapse/releases">Releases</a><a href="https://wess.io">By Wess</a></nav></div>
-    <p class="footerfine"><span>macOS &amp; Windows desktop · Linux CLI &amp; MCP</span><span>v1.14.5 · MIT · No account required</span></p>
+    <p class="footerfine"><span>macOS &amp; Windows desktop · Linux CLI &amp; MCP</span><span>v1.15.0 · MIT · No account required</span></p>
   </footer></div>
 </body>
 </html>

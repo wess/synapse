@@ -730,18 +730,32 @@ fn messagerow(message: Message) -> AnyElement {
         _ => "→ everyone".to_owned(),
     };
     div()
+        .w_full()
+        .min_w(px(0.0))
+        .overflow_hidden()
         .py(px(5.0))
         .flex()
         .items_baseline()
         .gap(px(10.0))
         .child(
-            div().flex_none().min_w(px(190.0)).child(
-                Text::new(format!("{} {to}", message.sender))
-                    .size(Size::Xs)
-                    .dimmed(),
-            ),
+            div()
+                .w(px(190.0))
+                .flex_none()
+                .min_w(px(0.0))
+                .truncate()
+                .child(
+                    Text::new(format!("{} {to}", message.sender))
+                        .size(Size::Xs)
+                        .dimmed(),
+                ),
         )
-        .child(Text::new(oneline(&message.body)).size(Size::Xs))
+        .child(
+            div()
+                .flex_1()
+                .min_w(px(0.0))
+                .truncate()
+                .child(Text::new(oneline(&message.body)).size(Size::Xs)),
+        )
         .into_any_element()
 }
 

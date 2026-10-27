@@ -2500,3 +2500,108 @@ fn a_projects_sources_wait_for_approval_and_lose_it_when_edited() {
         "an edit takes the approval away: {edited}"
     );
 }
+
+#[test]
+fn plugin_development_commands_scaffold_check_install_and_replace() {
+    let root = tempfile::tempdir().unwrap();
+    let existing = root.path().join("art-folder");
+    fs::create_dir(&existing).unwrap();
+    success(run(
+        root.path(),
+        &[
+            "plugin",
+            "init",
+            existing.to_str().unwrap(),
+            "--id",
+            "artpack",
+        ],
+        None,
+    ));
+    let initialized = fs::read_to_string(existing.join("plugin.toml")).unwrap();
+    assert!(initialized.contains("id = \"artpack\""));
+    let refused = run(
+        root.path(),
+        &[
+            "plugin",
+            "init",
+            existing.to_str().unwrap(),
+            "--id",
+            "different",
+        ],
+        None,
+    );
+    assert!(!refused.status.success());
+    assert_eq!(
+        fs::read_to_string(existing.join("plugin.toml")).unwrap(),
+        initialized
+    );
+
+    let source = root.path().join("moonforge-source");
+    success(run(
+        root.path(),
+        &["plugin", "create", "moonforge", source.to_str().unwrap()],
+        None,
+    ));
+    assert!(source.join("plugin.toml").is_file());
+
+    let checked = success(run(
+        root.path(),
+        &["plugin", "check", source.to_str().unwrap(), "--json"],
+        None,
+    ));
+    let checked: Value = serde_json::from_str(&checked).unwrap();
+    assert_eq!(checked["id"], "moonforge");
+    assert_eq!(checked["valid"], true);
+
+    success(run(
+        root.path(),
+        &["plugin", "install", source.to_str().unwrap()],
+        None,
+    ));
+    let installed = root.path().join("data/plugins/moonforge/plugin.toml");
+    assert!(installed.is_file());
+
+    let first = fs::read_to_string(source.join("plugin.toml")).unwrap();
+    fs::write(
+        source.join("plugin.toml"),
+        first.replace("name = \"moonforge\"", "name = \"Moon forge\""),
+    )
+    .unwrap();
+    let refused = run(
+        root.path(),
+        &["plugin", "install", source.to_str().unwrap()],
+        None,
+    );
+    assert!(!refused.status.success());
+    assert!(String::from_utf8_lossy(&refused.stderr).contains("--replace"));
+    success(run(
+        root.path(),
+        &["plugin", "install", source.to_str().unwrap(), "--replace"],
+        None,
+    ));
+    assert!(
+        fs::read_to_string(&installed)
+            .unwrap()
+            .contains("Moon forge")
+    );
+    assert!(
+        root.path()
+            .join("data/plugins/.moonforge.synapsebackup/plugin.toml")
+            .is_file()
+    );
+
+    let listed: Value = serde_json::from_str(&success(run(
+        root.path(),
+        &["plugin", "list", "--json"],
+        None,
+    )))
+    .unwrap();
+    assert_eq!(listed.as_array().unwrap().len(), 2);
+    assert!(
+        listed
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|plugin| plugin["id"] == "moonforge" && plugin["built_in"] == false)
+    );
+}

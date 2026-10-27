@@ -100,3 +100,9 @@ of memory, scope YAML, protocol responses, logs, and command arguments.
 For a tool connector, add a descriptor rather than extending a closed product
 enum. Include detection, connection, repair, and selective cleanup checks. Update
 the supported-tool table and the manual with the platforms actually tested.
+
+For a scene plugin, keep the work in its own folder and use `synapse plugin
+init`, `check`, and `install` for the local development loop. A plugin remains
+declarative data: extend the versioned manifest and its validation before adding
+a new capability, keep reads inside the plugin directory, and update
+[Scenes and plugins](scenes.md) plus the CLI reference when the surface changes.

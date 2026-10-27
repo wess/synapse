@@ -115,6 +115,13 @@ Commands:
                                    Manage team rosters
   relay ps [--json]                List background workers
   relay kill <name>                Stop a background worker
+  plugin list [--json]             List built-in and installed plugins
+  plugin path                      Print the installed plugin folder
+  plugin init [folder] [--id <id>] Add a manifest to an existing folder
+  plugin create <id> [folder]      Scaffold a declarative scene plugin
+  plugin check [folder] [--json]   Validate a plugin without installing it
+  plugin install [folder] [--replace]
+                                   Validate and install a plugin for the app
   skill list [--json]              List the skills in your library
   skill show <name>                Print one skill
   skill create <name>              Start a new skill from a template
@@ -217,6 +224,7 @@ pub fn run(arguments: Vec<OsString>) -> Result<Outcome> {
         "launch" => super::wrap::run(rest),
         "mux" => super::mux::run(rest),
         "relay" => super::relay::run(rest),
+        "plugin" => super::plugins::run(rest),
         "skill" => super::skills::run(rest),
         "source" => super::sources::run(rest),
         "tool" => super::layers::tool(rest),

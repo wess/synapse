@@ -89,7 +89,11 @@ pub fn catalog(root: &Path) -> Catalog {
         }
         let Ok(entry) = entry else { continue };
         let path = entry.path();
-        if path.is_dir() {
+        let hidden = path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .is_some_and(|name| name.starts_with('.'));
+        if path.is_dir() && !hidden {
             if paths.len() == PLUGINLIMIT {
                 truncated = true;
                 break;
@@ -148,15 +152,7 @@ pub fn load(root: &Path) -> Result<Plugin> {
         manifest.kind == "scene",
         "unsupported plugin kind; expected scene"
     );
-    ensure!(
-        !manifest.id.is_empty()
-            && manifest.id.len() <= 64
-            && manifest
-                .id
-                .bytes()
-                .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit()),
-        "id must contain lowercase letters and digits"
-    );
+    validateid(&manifest.id)?;
     ensure!(
         !manifest.name.trim().is_empty() && manifest.name.len() <= 80,
         "name must contain 1 to 80 bytes"
@@ -185,6 +181,18 @@ pub fn load(root: &Path) -> Result<Plugin> {
         manifest,
         root: Some(root.canonicalize()?),
     })
+}
+
+pub fn validateid(id: &str) -> Result<()> {
+    ensure!(
+        !id.is_empty()
+            && id.len() <= 64
+            && id
+                .bytes()
+                .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit()),
+        "id must contain 1 to 64 lowercase letters and digits"
+    );
+    Ok(())
 }
 
 pub fn colorvalue(value: &str) -> Result<[u8; 4]> {

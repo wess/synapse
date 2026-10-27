@@ -19,7 +19,7 @@
 <body class="docs" data-root="../../">
   <div class="shell">
   <a class="skip" href="#content">Skip to content</a>
-  <div class="windowbar"><a href="../../">synapse / manual</a><span>v1.14.5 · on your machine</span></div>
+  <div class="windowbar"><a href="../../">synapse / manual</a><span>v1.15.0 · on your machine</span></div>
   <header class="topbar">
     <a class="wordmark" href="../../" aria-label="Synapse home"><img src="../../icon.svg" width="28" height="28" alt=""><span>synapse</span></a>
     <button class="navtoggle" type="button" aria-expanded="false" aria-controls="topnav">Menu</button>
@@ -59,7 +59,7 @@ lives in <code>crates/synapsecore</code>, and <code>crates/synapse</code> adds t
 </thead>
 <tbody>
 <tr><td>Repository root</td><td>Native desktop and shared sync types</td><td><code>cargo build --locked</code></td></tr>
-<tr><td><code>crates/synapsecore</code></td><td>Memory, vaults, mesh, skills, setup, imports, CLI, MCP</td><td><code>cargo test --locked</code></td></tr>
+<tr><td><code>crates/synapsecore</code></td><td>Memory, vaults, mesh, plugins, skills, setup, imports, CLI, MCP</td><td><code>cargo test --locked</code></td></tr>
 <tr><td><code>crates/synapseserve</code></td><td>Optional opaque sync log server</td><td><code>cargo test --locked</code></td></tr>
 </tbody>
 </table>
@@ -80,6 +80,7 @@ one product; <code>synapse version</code> reads the core package version.</p>
 <tr><td><code>agent</code>, <code>files</code>, <code>instructions</code></td><td>Tool descriptors, managed configuration writes, shared guidance</td></tr>
 <tr><td><code>skill</code>, <code>sources</code>, <code>servers</code></td><td>Skill and MCP server libraries and their sources</td></tr>
 <tr><td><code>relay</code></td><td>Mesh messages, roles, teams, process supervision</td></tr>
+<tr><td><code>plugins</code>, <code>presence</code></td><td>Declarative scene packs and live MCP-session rooms</td></tr>
 <tr><td><code>mcp</code>, <code>cli</code></td><td>Protocol and command adapters</td></tr>
 <tr><td><code>sync</code></td><td>Client operations for the optional encrypted replication protocol</td></tr>
 </tbody>
@@ -120,14 +121,14 @@ cargo test --locked --test cli --test mcp
 <p>See <a href="../embedding/">Embedding</a> for the transport choice and a scoped Rust example,
 <a href="../retrieval/">Retrieval checks</a> for ranking and exact-read fixtures, and
 <a href="../developing/">Developing Synapse</a> for the complete repository gates.</p>
-<footer class="articlefoot"><div class="articlemeta"><a href="https://github.com/wess/synapse/blob/main/docs/synapsecore.md">View page source</a><span>Synapse 1.14.5</span></div><nav class="pagenav" aria-label="Guide pages"><a href="../../docs/developing/"><small>Previous</small><strong>Developing Synapse</strong></a><a href="../../docs/embedding/"><small>Next</small><strong>Embedding Synapse</strong></a></nav></footer>
+<footer class="articlefoot"><div class="articlemeta"><a href="https://github.com/wess/synapse/blob/main/docs/synapsecore.md">View page source</a><span>Synapse 1.15.0</span></div><nav class="pagenav" aria-label="Guide pages"><a href="../../docs/developing/"><small>Previous</small><strong>Developing Synapse</strong></a><a href="../../docs/embedding/"><small>Next</small><strong>Embedding Synapse</strong></a></nav></footer>
     </main>
   <aside class="ontoc" aria-label="On this page"><span>Contents</span><ol><li><a href="#workspace-boundaries">Workspace boundaries</a></li><li><a href="#public-modules">Public modules</a></li><li><a href="#storage-and-concurrency">Storage and concurrency</a></li><li><a href="#minimal-build">Minimal build</a></li><li><a href="#verification">Verification</a></li></ol></aside>
   </div>
   <footer class="footer">
     <div class="footerupper"><div><a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">synapse</a><p>A shared memory. A little less starting over.</p></div>
       <nav aria-label="Footer"><a href="../../docs/">Manual</a><a href="../../tutorials/">Tutorials</a><a href="https://github.com/wess/synapse">Source</a><a href="https://github.com/wess/synapse/releases">Releases</a><a href="https://wess.io">By Wess</a></nav></div>
-    <p class="footerfine"><span>macOS &amp; Windows desktop · Linux CLI &amp; MCP</span><span>v1.14.5 · MIT · No account required</span></p>
+    <p class="footerfine"><span>macOS &amp; Windows desktop · Linux CLI &amp; MCP</span><span>v1.15.0 · MIT · No account required</span></p>
   </footer></div>
 </body>
 </html>

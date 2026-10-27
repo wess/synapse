@@ -11,6 +11,7 @@ mod layers;
 mod learning;
 mod memory;
 mod mux;
+mod plugins;
 mod relay;
 mod remove;
 mod savings;

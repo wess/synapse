@@ -19,7 +19,7 @@
 <body class="docs" data-root="../../">
   <div class="shell">
   <a class="skip" href="#content">Skip to content</a>
-  <div class="windowbar"><a href="../../">synapse / manual</a><span>v1.14.5 · on your machine</span></div>
+  <div class="windowbar"><a href="../../">synapse / manual</a><span>v1.15.0 · on your machine</span></div>
   <header class="topbar">
     <a class="wordmark" href="../../" aria-label="Synapse home"><img src="../../icon.svg" width="28" height="28" alt=""><span>synapse</span></a>
     <button class="navtoggle" type="button" aria-expanded="false" aria-controls="topnav">Menu</button>
@@ -50,16 +50,18 @@
       <header class="articlehead"><nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../">Synapse</a><span aria-hidden="true">/</span><a href="../../docs/">Manual</a></nav><h1>Desktop app reference</h1><p>Use every Synapse screen with clear data boundaries, confirmation behavior, recovery paths, and shell-integration states.</p></header>
 
     <h2 id="navigation">Navigation and shared state</h2>
-    <p>The desktop app is a local control surface over the same SQLite database, vault, scope files, and tool configuration used by the CLI and MCP server. A column down the left moves between eight screens, grouped by what they answer: what Synapse is wired into, what is running, and what it is holding for you.</p>
+    <p>The desktop app is a local control surface over the same SQLite database, vault, scope files, and tool configuration used by the CLI and MCP server. The left column groups Map through Mesh under <strong>Workspace</strong>, installed extension surfaces such as Scenes under <strong>Plugins</strong>, and machine-wide Vaults and Settings under <strong>System</strong>.</p>
     <table>
       <thead><tr><th>Screen</th><th>Use it for</th><th>Material it can change</th></tr></thead>
       <tbody>
         <tr><td>Map</td><td>See the whole store at once: which projects it holds anything about, where the weight is, and what a memory sits next to.</td><td>Nothing. The map reads.</td></tr>
         <tr><td>Connections</td><td>Detect and connect supported developer tools.</td><td>Tool MCP configuration and managed instruction blocks.</td></tr>
+        <tr><td>Stats</td><td>Measure recall use, context savings, and recent activity.</td><td>Nothing. Stats reads recorded local usage.</td></tr>
         <tr><td>Memory</td><td>Import, scope, search, inspect, correct, or remove durable context.</td><td>Memory rows, scope metadata, and reversible import batches.</td></tr>
+        <tr><td>Skills</td><td>Keep one Agent Skills library, install it into every connected tool, and find skills other people published.</td><td>The library in the Synapse data directory, and skill folders inside each tool.</td></tr>
         <tr><td>MCP</td><td>Keep one list of MCP servers, give it to every connected tool, and find servers in the registry.</td><td>Server files in the Synapse data directory, their secrets in the vault, and each tool's MCP entries through its own CLI.</td></tr>
         <tr><td>Mesh</td><td>Turn the agent mesh on and watch who has joined, what they report, and what they send each other.</td><td>One local preference. The roster and messages are written by the agents themselves.</td></tr>
-        <tr><td>Skills</td><td>Keep one Agent Skills library, install it into every connected tool, and find skills other people published.</td><td>The library in the Synapse data directory, and skill folders inside each tool.</td></tr>
+        <tr><td>Scenes</td><td>Watch live MCP sessions and choose an installed scene plugin.</td><td>The selected plugin, character choices, and animation preference.</td></tr>
         <tr><td>Vaults</td><td>Manage labels, stored values, mappings, the value store itself, and approved project scopes.</td><td>Vault metadata, stored values, and <code>.synapse.yaml</code>.</td></tr>
         <tr><td>Settings</td><td>Manage shared guidance, recall, the mesh, self-improvement, the worker limit, appearance, CLI, and shell integration.</td><td><code>SOUL.md</code>, global pointers, local preferences, the CLI launcher, and one managed shell block.</td></tr>
       </tbody>
@@ -142,6 +144,10 @@
     <p>Once on, supervised workers lead the screen and are grouped into working and needs-attention states. The side roster shows other agents that are online now; offline and expected rows stay collapsed until you ask for them. Recent messages remain below the live roster. Nothing on this screen changes what agents do — it reports. <strong>Refresh</strong> re-reads the database, which is also what opening the screen does.</p>
     <p>See <a href="../mesh/">Agent mesh</a> for roles, teams, and the command line.</p>
 
+    <h2 id="scenes">Scenes and plugins</h2>
+    <p>Scenes appears under <strong>Plugins</strong> in the sidebar. It shows each live MCP transport as a room, even when that session has not joined the mesh. Select a room for its harness, project, heartbeat, and reported state; choose a character, filter by project, or pause animation without stopping presence updates.</p>
+    <p><strong>Open plugins folder</strong> reveals the local install location and <strong>Reload plugins</strong> discovers changes without restarting the app. For a safer development loop, use <code>synapse plugin init</code>, <code>check</code>, and <code>install</code>; see <a href="../scenes/">Scenes and plugins</a> for the manifest, asset bounds, and replacement backup.</p>
+
     <h2 id="skills">Skills</h2>
     <p>The Skills screen lists your library, and beside each skill a badge per connected tool saying whether that tool has it, has an older copy, or has one Synapse did not write. <strong>Install</strong> on a skill copies it wherever it is missing or behind; <strong>Install all</strong> does the lot.</p>
     <p>Skills a tool already has that the library does not know about appear under <strong>Already in your tools</strong> with an <strong>Adopt</strong> button, which copies one into the library and starts managing it. A skill Synapse did not install is never overwritten or deleted from this screen — it is reported instead, and the result line says how many were left alone.</p>
@@ -197,14 +203,14 @@
     <p>The built-in editor handles <code>SOUL.md</code>, supported tool instructions, TOML or JSON configuration, and YAML scope files. Structured formats must validate before saving. Changed files are backed up and replaced atomically while existing permissions and symlinks are preserved.</p>
     <p>If an editor contains unsaved changes, Close and application quit are blocked until you choose Save or Discard. Saving a scope refreshes its state but does not approve it; review the result and choose Approve separately.</p>
     <p><strong>Open data folder</strong> on the Connections screen reveals the directory containing the local database. It does not create a backup and editing database files by hand is unsupported. Use <a href="../data/">Data lifecycle</a> for integrity checks, validated exports, exclusive restore, and recovery behavior.</p>
-  <footer class="articlefoot"><div class="articlemeta"><a href="https://github.com/wess/synapse/blob/main/website/docs/app.ts">View page source</a><span>Synapse 1.14.5</span></div><nav class="pagenav" aria-label="Guide pages"><a href="../../docs/harnesses/"><small>Previous</small><strong>Supported and custom harnesses</strong></a><a href="../../docs/memory/"><small>Next</small><strong>Memory and recall</strong></a></nav></footer>
+  <footer class="articlefoot"><div class="articlemeta"><a href="https://github.com/wess/synapse/blob/main/website/docs/app.ts">View page source</a><span>Synapse 1.15.0</span></div><nav class="pagenav" aria-label="Guide pages"><a href="../../docs/harnesses/"><small>Previous</small><strong>Supported and custom harnesses</strong></a><a href="../../docs/memory/"><small>Next</small><strong>Memory and recall</strong></a></nav></footer>
     </main>
-  <aside class="ontoc" aria-label="On this page"><span>Contents</span><ol><li><a href="#navigation">Navigation</a></li><li><a href="#connections">Connections</a></li><li><a href="#memory">Memory</a></li><li><a href="#servers">MCP</a></li><li><a href="#mesh">Mesh</a></li><li><a href="#skills">Skills</a></li><li><a href="#vaults">Vaults</a></li><li><a href="#settings">Settings</a></li><li><a href="#editors">Editors and data</a></li></ol></aside>
+  <aside class="ontoc" aria-label="On this page"><span>Contents</span><ol><li><a href="#navigation">Navigation</a></li><li><a href="#connections">Connections</a></li><li><a href="#memory">Memory</a></li><li><a href="#servers">MCP</a></li><li><a href="#mesh">Mesh</a></li><li><a href="#scenes">Scenes and plugins</a></li><li><a href="#skills">Skills</a></li><li><a href="#vaults">Vaults</a></li><li><a href="#settings">Settings</a></li><li><a href="#editors">Editors and data</a></li></ol></aside>
   </div>
   <footer class="footer">
     <div class="footerupper"><div><a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">synapse</a><p>A shared memory. A little less starting over.</p></div>
       <nav aria-label="Footer"><a href="../../docs/">Manual</a><a href="../../tutorials/">Tutorials</a><a href="https://github.com/wess/synapse">Source</a><a href="https://github.com/wess/synapse/releases">Releases</a><a href="https://wess.io">By Wess</a></nav></div>
-    <p class="footerfine"><span>macOS &amp; Windows desktop · Linux CLI &amp; MCP</span><span>v1.14.5 · MIT · No account required</span></p>
+    <p class="footerfine"><span>macOS &amp; Windows desktop · Linux CLI &amp; MCP</span><span>v1.15.0 · MIT · No account required</span></p>
   </footer></div>
 </body>
 </html>

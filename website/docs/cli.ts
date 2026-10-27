@@ -14,6 +14,7 @@ export const cli: Page = {
     { label: "Memory", id: "memory" },
     { label: "Learning", id: "learning" },
     { label: "Agent mesh", id: "mesh" },
+    { label: "Plugin development", id: "plugins" },
     { label: "Skills", id: "skills" },
     { label: "Data and settings", id: "data" },
     { label: "Installation and paths", id: "installation" },
@@ -103,6 +104,15 @@ ${command("learn restore", "synapse learn restore &lt;id&gt; --confirm", "Remove
     ${command("session", "synapse session [--json]", "Report this session's Synapse connection as Claude Code session-hook output. Synapse installs this for you when you connect Claude Code; run it by hand to see exactly what a session will be told. When the input's <code>source</code> is <code>compact</code>, it prints no notice and hands the session's memory back instead, because the compaction dropped it. Reads the calling tool's JSON on stdin.")}
     ${command("compact", "synapse compact", "Answer a tool's pre-compaction hook. Asks the session to write down anything durable it settled before its context is compressed away, and recalls nothing \u2014 the window is being reclaimed. Synapse installs this for you when you connect Claude Code. Never blocks or rewrites the compaction. Reads the calling tool's JSON on stdin.")}
     ${command("statusline", "synapse statusline", "Print one status line for a connected tool, reading that tool's JSON on stdin.")}
+
+    <h2 id="plugins">Plugin development</h2>
+    <p>Plugins are local declarative packs, not executable extensions. API 1 supports scene palettes and PNG room or character art. See the <a href="../scenes/">Scenes and plugins guide</a> for the manifest and asset layout.</p>
+    ${command("plugin init", "synapse plugin init [folder] [--id <id>]", "Add <code>plugin.toml</code> to an existing folder without replacing one already there. The folder defaults to the current directory and its name becomes the plugin ID. Use <code>--id</code> when that folder name is not 1 to 64 lowercase letters and digits.")}
+    ${command("plugin create", "synapse plugin create <id> [folder]", "Create a scene-plugin manifest without overwriting anything. The folder defaults to <code>./&lt;id&gt;</code>. IDs contain 1 to 64 lowercase letters and digits; <code>workshop</code> is reserved for the built-in pack.")}
+    ${command("plugin check", "synapse plugin check [folder] [--json]", "Validate a development folder without installing it. Checks the manifest, API and kind, colors, declared paths, file types, size bounds, and path containment. The folder defaults to the current directory. Image decoding and dimensions are checked by the desktop renderer when it loads the art.")}
+    ${command("plugin install", "synapse plugin install [folder] [--replace]", "Validate, then copy only the manifest and assets it declares into the local plugin folder. Refuses an existing ID unless <code>--replace</code> is present. Replacement is staged first and keeps one hidden <code>.&lt;id&gt;.synapsebackup</code> rollback directory beside the installed copy.")}
+    ${command("plugin list", "synapse plugin list [--json]", "List the built-in pack and every valid installed plugin with ID, version, source, and display name. Invalid plugin folders are isolated and reported as warnings.")}
+    ${command("plugin path", "synapse plugin path", "Print the local plugin install folder. <code>SYNAPSE_DATA</code> relocates it for development and tests.")}
 
     <h2 id="skills">Skills</h2>
     <p>One Agent Skills library, installed into every connected tool. See the <a href="../skills/">skills guide</a> for the format and the folders involved.</p>
