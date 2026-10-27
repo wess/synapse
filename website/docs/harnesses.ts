@@ -15,7 +15,8 @@ export const harnesses: Page = {
   ],
   body: `
     <h2 id="supported">Supported harnesses</h2>
-    <p>A harness is the coding agent you run. Synapse ships connectors for Claude Code (<code>claude</code>), Codex (<code>codex</code>), pi (<code>pi</code>), and Ainz (<code>ainz</code>). Claude Code, Codex, and Ainz connect through MCP. pi uses the <code>synapse-pi</code> extension.</p>
+    <p>A harness is the coding agent you run. Synapse ships connectors for Claude Code (<code>claude</code>), Codex (<code>codex</code>), pi (<code>pi</code>), and <a href="https://wess.io/ainz/">Ainz</a> (<code>ainz</code>). Claude Code and Codex connect through MCP. Ainz adds a reciprocal native bridge around that MCP connection, while pi uses the <code>synapse-pi</code> extension.</p>
+    <p><code>synapse connect ainz</code> and <code>ainz synapse connect</code> perform the same complete handshake: shared memory and guidance turn on in Ainz, and the profile Synapse detects is written at the same time. Add <code>--mesh</code> from Ainz when its session and subagents should join the mesh.</p>
     <p>Each connector declares shared guidance and skill locations, connection detection, and launch arguments. Claude Code and pi also have dedicated session integration. A custom descriptor does not acquire those hooks by declaring the same paths.</p>
     ${code("shell", `synapse tool list
 synapse tool show codex

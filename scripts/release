@@ -30,6 +30,8 @@ rm -rf "$output/synapse.app"
 rm -f "$output/synapse.zip"
 mv "$stage/synapse.app" "$output/synapse.app"
 mv "$stage/synapse.zip" "$output/synapse.zip"
+shasum -a 256 "$output/synapse.zip" | awk '{print $1}' > "$output/synapse.zip.sha256"
 
 echo "$output/synapse.app"
 echo "$output/synapse.zip"
+echo "$output/synapse.zip.sha256"

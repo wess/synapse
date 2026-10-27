@@ -19,7 +19,7 @@
 <body class="docs" data-root="../../">
   <div class="shell">
   <a class="skip" href="#content">Skip to content</a>
-  <div class="windowbar"><a href="../../">synapse / manual</a><span>v1.15.0 · on your machine</span></div>
+  <div class="windowbar"><a href="../../">synapse / manual</a><span>v1.16.0 · on your machine</span></div>
   <header class="topbar">
     <a class="wordmark" href="../../" aria-label="Synapse home"><img src="../../icon.svg" width="28" height="28" alt=""><span>synapse</span></a>
     <button class="navtoggle" type="button" aria-expanded="false" aria-controls="topnav">Menu</button>
@@ -88,6 +88,10 @@ synapse status</code></pre>
     <p>The installed CLI is a small launcher that points into the signed application bundle. Moving the app later would leave that launcher pointing at the old location.</p>
   </aside>
 
+    <h2 id="updates">Keep the macOS app current</h2>
+    <p>Synapse checks the latest GitHub release when it opens and hourly while it is running. Choose <strong>Synapse → Check for Updates…</strong> for an immediate check; the menu bar item offers the same action while the main window is hidden.</p>
+    <p>An accepted update is downloaded, checked against its published SHA-256, verified as a signed Synapse bundle, and installed in place. If an open document has unsaved changes, Synapse leaves the new version ready for the next normal launch instead of forcing a restart or discarding work.</p>
+
     <h2 id="windows">Install on Windows</h2>
     <p>Download the <code>synapse.&lt;version&gt;.windows.x64.exe</code> installer from the <a href="https://github.com/wess/synapse/releases/latest">latest release</a>. It installs the app and CLI for your user account. Open a new terminal after installation to use <code>synapse</code> by name. See the <a href="https://github.com/wess/synapse/blob/main/docs/windows.md">Windows guide</a> for build and verification steps.</p>
 
@@ -128,10 +132,10 @@ synapse version</code></pre>
 
     <h2 id="tools">Connect tools</h2>
     <p>See <a href="../harnesses/">supported and custom harnesses</a> to add a connector with a TOML descriptor or contribute one through a PR.</p>
-    <p>On the macOS Synapse dashboard, each detected tool shows its installation and connection state. Choose <strong>Connect</strong> for Codex, Claude Code, pi, or Ainz.</p>
+    <p>On the macOS Synapse dashboard, each detected tool shows its installation and connection state. Choose <strong>Connect</strong> for Codex, Claude Code, pi, or Ainz. Ainz's connector is reciprocal: the same action enables Ainz's native Synapse integration and shared memory, and <code>ainz synapse connect</code> performs the handshake from Ainz.</p>
     <p>Setup performs two changes as one rollback-protected operation:</p>
     <ol>
-      <li>It registers the installed Synapse executable as a user-level MCP stdio server with the single argument <code>mcp</code>. pi has no MCP client, so its step is <code>pi install npm:synapse-pi</code> instead: one package that starts the same server and offers the same tools.</li>
+      <li>It registers the installed Synapse executable as a user-level MCP stdio server with the single argument <code>mcp</code>. For Ainz, its own reciprocal connection command also enables native shared memory and guidance. pi has no MCP client, so its step is <code>pi install npm:synapse-pi</code> instead: one package that starts the same server and offers the same tools.</li>
       <li>It creates <code>SOUL.md</code> when needed and appends or refreshes a small managed pointer in the tool’s global instruction file. Existing user content remains outside that block.</li>
     </ol>
     <p>The connected tool follows that pointer on launch, and the MCP server loads the same <code>SOUL.md</code> during initialization. The default guidance tells every connected tool to recall global plus current-project context, save confirmed reusable facts with project scope by default, use a Lean response first, and keep secrets out of memory.</p>
@@ -182,14 +186,14 @@ claude mcp add --scope user synapse -- ~/.local/bin/synapse mcp</code></pre>
       <li>Inspect the entry and its source in the macOS <strong>Memories</strong> screen, or use <code>synapse memory list</code> and <code>synapse memory show &lt;id&gt;</code> on Linux.</li>
     </ol>
     <p>If the dashboard shows a registered but disconnected state, the stored path is stale or its arguments differ from <code>["mcp"]</code>. Choose <strong>Repair</strong> in the app or remove and re-add the manual entry.</p>
-  <footer class="articlefoot"><div class="articlemeta"><a href="https://github.com/wess/synapse/blob/main/website/docs/install.ts">View page source</a><span>Synapse 1.15.0</span></div><nav class="pagenav" aria-label="Guide pages"><a href="../../docs/"><small>Previous</small><strong>Start here</strong></a><a href="../../docs/harnesses/"><small>Next</small><strong>Supported and custom harnesses</strong></a></nav></footer>
+  <footer class="articlefoot"><div class="articlemeta"><a href="https://github.com/wess/synapse/blob/main/website/docs/install.ts">View page source</a><span>Synapse 1.16.0</span></div><nav class="pagenav" aria-label="Guide pages"><a href="../../docs/"><small>Previous</small><strong>Start here</strong></a><a href="../../docs/harnesses/"><small>Next</small><strong>Supported and custom harnesses</strong></a></nav></footer>
     </main>
-  <aside class="ontoc" aria-label="On this page"><span>Contents</span><ol><li><a href="#requirements">Requirements</a></li><li><a href="#linux">Linux setup</a></li><li><a href="#app">macOS app</a></li><li><a href="#windows">Windows installer</a></li><li><a href="#cli">Install the CLI</a></li><li><a href="#shell">Shell integration</a></li><li><a href="#tools">Connect tools</a></li><li><a href="#guidance">Shared guidance</a></li><li><a href="#manual">Manual connection</a></li><li><a href="#verify">Verify</a></li></ol></aside>
+  <aside class="ontoc" aria-label="On this page"><span>Contents</span><ol><li><a href="#requirements">Requirements</a></li><li><a href="#linux">Linux setup</a></li><li><a href="#app">macOS app</a></li><li><a href="#updates">App updates</a></li><li><a href="#windows">Windows installer</a></li><li><a href="#cli">Install the CLI</a></li><li><a href="#shell">Shell integration</a></li><li><a href="#tools">Connect tools</a></li><li><a href="#guidance">Shared guidance</a></li><li><a href="#manual">Manual connection</a></li><li><a href="#verify">Verify</a></li></ol></aside>
   </div>
   <footer class="footer">
     <div class="footerupper"><div><a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">synapse</a><p>A shared memory. A little less starting over.</p></div>
       <nav aria-label="Footer"><a href="../../docs/">Manual</a><a href="../../tutorials/">Tutorials</a><a href="https://github.com/wess/synapse">Source</a><a href="https://github.com/wess/synapse/releases">Releases</a><a href="https://wess.io">By Wess</a></nav></div>
-    <p class="footerfine"><span>macOS &amp; Windows desktop · Linux CLI &amp; MCP</span><span>v1.15.0 · MIT · No account required</span></p>
+    <p class="footerfine"><span>macOS &amp; Windows desktop · Linux CLI &amp; MCP</span><span>v1.16.0 · MIT · No account required</span></p>
   </footer></div>
 </body>
 </html>

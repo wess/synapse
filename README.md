@@ -8,6 +8,11 @@ Stop repeating the same project conventions to each coding agent. With Synapse, 
 
 macOS desktop (Apple silicon, macOS 13+, signed and notarized) · Windows desktop (x64 installer) · CLI and MCP server · MIT license · No account required
 
+The macOS app checks for signed releases when it opens and hourly while it is
+running. Use **Synapse → Check for Updates…** at any time. If a document has
+unsaved changes, Synapse installs the update but waits until the next normal
+launch instead of forcing a restart.
+
 ## Supported harnesses
 
 A harness is the coding agent you run. Synapse ships these connectors:
@@ -71,6 +76,8 @@ On macOS:
 
 1. Download the app, extract it, and move **synapse.app** into **Applications**.
 2. Open Synapse and choose **Connect** for the tools you use: Claude Code, Codex, pi, or Ainz.
+   For Ainz, this also enables its native shared-memory integration; running
+   `ainz synapse connect` from Ainz performs the same reciprocal handshake.
 3. Restart those tools so they load the connection and shared guidance.
 4. Ask one tool to remember a confirmed project convention. Open another in the same folder and ask it to recall that convention.
 5. Inspect the record in Synapse's **Memories** screen.

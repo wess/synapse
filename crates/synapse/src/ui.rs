@@ -21,6 +21,7 @@ mod stats;
 mod statusbar;
 mod summary;
 mod theme;
+mod update;
 mod vaults;
 
 pub use dashboard::Dashboard;

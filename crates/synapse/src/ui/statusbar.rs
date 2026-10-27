@@ -14,6 +14,7 @@ pub enum Action {
     Open,
     Data,
     Install,
+    CheckUpdates,
     SystemTheme,
     LightTheme,
     DarkTheme,
@@ -31,6 +32,7 @@ pub fn install(sender: Sender<Action>) -> anyhow::Result<Statusbar> {
     let open = MenuItem::new("Open Synapse", true, None);
     let install = MenuItem::new("Install CLI", true, None);
     let data = MenuItem::new("Open data folder", true, None);
+    let updates = MenuItem::new("Check for Updates…", true, None);
     let systemtheme = MenuItem::new("System", true, None);
     let lighttheme = MenuItem::new("Light", true, None);
     let darktheme = MenuItem::new("Dark", true, None);
@@ -38,11 +40,20 @@ pub fn install(sender: Sender<Action>) -> anyhow::Result<Statusbar> {
         Submenu::with_items("Appearance", true, &[&systemtheme, &lighttheme, &darktheme])?;
     let separator = PredefinedMenuItem::separator();
     let quit = MenuItem::new("Quit Synapse", true, None);
-    menu.append_items(&[&open, &install, &data, &appearance, &separator, &quit])?;
+    menu.append_items(&[
+        &open,
+        &install,
+        &data,
+        &updates,
+        &appearance,
+        &separator,
+        &quit,
+    ])?;
 
     let openid = open.id().clone();
     let installid = install.id().clone();
     let dataid = data.id().clone();
+    let updatesid = updates.id().clone();
     let systemid = systemtheme.id().clone();
     let lightid = lighttheme.id().clone();
     let darkid = darktheme.id().clone();
@@ -54,6 +65,8 @@ pub fn install(sender: Sender<Action>) -> anyhow::Result<Statusbar> {
             Some(Action::Install)
         } else if event.id == dataid {
             Some(Action::Data)
+        } else if event.id == updatesid {
+            Some(Action::CheckUpdates)
         } else if event.id == systemid {
             Some(Action::SystemTheme)
         } else if event.id == lightid {

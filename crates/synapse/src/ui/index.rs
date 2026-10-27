@@ -88,6 +88,7 @@ pub fn run() {
                             }
                         }
                         Action::Install => crate::ui::menu::installcli(cx),
+                        Action::CheckUpdates => crate::ui::update::check_now(window, cx),
                         Action::SystemTheme => {
                             crate::ui::theme::set(crate::ui::theme::Mode::System, cx)
                         }
@@ -103,6 +104,7 @@ pub fn run() {
             });
             task.detach();
         }
+        crate::ui::update::start(window, cx);
         crate::ui::menu::show(window, cx);
     });
 }

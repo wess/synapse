@@ -12,7 +12,7 @@ const body = `
         <a class="button" href="${downloadurl}">Download for macOS</a>
         <a class="button secondary" href="docs/install/">Install on your machine</a>
       </div>
-      <p class="heronote">macOS &amp; Windows desktop. Linux CLI &amp; MCP.<br>No account. No subscription. Your machine.</p>
+      <p class="heronote">macOS &amp; Windows desktop. Linux CLI &amp; MCP.<br>Signed in-app updates. No account. Your machine.</p>
     </div>
     <div class="console" aria-label="Illustrative memory handoff between two sessions">
       <div class="consoletitle"><span>project / workshop</span><span>local memory</span></div>
@@ -34,7 +34,7 @@ const body = `
     <div class="sectionintro"><h2 id="workflowtitle">Pick up where<br>you left off.</h2><p>A new session shouldn’t mean explaining the project again. Keep what you settled, inspect what gets recalled, and change it when the decision changes.</p></div>
     <div class="workflowrows">
       <article><h3>Remember the decision.</h3><p>Keep confirmed conventions, corrections, and project context. Project memory follows the repository across clones and worktrees.</p><a href="docs/memory/">Memory &amp; recall</a></article>
-      <article><h3>Connect your tools.</h3><p>Use the built-in connectors or add a TOML descriptor for another harness. Launch one session, or make the connection permanent.</p><a href="docs/harnesses/">Supported &amp; custom tools</a></article>
+      <article><h3>Connect your tools.</h3><p>Use the built-in connectors or add a TOML descriptor for another harness. Ainz has a reciprocal bridge: connect it here or there and both products agree.</p><a href="docs/harnesses/">Supported &amp; custom tools</a> · <a href="https://wess.io/ainz/">Meet Ainz</a></article>
       <article><h3>Keep one skill library.</h3><p>Save a reusable procedure once. Review proposed skills, approve revisions, and update managed copies without overwriting your edits.</p><a href="docs/skills/">Skills &amp; learning</a></article>
       <article><h3>Work together.</h3><p>Turn on the optional mesh for direct messages, roles, teams, and bounded background workers. Join the conversation from your terminal.</p><a href="docs/mesh/">The agent mesh</a></article>
     </div>

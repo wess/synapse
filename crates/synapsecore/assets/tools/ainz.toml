@@ -17,12 +17,13 @@ integration = "{home}/mcp.toml"
 skills = "{home}/skills"
 projectskills = ".ainz/skills"
 
-# `--required` because Ainz loads a server's own instructions only from the
-# servers marked required. Without it the tools arrive and the guidance that
-# explains them does not, which is the one thing that must never come apart.
+# Ainz owns both sides of this handshake. Its command enables native shared
+# memory and guidance while also writing the MCP profile entry Synapse detects,
+# so the two products cannot disagree about whether they are connected.
 [connect]
-add = ["mcp", "add", "synapse", "--required", "--", "{server}", "mcp"]
-remove = ["mcp", "remove", "synapse"]
+add = ["synapse", "connect", "--command", "{server}"]
+remove = ["synapse", "disconnect"]
+replace = true
 
 # Not `--required`: that is for Synapse's own entry, whose guidance must arrive
 # with its tools. A server from the library is an ordinary one.

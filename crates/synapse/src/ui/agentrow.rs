@@ -27,6 +27,7 @@ pub fn render(index: usize, row: Row, actions: Actions) -> AnyElement {
     let installed = row.installed();
     let connected = row.connected();
     let outdated = row.outdated;
+    let is_ainz = row.agent.slug == "ainz";
     let status = if outdated {
         // Connected, and this release would connect it differently. Amber
         // rather than red: nothing is broken, there is just something newer to
@@ -123,6 +124,25 @@ pub fn render(index: usize, row: Row, actions: Actions) -> AnyElement {
                                 .child(Badge::new(status.0).size(Size::Sm).color(status.1)),
                         )
                         .child(Text::new(detail).size(Size::Xs).dimmed())
+                        .when(is_ainz, |element| {
+                            element.child(
+                                div()
+                                    .flex()
+                                    .items_center()
+                                    .gap(px(6.0))
+                                    .min_w(px(0.0))
+                                    .child(Icon::new(IconName::Network).size(Size::Xs))
+                                    .child(
+                                        Text::new(if connected {
+                                            "Shared memory is on · open this machine's mesh in Ainz with Cmd+R / Super+R"
+                                        } else {
+                                            "One connection shares memory and opens this machine's mesh inside Ainz"
+                                        })
+                                        .size(Size::Xs)
+                                        .dimmed(),
+                                    ),
+                            )
+                        })
                         .when_some(notice, |element, (summary, installed)| {
                             element.child(
                                 div()

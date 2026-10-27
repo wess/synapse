@@ -19,7 +19,7 @@
 <body class="docs" data-root="../../">
   <div class="shell">
   <a class="skip" href="#content">Skip to content</a>
-  <div class="windowbar"><a href="../../">synapse / manual</a><span>v1.15.0 · on your machine</span></div>
+  <div class="windowbar"><a href="../../">synapse / manual</a><span>v1.16.0 · on your machine</span></div>
   <header class="topbar">
     <a class="wordmark" href="../../" aria-label="Synapse home"><img src="../../icon.svg" width="28" height="28" alt=""><span>synapse</span></a>
     <button class="navtoggle" type="button" aria-expanded="false" aria-controls="topnav">Menu</button>
@@ -50,7 +50,8 @@
       <header class="articlehead"><nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../">Synapse</a><span aria-hidden="true">/</span><a href="../../docs/">Manual</a></nav><h1>Supported and custom harnesses</h1><p>Connect a supported coding agent, describe your own with one TOML file, or contribute a connector.</p></header>
 
     <h2 id="supported">Supported harnesses</h2>
-    <p>A harness is the coding agent you run. Synapse ships connectors for Claude Code (<code>claude</code>), Codex (<code>codex</code>), pi (<code>pi</code>), and Ainz (<code>ainz</code>). Claude Code, Codex, and Ainz connect through MCP. pi uses the <code>synapse-pi</code> extension.</p>
+    <p>A harness is the coding agent you run. Synapse ships connectors for Claude Code (<code>claude</code>), Codex (<code>codex</code>), pi (<code>pi</code>), and <a href="https://wess.io/ainz/">Ainz</a> (<code>ainz</code>). Claude Code and Codex connect through MCP. Ainz adds a reciprocal native bridge around that MCP connection, while pi uses the <code>synapse-pi</code> extension.</p>
+    <p><code>synapse connect ainz</code> and <code>ainz synapse connect</code> perform the same complete handshake: shared memory and guidance turn on in Ainz, and the profile Synapse detects is written at the same time. Add <code>--mesh</code> from Ainz when its session and subagents should join the mesh.</p>
     <p>Each connector declares shared guidance and skill locations, connection detection, and launch arguments. Claude Code and pi also have dedicated session integration. A custom descriptor does not acquire those hooks by declaring the same paths.</p>
 
   <div class="codeblock">
@@ -154,14 +155,14 @@ synapse launch mytool --print</code></pre>
 bun run site
 bun run sitecheck</code></pre>
   </div>
-  <footer class="articlefoot"><div class="articlemeta"><a href="https://github.com/wess/synapse/blob/main/website/docs/harnesses.ts">View page source</a><span>Synapse 1.15.0</span></div><nav class="pagenav" aria-label="Guide pages"><a href="../../docs/install/"><small>Previous</small><strong>Install and connect</strong></a><a href="../../docs/app/"><small>Next</small><strong>Desktop app reference</strong></a></nav></footer>
+  <footer class="articlefoot"><div class="articlemeta"><a href="https://github.com/wess/synapse/blob/main/website/docs/harnesses.ts">View page source</a><span>Synapse 1.16.0</span></div><nav class="pagenav" aria-label="Guide pages"><a href="../../docs/install/"><small>Previous</small><strong>Install and connect</strong></a><a href="../../docs/app/"><small>Next</small><strong>Desktop app reference</strong></a></nav></footer>
     </main>
   <aside class="ontoc" aria-label="On this page"><span>Contents</span><ol><li><a href="#supported">Supported harnesses</a></li><li><a href="#create">Create a connector</a></li><li><a href="#example">Descriptor example</a></li><li><a href="#verify">Verify and update</a></li><li><a href="#contribute">Contribute a harness</a></li></ol></aside>
   </div>
   <footer class="footer">
     <div class="footerupper"><div><a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">synapse</a><p>A shared memory. A little less starting over.</p></div>
       <nav aria-label="Footer"><a href="../../docs/">Manual</a><a href="../../tutorials/">Tutorials</a><a href="https://github.com/wess/synapse">Source</a><a href="https://github.com/wess/synapse/releases">Releases</a><a href="https://wess.io">By Wess</a></nav></div>
-    <p class="footerfine"><span>macOS &amp; Windows desktop · Linux CLI &amp; MCP</span><span>v1.15.0 · MIT · No account required</span></p>
+    <p class="footerfine"><span>macOS &amp; Windows desktop · Linux CLI &amp; MCP</span><span>v1.16.0 · MIT · No account required</span></p>
   </footer></div>
 </body>
 </html>

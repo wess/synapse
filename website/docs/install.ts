@@ -11,6 +11,7 @@ export const install: Page = {
     { label: "Requirements", id: "requirements" },
     { label: "Linux setup", id: "linux" },
     { label: "macOS app", id: "app" },
+    { label: "App updates", id: "updates" },
     { label: "Windows installer", id: "windows" },
     { label: "Install the CLI", id: "cli" },
     { label: "Shell integration", id: "shell" },
@@ -48,6 +49,10 @@ synapse status`)}
     </ol>
     ${note("Why move it first?", "The installed CLI is a small launcher that points into the signed application bundle. Moving the app later would leave that launcher pointing at the old location.")}
 
+    <h2 id="updates">Keep the macOS app current</h2>
+    <p>Synapse checks the latest GitHub release when it opens and hourly while it is running. Choose <strong>Synapse → Check for Updates…</strong> for an immediate check; the menu bar item offers the same action while the main window is hidden.</p>
+    <p>An accepted update is downloaded, checked against its published SHA-256, verified as a signed Synapse bundle, and installed in place. If an open document has unsaved changes, Synapse leaves the new version ready for the next normal launch instead of forcing a restart or discarding work.</p>
+
     <h2 id="windows">Install on Windows</h2>
     <p>Download the <code>synapse.&lt;version&gt;.windows.x64.exe</code> installer from the <a href="${releaseurl}">latest release</a>. It installs the app and CLI for your user account. Open a new terminal after installation to use <code>synapse</code> by name. See the <a href="https://github.com/wess/synapse/blob/main/docs/windows.md">Windows guide</a> for build and verification steps.</p>
 
@@ -74,10 +79,10 @@ synapse version`)}
 
     <h2 id="tools">Connect tools</h2>
     <p>See <a href="../harnesses/">supported and custom harnesses</a> to add a connector with a TOML descriptor or contribute one through a PR.</p>
-    <p>On the macOS Synapse dashboard, each detected tool shows its installation and connection state. Choose <strong>Connect</strong> for Codex, Claude Code, pi, or Ainz.</p>
+    <p>On the macOS Synapse dashboard, each detected tool shows its installation and connection state. Choose <strong>Connect</strong> for Codex, Claude Code, pi, or Ainz. Ainz's connector is reciprocal: the same action enables Ainz's native Synapse integration and shared memory, and <code>ainz synapse connect</code> performs the handshake from Ainz.</p>
     <p>Setup performs two changes as one rollback-protected operation:</p>
     <ol>
-      <li>It registers the installed Synapse executable as a user-level MCP stdio server with the single argument <code>mcp</code>. pi has no MCP client, so its step is <code>pi install npm:synapse-pi</code> instead: one package that starts the same server and offers the same tools.</li>
+      <li>It registers the installed Synapse executable as a user-level MCP stdio server with the single argument <code>mcp</code>. For Ainz, its own reciprocal connection command also enables native shared memory and guidance. pi has no MCP client, so its step is <code>pi install npm:synapse-pi</code> instead: one package that starts the same server and offers the same tools.</li>
       <li>It creates <code>SOUL.md</code> when needed and appends or refreshes a small managed pointer in the tool’s global instruction file. Existing user content remains outside that block.</li>
     </ol>
     <p>The connected tool follows that pointer on launch, and the MCP server loads the same <code>SOUL.md</code> during initialization. The default guidance tells every connected tool to recall global plus current-project context, save confirmed reusable facts with project scope by default, use a Lean response first, and keep secrets out of memory.</p>

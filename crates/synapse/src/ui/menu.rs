@@ -10,6 +10,7 @@ gpui::actions!(
         OpenSynapse,
         InstallCli,
         OpenData,
+        CheckUpdates,
         SystemTheme,
         LightTheme,
         DarkTheme,
@@ -121,6 +122,7 @@ pub fn configure(window: WindowHandle<Dashboard>, cx: &mut App) {
                 gpui::MenuItem::action("Open Synapse", OpenSynapse),
                 gpui::MenuItem::action("Install CLI", InstallCli),
                 gpui::MenuItem::action("Open Data Folder", OpenData),
+                gpui::MenuItem::action("Check for Updates…", CheckUpdates),
                 gpui::MenuItem::separator(),
                 gpui::MenuItem::submenu(gpui::Menu {
                     name: SharedString::new_static("Appearance"),
@@ -191,6 +193,7 @@ pub fn configure(window: WindowHandle<Dashboard>, cx: &mut App) {
             cx,
         );
     });
+    cx.on_action::<CheckUpdates>(move |_, cx| crate::ui::update::check_now(window, cx));
     cx.on_action::<SystemTheme>(|_, cx| crate::ui::theme::set(crate::ui::theme::Mode::System, cx));
     cx.on_action::<LightTheme>(|_, cx| crate::ui::theme::set(crate::ui::theme::Mode::Light, cx));
     cx.on_action::<DarkTheme>(|_, cx| crate::ui::theme::set(crate::ui::theme::Mode::Dark, cx));
@@ -308,6 +311,9 @@ pub fn bar<T: 'static>(cx: &mut Context<T>) -> Option<Entity<MenuBar>> {
                     menu.item("Open Synapse", |_, cx| cx.dispatch_action(&OpenSynapse))
                         .item("Install CLI", |_, cx| cx.dispatch_action(&InstallCli))
                         .item("Open data folder", |_, cx| cx.dispatch_action(&OpenData))
+                        .item("Check for updates…", |_, cx| {
+                            cx.dispatch_action(&CheckUpdates)
+                        })
                         .divider()
                         .danger_item("Quit", |_, cx| cx.dispatch_action(&QuitSynapse))
                 })

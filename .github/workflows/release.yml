@@ -180,7 +180,7 @@ jobs:
           fi
 
       - name: Upload zip
-        run: gh release upload "v${{ needs.check-version.outputs.version }}" dist/synapse.zip --clobber
+        run: gh release upload "v${{ needs.check-version.outputs.version }}" dist/synapse.zip dist/synapse.zip.sha256 --clobber
         env:
           GH_TOKEN: ${{ github.token }}
 

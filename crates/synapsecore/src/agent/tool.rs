@@ -443,6 +443,12 @@ mod tests {
         assert_eq!(ainz.integration, ainzhome.join("mcp.toml"));
         assert_eq!(ainz.skills, ainzhome.join("skills"));
         assert_eq!(ainz.projectskills, ".ainz/skills");
+        assert_eq!(
+            ainz.connect.add,
+            ["synapse", "connect", "--command", "{server}"]
+        );
+        assert_eq!(ainz.connect.remove, ["synapse", "disconnect"]);
+        assert!(ainz.connect.replace);
 
         // Every built-in with an MCP client can be given the library's
         // servers; pi has none, so it gets no row rather than a broken one.
