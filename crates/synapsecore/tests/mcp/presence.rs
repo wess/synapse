@@ -1,6 +1,21 @@
 use super::*;
 use synapsecore::{brain::Brain, presence};
 
+fn sessions_with_count(
+    runtime: &tokio::runtime::Runtime,
+    brain: &Brain,
+    expected: usize,
+) -> Vec<presence::Session> {
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+    loop {
+        let rows = runtime.block_on(presence::sessions(brain.pool())).unwrap();
+        if rows.len() == expected || std::time::Instant::now() >= deadline {
+            return rows;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(10));
+    }
+}
+
 #[test]
 fn transports_publish_presence_without_joining_the_mesh_and_depart_cleanly() {
     let root = tempfile::tempdir().unwrap();
@@ -14,7 +29,9 @@ fn transports_publish_presence_without_joining_the_mesh_and_depart_cleanly() {
     let brain = runtime
         .block_on(Brain::open(data.join("brain.db")))
         .unwrap();
-    let rows = runtime.block_on(presence::sessions(brain.pool())).unwrap();
+    // The initialized notification has no response, so the transport may still
+    // be recording it when the following tools/list call completes.
+    let rows = sessions_with_count(&runtime, &brain, 2);
     assert_eq!(rows.len(), 2);
     assert!(rows.iter().all(|row| row.online(presence::now())));
     assert!(

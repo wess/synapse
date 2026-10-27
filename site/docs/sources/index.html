@@ -19,7 +19,7 @@
 <body class="docs" data-root="../../">
   <div class="shell">
   <a class="skip" href="#content">Skip to content</a>
-  <div class="windowbar"><a href="../../">synapse / manual</a><span>v1.14.4 · on your machine</span></div>
+  <div class="windowbar"><a href="../../">synapse / manual</a><span>v1.14.5 · on your machine</span></div>
   <header class="topbar">
     <a class="wordmark" href="../../" aria-label="Synapse home"><img src="../../icon.svg" width="28" height="28" alt=""><span>synapse</span></a>
     <button class="navtoggle" type="button" aria-expanded="false" aria-controls="topnav">Menu</button>
@@ -133,14 +133,14 @@ path = &quot;skills&quot;</code></pre>
     <h2 id="repositories">How a repository is read</h2>
     <p>One request to GitHub's trees API lists the whole repository, and the files come from raw.githubusercontent.com, which does not count against GitHub's allowance of sixty requests an hour without a token. The catalogue — every skill's name and description, every <code>server.json</code> — is cached in the data folder for an hour, and a refresh whose tree has not changed reads nothing else. <code>synapse source refresh</code> reads it again now.</p>
     <p>A <code>server.json</code> straight out of a repository is often the template a release fills in, with <code>${VERSION}</code> where the version goes. Synapse cannot fill it, so the server runs unpinned.</p>
-  <footer class="articlefoot"><div class="articlemeta"><a href="https://github.com/wess/synapse/blob/main/website/docs/sources.ts">View page source</a><span>Synapse 1.14.4</span></div><nav class="pagenav" aria-label="Guide pages"><a href="../../docs/servers/"><small>Previous</small><strong>MCP servers</strong></a><a href="../../docs/vault/"><small>Next</small><strong>Vaults and scopes</strong></a></nav></footer>
+  <footer class="articlefoot"><div class="articlemeta"><a href="https://github.com/wess/synapse/blob/main/website/docs/sources.ts">View page source</a><span>Synapse 1.14.5</span></div><nav class="pagenav" aria-label="Guide pages"><a href="../../docs/servers/"><small>Previous</small><strong>MCP servers</strong></a><a href="../../docs/vault/"><small>Next</small><strong>Vaults and scopes</strong></a></nav></footer>
     </main>
   <aside class="ontoc" aria-label="On this page"><span>Contents</span><ol><li><a href="#kinds">What a source is</a></li><li><a href="#adding">Adding one</a></li><li><a href="#private">Private repositories</a></li><li><a href="#project">A project's sources</a></li><li><a href="#repositories">How a repository is read</a></li></ol></aside>
   </div>
   <footer class="footer">
     <div class="footerupper"><div><a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">synapse</a><p>A shared memory. A little less starting over.</p></div>
       <nav aria-label="Footer"><a href="../../docs/">Manual</a><a href="../../tutorials/">Tutorials</a><a href="https://github.com/wess/synapse">Source</a><a href="https://github.com/wess/synapse/releases">Releases</a><a href="https://wess.io">By Wess</a></nav></div>
-    <p class="footerfine"><span>macOS &amp; Windows desktop · Linux CLI &amp; MCP</span><span>v1.14.4 · MIT · No account required</span></p>
+    <p class="footerfine"><span>macOS &amp; Windows desktop · Linux CLI &amp; MCP</span><span>v1.14.5 · MIT · No account required</span></p>
   </footer></div>
 </body>
 </html>
