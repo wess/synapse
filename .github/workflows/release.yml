@@ -21,7 +21,7 @@ jobs:
       version: ${{ steps.version.outputs.version }}
       prerelease: ${{ steps.version.outputs.prerelease }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
 
       # Release when the package version has no matching tag yet. Idempotent
       # for both push and manual dispatch (a HEAD~1 diff would miss dispatches
@@ -59,13 +59,13 @@ jobs:
       run:
         working-directory: synapse
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
           path: synapse
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec
 
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0
         with:
           workspaces: synapse
 
@@ -85,7 +85,7 @@ jobs:
     needs: [check-version, test]
     if: needs.check-version.outputs.changed == 'true'
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
 
       - name: Create git tag
         run: |
@@ -98,7 +98,7 @@ jobs:
       # notarization run with none of its assets attached yet. Drafts are
       # invisible to `releases/latest` and still accept uploads.
       - name: Create GitHub Release (draft)
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65
         with:
           tag_name: "v${{ needs.check-version.outputs.version }}"
           generate_release_notes: true
@@ -121,16 +121,16 @@ jobs:
       APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
       APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
           ref: "v${{ needs.check-version.outputs.version }}"
           path: synapse
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec
 
       - name: Cache cargo
-        uses: Swatinem/rust-cache@v2
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0
         with:
           workspaces: synapse
 
@@ -192,16 +192,16 @@ jobs:
     env:
       CARGO_TARGET_DIR: ${{ github.workspace }}/target
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
           ref: "v${{ needs.check-version.outputs.version }}"
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0
       - name: Desktop tests
         run: cargo test --locked
       - name: Core tests
         run: cargo test --locked --manifest-path crates/synapsecore/Cargo.toml
-      - uses: oven-sh/setup-bun@v2
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
       - name: Windows pi bridge
         run: bun test pi/tests
         env:
@@ -219,7 +219,7 @@ jobs:
           $uninstall = Start-Process "$env:LOCALAPPDATA/Programs/Synapse/unins000.exe" -ArgumentList '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART' -Wait -PassThru
           if ($uninstall.ExitCode -ne 0) { throw 'Uninstall failed' }
       - name: Upload Windows installer
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65
         with:
           tag_name: "v${{ needs.check-version.outputs.version }}"
           draft: true
@@ -273,7 +273,7 @@ jobs:
           echo "sha_darwin_arm64=${SHA}" >> "$GITHUB_OUTPUT"
 
       - name: Checkout homebrew tap
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
           repository: wess/homebrew-packages
           token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
