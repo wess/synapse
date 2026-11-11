@@ -37,6 +37,18 @@ pub fn read(path: &Path) -> Result<(ScopeConfig, String)> {
     let config: ScopeConfig = serde_saphyr::from_str(&content)
         .with_context(|| format!("{} is not valid Synapse YAML", path.display()))?;
     anyhow::ensure!(config.version == 1, "unsupported Synapse scope version");
+    // These names are written into text a shell evaluates. Approving a scope
+    // agrees to which secret a variable holds, never to running a command, so a
+    // name that is anything but a variable's is refused before it is a question
+    // of quoting.
+    for name in config.env.keys() {
+        anyhow::ensure!(
+            super::shell::validkey(name),
+            "{} names `{}`, which is not a variable a shell can set",
+            path.display(),
+            name.escape_debug()
+        );
+    }
     let digest = format!("{:x}", Sha256::digest(content.as_bytes()));
     Ok((config, digest))
 }
@@ -56,6 +68,7 @@ pub async fn resolve(store: &VaultStore, folder: &Path) -> Result<Resolved> {
                 let changed = approved.is_some() && !trusted;
                 let mut state = ScopeState {
                     path: path.clone(),
+                    digest,
                     kind: config.scope,
                     trusted,
                     changed,
@@ -77,6 +90,7 @@ pub async fn resolve(store: &VaultStore, folder: &Path) -> Result<Resolved> {
             }
             Err(error) => ScopeState {
                 path: path.clone(),
+                digest: String::new(),
                 kind: Default::default(),
                 trusted: false,
                 changed: false,
@@ -256,6 +270,78 @@ mod tests {
         let changed = resolve(&store, &nested).await.unwrap();
         assert_eq!(changed.env["TOKEN"].vault, "global");
         assert!(changed.scopes[0].changed);
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn a_link_to_an_approved_scope_is_not_approved_by_it() {
+        let directory = tempfile::tempdir().unwrap();
+        let (trusted, linked, copied) = (
+            directory.path().join("trusted"),
+            directory.path().join("linked"),
+            directory.path().join("copied"),
+        );
+        for folder in [&trusted, &linked, &copied] {
+            fs::create_dir_all(folder).unwrap();
+        }
+        let store = VaultStore::open(directory.path().join("brain.db"))
+            .await
+            .unwrap();
+        let work = store.createvault("work").await.unwrap();
+        store
+            .createsecret(work.id, "token", "TOKEN", false)
+            .await
+            .unwrap();
+        let content = "version: 1\nscope: project\nenv:\n  TOKEN: work.token\ndeny: []\n";
+        let path = trusted.join(CONFIG);
+        fs::write(&path, content).unwrap();
+        let (_, digest) = read(&path).unwrap();
+        store.trust(&path, &digest).await.unwrap();
+        assert!(resolve(&store, &trusted).await.unwrap().scopes[0].trusted);
+
+        // A folder nobody approved, holding a link to the file somebody did.
+        std::os::unix::fs::symlink(&path, linked.join(CONFIG)).unwrap();
+        let through = resolve(&store, &linked).await.unwrap();
+        assert!(!through.scopes[0].trusted);
+        assert!(!through.env.contains_key("TOKEN"));
+        assert!(!through.warnings.is_empty(), "and so nothing activates");
+
+        // The same bytes as a real file were never approved either.
+        fs::write(copied.join(CONFIG), content).unwrap();
+        assert!(!resolve(&store, &copied).await.unwrap().scopes[0].trusted);
+
+        // Approving the link is a decision about that folder, and it holds
+        // until what the link reaches changes.
+        store.trust(&linked.join(CONFIG), &digest).await.unwrap();
+        assert!(resolve(&store, &linked).await.unwrap().scopes[0].trusted);
+        fs::write(&path, format!("{content}\n")).unwrap();
+        assert!(resolve(&store, &linked).await.unwrap().scopes[0].changed);
+    }
+
+    #[tokio::test]
+    async fn a_name_that_is_not_a_variable_is_refused_before_any_shell_sees_it() {
+        let directory = tempfile::tempdir().unwrap();
+        let store = VaultStore::open(directory.path().join("brain.db"))
+            .await
+            .unwrap();
+        let path = directory.path().join(CONFIG);
+        for name in [
+            "\"A=1; touch owned; B\"",
+            "\"$(touch owned)\"",
+            "\"1LEADING\"",
+            "\"WITH SPACE\"",
+            "\"\"",
+        ] {
+            fs::write(
+                &path,
+                format!("version: 1\nscope: project\nenv:\n  {name}: work.token\ndeny: []\n"),
+            )
+            .unwrap();
+            assert!(read(&path).is_err(), "{name} was accepted as a variable");
+            let resolved = resolve(&store, directory.path()).await.unwrap();
+            assert!(resolved.env.is_empty());
+            assert!(!resolved.warnings.is_empty());
+        }
     }
 
     #[test]

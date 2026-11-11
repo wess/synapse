@@ -46,7 +46,7 @@ fn temporary(parent: &Path) -> Result<(PathBuf, File)> {
         let number = NEXT.fetch_add(1, Ordering::Relaxed);
         let name = format!(".synapsetemp{}{}", std::process::id(), number);
         let path = parent.join(name);
-        match OpenOptions::new().write(true).create_new(true).open(&path) {
+        match exclusive().open(&path) {
             Ok(file) => return Ok((path, file)),
             Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => continue,
             Err(error) => {
@@ -60,6 +60,21 @@ fn temporary(parent: &Path) -> Result<(PathBuf, File)> {
         "could not create a unique temporary file in {}",
         parent.display()
     )
+}
+
+/// A new file nobody else can open. It is given the mode of the file it will
+/// replace once it is written, but until then it holds that file's contents
+/// under whatever the umask leaves — and anyone who opens it in that window
+/// keeps reading after the mode is tightened.
+fn exclusive() -> OpenOptions {
+    let mut options = OpenOptions::new();
+    options.write(true).create_new(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.mode(0o600);
+    }
+    options
 }
 
 #[cfg(unix)]

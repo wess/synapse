@@ -52,7 +52,7 @@ export const mesh: Page = {
 synapse relay role show frontend
 synapse relay role create reviewer          # writes into this project
 synapse relay role create reviewer --user   # writes into your own layer`)}
-    <p>Roles resolve from the project first, then your own layer, then the built-ins. A role saved into a project lives in <code>.synapse/roles/</code> and travels with the checkout. Editing a built-in copies it down into a layer you own, so the shipped templates stay intact.</p>
+    <p>Roles resolve from the project first, then your own layer, then the built-ins. A role saved into a project lives in <code>.synapse/roles/</code> and travels with the checkout. A role is the brief and the permissions an agent starts with, so one that arrived with a checkout is not used until you approve it with <code>synapse relay role allow &lt;name&gt;</code> (<code>synapse relay team allow &lt;name&gt;</code> for a team), and an edit to the file takes the approval away. <code>synapse relay role list</code> names anything waiting. Editing a built-in copies it down into a layer you own, so the shipped templates stay intact.</p>
     ${code("toml", `channels = ["frontend"]
 tool = "claude"
 # model = "claude-opus-5"

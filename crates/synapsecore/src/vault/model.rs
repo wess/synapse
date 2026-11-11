@@ -45,6 +45,8 @@ pub enum ScopeKind {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ScopeState {
     pub path: PathBuf,
+    /// Digest of the exact file content this state describes.
+    pub digest: String,
     pub kind: ScopeKind,
     pub trusted: bool,
     pub changed: bool,

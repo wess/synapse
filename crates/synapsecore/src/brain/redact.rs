@@ -92,14 +92,16 @@ fn words(body: &str, count: &mut usize) -> String {
         let word = piece.trim_end_matches(char::is_whitespace);
         let space = &piece[word.len()..];
         let lead = word.len() - word.trim_start_matches(QUOTES).len();
-        let value = token(&word[lead..]);
+        let value = credential(&word[lead..]);
         let cleaned = if bearer && value.len() >= 20 {
             *count += 1;
             format!("{}{MARKER}{}", &word[..lead], &word[lead + value.len()..])
         } else {
             word_redacted(word, count)
         };
-        bearer = word.eq_ignore_ascii_case("bearer");
+        // Past any quote it opens with: `"Bearer` introduces a token as surely
+        // as `Bearer` does.
+        bearer = word[lead..].eq_ignore_ascii_case("bearer");
         out.push_str(&cleaned);
         out.push_str(space);
     }
@@ -118,6 +120,10 @@ fn word_redacted(word: &str, count: &mut usize) -> String {
         return cleaned;
     }
     if let Some(cleaned) = userinfo(word) {
+        *count += 1;
+        return cleaned;
+    }
+    if let Some(cleaned) = jwt(word) {
         *count += 1;
         return cleaned;
     }
@@ -245,6 +251,36 @@ fn token(word: &str) -> &str {
     &word[..end]
 }
 
+/// The longest leading run of the characters an `Authorization` credential is
+/// made of. Wider than [`token`]: a signed token is three runs joined by dots
+/// and an opaque one may be base64 with its padding, and stopping at the first
+/// dot keeps the payload and the signature and marks the word as handled.
+fn credential(word: &str) -> &str {
+    let end = word
+        .find(|c: char| !(tokenchar(c) || matches!(c, '.' | '~' | '+' | '/' | '=')))
+        .unwrap_or(word.len());
+    &word[..end]
+}
+
+/// A signed token wherever it sits in the word: three base64url runs joined by
+/// dots, the first two opening with `eyJ`, which is what `{"` encodes to. That
+/// pair is what makes it safe to take without a `Bearer` in front — prose does
+/// not produce it by accident.
+fn jwt(word: &str) -> Option<String> {
+    let start = word.find("eyJ")?;
+    let rest = &word[start..];
+    let mut parts = rest.splitn(3, '.');
+    let (header, payload, tail) = (parts.next()?, parts.next()?, parts.next()?);
+    let signature = token(tail);
+    let whole = |part: &str| part.len() >= 8 && part.chars().all(tokenchar);
+    (whole(header) && whole(payload) && payload.starts_with("eyJ") && signature.len() >= 8).then(
+        || {
+            let length = header.len() + payload.len() + signature.len() + 2;
+            format!("{}{MARKER}{}", &word[..start], &rest[length..])
+        },
+    )
+}
+
 /// A token in one of the formats providers issue, recognised by its prefix
 /// and length. A prefix alone would catch `sk-learn` and `ghp_` in prose.
 fn known(run: &str) -> bool {
@@ -273,10 +309,15 @@ fn known(run: &str) -> bool {
 }
 
 /// Case-insensitive search for an ASCII tag.
+///
+/// Compared in place. Lowercasing the haystack first copies everything left of
+/// the text on every call, and this is called once per tag — which made a body
+/// of nothing but tags cost the square of its length.
 fn find(haystack: &str, needle: &str) -> Option<usize> {
     haystack
-        .to_ascii_lowercase()
-        .find(&needle.to_ascii_lowercase())
+        .as_bytes()
+        .windows(needle.len())
+        .position(|window| window.eq_ignore_ascii_case(needle.as_bytes()))
 }
 
 #[cfg(test)]
@@ -369,6 +410,58 @@ mod tests {
         assert_eq!(
             clean("curl -H 'Authorization: Bearer abcdefghijklmnopqrstuvwxyz012345'"),
             "curl -H 'Authorization: Bearer [redacted]'"
+        );
+    }
+
+    #[test]
+    fn a_signed_bearer_token_goes_whole_not_just_up_to_its_first_dot() {
+        let signed =
+            "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV";
+        assert_eq!(
+            clean(&format!("Authorization: Bearer {signed}")),
+            "Authorization: Bearer [redacted]"
+        );
+        // An opaque token whose first run is short, and one behind a quote.
+        assert_eq!(
+            clean("Bearer ya29.a0AfH6SMBx7example-token_value"),
+            "Bearer [redacted]"
+        );
+        assert_eq!(
+            clean("-H \"Bearer abcdefghijklmnopqrstuvwxyz012345\""),
+            "-H \"Bearer [redacted]\""
+        );
+        // The same token with nothing announcing it.
+        assert_eq!(clean(&format!("token={signed};")), "token=[redacted];");
+        assert_eq!(
+            clean(&format!("it returned {signed} and stopped")),
+            "it returned [redacted] and stopped"
+        );
+    }
+
+    #[test]
+    fn prose_that_only_resembles_a_token_is_left_alone() {
+        for prose in [
+            "the bearer of bad news arrived",
+            "eyJ is how a JSON object starts in base64",
+            "see docs.example.com/eyJ.notes.txt for details",
+            "version 1.2.3 ships Friday",
+        ] {
+            assert_eq!(clean(prose), prose);
+        }
+    }
+
+    #[test]
+    fn a_body_of_nothing_but_tags_is_cleaned_in_time_proportional_to_its_length() {
+        // Four megabytes of empty sections. When each search copied the rest
+        // of the body this took minutes; it is a few milliseconds of scanning.
+        let body = "<private></private>".repeat(4 * 1024 * 1024 / 19);
+        let started = std::time::Instant::now();
+        let cleaned = redact(&body);
+        assert!(cleaned.body.is_empty());
+        assert!(
+            started.elapsed() < std::time::Duration::from_secs(5),
+            "took {:?}",
+            started.elapsed()
         );
     }
 

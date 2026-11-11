@@ -85,13 +85,22 @@ fn trim(path: &Path) {
     if metadata.len() <= MAXBYTES {
         return;
     }
-    let Ok(content) = std::fs::read_to_string(path) else {
+    // As bytes. The cut lands wherever the count does, and slicing text there
+    // panics when it falls inside a character — from within the panic hook,
+    // which turns a crash that was being written down into an abort.
+    let Ok(content) = std::fs::read(path) else {
         return;
     };
+    const ENTRY: &[u8] = b"\n--- synapse ";
     let keep = content.len() - (MAXBYTES / 2) as usize;
-    let from = content[keep..]
-        .find("\n--- synapse ")
+    let mut from = content[keep..]
+        .windows(ENTRY.len())
+        .position(|window| window == ENTRY)
         .map_or(keep, |at| keep + at + 1);
+    // No entry boundary in the half that stays: at least start on a character.
+    while content.get(from).is_some_and(|byte| byte & 0xC0 == 0x80) {
+        from += 1;
+    }
     let _ = std::fs::write(path, &content[from..]);
 }
 
@@ -116,6 +125,27 @@ mod tests {
         assert!(entries[0].contains("the first one"));
         assert!(entries[1].contains("the second one"));
         assert!(entries[1].contains(env!("CARGO_PKG_VERSION")));
+    }
+
+    #[test]
+    fn trimming_a_log_of_wide_characters_does_not_panic_or_leave_half_of_one() {
+        let directory = tempfile::tempdir().unwrap();
+        let log = directory.path().join("crash.log");
+        // One entry, no boundary to cut at, and three bytes to a character, so
+        // the halfway point lands inside one whatever the length.
+        for padding in 0..3 {
+            let content = format!(
+                "{}{}",
+                "x".repeat(padding),
+                "·é漢".repeat(MAXBYTES as usize / 4)
+            );
+            std::fs::write(&log, &content).unwrap();
+            assert!(std::fs::metadata(&log).unwrap().len() > MAXBYTES);
+            trim(&log);
+            let kept = std::fs::read_to_string(&log).expect("still text");
+            assert!(kept.len() as u64 <= MAXBYTES / 2 + 4);
+            assert!(content.ends_with(&kept));
+        }
     }
 
     #[test]

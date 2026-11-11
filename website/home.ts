@@ -15,7 +15,7 @@ const body = `
       <p class="heronote">macOS &amp; Windows desktop. Linux CLI &amp; MCP.<br>Signed in-app updates. No account. Your machine.</p>
     </div>
     <div class="console" aria-label="Illustrative memory handoff between two sessions">
-      <div class="consoletitle"><span>project / workshop</span><span>local memory</span></div>
+      <div class="consoletitle"><span>project / backend</span><span>local memory</span></div>
       <div class="buffer">
         <p class="bufferlabel">session one / save a decision</p>
         <p><span class="nick">you</span> Use Bun in this repository.<br><span class="indent">Remember that for this project.</span></p>
@@ -29,7 +29,7 @@ const body = `
       <div class="consolestatus"><span>remember → recall → continue</span><span>illustrative example</span></div>
     </div>
   </section>
-  <div class="systemline"><span>LOCAL-FIRST MEMORY</span><span>SQLite · MCP · shared skills · scoped credentials</span><a href="${repositoryurl}">Open source / MIT</a></div>
+  <div class="systemline"><span>LOCAL AGENT BACKEND</span><span>memory · jobs · logs · skills · scoped credentials</span><a href="${repositoryurl}">Open source / MIT</a></div>
   <section class="workflows" aria-labelledby="workflowtitle">
     <div class="sectionintro"><h2 id="workflowtitle">Pick up where<br>you left off.</h2><p>A new session shouldn’t mean explaining the project again. Keep what you settled, inspect what gets recalled, and change it when the decision changes.</p></div>
     <div class="workflowrows">
@@ -37,6 +37,7 @@ const body = `
       <article><h3>Connect your tools.</h3><p>Use the built-in connectors or add a TOML descriptor for another harness. Ainz has a reciprocal bridge: connect it here or there and both products agree.</p><a href="docs/harnesses/">Supported &amp; custom tools</a> · <a href="https://wess.io/ainz/">Meet Ainz</a></article>
       <article><h3>Keep one skill library.</h3><p>Save a reusable procedure once. Review proposed skills, approve revisions, and update managed copies without overwriting your edits.</p><a href="docs/skills/">Skills &amp; learning</a></article>
       <article><h3>Work together.</h3><p>Turn on the optional mesh for direct messages, roles, teams, and bounded background workers. Join the conversation from your terminal.</p><a href="docs/mesh/">The agent mesh</a></article>
+      <article><h3>See what is running.</h3><p>Follow live events, durable jobs, artifacts, triggers, routes, and evaluations from one local operational view.</p><a href="docs/app/#logs">Logs and runtime status</a></article>
     </div>
   </section>
   <section class="boundary" aria-labelledby="boundarytitle">
@@ -58,7 +59,7 @@ const body = `
 export const home: Page = {
   path: "index.html",
   title: "Synapse",
-  description: "Local memory, shared skills, scoped credentials, and an optional agent mesh. Carry decisions between coding tools without an account or hosted service.",
+  description: "A local backend for agent harnesses: durable memory, jobs, logs, artifacts, shared skills, scoped credentials, and an optional mesh.",
   kind: "home",
   body,
 };

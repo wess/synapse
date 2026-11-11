@@ -1,6 +1,6 @@
 # Synapse
 
-**Shared memory and skills for Claude Code, Codex, pi, and Ainz.**
+**A local backend for agent harnesses.**
 
 Stop repeating the same project conventions to each coding agent. With Synapse, you can save a correction in one tool and recall it in another, in the same project. Keep your memory on your machine and manage reusable skills in one library.
 
@@ -38,7 +38,7 @@ synapse connect mytool
 
 The first command opens a commented TOML template in your editor and validates it before saving **`.synapse/tools/mytool.toml`**. Fill in your harness's executable, configuration and instruction paths, MCP registration commands, and launch flags. Restart the harness after connecting, then ask it to save and recall a project convention.
 
-Use `synapse tool create mytool --user` for a personal connector available across projects. Project descriptors override user descriptors, which override built-ins. Run project commands from the repository root. `.synapse.yaml` remains the project credential-scope configuration; harness definitions live in `.synapse/tools/`.
+Use `synapse tool create mytool --user` for a personal connector available across projects. Project descriptors override user descriptors, which override built-ins. Run project commands from the repository root. A descriptor names the program Synapse runs, so one that arrives with a checkout is ignored until you have read it and run `synapse tool allow mytool`; one you create or edit through `synapse tool` is approved as you save it, and any later edit to the file needs approving again. `.synapse.yaml` remains the project credential-scope configuration; harness definitions live in `.synapse/tools/`.
 
 [Custom harness guide and example](https://wess.io/synapse/docs/harnesses/). Support for hooks or a non-MCP protocol may require an adapter in addition to a descriptor.
 
@@ -108,12 +108,31 @@ See the [installation guide](https://wess.io/synapse/docs/install/) for CLI setu
 | Shared guidance | Edit one `SOUL.md` and point your connected tools at it. |
 | Agent Skills | Maintain one library, install skills into connected tools, and check which copies have drifted. |
 | MCP servers | Keep one list of MCP servers and give it to every connected tool, with each token in the vault instead of in plaintext in every tool's config. |
-| Plugins and Scenes | Watch connected sessions as characters in their own pixel-art workshop rooms. Initialize, validate, and install local scene packs with `synapse plugin`, then find Scenes under **Plugins** in the app. See [Scenes and plugins](docs/scenes.md). |
 | Agent coordination | Enable the optional mesh to let agents message each other and work together. Join them yourself with `synapse mux`. |
 | Scoped credentials | Approve which project folders may receive which environment variables, using the local encrypted vault or macOS Keychain. |
 | The Map | See every memory as a graph in three dimensions — projects as clusters, a correction as a line to what it replaced, and a memory nothing else touches looking like one. |
 
 Search, edit, export, restore, or delete stored memory from the app. Search matches words in any form and fragments of identifiers, so `deploying` finds "deploys" and `hashpw` finds `scripts/hashpw.sh`. Supersede a decision when it changes: future recall returns the current version, and you can still inspect or restore the old one. `synapse memory eval` scores recall against questions you write down, so a change to what you store can be measured instead of guessed.
+
+## Local runtime backend
+
+Synapse also provides the durable plumbing a local harness should not have to
+rebuild: a live redacted event ledger, leased jobs with retries and replay,
+content-addressed artifacts, default-deny capability decisions, triggers, model
+routes, and evaluations. The native **Logs** screen follows activity and runs;
+the status-bar menu keeps the current counts and latest events visible without
+opening a window.
+
+The interface is local and spawn-on-demand. `synapse backend api` reads one
+versioned JSON request per line on stdin and writes one response per line on
+stdout. It opens no listener and runs no permanent scheduler. Harnesses can use
+the same surface from Rust through `synapsecore::backend`.
+
+```sh
+synapse backend summary
+synapse backend events --limit 50
+printf '%s\n' '{"version":1,"id":1,"method":"summary"}' | synapse backend api
+```
 
 ## One skill library
 

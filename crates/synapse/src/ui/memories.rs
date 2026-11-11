@@ -23,6 +23,7 @@ pub struct View {
     pub batches: Vec<ImportBatch>,
     pub pendingbatch: Option<i64>,
     pub notice: Notice,
+    pub compact: bool,
 }
 
 pub struct Actions {
@@ -84,7 +85,7 @@ pub fn render(view: View, actions: Actions, cx: &App) -> AnyElement {
         .child(
             div()
                 .w_full()
-                .max_w(px(1040.0))
+                .max_w(px(1180.0))
                 .mx_auto()
                 .px(px(34.0))
                 .py(px(28.0))
@@ -92,23 +93,17 @@ pub fn render(view: View, actions: Actions, cx: &App) -> AnyElement {
                 .flex_col()
                 .gap(px(20.0))
                 .child(hero(&view, cx))
-                .child(importpanel(
-                    &view.imports,
-                    &view.batches,
-                    view.pendingbatch,
-                    import,
-                    review,
-                    undo,
-                    cx,
-                ))
+                .child(importpanel(&view, import, review, undo, cx))
                 .child(
                     div()
                         .flex()
+                        .when(view.compact, |element| element.flex_col())
                         .items_start()
                         .gap(px(18.0))
                         .child(
                             div()
-                                .w(px(320.0))
+                                .w(if view.compact { px(0.0) } else { px(320.0) })
+                                .when(view.compact, |element| element.w_full())
                                 .flex_none()
                                 .rounded(px(6.0))
                                 .border_1()
@@ -140,6 +135,7 @@ pub fn render(view: View, actions: Actions, cx: &App) -> AnyElement {
                                 .child(memorylist(
                                     &view.memories,
                                     view.selected,
+                                    view.compact,
                                     select,
                                     cx,
                                 )),
@@ -191,9 +187,9 @@ pub fn render(view: View, actions: Actions, cx: &App) -> AnyElement {
                             Button::new(
                                 "wipememories",
                                 if view.pendingwipe {
-                                    "Confirm wipe"
+                                    "Delete all"
                                 } else {
-                                    "Wipe memories"
+                                    "Delete all memories"
                                 },
                             )
                             .variant(Variant::Light)
@@ -227,10 +223,12 @@ fn hero(view: &View, cx: &App) -> impl IntoElement {
                 .gap(px(24.0))
                 .child(
                     div()
+                        .flex_1()
+                        .min_w(px(0.0))
                         .flex()
                         .flex_col()
                         .gap(px(7.0))
-                        .child(Title::new("Memory").order(2))
+                        .child(Title::new("Memory").order(3))
                         .child(
                             Text::new(
                                 "Search and correct durable context before connected tools recall it.",
@@ -256,9 +254,7 @@ fn hero(view: &View, cx: &App) -> impl IntoElement {
 }
 
 fn importpanel(
-    summaries: &[ImportSummary],
-    batches: &[ImportBatch],
-    pendingbatch: Option<i64>,
+    view: &View,
     import: impl Fn(ImportProvider) -> Click,
     review: impl Fn(ImportProvider) -> Click,
     undo: impl Fn(i64) -> Click,
@@ -277,6 +273,7 @@ fn importpanel(
             div()
                 .p(px(16.0))
                 .flex()
+                .when(view.compact, |element| element.flex_col())
                 .items_start()
                 .justify_between()
                 .gap(px(24.0))
@@ -301,9 +298,13 @@ fn importpanel(
                             .dimmed(),
                         ),
                 )
-                .child(Badge::new("Previewed locally").color(ColorName::Violet)),
+                .child(
+                    div()
+                        .flex_none()
+                        .child(Badge::new("Previewed locally").color(ColorName::Violet)),
+                ),
         );
-    for summary in summaries {
+    for summary in &view.imports {
         let provider = summary.provider;
         let importclick = import(provider);
         let reviewclick = review(provider);
@@ -374,7 +375,7 @@ fn importpanel(
                 ),
         );
     }
-    if let Some(batch) = batches.iter().find(|batch| !batch.undone) {
+    if let Some(batch) = view.batches.iter().find(|batch| !batch.undone) {
         let id = batch.id;
         let undoclick = undo(id);
         panel = panel.child(
@@ -398,14 +399,14 @@ fn importpanel(
                 .child(
                     Button::new(
                         "undoimport",
-                        if pendingbatch == Some(id) {
+                        if view.pendingbatch == Some(id) {
                             "Confirm undo"
                         } else {
                             "Undo batch"
                         },
                     )
                     .variant(Variant::Subtle)
-                    .color(if pendingbatch == Some(id) {
+                    .color(if view.pendingbatch == Some(id) {
                         ColorName::Red
                     } else {
                         ColorName::Gray
@@ -422,6 +423,7 @@ fn importpanel(
 fn memorylist(
     memories: &[Memory],
     selected: Option<i64>,
+    compact: bool,
     select: impl Fn(i64) -> Click,
     cx: &App,
 ) -> AnyElement {
@@ -441,7 +443,7 @@ fn memorylist(
     }
     let mut list = div()
         .id("memorylist")
-        .max_h(px(520.0))
+        .max_h(px(if compact { 280.0 } else { 520.0 }))
         .overflow_y_scroll()
         .flex()
         .flex_col()

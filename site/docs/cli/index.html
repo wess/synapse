@@ -19,7 +19,7 @@
 <body class="docs" data-root="../../">
   <div class="shell">
   <a class="skip" href="#content">Skip to content</a>
-  <div class="windowbar"><a href="../../">synapse / manual</a><span>v1.16.0 · on your machine</span></div>
+  <div class="windowbar"><a href="../../">synapse / manual</a><span>v1.17.0 · on your machine</span></div>
   <header class="topbar">
     <a class="wordmark" href="../../" aria-label="Synapse home"><img src="../../icon.svg" width="28" height="28" alt=""><span>synapse</span></a>
     <button class="navtoggle" type="button" aria-expanded="false" aria-controls="topnav">Menu</button>
@@ -41,7 +41,7 @@
     <details class="railnav" open>
       <summary>Browse all guides</summary>
       <nav aria-label="All guides">
-        <h2>Start here</h2><ul><li><a href="../../docs/">Start here</a></li><li><a href="../../docs/install/">Install and connect</a></li><li><a href="../../docs/harnesses/">Supported and custom harnesses</a></li><li><a href="../../docs/app/">Desktop app reference</a></li></ul><h2>Reference</h2><ul><li><a href="../../docs/memory/">Memory and recall</a></li><li><a href="../../docs/knowledge/">Project Knowledge</a></li><li><a href="../../docs/mcp/">MCP tool reference</a></li><li><a href="../../docs/mesh/">Agent mesh</a></li><li><a href="../../docs/scenes/">Scenes and plugins</a></li><li><a href="../../docs/skills/">Skills</a></li><li><a href="../../docs/servers/">MCP servers</a></li><li><a href="../../docs/sources/">Sources</a></li></ul><h2>Your machine</h2><ul><li><a href="../../docs/vault/">Vaults and scopes</a></li><li><a href="../../docs/data/">Data lifecycle</a></li><li><a href="../../docs/config/">Configuration and paths</a></li><li><a href="../../docs/security/">Security model</a></li><li><a href="../../docs/sync/">Encrypted sync</a></li><li><a href="../../docs/troubleshoot/">Troubleshooting</a></li></ul><h2>Build with it</h2><ul><li><a href="../../docs/cli/" aria-current="page">CLI reference</a></li><li><a href="../../docs/developing/">Developing Synapse</a></li><li><a href="../../docs/synapsecore/">The core library</a></li><li><a href="../../docs/embedding/">Embedding Synapse</a></li><li><a href="../../docs/retrieval/">Retrieval checks</a></li><li><a href="../../docs/map/">The memory map</a></li><li><a href="../../docs/startup/">What launching costs</a></li><li><a href="../../docs/review/">Security, stability, and resource review</a></li><li><a href="../../docs/windows/">Windows</a></li><li><a href="../../docs/federation/">Federation proposal</a></li></ul>
+        <h2>Start here</h2><ul><li><a href="../../docs/">Start here</a></li><li><a href="../../docs/install/">Install and connect</a></li><li><a href="../../docs/harnesses/">Supported and custom harnesses</a></li><li><a href="../../docs/app/">Desktop app reference</a></li></ul><h2>Reference</h2><ul><li><a href="../../docs/memory/">Memory and recall</a></li><li><a href="../../docs/knowledge/">Project Knowledge</a></li><li><a href="../../docs/mcp/">MCP tool reference</a></li><li><a href="../../docs/mesh/">Agent mesh</a></li><li><a href="../../docs/skills/">Skills</a></li><li><a href="../../docs/servers/">MCP servers</a></li><li><a href="../../docs/sources/">Sources</a></li></ul><h2>Your machine</h2><ul><li><a href="../../docs/vault/">Vaults and scopes</a></li><li><a href="../../docs/data/">Data lifecycle</a></li><li><a href="../../docs/config/">Configuration and paths</a></li><li><a href="../../docs/security/">Security model</a></li><li><a href="../../docs/sync/">Encrypted sync</a></li><li><a href="../../docs/troubleshoot/">Troubleshooting</a></li></ul><h2>Build with it</h2><ul><li><a href="../../docs/cli/" aria-current="page">CLI reference</a></li><li><a href="../../docs/developing/">Developing Synapse</a></li><li><a href="../../docs/synapsecore/">The core library</a></li><li><a href="../../docs/embedding/">Embedding Synapse</a></li><li><a href="../../docs/retrieval/">Retrieval checks</a></li><li><a href="../../docs/map/">The memory map</a></li><li><a href="../../docs/startup/">What launching costs</a></li><li><a href="../../docs/review/">Security, stability, and resource review</a></li><li><a href="../../docs/windows/">Windows</a></li><li><a href="../../docs/federation/">Federation proposal</a></li></ul>
         <h2>Tutorials</h2><ul><li><a href="../../tutorials/">Tutorials</a></li><li><a href="../../tutorials/connect/">Install and connect your first tools</a></li><li><a href="../../tutorials/continuity/">Carry one decision between tools</a></li><li><a href="../../tutorials/curate/">Curate and optimize memory</a></li><li><a href="../../tutorials/secrets/">Use a scoped secret in either shell mode</a></li><li><a href="../../tutorials/skills/">Keep one skill library across every tool</a></li><li><a href="../../tutorials/learn/">Let your agents write skills</a></li><li><a href="../../tutorials/launch/">Start a tool with everything in place</a></li><li><a href="../../tutorials/mesh/">Run a team of agents and drive it yourself</a></li><li><a href="../../tutorials/overseer/">Hand a job to one agent and watch it grow a team</a></li><li><a href="../../tutorials/recovery/">Export and restore safely</a></li><li><a href="../../tutorials/lifecycle/">Check, migrate, and remove Synapse</a></li></ul>
       </nav>
     </details>
@@ -604,55 +604,87 @@
     <p>Print one status line for a connected tool, reading that tool's JSON on stdin.</p>
   </section>
 
-    <h2 id="plugins">Plugin development</h2>
-    <p>Plugins are local declarative packs, not executable extensions. API 1 supports scene palettes and PNG room or character art. See the <a href="../scenes/">Scenes and plugins guide</a> for the manifest and asset layout.</p>
+    <h2 id="backend">Local backend</h2>
+    <p>The backend commands expose the same bounded runtime state as the native Logs view. Structured bodies are read from stdin. <code>backend api</code> is a versioned JSONL stdin/stdout protocol for local harnesses; it opens no listener.</p>
 
-  <section class="command" id="plugininit">
+  <section class="command" id="backendsummary">
     <div>
-      <h3>plugin init</h3>
-      <code>synapse plugin init [folder] [--id &lt;id&gt;]</code>
+      <h3>backend summary</h3>
+      <code>synapse backend summary</code>
     </div>
-    <p>Add <code>plugin.toml</code> to an existing folder without replacing one already there. The folder defaults to the current directory and its name becomes the plugin ID. Use <code>--id</code> when that folder name is not 1 to 64 lowercase letters and digits.</p>
+    <p>Print live-agent, run, queue, and recent error counts.</p>
   </section>
 
-  <section class="command" id="plugincreate">
+  <section class="command" id="backendevents">
     <div>
-      <h3>plugin create</h3>
-      <code>synapse plugin create &lt;id&gt; [folder]</code>
+      <h3>backend events</h3>
+      <code>synapse backend events [--after &amp;lt;id&amp;gt;] [--limit &amp;lt;n&amp;gt;] [filters]</code>
     </div>
-    <p>Create a scene-plugin manifest without overwriting anything. The folder defaults to <code>./&lt;id&gt;</code>. IDs contain 1 to 64 lowercase letters and digits; <code>workshop</code> is reserved for the built-in pack.</p>
+    <p>Read the redacted event ledger. Cursor reads are ascending; initial reads return the newest bounded window.</p>
   </section>
 
-  <section class="command" id="plugincheck">
+  <section class="command" id="backendemit">
     <div>
-      <h3>plugin check</h3>
-      <code>synapse plugin check [folder] [--json]</code>
+      <h3>backend emit</h3>
+      <code>synapse backend emit</code>
     </div>
-    <p>Validate a development folder without installing it. Checks the manifest, API and kind, colors, declared paths, file types, size bounds, and path containment. The folder defaults to the current directory. Image decoding and dimensions are checked by the desktop renderer when it loads the art.</p>
+    <p>Read one event draft as JSON from stdin, redact it, and append it to the bounded ledger.</p>
   </section>
 
-  <section class="command" id="plugininstall">
+  <section class="command" id="backendruns">
     <div>
-      <h3>plugin install</h3>
-      <code>synapse plugin install [folder] [--replace]</code>
+      <h3>backend runs</h3>
+      <code>synapse backend runs [--limit &amp;lt;n&amp;gt;]</code>
     </div>
-    <p>Validate, then copy only the manifest and assets it declares into the local plugin folder. Refuses an existing ID unless <code>--replace</code> is present. Replacement is staged first and keeps one hidden <code>.&lt;id&gt;.synapsebackup</code> rollback directory beside the installed copy.</p>
+    <p>List durable jobs. Run subcommands create, update, claim, renew, cancel, retry, and replay them.</p>
   </section>
 
-  <section class="command" id="pluginlist">
+  <section class="command" id="backendartifact">
     <div>
-      <h3>plugin list</h3>
-      <code>synapse plugin list [--json]</code>
+      <h3>backend artifact</h3>
+      <code>synapse backend artifact &amp;lt;put|attach|list|read&amp;gt;</code>
     </div>
-    <p>List the built-in pack and every valid installed plugin with ID, version, source, and display name. Invalid plugin folders are isolated and reported as warnings.</p>
+    <p>Store verified content-addressed output, attach it to a run, or read it back.</p>
   </section>
 
-  <section class="command" id="pluginpath">
+  <section class="command" id="backendcapability">
     <div>
-      <h3>plugin path</h3>
-      <code>synapse plugin path</code>
+      <h3>backend capability</h3>
+      <code>synapse backend capability &amp;lt;list|allow|deny|check&amp;gt;</code>
     </div>
-    <p>Print the local plugin install folder. <code>SYNAPSE_DATA</code> relocates it for development and tests.</p>
+    <p>Manage exact default-deny capability decisions, optionally bound to a content digest.</p>
+  </section>
+
+  <section class="command" id="backendtrigger">
+    <div>
+      <h3>backend trigger</h3>
+      <code>synapse backend trigger &amp;lt;list|put|due|mark|tick&amp;gt;</code>
+    </div>
+    <p>Manage triggers. Tick dispatches due work on demand; no scheduler process stays resident.</p>
+  </section>
+
+  <section class="command" id="backendroute">
+    <div>
+      <h3>backend route</h3>
+      <code>synapse backend route &amp;lt;list|put|select|call&amp;gt;</code>
+    </div>
+    <p>Manage and invoke ordered inference routes. Local routes are loopback-only; remote routes require HTTPS.</p>
+  </section>
+
+  <section class="command" id="backendevaluation">
+    <div>
+      <h3>backend evaluation</h3>
+      <code>synapse backend evaluation &amp;lt;list|add&amp;gt;</code>
+    </div>
+    <p>Attach expected output, actual output, a normalized score, and a note to a run.</p>
+  </section>
+
+  <section class="command" id="backendapi">
+    <div>
+      <h3>backend api</h3>
+      <code>synapse backend api</code>
+    </div>
+    <p>Read versioned JSON requests one per line from stdin and write one response per line to stdout.</p>
   </section>
 
     <h2 id="skills">Skills</h2>
@@ -1038,7 +1070,8 @@
       <code>.synapse/tools/</code> in a repository first, then your data
       directory, then the ones Synapse ships — so a project can carry the tool
       its team works in, and you can correct a built-in without waiting for a
-      release. A described tool gets everything a built-in gets: connection,
+      release. A project's descriptor is used only once you have approved it as
+      it is written, with <code>synapse tool allow &lt;name&gt;</code>. A described tool gets everything a built-in gets: connection,
       shared guidance, the skill library, and the mesh.
     </p>
     <p>Follow the <a href="../harnesses/">custom harness guide</a> for a descriptor example, setup verification, and contribution instructions.</p>
@@ -1180,14 +1213,14 @@
     </div>
     <p>Print the command summary, or one command’s entries. <code>--help</code> and <code>-h</code> do the same thing wherever they appear before a <code>--</code>.</p>
   </section>
-  <footer class="articlefoot"><div class="articlemeta"><a href="https://github.com/wess/synapse/blob/main/website/docs/cli.ts">View page source</a><span>Synapse 1.16.0</span></div><nav class="pagenav" aria-label="Guide pages"><a href="../../docs/troubleshoot/"><small>Previous</small><strong>Troubleshooting</strong></a><a href="../../docs/developing/"><small>Next</small><strong>Developing Synapse</strong></a></nav></footer>
+  <footer class="articlefoot"><div class="articlemeta"><a href="https://github.com/wess/synapse/blob/main/website/docs/cli.ts">View page source</a><span>Synapse 1.17.0</span></div><nav class="pagenav" aria-label="Guide pages"><a href="../../docs/troubleshoot/"><small>Previous</small><strong>Troubleshooting</strong></a><a href="../../docs/developing/"><small>Next</small><strong>Developing Synapse</strong></a></nav></footer>
     </main>
-  <aside class="ontoc" aria-label="On this page"><span>Contents</span><ol><li><a href="#invocation">Invocation</a></li><li><a href="#application">Application and server</a></li><li><a href="#shell">Shell environments</a></li><li><a href="#vault">Vault and scope</a></li><li><a href="#memory">Memory</a></li><li><a href="#learning">Learning</a></li><li><a href="#mesh">Agent mesh</a></li><li><a href="#plugins">Plugin development</a></li><li><a href="#skills">Skills</a></li><li><a href="#data">Data and settings</a></li><li><a href="#installation">Installation and paths</a></li></ol></aside>
+  <aside class="ontoc" aria-label="On this page"><span>Contents</span><ol><li><a href="#invocation">Invocation</a></li><li><a href="#application">Application and server</a></li><li><a href="#shell">Shell environments</a></li><li><a href="#vault">Vault and scope</a></li><li><a href="#memory">Memory</a></li><li><a href="#learning">Learning</a></li><li><a href="#mesh">Agent mesh</a></li><li><a href="#backend">Local backend</a></li><li><a href="#skills">Skills</a></li><li><a href="#data">Data and settings</a></li><li><a href="#installation">Installation and paths</a></li></ol></aside>
   </div>
   <footer class="footer">
     <div class="footerupper"><div><a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">synapse</a><p>A shared memory. A little less starting over.</p></div>
       <nav aria-label="Footer"><a href="../../docs/">Manual</a><a href="../../tutorials/">Tutorials</a><a href="https://github.com/wess/synapse">Source</a><a href="https://github.com/wess/synapse/releases">Releases</a><a href="https://wess.io">By Wess</a></nav></div>
-    <p class="footerfine"><span>macOS &amp; Windows desktop · Linux CLI &amp; MCP</span><span>v1.16.0 · MIT · No account required</span></p>
+    <p class="footerfine"><span>macOS &amp; Windows desktop · Linux CLI &amp; MCP</span><span>v1.17.0 · MIT · No account required</span></p>
   </footer></div>
 </body>
 </html>

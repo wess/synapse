@@ -116,6 +116,38 @@ async fn exports_checks_and_restores_consistent_database() {
     );
 }
 
+#[tokio::test]
+async fn a_backup_that_brings_a_write_ahead_log_is_refused_before_it_is_opened() {
+    let directory = tempfile::tempdir().unwrap();
+    let folder = directory.path().join("synapse");
+    let path = folder.join("brain.db");
+    let exported = directory.path().join("export.db");
+    let opened = open(&path).await.unwrap();
+    sqlx::query("INSERT INTO memory(body, source, created) VALUES ('kept', 'test', 1)")
+        .execute(&opened.pool)
+        .await
+        .unwrap();
+    opened.pool.close().await;
+    drop(opened.lock);
+    export(&path, &exported).await.unwrap();
+
+    // Not a log SQLite wrote: anything at all beside the file is enough,
+    // because the point is that it is never handed to SQLite to find out.
+    let log = permission::sidecar(&exported, "wal");
+    std::fs::write(&log, [0u8; 64]).unwrap();
+    let error = restore(&path, &exported).await.unwrap_err();
+    assert!(error.to_string().contains("write-ahead log"), "{error}");
+    assert_eq!(
+        std::fs::read(&log).unwrap(),
+        [0u8; 64],
+        "and it is untouched"
+    );
+
+    // An empty one is what reading a backup leaves behind, and says nothing.
+    std::fs::write(&log, []).unwrap();
+    assert!(restore(&path, &exported).await.unwrap().is_some());
+}
+
 /// Break a reference so the relationship check has something to find.
 async fn orphan(path: &Path) {
     let options = SqliteConnectOptions::from_str("sqlite://corrupt")

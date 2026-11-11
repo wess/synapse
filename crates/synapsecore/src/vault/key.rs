@@ -49,6 +49,10 @@ pub fn load() -> Result<Key> {
     let path = path()?;
     match std::fs::read_to_string(&path) {
         Ok(content) => {
+            // Every open of the store re-secures its files; the key that opens
+            // them gets the same, so a mode loosened by a restore or a copy
+            // does not stay loose.
+            let _ = crate::database::securefile(&path);
             parse(&content).with_context(|| format!("could not read {}", path.display()))
         }
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => create(),
@@ -82,6 +86,10 @@ fn create() -> Result<Key> {
         Ok(mut file) => {
             use std::io::Write;
             file.write_all(content.as_bytes())
+                .with_context(|| format!("could not write {}", path.display()))?;
+            // Values are sealed under this the moment it is returned. A key
+            // still in a write cache when the power goes is those values gone.
+            file.sync_all()
                 .with_context(|| format!("could not write {}", path.display()))?;
             Ok(Key::new(bytes))
         }

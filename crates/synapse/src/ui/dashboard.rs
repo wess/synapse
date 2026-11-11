@@ -1,7 +1,7 @@
 use crate::ui::buffer::{self, Buffer, Format};
 use crate::ui::{
-    Document, Notice, Page, Row, SaveDocument, agentrow, clibanner, document, graph, memories,
-    mesh, scene, servers, settings, sidebar, skills, sources, stats, summary, vaults,
+    Document, Notice, Page, Row, SaveDocument, agentrow, clibanner, document, graph, logs,
+    memories, mesh, servers, settings, sidebar, skills, sources, stats, summary, vaults,
 };
 use gpui::prelude::*;
 use gpui::{Context, Entity, IntoElement, Window, div, px};
@@ -21,7 +21,6 @@ const CLIPROMPT: &str = "cliprompt";
 
 pub struct Dashboard {
     rows: Vec<Row>,
-    scene: Entity<scene::Scene>,
     stats: Stats,
     database: PathBuf,
     notice: Notice,
@@ -72,6 +71,7 @@ pub struct Dashboard {
     scopestate: Option<ScopeState>,
     addglobal: bool,
     pendingforget: Option<i64>,
+    pendingreplace: Option<i64>,
     pendingvault: Option<i64>,
     /// Where values are kept, and whether a move has been asked for once.
     backend: Backend,
@@ -85,6 +85,16 @@ pub struct Dashboard {
     meshagents: Vec<synapsecore::relay::AgentView>,
     meshworkers: Vec<synapsecore::relay::WorkerView>,
     meshfeed: Vec<synapsecore::relay::Message>,
+    logsummary: synapsecore::backend::Summary,
+    logevents: Vec<synapsecore::backend::Event>,
+    logruns: Vec<synapsecore::backend::Run>,
+    logtriggers: Vec<synapsecore::backend::Trigger>,
+    logroutes: Vec<synapsecore::backend::Route>,
+    logcapabilities: Vec<synapsecore::backend::Capability>,
+    logserror: Option<String>,
+    logspaused: bool,
+    logsloading: bool,
+    logsrun: u64,
     /// Most workers one session may run, read with the rest of the mesh.
     workerlimit: usize,
     usage: Option<synapsecore::usage::Report>,
@@ -288,7 +298,7 @@ impl Dashboard {
         let secretvalue = cx.new(|cx| {
             PasswordInput::new(cx)
                 .label("Secret value")
-                .placeholder("Stored in Keychain")
+                .placeholder("Stored in the secure vault")
         });
         let folderinput = cx.new(|cx| {
             FileInput::new(cx)
@@ -329,9 +339,7 @@ impl Dashboard {
         let learnenabled = settings.learn;
         let knowledgeenabled = settings.knowledge;
         let workerlimit = settings.workers;
-        let scene = cx.new(|cx| scene::Scene::new(brain.clone(), cx));
         Self {
-            scene,
             // Filled by `opened`, once there is a window to fill.
             rows: Vec::new(),
             stats,
@@ -371,6 +379,7 @@ impl Dashboard {
             scopestate: None,
             addglobal: false,
             pendingforget: None,
+            pendingreplace: None,
             pendingvault: None,
             backend,
             pendingbackend: false,
@@ -383,6 +392,16 @@ impl Dashboard {
             meshagents: meshdata.agents,
             meshworkers: meshdata.workers,
             meshfeed: meshdata.feed,
+            logsummary: synapsecore::backend::Summary::default(),
+            logevents: Vec::new(),
+            logruns: Vec::new(),
+            logtriggers: Vec::new(),
+            logroutes: Vec::new(),
+            logcapabilities: Vec::new(),
+            logserror: None,
+            logspaused: false,
+            logsloading: false,
+            logsrun: 0,
             workerlimit,
             usage: None,
             usagedays: Some(30),
@@ -466,10 +485,7 @@ impl Dashboard {
             stats: Box::new(cx.listener(|this, _, _, cx| this.showstats(cx))),
             memories: Box::new(cx.listener(|this, _, _, cx| this.showmemories(cx))),
             mesh: Box::new(cx.listener(|this, _, _, cx| this.showmesh(cx))),
-            scenes: Box::new(cx.listener(|this, _, _, cx| {
-                this.page = Page::Scenes;
-                cx.notify();
-            })),
+            logs: Box::new(cx.listener(|this, _, _, cx| this.showlogs(cx))),
             skills: Box::new(cx.listener(|this, _, _, cx| this.showskills(cx))),
             servers: Box::new(cx.listener(|this, _, _, cx| this.showservers(cx))),
             vaults: Box::new(cx.listener(|this, _, _, cx| this.showvaults(cx))),
@@ -478,12 +494,12 @@ impl Dashboard {
     }
 
     fn showconnections(&mut self, cx: &mut Context<Self>) {
-        self.page = Page::Connections;
+        self.navigate(Page::Connections);
         cx.notify();
     }
 
     fn showstats(&mut self, cx: &mut Context<Self>) {
-        self.page = Page::Stats;
+        self.navigate(Page::Stats);
         self.refreshstats(true, cx);
     }
 
@@ -563,7 +579,7 @@ impl Dashboard {
     }
 
     fn showmap(&mut self, cx: &mut Context<Self>) {
-        self.page = Page::Map;
+        self.navigate(Page::Map);
         self.refreshmap(cx);
     }
 
@@ -662,7 +678,7 @@ impl Dashboard {
     }
 
     fn showmemories(&mut self, cx: &mut Context<Self>) {
-        self.page = Page::Memories;
+        self.navigate(Page::Memories);
         self.refreshmemories(cx);
         self.refreshimports(cx);
     }
@@ -786,7 +802,10 @@ impl Dashboard {
         };
         if !self.pendingwipe {
             self.pendingwipe = true;
-            self.notice = Notice::Error("Choose Confirm wipe to delete every memory.".to_owned());
+            self.notice = Notice::Error(format!(
+                "Delete all {} memories? Vault labels, settings, and approved scopes will stay.",
+                self.stats.entries
+            ));
             cx.notify();
             return;
         }
@@ -918,12 +937,12 @@ impl Dashboard {
     }
 
     fn showvaults(&mut self, cx: &mut Context<Self>) {
-        self.page = Page::Vaults;
+        self.navigate(Page::Vaults);
         self.refreshvaults(cx);
     }
 
     fn showskills(&mut self, cx: &mut Context<Self>) {
-        self.page = Page::Skills;
+        self.navigate(Page::Skills);
         self.refreshsources();
         self.refreshskills(cx);
     }
@@ -1163,7 +1182,7 @@ impl Dashboard {
     }
 
     fn showservers(&mut self, cx: &mut Context<Self>) {
-        self.page = Page::Servers;
+        self.navigate(Page::Servers);
         self.refreshsources();
         self.refreshservers(cx);
     }
@@ -1586,27 +1605,114 @@ impl Dashboard {
     /// the reason it always did: arriving on a screen that reports an empty
     /// library is worse than arriving on one that is still filling.
     pub fn opened(&mut self, cx: &mut Context<Self>) {
-        self.rows = loadrows();
-        self.probed = true;
-        // The integrity check `glance` skipped on the way in. Once per process
-        // and after the window is up, which is where it belongs: a store worth
-        // checking is worth checking, and not at the cost of the launch.
-        if let Ok(brain) = block(async { Brain::open(&self.database).await }) {
-            self.brain = Some(brain);
-        }
-        match self.page {
-            Page::Stats => self.refreshstats(true, cx),
-            Page::Skills => self.refreshskills(cx),
-            Page::Servers => self.refreshservers(cx),
-            Page::Memories => self.refreshimports(cx),
-            _ => {}
-        }
-        cx.notify();
+        let database = self.database.clone();
+        cx.spawn(async move |this, cx| {
+            let (rows, brain) = cx
+                .background_executor()
+                .spawn(async move {
+                    let rows = loadrows();
+                    let brain = block(async { Brain::open(database).await });
+                    (rows, brain)
+                })
+                .await;
+            this.update(cx, |this, cx| {
+                this.rows = rows;
+                this.probed = true;
+                match brain {
+                    Ok(brain) => this.brain = Some(brain),
+                    Err(error) => {
+                        this.notice = Notice::Error(format!(
+                            "The memory store failed its integrity check: {error}"
+                        ));
+                    }
+                }
+                match this.page {
+                    Page::Stats => this.refreshstats(true, cx),
+                    Page::Skills => this.refreshskills(cx),
+                    Page::Servers => this.refreshservers(cx),
+                    Page::Memories => this.refreshimports(cx),
+                    Page::Logs => this.refreshlogs(cx),
+                    _ => {}
+                }
+                cx.notify();
+            })
+            .ok();
+        })
+        .detach();
     }
 
     fn showmesh(&mut self, cx: &mut Context<Self>) {
-        self.page = Page::Mesh;
+        self.navigate(Page::Mesh);
         self.refreshmesh(cx);
+    }
+
+    pub fn showlogs(&mut self, cx: &mut Context<Self>) {
+        self.navigate(Page::Logs);
+        self.refreshlogs(cx);
+    }
+
+    fn togglelogs(&mut self, cx: &mut Context<Self>) {
+        self.logspaused = !self.logspaused;
+        if self.logspaused {
+            cx.notify();
+        } else {
+            self.refreshlogs(cx);
+        }
+    }
+
+    fn refreshlogs(&mut self, cx: &mut Context<Self>) {
+        if self.logsloading || self.logspaused || self.page != Page::Logs {
+            return;
+        }
+        self.logsloading = true;
+        self.logsrun = self.logsrun.wrapping_add(1);
+        let run = self.logsrun;
+        let database = self.database.clone();
+        cx.notify();
+        cx.spawn(async move |this, cx| {
+            let result = cx
+                .background_executor()
+                .spawn(async move { loadlogs(&database) })
+                .await;
+            this.update(cx, |this, cx| {
+                if this.logsrun != run {
+                    return;
+                }
+                this.logsloading = false;
+                match result {
+                    Ok(data) => {
+                        this.logsummary = data.summary;
+                        this.logevents = data.events;
+                        this.logruns = data.runs;
+                        this.logtriggers = data.triggers;
+                        this.logroutes = data.routes;
+                        this.logcapabilities = data.capabilities;
+                        this.logserror = None;
+                    }
+                    Err(error) => this.logserror = Some(format!("Could not read logs: {error}")),
+                }
+                cx.notify();
+                if this.page == Page::Logs && !this.logspaused {
+                    this.schedulelogs(cx);
+                }
+            })
+            .ok();
+        })
+        .detach();
+    }
+
+    fn schedulelogs(&mut self, cx: &mut Context<Self>) {
+        let run = self.logsrun;
+        cx.spawn(async move |this, cx| {
+            gpui::Timer::after(std::time::Duration::from_secs(2)).await;
+            this.update(cx, |this, cx| {
+                if this.page == Page::Logs && this.logsrun == run && !this.logspaused {
+                    this.refreshlogs(cx);
+                }
+            })
+            .ok();
+        })
+        .detach();
     }
 
     fn togglemeshoffline(&mut self, cx: &mut Context<Self>) {
@@ -1710,9 +1816,26 @@ impl Dashboard {
     }
 
     fn showsettings(&mut self, cx: &mut Context<Self>) {
-        self.page = Page::Settings;
+        self.navigate(Page::Settings);
         self.refreshguidance();
         cx.notify();
+    }
+
+    /// Leaving a page cancels confirmations that were armed there. A second
+    /// click should confirm the action somebody is still looking at, not one
+    /// they left behind and rediscovered later.
+    fn navigate(&mut self, page: Page) {
+        if self.page != page {
+            self.pendingmemory = None;
+            self.pendingwipe = false;
+            self.pendingbatch = None;
+            self.pendingforget = None;
+            self.pendingreplace = None;
+            self.pendingvault = None;
+            self.pendingbackend = false;
+            self.pendingguidance = false;
+        }
+        self.page = page;
     }
 
     fn refreshguidance(&mut self) {
@@ -1934,12 +2057,8 @@ impl Dashboard {
                     .update(cx, |input, cx| input.set_text("", cx));
                 self.secretvalue
                     .update(cx, |input, cx| input.set_text("", cx));
-                self.notice = Notice::Success(format!(
-                    "Saved {}.{} · {}",
-                    secret.vault,
-                    secret.name,
-                    synapsecore::vault::shape(&entry.value)
-                ));
+                self.notice =
+                    Notice::Success(format!("Secret saved in the {} vault.", secret.vault));
                 self.refreshvaults(cx);
             }
             Err(error) => {
@@ -2033,11 +2152,28 @@ impl Dashboard {
         let Some(secret) = self.secrets.iter().find(|secret| secret.id == id) else {
             return;
         };
+        if raw.trim().is_empty() {
+            self.notice = Notice::Error(
+                "Enter the replacement in Secret value, then choose Replace.".to_owned(),
+            );
+            cx.notify();
+            return;
+        }
         let names = [
             secret.vault.as_str(),
             secret.name.as_str(),
             secret.env.as_str(),
         ];
+        if self.pendingreplace != Some(id) {
+            self.pendingreplace = Some(id);
+            self.notice = Notice::Error(format!(
+                "Replace {}.{}? The current value cannot be recovered here.",
+                secret.vault, secret.name
+            ));
+            cx.notify();
+            return;
+        }
+        self.pendingreplace = None;
         self.notice = match synapsecore::vault::entered(&raw, &names) {
             Err(error) if raw.trim().is_empty() => Notice::Error(format!(
                 "Enter the replacement in Secret value, then choose Replace. ({error})"
@@ -2046,9 +2182,7 @@ impl Dashboard {
             Ok(entry) => {
                 match block(synapsecore::vault::setsecret(&secret.account, &entry.value)) {
                     Ok(()) => {
-                        let shape = synapsecore::vault::shape(&entry.value);
-                        let replaced =
-                            format!("Replaced {}.{} · {shape}", secret.vault, secret.name);
+                        let replaced = format!("Secret updated in the {} vault.", secret.vault);
                         self.secretvalue
                             .update(cx, |input, cx| input.set_text("", cx));
                         Notice::Success(replaced)
@@ -2063,7 +2197,7 @@ impl Dashboard {
     fn forgetsecret(&mut self, id: i64, cx: &mut Context<Self>) {
         if self.pendingforget != Some(id) {
             self.pendingforget = Some(id);
-            self.notice = Notice::Error("Choose Confirm to remove the Keychain value.".to_owned());
+            self.notice = Notice::Error("Choose Confirm to remove the stored value.".to_owned());
             cx.notify();
             return;
         }
@@ -2140,13 +2274,17 @@ impl Dashboard {
     }
 
     fn trustscope(&mut self, cx: &mut Context<Self>) {
-        let (Some(store), Some(folder)) = (self.vaultstore.clone(), self.scopefolder.clone())
-        else {
+        let (Some(store), Some(scope)) = (self.vaultstore.clone(), self.scopestate.clone()) else {
             return;
         };
-        let path = folder.join(synapsecore::vault::CONFIG);
-        let result = synapsecore::vault::readscope(&path)
-            .and_then(|(_, digest)| block(store.trust(&path, &digest)));
+        let path = scope.path;
+        let result = synapsecore::vault::readscope(&path).and_then(|(_, digest)| {
+            anyhow::ensure!(
+                digest == scope.digest,
+                "the scope changed after it was reviewed; inspect it again"
+            );
+            block(store.trust(&path, &scope.digest))
+        });
         match result {
             Ok(()) => {
                 self.notice = Notice::Success(format!("Approved {}.", path.display()));
@@ -2706,11 +2844,12 @@ impl Render for Dashboard {
     /// The wrapping happens here, once, rather than in each of the seven
     /// branches below — every one of them returns early, and a frame assembled
     /// seven times is a frame that is subtly different in one of them.
-    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         // The document editor takes the whole window: it is a mode, not a page,
         // and a sidebar beside unsaved edits invites leaving them.
         let framed = self.document.is_none();
-        let body = self.body(cx);
+        let compact = f32::from(window.viewport_size().width) < 1180.0;
+        let body = self.body(compact, cx);
         let navigation = self.navigation(cx);
         let page = self.page;
         let appmenu = self.appmenu.clone();
@@ -2737,9 +2876,7 @@ impl Render for Dashboard {
 }
 
 impl Dashboard {
-    fn body(&mut self, cx: &mut Context<Self>) -> gpui::AnyElement {
-        let active = self.page == Page::Scenes && self.document.is_none();
-        self.scene.update(cx, |scene, _| scene.active = active);
+    fn body(&mut self, compact: bool, cx: &mut Context<Self>) -> gpui::AnyElement {
         let theme = guise::theme(cx);
         let border = theme.border().hsla();
         let surface = theme.surface().hsla();
@@ -2790,10 +2927,6 @@ impl Dashboard {
             .flex()
             .flex_col()
             .children(banner);
-
-        if self.page == Page::Scenes {
-            return shell.child(self.scene.clone()).into_any_element();
-        }
 
         if self.page == Page::Map {
             let host = cx.entity().downgrade();
@@ -2908,6 +3041,7 @@ impl Dashboard {
                         batches: self.importbatches.clone(),
                         pendingbatch: self.pendingbatch,
                         notice: self.notice.clone(),
+                        compact,
                     },
                     memories::Actions {
                         search: Box::new(cx.listener(|this, _, _, cx| this.refreshmemories(cx))),
@@ -3003,6 +3137,35 @@ impl Dashboard {
                         .height(36.0)
                         .left(Text::new("Agent mesh · local SQLite bus").size(Size::Xs))
                         .right(Text::new("Messages stay on this computer").size(Size::Xs)),
+                )
+                .into_any_element();
+        }
+
+        if self.page == Page::Logs {
+            return shell
+                .child(logs::render(
+                    logs::View {
+                        summary: self.logsummary.clone(),
+                        events: self.logevents.clone(),
+                        runs: self.logruns.clone(),
+                        triggers: self.logtriggers.clone(),
+                        routes: self.logroutes.clone(),
+                        capabilities: self.logcapabilities.clone(),
+                        paused: self.logspaused,
+                        loading: self.logsloading,
+                        error: self.logserror.clone(),
+                    },
+                    logs::Actions {
+                        refresh: Box::new(cx.listener(|this, _, _, cx| this.refreshlogs(cx))),
+                        toggle: Box::new(cx.listener(|this, _, _, cx| this.togglelogs(cx))),
+                    },
+                    cx,
+                ))
+                .child(
+                    StatusBar::new()
+                        .height(36.0)
+                        .left(Text::new("Local event ledger · 30 day retention").size(Size::Xs))
+                        .right(Text::new("Live while this page is open").size(Size::Xs)),
                 )
                 .into_any_element();
         }
@@ -3349,7 +3512,8 @@ impl Dashboard {
                         .height(36.0)
                         .left(Text::new("Settings · stored locally").size(Size::Xs))
                         .right(
-                            Text::new("Two shell modes · values stay in Keychain").size(Size::Xs),
+                            Text::new("Two shell modes · values stay in the secure vault")
+                                .size(Size::Xs),
                         ),
                 )
                 .into_any_element();
@@ -3412,10 +3576,12 @@ impl Dashboard {
                         scope: self.scopestate.clone(),
                         addglobal: self.addglobal,
                         pendingforget: self.pendingforget,
+                        pendingreplace: self.pendingreplace,
                         pendingvault: self.pendingvault,
                         backend: self.backend,
                         pendingbackend: self.pendingbackend,
                         notice: self.notice.clone(),
+                        compact,
                     },
                     vaults::Actions {
                         createvault: Box::new(cx.listener(|this, _, _, cx| this.createvault(cx))),
@@ -3440,7 +3606,7 @@ impl Dashboard {
                 .child(
                     StatusBar::new()
                         .height(36.0)
-                        .left(Text::new("Keychain · values protected").size(Size::Xs))
+                        .left(Text::new("Secure vault · values protected").size(Size::Xs))
                         .right(Text::new("synapse run -- <command>").size(Size::Xs)),
                 )
                 .into_any_element();
@@ -3575,13 +3741,47 @@ fn initialpage() -> Page {
         Ok("stats" | "savings") => Page::Stats,
         Ok("memory") => Page::Memories,
         Ok("mesh") => Page::Mesh,
-        Ok("scenes") => Page::Scenes,
+        Ok("logs") => Page::Logs,
         Ok("skills") => Page::Skills,
         Ok("mcp") => Page::Servers,
         Ok("vaults") => Page::Vaults,
         Ok("settings") => Page::Settings,
         _ => Page::Connections,
     }
+}
+
+struct LogData {
+    summary: synapsecore::backend::Summary,
+    events: Vec<synapsecore::backend::Event>,
+    runs: Vec<synapsecore::backend::Run>,
+    triggers: Vec<synapsecore::backend::Trigger>,
+    routes: Vec<synapsecore::backend::Route>,
+    capabilities: Vec<synapsecore::backend::Capability>,
+}
+
+fn loadlogs(database: &std::path::Path) -> anyhow::Result<LogData> {
+    block(async {
+        let backend = synapsecore::backend::Backend::glance(database).await?;
+        let summary = backend.summary().await?;
+        let events = backend
+            .events(&synapsecore::backend::EventFilter {
+                limit: 200,
+                ..Default::default()
+            })
+            .await?;
+        let runs = backend.runs(20).await?;
+        let triggers = backend.triggers().await?;
+        let routes = backend.routes().await?;
+        let capabilities = backend.capabilities().await?;
+        Ok(LogData {
+            summary,
+            events,
+            runs,
+            triggers,
+            routes,
+            capabilities,
+        })
+    })
 }
 
 fn instructionspath(agent: &agent::Agent) -> PathBuf {
@@ -3758,7 +3958,10 @@ fn loadmeshdata(database: &std::path::Path) -> MeshData {
     }
     let path = database.to_path_buf();
     match block(async {
-        let mesh = synapsecore::relay::Mesh::open(path).await?;
+        // A read, on every visit to the page. `opened` already asked whether
+        // the store is sound; asking again here reads the whole file each time
+        // some session has written since the last visit.
+        let mesh = synapsecore::relay::Mesh::glance(path).await?;
         Ok((
             mesh.agents().await?,
             mesh.workers().await?,
@@ -3782,14 +3985,17 @@ fn loadmeshdata(database: &std::path::Path) -> MeshData {
 
 fn loadmesh(database: &std::path::Path) -> anyhow::Result<bool> {
     block(async {
-        let brain = synapsecore::brain::Brain::open(database).await?;
+        let brain = synapsecore::brain::Brain::glance(database).await?;
         brain.mesh().await
     })
 }
 
 fn loadvaults(database: &std::path::Path) -> anyhow::Result<VaultData> {
     block(async {
-        let store = VaultStore::open(database).await?;
+        // Before the first frame, so without the whole-file scan: that one
+        // belongs to `opened`, with everything else whose cost grows with the
+        // store. Opening it here ran the scan the launch budget moved out.
+        let store = VaultStore::glance(database).await?;
         let vaults = store.vaults().await?;
         let selected = vaults.first().map(|vault| vault.id);
         let secrets = match selected {

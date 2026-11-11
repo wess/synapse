@@ -34,11 +34,15 @@ pub fn render(
                         .flex_col()
                         .gap(px(8.0))
                         .max_w(px(590.0))
-                        .child(Title::new("Connect your coding tools").order(2))
+                        .child(Title::new("Connections").order(3))
                         .child(
-                            Text::new(
-                                "One scoped memory and one shared playbook, available wherever you work.",
-                            )
+                            Text::new(match (probed, connected) {
+                                (false, _) => "Looking for supported tools on this Mac.",
+                                (true, 0) => {
+                                    "Connect a tool to share memory and guidance across sessions."
+                                }
+                                _ => "Connected tools share the same local memory and guidance.",
+                            })
                             .size(Size::Sm)
                             .dimmed(),
                         ),
@@ -49,14 +53,14 @@ pub fn render(
                         .flex()
                         .items_center()
                         .gap(px(18.0))
-                        .child(metric("Memories", stats.entries.to_string()))
-                        .child(metric("Database", formatsize(stats.bytes)))
+                        .child(metric("memories", stats.entries.to_string()))
+                        .child(metric("on disk", formatsize(stats.bytes)))
                         // A dash rather than `0/0` until the machine has been
                         // looked at. Nought of nought is an answer, and it is
                         // the wrong one for the frame before the question was
                         // asked.
                         .child(metric(
-                            "Connected",
+                            "connected",
                             match probed {
                                 true => format!("{connected}/{total}"),
                                 false => "—".to_owned(),

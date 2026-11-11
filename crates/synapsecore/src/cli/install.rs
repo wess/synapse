@@ -48,6 +48,12 @@ pub fn status() -> Result<InstallStatus> {
         .and_then(|value| value.canonicalize().ok())
         .as_ref()
         == Some(&executable);
+    // Settled without reading either file when the command already is this
+    // binary. Hashing first meant every call read the whole executable — tens
+    // of megabytes for the desktop build, from a page that asks on every frame.
+    if samefile {
+        return Ok(InstallStatus::Installed(target));
+    }
     let targetdigest = digest(&target).ok();
     let receipt = fs::read_to_string(receiptpath(&target)).ok();
     let managed = targetdigest
@@ -56,10 +62,7 @@ pub fn status() -> Result<InstallStatus> {
         .is_some_and(|(digest, receipt)| digest == receipt.trim());
     let currentlauncher = !bundled(&executable)
         || fs::read_to_string(&target).ok().as_deref() == Some(&launcher(&executable));
-    if samefile
-        || managed && currentlauncher
-        || targetdigest.as_ref() == Some(&digest(&executable)?)
-    {
+    if managed && currentlauncher || targetdigest.as_ref() == Some(&digest(&executable)?) {
         Ok(InstallStatus::Installed(target))
     } else if managed {
         Ok(InstallStatus::Missing)

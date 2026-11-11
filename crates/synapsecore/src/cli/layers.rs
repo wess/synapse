@@ -15,20 +15,24 @@ use anyhow::{Context, Result};
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 
-const ROLEUSAGE: &str = "usage: synapse relay role <list|show|create|edit|delete> [name] [--user]";
+const ROLEUSAGE: &str =
+    "usage: synapse relay role <list|show|create|edit|delete|allow> [name] [--user]";
 const TEAMUSAGE: &str =
-    "usage: synapse relay team <list|show|create|edit|delete|open> [name] [--user]";
-const TOOLUSAGE: &str = "usage: synapse tool <list|show|create|edit|delete> [name] [--user]";
+    "usage: synapse relay team <list|show|create|edit|delete|allow|open> [name] [--user]";
+const TOOLUSAGE: &str = "usage: synapse tool <list|show|create|edit|delete|allow> [name] [--user]";
 
 pub fn role(arguments: &[OsString]) -> Result<Outcome> {
     let kind = Kind {
         label: "role",
+        verb: "relay role",
         usage: ROLEUSAGE,
         template: relay::role::TEMPLATE,
         names: |root| relay::role::roles(Some(root)),
         text: |root, name| relay::role::text(Some(root), name),
         save: relay::role::save,
         delete: relay::role::delete,
+        allow: relay::role::allow,
+        pending: |root| relay::role::pending(Some(root)),
     };
     run(&kind, arguments)
 }
@@ -36,12 +40,15 @@ pub fn role(arguments: &[OsString]) -> Result<Outcome> {
 pub fn team(arguments: &[OsString]) -> Result<Outcome> {
     let kind = Kind {
         label: "team",
+        verb: "relay team",
         usage: TEAMUSAGE,
         template: relay::team::TEMPLATE,
         names: |root| relay::team::teams(Some(root)),
         text: |root, name| relay::team::text(Some(root), name),
         save: relay::team::save,
         delete: relay::team::delete,
+        allow: relay::team::allow,
+        pending: |root| relay::team::pending(Some(root)),
     };
     run(&kind, arguments)
 }
@@ -55,24 +62,31 @@ pub fn tool(arguments: &[OsString]) -> Result<Outcome> {
 fn toolkind() -> Kind {
     Kind {
         label: "tool",
+        verb: "tool",
         usage: TOOLUSAGE,
         template: crate::agent::tool::TEMPLATE,
         names: |root| crate::agent::tool::names(Some(root)),
         text: |root, name| crate::agent::tool::text(Some(root), name),
         save: crate::agent::tool::save,
         delete: crate::agent::tool::delete,
+        allow: crate::agent::tool::allow,
+        pending: |root| crate::agent::tool::pending(Some(root)),
     }
 }
 
 /// The three file kinds differ only in which functions read and write them.
 struct Kind {
     label: &'static str,
+    /// The words after `synapse` that reach this kind, for a hint to quote.
+    verb: &'static str,
     usage: &'static str,
     template: &'static str,
     names: fn(&Path) -> Vec<(String, Source)>,
     text: fn(&Path, &str) -> Result<(String, Source)>,
     save: fn(&str, bool, &Path, &str) -> Result<PathBuf>,
     delete: fn(&str, bool, &Path) -> Result<PathBuf>,
+    allow: fn(&Path, &str) -> Result<PathBuf>,
+    pending: fn(&Path) -> Vec<String>,
 }
 
 fn run(kind: &Kind, arguments: &[OsString]) -> Result<Outcome> {
@@ -107,6 +121,17 @@ fn run(kind: &Kind, arguments: &[OsString]) -> Result<Outcome> {
             let path = (kind.delete)(&name, user, &root)?;
             println!("Deleted {}", path.display());
         }
+        // A file that arrived with the checkout is somebody else's text until
+        // it has been read. This is the reading: it approves what the file says
+        // now, and the next edit to it takes that back.
+        "allow" => {
+            let name = text(arguments, 1, kind.usage)?;
+            let path = (kind.allow)(&root, &name)?;
+            println!(
+                "Approved {} as it is written. Editing it will need approving again.",
+                path.display()
+            );
+        }
         unknown => anyhow::bail!(
             "unknown {} command `{unknown}`\n\n{}",
             kind.label,
@@ -118,16 +143,31 @@ fn run(kind: &Kind, arguments: &[OsString]) -> Result<Outcome> {
 
 fn list(kind: &Kind, root: &Path, arguments: &[OsString]) -> Result<()> {
     let names = (kind.names)(root);
+    let pending = (kind.pending)(root);
     if arguments.iter().any(|value| value == "--json") {
         let rows: Vec<_> = names
             .iter()
             .map(|(name, source)| serde_json::json!({"name": name, "source": source.label()}))
+            .chain(
+                pending
+                    .iter()
+                    .map(|name| serde_json::json!({"name": name, "source": "unapproved"})),
+            )
             .collect();
         println!("{}", serde_json::to_string_pretty(&rows)?);
         return Ok(());
     }
     for (name, source) in names {
         println!("{name}\t{}", source.label());
+    }
+    // Said rather than left out. A file that is ignored without a word reads as
+    // a file that does nothing, and the person who wrote it goes looking for a
+    // bug in it.
+    for name in pending {
+        eprintln!(
+            "{name}\tin this project, not approved: `synapse {} allow {name}`",
+            kind.verb
+        );
     }
     Ok(())
 }

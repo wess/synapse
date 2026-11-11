@@ -161,7 +161,7 @@ pub fn render(view: View, actions: Actions, cx: &App) -> AnyElement {
                                 .flex()
                                 .flex_col()
                                 .gap(px(7.0))
-                                .child(Title::new("Skills").order(2))
+                                .child(Title::new("Skills").order(3))
                                 .child(
                                     Text::new(
                                         "One library, installed into every tool that reads the Agent Skills format. Edit a skill once here instead of keeping copies in step by hand.",

@@ -33,20 +33,15 @@ fn transports_publish_presence_without_joining_the_mesh_and_depart_cleanly() {
     // be recording it when the following tools/list call completes.
     let rows = sessions_with_count(&runtime, &brain, 2);
     assert_eq!(rows.len(), 2);
-    assert!(rows.iter().all(|row| row.online(presence::now())));
+    assert!(rows.iter().all(|row| row.online()));
     assert!(
         rows.iter()
-            .all(|row| row.state(presence::now()) == presence::State::Connected)
+            .all(|row| row.state() == presence::State::Connected)
     );
     assert_ne!(rows[0].slot, rows[1].slot);
     first.finish();
     let rows = runtime.block_on(presence::sessions(brain.pool())).unwrap();
-    assert_eq!(
-        rows.iter()
-            .filter(|row| row.online(presence::now()))
-            .count(),
-        1
-    );
+    assert_eq!(rows.iter().filter(|row| row.online()).count(), 1);
     second.finish();
     let rows = runtime.block_on(presence::sessions(brain.pool())).unwrap();
     assert!(rows.iter().all(|row| row.ended > 0));
@@ -63,6 +58,9 @@ fn reported_work_state_reaches_the_scene_session() {
         .unwrap();
     runtime.block_on(brain.setmesh(true)).unwrap();
     let mut worker = session(&home, &data);
+    // Joining answers a notification, which has no response to wait on. A
+    // report that beat it would update a row that is not there yet.
+    assert_eq!(sessions_with_count(&runtime, &brain, 1).len(), 1);
     let registered = tool(
         &mut worker,
         2,
@@ -87,6 +85,6 @@ fn reported_work_state_reaches_the_scene_session() {
     assert_eq!(rows[0].name, "builder");
     assert_eq!(rows[0].project, root.path().display().to_string());
     assert_eq!(rows[0].note, "Crafting the parser");
-    assert_eq!(rows[0].state(presence::now()), presence::State::Working);
+    assert_eq!(rows[0].state(), presence::State::Working);
     worker.finish();
 }

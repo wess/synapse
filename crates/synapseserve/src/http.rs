@@ -5,11 +5,14 @@
 //! primary key.
 
 use crate::{State, auth};
-use axum::extract::{DefaultBodyLimit, State as Extract};
+use axum::extract::{DefaultBodyLimit, FromRequestParts, Request, State as Extract};
+use axum::http::request::Parts;
 use axum::http::{HeaderMap, StatusCode};
+use axum::middleware::{self, Next};
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use axum::{Json, Router};
+use std::time::Duration;
 use synapsesync::wire::{MAXENVELOPE, MAXOPS, PROTOCOL};
 use synapsesync::{Op, PullRequest, PullResponse, PushRequest, PushResponse};
 
@@ -17,13 +20,50 @@ use synapsesync::{Op, PullRequest, PullResponse, PushRequest, PushResponse};
 /// them in more than one push.
 const REQUESTBYTES: usize = 8 * 1024 * 1024;
 
+/// How long one request may take from its headers to its answer. The largest
+/// body allowed crosses a slow link in a fraction of this, so what it ends is a
+/// client that opened a request and then sent it a byte at a time.
+///
+/// It starts once the headers are in. A peer that never finishes sending those
+/// is not bounded here, which is one more reason this belongs behind something
+/// that terminates TLS and has timeouts of its own.
+const REQUESTTIME: Duration = Duration::from_secs(60);
+
 pub fn router(state: State) -> Router {
     Router::new()
         .route("/health", get(health))
         .route("/push", post(push))
         .route("/pull", post(pull))
         .layer(DefaultBodyLimit::max(REQUESTBYTES))
+        .layer(middleware::from_fn(deadline))
         .with_state(state)
+}
+
+async fn deadline(request: Request, next: Next) -> Response {
+    match tokio::time::timeout(REQUESTTIME, next.run(request)).await {
+        Ok(response) => response,
+        Err(_) => Failure::new(
+            StatusCode::REQUEST_TIMEOUT,
+            "this request took too long to arrive",
+        )
+        .into_response(),
+    }
+}
+
+/// Which log a request may touch, settled from its headers.
+///
+/// An extractor rather than a call at the top of each handler, because axum
+/// reads the body for the last argument only after every earlier one has
+/// succeeded. Authorising inside the handler meant eight megabytes of JSON were
+/// read and parsed for anybody who asked, and only then was the token looked at.
+struct Tenant(i64);
+
+impl FromRequestParts<State> for Tenant {
+    type Rejection = Failure;
+
+    async fn from_request_parts(parts: &mut Parts, state: &State) -> Result<Self, Failure> {
+        authorize(state, &parts.headers).await.map(Self)
+    }
 }
 
 async fn health() -> &'static str {
@@ -32,10 +72,9 @@ async fn health() -> &'static str {
 
 async fn push(
     Extract(state): Extract<State>,
-    headers: HeaderMap,
+    Tenant(tenant): Tenant,
     Json(request): Json<PushRequest>,
 ) -> Result<Json<PushResponse>, Failure> {
-    let tenant = authorize(&state, &headers).await?;
     protocol(request.protocol)?;
     if request.ops.len() > MAXOPS {
         return Err(Failure::new(
@@ -57,10 +96,9 @@ async fn push(
 
 async fn pull(
     Extract(state): Extract<State>,
-    headers: HeaderMap,
+    Tenant(tenant): Tenant,
     Json(request): Json<PullRequest>,
 ) -> Result<Json<PullResponse>, Failure> {
-    let tenant = authorize(&state, &headers).await?;
     protocol(request.protocol)?;
     if request.since < 0 {
         return Err(Failure::new(

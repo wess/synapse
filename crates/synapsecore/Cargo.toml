@@ -20,7 +20,7 @@ name = "synapsecore"
 # Keep this in step with crates/synapse: `synapse version` reads the version of
 # the crate that holds the command, and the two ship as one product. Only the
 # desktop crate's version triggers the release workflow.
-version = "1.16.3"
+version = "1.17.0"
 edition = "2024"
 description = "Memory, credentials, and the command surface for Synapse, without a window"
 
@@ -33,6 +33,7 @@ path = "src/main.rs"
 [dependencies]
 synapsesync = { path = "../synapsesync" }
 anyhow = "1.0"
+base64 = "0.22"
 # The only HTTP client here, and it exists for sync alone. rustls rather than
 # the platform's TLS so a Linux box needs no system OpenSSL, and no default
 # features so this does not quietly bring a second async runtime with it.
@@ -46,7 +47,7 @@ chacha20poly1305 = "0.10"
 chrono = { version = "0.4", default-features = false, features = ["clock"] }
 directories = "6.0"
 fs2 = "0.4"
-rmcp = { version = "2.2.0", default-features = false, features = ["macros", "server", "transport-io"] }
+rmcp = { version = "3.9.0", default-features = false, features = ["macros", "server", "transport-io"] }
 rpassword = "7.5"
 schemars = "1.0"
 serde = { version = "1.0", features = ["derive"] }

@@ -11,6 +11,8 @@ Usage: synapse [command]
 
 Commands:
   app                              Open the desktop application
+  backend <summary|events|runs|artifact|capability|trigger|route|evaluation|api>
+                                   Inspect and drive the local agent runtime
   mcp                              Run the MCP stdio server
   mcp list [--json]                List the MCP servers in your library
   mcp show <name>                  Print one server's description
@@ -111,17 +113,12 @@ Commands:
   relay team open <name>           Open a whole roster, lead in this terminal
   relay role <list|show|create|edit|delete> [name] [--user]
                                    Manage reusable agent roles
+  relay role allow <name>          Approve this project's role as it is written
   relay team <list|show|create|edit|delete> [name] [--user]
                                    Manage team rosters
+  relay team allow <name>          Approve this project's team as it is written
   relay ps [--json]                List background workers
   relay kill <name>                Stop a background worker
-  plugin list [--json]             List built-in and installed plugins
-  plugin path                      Print the installed plugin folder
-  plugin init [folder] [--id <id>] Add a manifest to an existing folder
-  plugin create <id> [folder]      Scaffold a declarative scene plugin
-  plugin check [folder] [--json]   Validate a plugin without installing it
-  plugin install [folder] [--replace]
-                                   Validate and install a plugin for the app
   skill list [--json]              List the skills in your library
   skill show <name>                Print one skill
   skill create <name>              Start a new skill from a template
@@ -153,6 +150,7 @@ Commands:
   tool create <name> [--user]      Describe a tool Synapse does not ship
   tool edit <name> [--user]        Edit a tool descriptor in $EDITOR
   tool delete <name> [--user]      Remove a descriptor you added
+  tool allow <name>                Approve this project's descriptor as it is written
                                    --user saves beside the data directory
                                    rather than in this project
   session [--json]                 Report this session's Synapse connection
@@ -201,7 +199,16 @@ pub fn run(arguments: Vec<OsString>) -> Result<Outcome> {
         // Bare, it is Synapse's own server — what every tool's registration
         // runs, so that meaning cannot move. Anything after it is the library.
         "mcp" if rest.is_empty() => {
-            runtime()?.block_on(crate::mcp::run())?;
+            // Two workers, not one per core. This process sits beside a session
+            // for as long as it is open, answering one call at a time, and there
+            // is one of it for every session on the machine. Two rather than one
+            // because a handler that reads the checkout must not hold up the
+            // call behind it.
+            tokio::runtime::Builder::new_multi_thread()
+                .worker_threads(2)
+                .enable_all()
+                .build()?
+                .block_on(crate::mcp::run())?;
             Ok(Outcome::Exit(0))
         }
         "mcp" => super::servers::run(rest),
@@ -219,12 +226,12 @@ pub fn run(arguments: Vec<OsString>) -> Result<Outcome> {
         "scope" => scope(rest),
         "data" => data(rest),
         "memory" => super::memory::run(rest),
+        "backend" => super::backend::run(rest),
         "learn" => super::learning::run(rest),
         "guidance" => super::guidance::run(rest),
         "launch" => super::wrap::run(rest),
         "mux" => super::mux::run(rest),
         "relay" => super::relay::run(rest),
-        "plugin" => super::plugins::run(rest),
         "skill" => super::skills::run(rest),
         "source" => super::sources::run(rest),
         "tool" => super::layers::tool(rest),

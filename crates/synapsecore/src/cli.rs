@@ -1,3 +1,4 @@
+mod backend;
 mod command;
 mod connect;
 mod doctor;
@@ -11,7 +12,6 @@ mod layers;
 mod learning;
 mod memory;
 mod mux;
-mod plugins;
 mod relay;
 mod remove;
 mod savings;

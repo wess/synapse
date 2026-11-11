@@ -15,7 +15,7 @@ type Click = Box<dyn Fn(&ClickEvent, &mut Window, &mut App) + 'static>;
 
 /// Wide enough for the longest label beside its icon, narrow enough that the
 /// page keeps the window.
-const WIDTH: f32 = 212.0;
+const WIDTH: f32 = 196.0;
 
 /// Where each navigation button goes. Named rather than passed in a row,
 /// because a run of handlers with one type is easy to wire to the wrong page
@@ -28,7 +28,7 @@ pub struct Navigation {
     pub skills: Click,
     pub servers: Click,
     pub mesh: Click,
-    pub scenes: Click,
+    pub logs: Click,
     pub vaults: Click,
     pub settings: Click,
 }
@@ -42,7 +42,7 @@ pub fn render(page: Page, go: Navigation, cx: &App) -> impl IntoElement {
         skills,
         servers,
         mesh,
-        scenes,
+        logs,
         vaults,
         settings,
     } = go;
@@ -65,19 +65,7 @@ pub fn render(page: Page, go: Navigation, cx: &App) -> impl IntoElement {
         .border_color(theme.border().hsla())
         .bg(theme.surface().hsla())
         .child(wordmark())
-        // Grouped by the thing users are managing: their workspace, installed
-        // extensions, or Synapse itself.
         .child(group("Workspace"))
-        // First, because it is the only page that answers "what is in here"
-        // rather than "what is in here that I searched for".
-        .child(entry(
-            "navmap",
-            "Map",
-            IconName::ChartNetwork,
-            page == Page::Map,
-            &colours,
-            map,
-        ))
         .child(entry(
             "navconnections",
             "Connections",
@@ -85,14 +73,6 @@ pub fn render(page: Page, go: Navigation, cx: &App) -> impl IntoElement {
             page == Page::Connections,
             &colours,
             connections,
-        ))
-        .child(entry(
-            "navstats",
-            "Stats",
-            IconName::ChartColumn,
-            page == Page::Stats,
-            &colours,
-            stats,
         ))
         .child(entry(
             "navmemories",
@@ -103,6 +83,24 @@ pub fn render(page: Page, go: Navigation, cx: &App) -> impl IntoElement {
             memories,
         ))
         .child(entry(
+            "navstats",
+            "Usage",
+            IconName::ChartColumn,
+            page == Page::Stats,
+            &colours,
+            stats,
+        ))
+        .child(group("Explore"))
+        .child(entry(
+            "navmap",
+            "Memory Map",
+            IconName::ChartNetwork,
+            page == Page::Map,
+            &colours,
+            map,
+        ))
+        .child(group("Extensions"))
+        .child(entry(
             "navskills",
             "Skills",
             IconName::Sparkles,
@@ -112,38 +110,39 @@ pub fn render(page: Page, go: Navigation, cx: &App) -> impl IntoElement {
         ))
         .child(entry(
             "navservers",
-            "MCP",
+            "Tool Servers",
             IconName::Server,
             page == Page::Servers,
             &colours,
             servers,
         ))
+        .child(group("Coordination"))
         .child(entry(
             "navmesh",
-            "Mesh",
+            "Agents",
             IconName::Waypoints,
             page == Page::Mesh,
             &colours,
             mesh,
         ))
-        .child(group("Plugins"))
         .child(entry(
-            "navscenes",
-            "Scenes",
-            IconName::Sparkles,
-            page == Page::Scenes,
+            "navlogs",
+            "Logs",
+            IconName::Logs,
+            page == Page::Logs,
             &colours,
-            scenes,
+            logs,
         ))
-        .child(group("System"))
+        .child(group("Security"))
         .child(entry(
             "navvaults",
-            "Vaults",
+            "Secrets",
             IconName::KeyRound,
             page == Page::Vaults,
             &colours,
             vaults,
         ))
+        .child(div().flex_1())
         .child(entry(
             "navsettings",
             "Settings",
@@ -152,8 +151,6 @@ pub fn render(page: Page, go: Navigation, cx: &App) -> impl IntoElement {
             &colours,
             settings,
         ))
-        // Pushes whatever follows to the bottom of the column.
-        .child(div().flex_1())
 }
 
 fn wordmark() -> impl IntoElement {
@@ -165,7 +162,7 @@ fn wordmark() -> impl IntoElement {
         .pb(px(14.0))
         .child(
             div()
-                .size(px(30.0))
+                .size(px(26.0))
                 .rounded(px(5.0))
                 .flex()
                 .items_center()
@@ -174,7 +171,7 @@ fn wordmark() -> impl IntoElement {
                 .text_color(guise::rgb(255, 255, 255))
                 .child(Icon::new(IconName::BrainCircuit).size(Size::Sm)),
         )
-        .child(Title::new("Synapse").order(4))
+        .child(Text::new("Synapse").size(Size::Md).bold())
 }
 
 /// A heading over a run of destinations. Small, quiet, and not clickable —
@@ -184,7 +181,7 @@ fn group(label: &'static str) -> impl IntoElement {
         .px(px(8.0))
         .pt(px(12.0))
         .pb(px(4.0))
-        .child(Text::new(label.to_uppercase()).size(Size::Xs).dimmed())
+        .child(Text::new(label).size(Size::Xs).dimmed())
 }
 
 /// One destination.
@@ -217,6 +214,8 @@ fn entry(
         .h(px(32.0))
         .px(px(8.0))
         .rounded(px(7.0))
+        .focusable()
+        .tab_index(0)
         .when(here, |element| element.bg(hover))
         .text_color(if here { colours.text } else { colours.dim })
         .hover(move |style| style.bg(hover).text_color(text))

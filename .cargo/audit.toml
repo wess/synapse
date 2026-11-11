@@ -3,4 +3,13 @@
 # in the current enabled graph (`cargo tree --target all -i quick-xml@0.30.0`).
 # The headless core and sync server do not depend on GPUI. Keep these exceptions
 # explicit until the upstream optional dependency supports quick-xml >=0.41.
-ignore = ["RUSTSEC-2026-0194", "RUSTSEC-2026-0195"]
+#
+# RUSTSEC-2026-0459 is the SQLite bundled by libsqlite3-sys 0.30 (CVE-2026-119375):
+# a database opened beside a crafted write-ahead log can return stale process
+# memory. The fix is libsqlite3-sys >= 0.39, and no sqlx release accepts it —
+# 0.9.0 still requires < 0.38 — so there is nothing to upgrade to yet. Every
+# store Synapse opens is one it created, in a folder only its owner can write;
+# the one path that opens a file somebody else could have made is
+# `synapse data restore`, which refuses a source with a log beside it before
+# SQLite sees either file (database/lifecycle.rs). Drop this the day sqlx moves.
+ignore = ["RUSTSEC-2026-0194", "RUSTSEC-2026-0195", "RUSTSEC-2026-0459"]

@@ -3,7 +3,7 @@ use anyhow::{Context, Result};
 use sqlx::SqlitePool;
 use std::path::Path;
 
-pub const LATEST: i64 = 17;
+pub const LATEST: i64 = 19;
 
 /// The vault's own schema, in its own file. One table today, with the numbered
 /// migration around it anyway: the day it grows a column is not the day to
@@ -392,6 +392,71 @@ const MIGRATIONS: &[Migration] = &[
             "CREATE INDEX sceneavatarupdated ON sceneavatar(updated)",
         ],
     },
+    Migration {
+        version: 18,
+        statements: &[
+            "CREATE TABLE event(\
+             id INTEGER PRIMARY KEY AUTOINCREMENT, created INTEGER NOT NULL, \
+             source TEXT NOT NULL, project TEXT NOT NULL DEFAULT '', agent TEXT NOT NULL DEFAULT '', \
+             session TEXT NOT NULL DEFAULT '', level TEXT NOT NULL \
+             CHECK(level IN ('trace','debug','info','warn','error')), \
+             kind TEXT NOT NULL, message TEXT NOT NULL, fields TEXT NOT NULL DEFAULT '{}', \
+             runid TEXT NOT NULL DEFAULT '', traceid TEXT NOT NULL DEFAULT '')",
+            "CREATE INDEX eventcreated ON event(created DESC,id DESC)",
+            "CREATE INDEX eventproject ON event(project,id DESC)",
+            "CREATE INDEX eventrun ON event(runid,id) WHERE runid != ''",
+            "CREATE TABLE run(\
+             id TEXT PRIMARY KEY, project TEXT NOT NULL DEFAULT '', harness TEXT NOT NULL DEFAULT '', \
+             status TEXT NOT NULL CHECK(status IN ('queued','running','waiting','succeeded','failed','cancelled')), \
+             input TEXT NOT NULL DEFAULT '{}', output TEXT NOT NULL DEFAULT '', error TEXT NOT NULL DEFAULT '', \
+             replayof TEXT NOT NULL DEFAULT '', leaseowner TEXT NOT NULL DEFAULT '', \
+             leaseuntil INTEGER NOT NULL DEFAULT 0, attempts INTEGER NOT NULL DEFAULT 0, \
+             maxattempts INTEGER NOT NULL DEFAULT 3, created INTEGER NOT NULL, updated INTEGER NOT NULL)",
+            "CREATE INDEX runupdated ON run(updated DESC,id DESC)",
+            "CREATE INDEX runproject ON run(project,updated DESC)",
+            "CREATE TABLE runstep(\
+             id INTEGER PRIMARY KEY AUTOINCREMENT, runid TEXT NOT NULL REFERENCES run(id) ON DELETE CASCADE, \
+             name TEXT NOT NULL, status TEXT NOT NULL \
+             CHECK(status IN ('queued','running','succeeded','failed','cancelled')), \
+             input TEXT NOT NULL DEFAULT '{}', output TEXT NOT NULL DEFAULT '', error TEXT NOT NULL DEFAULT '', \
+             started INTEGER NOT NULL DEFAULT 0, ended INTEGER NOT NULL DEFAULT 0)",
+            "CREATE INDEX runsteprun ON runstep(runid,id)",
+            "CREATE TABLE artifact(\
+             digest TEXT PRIMARY KEY, name TEXT NOT NULL, kind TEXT NOT NULL, media TEXT NOT NULL, \
+             path TEXT NOT NULL, size INTEGER NOT NULL, created INTEGER NOT NULL)",
+            "CREATE TABLE runartifact(\
+             runid TEXT NOT NULL REFERENCES run(id) ON DELETE CASCADE, \
+             digest TEXT NOT NULL REFERENCES artifact(digest) ON DELETE RESTRICT, role TEXT NOT NULL, \
+             PRIMARY KEY(runid,digest,role))",
+            "CREATE TABLE capability(\
+             subject TEXT NOT NULL, kind TEXT NOT NULL, resource TEXT NOT NULL, \
+             decision TEXT NOT NULL CHECK(decision IN ('allow','deny')), digest TEXT NOT NULL DEFAULT '', \
+             updated INTEGER NOT NULL, PRIMARY KEY(subject,kind,resource))",
+            "CREATE TABLE trigger(\
+             id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL UNIQUE, \
+             kind TEXT NOT NULL CHECK(kind IN ('schedule','event','dependency')), spec TEXT NOT NULL, \
+             enabled INTEGER NOT NULL DEFAULT 1 CHECK(enabled IN (0,1)), \
+             next INTEGER NOT NULL DEFAULT 0, lastrun INTEGER NOT NULL DEFAULT 0, \
+             created INTEGER NOT NULL, updated INTEGER NOT NULL)",
+            "CREATE INDEX triggerdue ON trigger(enabled,next) WHERE enabled = 1",
+            "CREATE TABLE route(\
+             name TEXT PRIMARY KEY, endpoint TEXT NOT NULL, model TEXT NOT NULL DEFAULT '', \
+             priority INTEGER NOT NULL DEFAULT 100, local INTEGER NOT NULL DEFAULT 1 CHECK(local IN (0,1)), \
+             enabled INTEGER NOT NULL DEFAULT 1 CHECK(enabled IN (0,1)), \
+             created INTEGER NOT NULL, updated INTEGER NOT NULL)",
+            "CREATE INDEX routechoice ON route(enabled,priority,name)",
+            "CREATE TABLE evaluation(\
+             id INTEGER PRIMARY KEY AUTOINCREMENT, runid TEXT NOT NULL REFERENCES run(id) ON DELETE CASCADE, \
+             expected TEXT NOT NULL, actual TEXT NOT NULL, score REAL NOT NULL, note TEXT NOT NULL DEFAULT '', \
+             created INTEGER NOT NULL)",
+            "CREATE INDEX evaluationrun ON evaluation(runid,id)",
+            "DROP TABLE sceneavatar",
+        ],
+    },
+    Migration {
+        version: 19,
+        statements: &["ALTER TABLE trigger ADD COLUMN claimed INTEGER NOT NULL DEFAULT 0"],
+    },
 ];
 
 /// `vault.db`. One row per secret, holding a sealed envelope and nothing else:
@@ -564,11 +629,6 @@ mod tests {
         .execute(&pool)
         .await
         .unwrap();
-        sqlx::query("INSERT INTO sceneavatar(identity, appearance) VALUES ('session', 12)")
-            .execute(&pool)
-            .await
-            .unwrap();
-
         run(&pool, &path, false, Schema::Brain).await.unwrap();
 
         assert_eq!(version(&pool).await.unwrap(), LATEST);
@@ -587,13 +647,12 @@ mod tests {
             0,
             "a memory written before the column existed still stands"
         );
-        let avatar: (i64, i64) = sqlx::query_as(
-            "SELECT appearance, updated FROM sceneavatar WHERE identity = 'session'",
+        let scene: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='sceneavatar'",
         )
         .fetch_one(&pool)
         .await
         .unwrap();
-        assert_eq!(avatar.0, 12);
-        assert!(avatar.1 > 0);
+        assert_eq!(scene, 0, "the retired graphics table is removed");
     }
 }

@@ -6,8 +6,18 @@
 //! directory, which keeps it overridable by `SYNAPSE_DATA` in tests. Built-ins
 //! are embedded in the binary and can never be edited in place — editing one
 //! copies it down to a layer you own first.
+//!
+//! A project file is used only once its exact contents are approved, and an
+//! edit takes the approval away. These files are not settings: a tool
+//! descriptor names the program Synapse runs and the arguments it is given, and
+//! a role is the brief and the permissions an agent starts with. A checkout is
+//! somebody else's text until its owner has read it, which is the same bargain
+//! a `.synapse.yaml` and a project's sources file already make — and without
+//! it, cloning a repository and typing `synapse launch claude` runs whatever
+//! that repository said `claude` was.
 
-use anyhow::Result;
+use anyhow::{Context, Result};
+use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
@@ -52,6 +62,104 @@ pub fn file(directory: &Path, name: &str) -> PathBuf {
     directory.join(format!("{name}.toml"))
 }
 
+fn digest(text: &str) -> String {
+    format!("{:x}", Sha256::digest(text.as_bytes()))
+}
+
+/// Where the approval of one project file is written down: a file named for
+/// where the project file sits, holding the digest of what it said.
+///
+/// Files rather than rows in the store's trust table because everything that
+/// resolves a layer is synchronous and most of it has no database open. Keyed
+/// on the folder resolved and the name as written, like the trust table: a
+/// link is approved where it is, not where it points.
+fn record(path: &Path) -> Result<PathBuf> {
+    let name = path
+        .file_name()
+        .with_context(|| format!("{} does not name a file", path.display()))?;
+    let folder = path
+        .parent()
+        .context("a project file has a folder")?
+        .canonicalize()
+        .with_context(|| format!("could not resolve {}", path.display()))?;
+    let place = folder.join(name).display().to_string();
+    Ok(crate::files::data()?.join("approved").join(digest(&place)))
+}
+
+/// Whether this project file was approved saying exactly this.
+pub fn approved(path: &Path, text: &str) -> bool {
+    record(path)
+        .ok()
+        .and_then(|record| std::fs::read_to_string(record).ok())
+        .is_some_and(|stored| stored.trim() == digest(text))
+}
+
+fn approve(path: &Path, text: &str) -> Result<()> {
+    let record = record(path)?;
+    let folder = record.parent().context("an approval has a folder")?;
+    std::fs::create_dir_all(folder)
+        .with_context(|| format!("could not create {}", folder.display()))?;
+    crate::database::securedirectory(folder)?;
+    std::fs::write(&record, digest(text))
+        .with_context(|| format!("could not record approval of {}", path.display()))?;
+    crate::database::securefile(&record)
+}
+
+/// Approve a project file as it reads now, returning its path. The next edit
+/// to it — anybody's — makes it unapproved again.
+pub fn allow(kind: &str, root: &Path, name: &str) -> Result<PathBuf> {
+    valid(name)?;
+    let path = file(&projectdirectory(root, kind), name);
+    let text = std::fs::read_to_string(&path)
+        .with_context(|| format!("this project has no {}", path.display()))?;
+    approve(&path, &text)?;
+    Ok(path)
+}
+
+/// Project files of this kind that are present and not approved as they stand,
+/// so a surface can say they are being ignored rather than leave somebody to
+/// wonder why their role did nothing.
+pub fn pending(kind: &str, root: Option<&Path>) -> Vec<String> {
+    let Some(root) = root else {
+        return Vec::new();
+    };
+    let mut names: Vec<String> = entries(&projectdirectory(root, kind))
+        .into_iter()
+        .filter(|(_, path)| std::fs::read_to_string(path).is_ok_and(|text| !approved(path, &text)))
+        .map(|(name, _)| name)
+        .collect();
+    names.sort();
+    names
+}
+
+/// What to say when `name` did not resolve: that there is no such thing, or
+/// that this project has one waiting to be read.
+pub fn unknown(label: &str, kind: &str, root: Option<&Path>, name: &str, verb: &str) -> String {
+    match pending(kind, root).iter().any(|item| item == name) {
+        true => format!(
+            "this project's {label} `{name}` has not been approved as it is written; \
+             read .synapse/{kind}/{name}.toml, then run `synapse {verb} allow {name}`"
+        ),
+        false => format!("no {label} named `{name}`"),
+    }
+}
+
+/// Every `.toml` in a layer's folder, by the name it would resolve under.
+fn entries(directory: &Path) -> Vec<(String, PathBuf)> {
+    let Ok(entries) = std::fs::read_dir(directory) else {
+        return Vec::new();
+    };
+    entries
+        .flatten()
+        .map(|entry| entry.path())
+        .filter(|path| path.extension().and_then(|value| value.to_str()) == Some("toml"))
+        .filter_map(|path| {
+            let stem = path.file_stem()?.to_str()?.to_owned();
+            Some((stem, path))
+        })
+        .collect()
+}
+
 /// Read `name` from the highest layer that has it, returning the text and where
 /// it came from. Built-ins are the floor.
 pub fn read(
@@ -68,7 +176,13 @@ pub fn read(
         candidates.push((user, Source::User));
     }
     for (directory, source) in candidates {
-        if let Ok(text) = std::fs::read_to_string(file(&directory, name)) {
+        let path = file(&directory, name);
+        if let Ok(text) = std::fs::read_to_string(&path) {
+            // Unapproved, it is not there: the name falls through to a layer
+            // this user owns, or to nothing.
+            if source == Source::Project && !approved(&path, &text) {
+                continue;
+            }
             return Some((text, source));
         }
     }
@@ -96,17 +210,13 @@ pub fn scan(
         directories.push((projectdirectory(root, kind), Source::Project));
     }
     for (directory, source) in directories {
-        let Ok(entries) = std::fs::read_dir(&directory) else {
-            continue;
-        };
-        for entry in entries.flatten() {
-            let path = entry.path();
-            if path.extension().and_then(|value| value.to_str()) != Some("toml") {
+        for (name, path) in entries(&directory) {
+            if source == Source::Project
+                && !std::fs::read_to_string(&path).is_ok_and(|text| approved(&path, &text))
+            {
                 continue;
             }
-            if let Some(stem) = path.file_stem().and_then(|value| value.to_str()) {
-                seen.insert(stem.to_owned(), source);
-            }
+            seen.insert(name, source);
         }
     }
     seen
@@ -123,6 +233,13 @@ pub fn save(kind: &str, name: &str, user: bool, root: &Path, text: &str) -> Resu
     };
     let path = file(&directory, name);
     crate::files::write(&path, text)?;
+    // Written through Synapse by the person whose project it is, which is the
+    // reading an approval stands for. What is recorded is what landed on disk.
+    if !user {
+        let written = std::fs::read_to_string(&path)
+            .with_context(|| format!("could not read back {}", path.display()))?;
+        approve(&path, &written)?;
+    }
     Ok(path)
 }
 
@@ -156,21 +273,86 @@ mod tests {
         assert!(valid("front end").is_err());
     }
 
-    #[test]
-    fn the_project_layer_wins_over_the_builtin() {
+    /// A checkout and a data folder, with the data folder held for the test.
+    fn project() -> (tempfile::TempDir, std::sync::MutexGuard<'static, ()>) {
         let directory = tempfile::tempdir().unwrap();
-        let root = directory.path();
-        std::fs::create_dir_all(projectdirectory(root, "roles")).unwrap();
-        std::fs::write(
-            file(&projectdirectory(root, "roles"), "worker"),
-            "name = \"mine\"\n",
-        )
-        .unwrap();
+        let guard = crate::files::scopeddata(&directory.path().join("data"));
+        std::fs::create_dir_all(projectdirectory(&directory.path().join("repo"), "roles")).unwrap();
+        (directory, guard)
+    }
 
-        let (text, source) = read("roles", BUILTINS, Some(root), "worker").unwrap();
+    #[test]
+    fn the_project_layer_wins_over_the_builtin_once_it_is_approved() {
+        let (directory, _data) = project();
+        let root = directory.path().join("repo");
+        let path = file(&projectdirectory(&root, "roles"), "worker");
+        std::fs::write(&path, "name = \"mine\"\n").unwrap();
 
+        // Somebody else's text until its owner has read it.
+        let (_, source) = read("roles", BUILTINS, Some(&root), "worker").unwrap();
+        assert_eq!(source, Source::Builtin);
+        assert_eq!(pending("roles", Some(&root)), ["worker"]);
+
+        allow("roles", &root, "worker").unwrap();
+        let (text, source) = read("roles", BUILTINS, Some(&root), "worker").unwrap();
         assert_eq!(text, "name = \"mine\"\n");
         assert_eq!(source, Source::Project);
+        assert!(pending("roles", Some(&root)).is_empty());
+
+        // And somebody else's again the moment it says something different.
+        std::fs::write(&path, "name = \"theirs\"\n").unwrap();
+        let (text, source) = read("roles", BUILTINS, Some(&root), "worker").unwrap();
+        assert_eq!(text, "name = \"worker\"\n");
+        assert_eq!(source, Source::Builtin);
+    }
+
+    #[test]
+    fn a_project_file_nobody_approved_is_not_there_and_says_why() {
+        let (directory, _data) = project();
+        let root = directory.path().join("repo");
+        std::fs::write(file(&projectdirectory(&root, "roles"), "theirs"), "x = 1\n").unwrap();
+
+        assert!(read("roles", BUILTINS, Some(&root), "theirs").is_none());
+        assert!(!scan("roles", BUILTINS, Some(&root)).contains_key("theirs"));
+        let message = unknown("role", "roles", Some(&root), "theirs", "relay role");
+        assert!(message.contains("has not been approved"), "{message}");
+        assert!(
+            message.contains("synapse relay role allow theirs"),
+            "{message}"
+        );
+        assert_eq!(
+            unknown("role", "roles", Some(&root), "nobody", "relay role"),
+            "no role named `nobody`"
+        );
+    }
+
+    #[test]
+    fn approving_one_checkout_does_not_approve_the_same_file_in_another() {
+        let (directory, _data) = project();
+        let (root, clone) = (
+            directory.path().join("repo"),
+            directory.path().join("clone"),
+        );
+        std::fs::create_dir_all(projectdirectory(&clone, "roles")).unwrap();
+        for at in [&root, &clone] {
+            std::fs::write(file(&projectdirectory(at, "roles"), "mine"), "x = 1\n").unwrap();
+        }
+        allow("roles", &root, "mine").unwrap();
+
+        assert!(read("roles", BUILTINS, Some(&root), "mine").is_some());
+        assert!(read("roles", BUILTINS, Some(&clone), "mine").is_none());
+    }
+
+    #[test]
+    fn a_file_saved_through_synapse_into_the_project_is_already_approved() {
+        let (directory, _data) = project();
+        let root = directory.path().join("repo");
+
+        save("roles", "mine", false, &root, "x = 1\n").unwrap();
+
+        let (_, source) = read("roles", BUILTINS, Some(&root), "mine").unwrap();
+        assert_eq!(source, Source::Project);
+        assert!(allow("roles", &root, "missing").is_err());
     }
 
     #[test]
@@ -184,13 +366,14 @@ mod tests {
 
     #[test]
     fn scanning_labels_each_name_with_its_highest_layer() {
-        let directory = tempfile::tempdir().unwrap();
-        let root = directory.path();
-        std::fs::create_dir_all(projectdirectory(root, "roles")).unwrap();
-        std::fs::write(file(&projectdirectory(root, "roles"), "worker"), "").unwrap();
-        std::fs::write(file(&projectdirectory(root, "roles"), "mine"), "").unwrap();
+        let (directory, _data) = project();
+        let root = directory.path().join("repo");
+        for name in ["worker", "mine"] {
+            std::fs::write(file(&projectdirectory(&root, "roles"), name), "").unwrap();
+            allow("roles", &root, name).unwrap();
+        }
 
-        let seen = scan("roles", BUILTINS, Some(root));
+        let seen = scan("roles", BUILTINS, Some(&root));
 
         assert_eq!(seen.get("worker"), Some(&Source::Project));
         assert_eq!(seen.get("mine"), Some(&Source::Project));

@@ -136,7 +136,13 @@ async fn connect(path: &Path, schema: Schema) -> Result<SqlitePool> {
         .create_if_missing(true)
         .foreign_keys(true)
         .busy_timeout(Duration::from_secs(5))
-        .journal_mode(sqlx::sqlite::SqliteJournalMode::Wal);
+        .journal_mode(sqlx::sqlite::SqliteJournalMode::Wal)
+        // Without statistics the planner guesses, and for the scoped recent
+        // list it guesses a sort of every visible memory over a walk of the
+        // newest few. This keeps them current as a connection is retired, and
+        // only re-reads a table whose shape has moved; the limit bounds what
+        // that costs on a large store.
+        .optimize_on_close(true, 400);
     // A deleted row is normally left on the page until something else needs
     // the space. For the vault that means a forgotten secret's envelope sits
     // in the file until it happens to be written over, so it is zeroed on the

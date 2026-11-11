@@ -128,7 +128,7 @@ pub fn render(view: View, actions: Actions, cx: &App) -> AnyElement {
                 .flex()
                 .flex_col()
                 .gap(px(7.0))
-                .child(Title::new("MCP").order(2))
+                .child(Title::new("Tool Servers").order(3))
                 .child(
                     Text::new(
                         "One list of MCP servers, given to every connected tool. Each tool starts a server through Synapse, which hands it its secrets from the vault, so no token sits in a tool's config.",
@@ -787,7 +787,11 @@ fn detail(
         .flex()
         .items_center()
         .gap(px(8.0));
-    if !listing.repository.is_empty() {
+    if listing
+        .repository
+        .to_ascii_lowercase()
+        .starts_with("https://")
+    {
         let click = open(listing.repository.clone());
         buttons = buttons.child(
             Button::new("serverrepository", "Source")

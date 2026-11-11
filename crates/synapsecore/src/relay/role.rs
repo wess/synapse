@@ -79,12 +79,23 @@ pub fn roles(root: Option<&Path>) -> Vec<(String, Source)> {
 /// Read a role's file text and the layer it came from, so it can be shown or
 /// used as the seed for a copy in a layer the user owns.
 pub fn text(root: Option<&Path>, name: &str) -> Result<(String, Source)> {
-    layer::read(KIND, BUILTINS, root, name).with_context(|| format!("no role named `{name}`"))
+    layer::read(KIND, BUILTINS, root, name)
+        .with_context(|| layer::unknown("role", KIND, root, name, "relay role"))
 }
 
 pub fn save(name: &str, user: bool, root: &Path, text: &str) -> Result<std::path::PathBuf> {
     parse(name, text, Source::Project)?;
     layer::save(KIND, name, user, root, text)
+}
+
+/// Approve this project's file of that name as it reads now.
+pub fn allow(root: &Path, name: &str) -> Result<std::path::PathBuf> {
+    layer::allow(KIND, root, name)
+}
+
+/// This project's files that are present and not approved.
+pub fn pending(root: Option<&Path>) -> Vec<String> {
+    layer::pending(KIND, root)
 }
 
 pub fn delete(name: &str, user: bool, root: &Path) -> Result<std::path::PathBuf> {
@@ -134,12 +145,18 @@ mod tests {
     #[test]
     fn a_project_role_overrides_the_builtin_of_the_same_name() {
         let directory = tempfile::tempdir().unwrap();
-        let root = directory.path();
+        let _data = crate::files::scopeddata(&directory.path().join("data"));
+        let root = &directory.path().join("repo");
         crate::files::write(
             &layer::file(&layer::projectdirectory(root, KIND), "worker"),
             "channels = [\"mine\"]\ndescription = \"local\"\n",
         )
         .unwrap();
+
+        // It came with the checkout, so until it is approved the shipped role
+        // is the one that answers to the name.
+        assert!(resolve(Some(root), "worker").unwrap().unwrap().channels != ["mine"]);
+        allow(root, "worker").unwrap();
 
         let role = resolve(Some(root), "worker").unwrap().unwrap();
         let (_, source) = text(Some(root), "worker").unwrap();

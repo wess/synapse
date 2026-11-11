@@ -39,6 +39,18 @@ pub async fn export(database: &Path, target: &Path) -> Result<()> {
 
 pub async fn restore(database: &Path, source: &Path) -> Result<Option<PathBuf>> {
     anyhow::ensure!(source.is_file(), "{} is not a file", source.display());
+    // An export is one file. A log beside it means the file was copied out from
+    // under a store in use, so it may be missing whatever the log still held —
+    // and a log is also the one thing a hostile "backup" needs to bring along:
+    // SQLite before 3.54 returns stale memory for a database whose log has a
+    // different page size (CVE-2026-119375), and the bundled copy is older.
+    let log = permission::sidecar(source, "wal");
+    anyhow::ensure!(
+        !fs::metadata(&log).is_ok_and(|log| log.len() > 0),
+        "{} has a write-ahead log beside it, so it is a copy of a store that was in use; \
+         make the backup with `synapse data export` instead",
+        source.display()
+    );
     let sourcepool = readonly(source).await?;
     integrity(&sourcepool).await?;
     let sourceversion = version(&sourcepool).await?;

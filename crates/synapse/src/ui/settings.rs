@@ -94,7 +94,7 @@ pub fn render(view: View, actions: Actions, cx: &App) -> AnyElement {
                         .flex()
                         .flex_col()
                         .gap(px(7.0))
-                        .child(Title::new("Settings").order(2))
+                        .child(Title::new("Settings").order(3))
                         .child(
                             Text::new(
                                 "Manage shared guidance, recall, appearance, CLI, and shell integration.",

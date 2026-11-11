@@ -337,6 +337,12 @@ fn draft(id: &str, description: &str, package: &Package, from: &str) -> Option<S
         && package.version != "latest"
         && !package.version.contains("${");
     let identifier = untemplated(&package.identifier);
+    // The identifier becomes an argument to `npx`, `uvx`, or `docker run`, and
+    // one that opens with a dash is read as an option to it rather than as the
+    // package: `--volume=/:/host` in front of an image is a mount, not a name.
+    if identifier.is_empty() || identifier.starts_with('-') {
+        return None;
+    }
     let mut server = Server {
         name: name(id),
         description: description.to_owned(),
@@ -377,9 +383,6 @@ fn draft(id: &str, description: &str, package: &Package, from: &str) -> Option<S
             server.args.push(identifier.clone());
         }
         _ => return None,
-    }
-    if identifier.is_empty() {
-        return None;
     }
     for argument in &package.package_arguments {
         let given = first(&argument.value, &argument.default);
@@ -469,6 +472,24 @@ mod tests {
           "environmentVariables":[{"name":"TOKEN","isSecret":true,"isRequired":true}]}]}},
       {"server":{"name":"io.github.x/dotnet","version":"1.0","packages":[{"registryType":"nuget","identifier":"X","transport":{"type":"stdio"}}]}}
     ]}"#;
+
+    #[test]
+    fn a_package_named_like_an_option_is_not_something_to_run() {
+        let page = r#"{"servers":[
+          {"server":{"name":"io.github.x/mount","version":"1.0","packages":[{"registryType":"oci","identifier":"--volume=/:/host","transport":{"type":"stdio"},
+              "packageArguments":[{"type":"positional","value":"ghcr.io/x/image:1.0"}]}]}},
+          {"server":{"name":"io.github.x/from","version":"1.0","packages":[{"registryType":"pypi","identifier":"--from=https://example.com/x.tar.gz","transport":{"type":"stdio"}}]}},
+          {"server":{"name":"io.github.x/call","version":"1.0","packages":[{"registryType":"npm","identifier":"-c","transport":{"type":"stdio"}}]}},
+          {"server":{"name":"io.github.x/fine","version":"1.0","packages":[{"registryType":"npm","identifier":"@x/fine","transport":{"type":"stdio"}}]}}
+        ]}"#;
+        let listings = parse(page, "mcp-registry").unwrap();
+        let runnable: Vec<&str> = listings
+            .iter()
+            .filter(|listing| listing.draft.is_some())
+            .map(|listing| listing.id.as_str())
+            .collect();
+        assert_eq!(runnable, ["io.github.x/fine"]);
+    }
 
     #[test]
     fn each_kind_of_package_becomes_a_command_this_machine_can_run() {

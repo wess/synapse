@@ -84,7 +84,7 @@ You review other agents' work. Read the diffs they report, check correctness,
 edge cases, and conventions, and send concise, actionable feedback to the author.
 Approve only when it holds up; escalate disagreements to the supervisor.
 """`)}
-        <p>Roles resolve from the project first, then your own layer, then the built-ins. A role saved into a project lives in <code>.synapse/roles/</code> and travels with the checkout, which is how a team convention becomes something the repository carries rather than something each person configures.</p>
+        <p>Roles resolve from the project first, then your own layer, then the built-ins. A role saved into a project lives in <code>.synapse/roles/</code> and travels with the checkout, which is how a team convention becomes something the repository carries rather than something each person configures. Each person still approves it once: a role that arrived with a checkout is not used until <code>synapse relay role allow &lt;name&gt;</code>, and approving again is what a changed file asks for.</p>
       </li>
 
       <li>

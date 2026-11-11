@@ -15,6 +15,7 @@ pub fn run() {
             .open_window(
                 WindowOptions {
                     window_bounds: Some(WindowBounds::Windowed(bounds)),
+                    window_min_size: Some(size(px(900.0), px(620.0))),
                     titlebar: Some(TitlebarOptions {
                         title: Some(SharedString::new_static("Synapse")),
                         ..Default::default()
@@ -71,8 +72,51 @@ pub fn run() {
                     None
                 }
             };
+            let statusdata = synapsecore::files::database().ok();
             if let Some(statusbar) = statusbar {
                 cx.set_global(statusbar);
+                let task: Task<()> = cx.spawn(async move |cx| {
+                    let Some(database) = statusdata else {
+                        return;
+                    };
+                    let Ok(backend) = cx
+                        .background_executor()
+                        .spawn(async move {
+                            crate::ui::runtime::block(async {
+                                synapsecore::backend::Backend::glance(database).await
+                            })
+                        })
+                        .await
+                    else {
+                        return;
+                    };
+                    loop {
+                        let reading = backend.clone();
+                        let result = cx
+                            .background_executor()
+                            .spawn(async move {
+                                crate::ui::runtime::block(async {
+                                    let summary = reading.summary().await?;
+                                    let events = reading
+                                        .events(&synapsecore::backend::EventFilter {
+                                            limit: 4,
+                                            ..Default::default()
+                                        })
+                                        .await?;
+                                    Ok((summary, events))
+                                })
+                            })
+                            .await;
+                        if let Ok((summary, events)) = result {
+                            let _ = cx.update(|cx| {
+                                cx.global::<statusbar::Statusbar>()
+                                    .refresh(&summary, &events)
+                            });
+                        }
+                        gpui::Timer::after(std::time::Duration::from_secs(5)).await;
+                    }
+                });
+                task.detach();
             }
             let data = synapsecore::files::data().ok();
             let task: Task<()> = cx.spawn(async move |cx| {
@@ -82,6 +126,11 @@ pub fn run() {
                     // different things.
                     let _ = cx.update(|cx| match action {
                         Action::Open => crate::ui::menu::show(window, cx),
+                        Action::Logs => {
+                            let _ =
+                                window.update(cx, |dashboard, _window, cx| dashboard.showlogs(cx));
+                            crate::ui::menu::show(window, cx);
+                        }
                         Action::Data => {
                             if let Some(path) = data.as_deref() {
                                 let _ = synapsecore::files::reveal(path);

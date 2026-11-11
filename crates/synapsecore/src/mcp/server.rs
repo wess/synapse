@@ -7,7 +7,7 @@ use crate::skill::Receipts;
 use crate::usage::Entry;
 use crate::vault::{VaultStatusRequest, VaultStatusResponse, VaultStore};
 use rmcp::handler::server::{router::tool::ToolRouter, wrapper::Parameters};
-use rmcp::model::{Implementation, ServerCapabilities, ServerInfo};
+use rmcp::model::{Implementation, ServerCapabilities, ServerConfig};
 use rmcp::service::{NotificationContext, RoleServer};
 use rmcp::{Json, ServerHandler, ServiceExt, tool, tool_handler, tool_router, transport::stdio};
 use std::sync::Arc;
@@ -65,14 +65,7 @@ impl Server {
             receipts,
             supervisor: Supervisor::new(),
             identity: Arc::new(Mutex::new(None)),
-            learningid: Arc::new(format!(
-                "{}-{}",
-                std::process::id(),
-                std::time::SystemTime::now()
-                    .duration_since(std::time::UNIX_EPOCH)
-                    .unwrap_or_default()
-                    .as_nanos()
-            )),
+            learningid: Arc::new(crate::presence::identify()),
             instructions,
             standing,
             toolrouter,
@@ -282,8 +275,8 @@ pub(super) fn knowledgepath(requested: Option<&str>) -> Result<std::path::PathBu
 
 #[tool_handler(router = self.toolrouter)]
 impl ServerHandler for Server {
-    fn get_info(&self) -> ServerInfo {
-        ServerInfo::new(ServerCapabilities::builder().enable_tools().build())
+    fn get_info(&self) -> ServerConfig {
+        ServerConfig::new(ServerCapabilities::builder().enable_tools().build())
             .with_instructions(self.instructions.clone())
             .with_server_info(
                 Implementation::new("synapse", env!("CARGO_PKG_VERSION"))
@@ -337,16 +330,10 @@ pub async fn run(
     );
     let closing = server.clone();
     let service = server.serve(stdio()).await?;
-    let heartbeat = closing.clone();
-    let pulse = tokio::spawn(async move {
-        let mut timer = tokio::time::interval(std::time::Duration::from_secs(10));
-        loop {
-            timer.tick().await;
-            let _ = crate::presence::touch(heartbeat.brain.pool(), &heartbeat.learningid).await;
-        }
-    });
+    // Nothing ticks while this waits. A session is on the scene for as long as
+    // its process is, which anybody can ask without this one writing a row
+    // every few seconds to say so.
     let result = service.waiting().await;
-    pulse.abort();
     closing.depart().await;
     result?;
     Ok(())

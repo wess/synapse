@@ -37,10 +37,12 @@ pub struct View {
     pub scope: Option<ScopeState>,
     pub addglobal: bool,
     pub pendingforget: Option<i64>,
+    pub pendingreplace: Option<i64>,
     pub pendingvault: Option<i64>,
     pub backend: Backend,
     pub pendingbackend: bool,
     pub notice: Notice,
+    pub compact: bool,
 }
 
 pub fn render(view: View, actions: Actions, cx: &App) -> AnyElement {
@@ -79,22 +81,24 @@ pub fn render(view: View, actions: Actions, cx: &App) -> AnyElement {
         .child(
             div()
                 .w_full()
-                .max_w(px(980.0))
+                .max_w(px(1120.0))
                 .mx_auto()
                 .px(px(34.0))
                 .py(px(28.0))
                 .flex()
                 .flex_col()
                 .gap(px(20.0))
-                .child(hero(&view, switchbackend, cx))
+                .child(hero(&view, switchbackend, view.compact, cx))
                 .child(
                     div()
                         .flex()
+                        .when(view.compact, |element| element.flex_col())
                         .items_start()
                         .gap(px(18.0))
                         .child(
                             div()
-                                .w(px(240.0))
+                                .w(if view.compact { px(0.0) } else { px(240.0) })
+                                .when(view.compact, |element| element.w_full())
                                 .flex_none()
                                 .rounded(px(6.0))
                                 .border_1()
@@ -147,6 +151,7 @@ pub fn render(view: View, actions: Actions, cx: &App) -> AnyElement {
                                     view.secretvalue,
                                     view.addglobal,
                                     view.pendingforget,
+                                    view.pendingreplace,
                                     view.pendingvault,
                                     addsecret,
                                     togglenewglobal,
@@ -172,7 +177,7 @@ pub fn render(view: View, actions: Actions, cx: &App) -> AnyElement {
         .into_any_element()
 }
 
-fn hero(view: &View, switchbackend: Click, cx: &App) -> impl IntoElement {
+fn hero(view: &View, switchbackend: Click, compact: bool, cx: &App) -> impl IntoElement {
     let theme = guise::theme(cx);
     let noticecolor = match view.notice {
         Notice::Error(_) => theme.danger(),
@@ -197,15 +202,17 @@ fn hero(view: &View, switchbackend: Click, cx: &App) -> impl IntoElement {
         .child(
             div()
                 .flex()
-                .items_end()
-                .justify_between()
-                .gap(px(24.0))
+                .flex_col()
+                .items_start()
+                .gap(if compact { px(14.0) } else { px(10.0) })
                 .child(
                     div()
+                        .flex_1()
+                        .min_w(px(0.0))
                         .flex()
                         .flex_col()
                         .gap(px(7.0))
-                        .child(Title::new("Vaults and scopes").order(2))
+                        .child(Title::new("Secrets").order(3))
                         .child(
                             Text::new(
                                 "Keep credentials out of project files, then grant names at global, project, or folder level.",
@@ -216,6 +223,7 @@ fn hero(view: &View, switchbackend: Click, cx: &App) -> impl IntoElement {
                 )
                 .child(
                     div()
+                        .flex_none()
                         .flex()
                         .items_center()
                         .gap(px(10.0))
@@ -263,7 +271,7 @@ fn store(view: &View, switchbackend: Click) -> impl IntoElement {
                 if view.pendingbackend {
                     "Confirm move".to_owned()
                 } else {
-                    format!("Move to {}", view.backend.other().name())
+                    "Move values".to_owned()
                 },
             )
             .variant(Variant::Subtle)
@@ -313,6 +321,7 @@ fn secretpanel(
     value: Entity<PasswordInput>,
     addglobal: bool,
     pendingforget: Option<i64>,
+    pendingreplace: Option<i64>,
     pendingvault: Option<i64>,
     add: Click,
     togglenewglobal: Click,
@@ -366,6 +375,7 @@ fn secretpanel(
         let replaceclick = replace(secret.id);
         let forgetclick = forget(secret.id);
         let confirming = pendingforget == Some(secret.id);
+        let replacing = pendingreplace == Some(secret.id);
         rows = rows.child(
             div()
                 .min_h(px(64.0))
@@ -441,9 +451,18 @@ fn secretpanel(
                         .child(
                             Button::new(
                                 gpui::ElementId::Name(format!("replace{}", secret.id).into()),
-                                "Replace",
+                                if replacing {
+                                    "Confirm replace"
+                                } else {
+                                    "Replace"
+                                },
                             )
                             .variant(Variant::Subtle)
+                            .color(if replacing {
+                                ColorName::Orange
+                            } else {
+                                ColorName::Violet
+                            })
                             .size(Size::Xs)
                             .on_click(move |event, window, cx| replaceclick(event, window, cx)),
                         )
@@ -626,6 +645,28 @@ fn scopepanel(
                             .size(Size::Xs)
                             .dimmed(),
                     )
+                })
+                .when_some(scope, |element, scope| {
+                    let grants = scope
+                        .env
+                        .iter()
+                        .zip(&scope.references)
+                        .map(|(env, reference)| format!("{env} ← {reference}"))
+                        .collect::<Vec<_>>()
+                        .join(" · ");
+                    let denied = (!scope.denied.is_empty())
+                        .then(|| format!("Denied: {}", scope.denied.join(", ")));
+                    element
+                        .when(!grants.is_empty(), |element| {
+                            element.child(
+                                Text::new(format!("Grants: {grants}"))
+                                    .size(Size::Xs)
+                                    .bold(),
+                            )
+                        })
+                        .when_some(denied, |element, denied| {
+                            element.child(Text::new(denied).size(Size::Xs).dimmed())
+                        })
                 }),
         )
         .child(

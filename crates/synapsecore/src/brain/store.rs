@@ -81,6 +81,7 @@ impl Brain {
     ) -> Result<(i64, Vec<i64>)> {
         let body = stored(body)?;
         let body = body.as_str();
+        let source = sourced(source);
         let project = scope.project(project)?;
 
         let created = SystemTime::now()
@@ -91,7 +92,7 @@ impl Brain {
         let mut transaction = self.pool.begin_with("BEGIN IMMEDIATE").await?;
         let result = sqlx::query("INSERT INTO memory(body, source, created) VALUES (?, ?, ?)")
             .bind(body)
-            .bind(source.unwrap_or(""))
+            .bind(source.as_deref().unwrap_or(""))
             .bind(created)
             .execute(&mut *transaction)
             .await?;
@@ -535,13 +536,14 @@ impl Brain {
     ) -> Result<Option<Memory>> {
         let body = stored(body)?;
         let body = body.as_str();
+        let source = sourced(source);
         let _writer = self.writing().await;
         let mut transaction = self.pool.begin_with("BEGIN IMMEDIATE").await?;
         crate::brain::gram::unindex(&mut transaction, id).await?;
         let result =
             sqlx::query("UPDATE memory SET body = ?, source = COALESCE(?, source) WHERE rowid = ?")
                 .bind(body)
-                .bind(source.map(str::trim))
+                .bind(source)
                 .bind(id)
                 .execute(&mut *transaction)
                 .await
@@ -727,12 +729,30 @@ pub(super) fn terms(query: &str) -> (Vec<String>, Vec<String>) {
 /// byte of it here would make it a different memory to every other machine.
 fn stored(body: &str) -> Result<String> {
     anyhow::ensure!(!body.trim().is_empty(), "memory content cannot be empty");
+    anyhow::ensure!(
+        body.len() <= MAXBODY,
+        "a memory cannot be longer than {} KB; store what was decided and where the rest lives",
+        MAXBODY / 1024
+    );
     let body = crate::brain::redact(body).body.trim().to_owned();
     anyhow::ensure!(
         !body.is_empty(),
         "nothing is left to store once private and secret content is removed"
     );
     Ok(body)
+}
+
+/// The longest memory accepted from this machine. The largest anybody has
+/// written by hand is a few kilobytes; this is two orders past that, and what it
+/// stops is one call from a confused or misdirected agent writing a file's worth
+/// of text into a store that is indexed twice, recalled into context, and synced.
+const MAXBODY: usize = 256 * 1024;
+
+/// Where a memory came from, as it is stored. The label is indexed, recalled,
+/// and synced exactly as the body is, and an agent fills it in the same breath
+/// — a remote with a token in it is as likely here as there.
+fn sourced(source: Option<&str>) -> Option<String> {
+    source.map(|source| crate::brain::redact(source).body.trim().to_owned())
 }
 
 /// A literal pattern, safe to hand to `LIKE`. Without this a memory containing
@@ -909,6 +929,55 @@ mod tests {
             "imported",
             "the oldest memory belongs last however recently it was written"
         );
+    }
+
+    #[tokio::test]
+    async fn a_credential_in_the_source_is_removed_like_one_in_the_body() {
+        let directory = tempfile::tempdir().unwrap();
+        let brain = Brain::open(directory.path().join("brain.db"))
+            .await
+            .unwrap();
+        let remote = "https://deploy:ghp_abcdefghijklmnopqrstuvwxyz0123456789@git.internal/repo";
+        let id = brain
+            .rememberscoped(
+                "Deploys go through the internal remote.",
+                Some(remote),
+                MemoryScope::Global,
+                None,
+            )
+            .await
+            .unwrap();
+        let stored = brain.memory(id).await.unwrap().unwrap();
+        assert!(!stored.source.contains("ghp_"), "{}", stored.source);
+        assert!(stored.source.contains("git.internal/repo"));
+
+        let updated = brain
+            .updatememory(id, "Deploys go through the internal remote.", Some(remote))
+            .await
+            .unwrap()
+            .unwrap();
+        assert!(!updated.source.contains("ghp_"), "{}", updated.source);
+    }
+
+    #[tokio::test]
+    async fn a_memory_the_size_of_a_file_is_refused() {
+        let directory = tempfile::tempdir().unwrap();
+        let brain = Brain::open(directory.path().join("brain.db"))
+            .await
+            .unwrap();
+        let fits = "word ".repeat(MAXBODY / 5);
+        assert!(fits.len() <= MAXBODY);
+        assert!(
+            brain
+                .rememberscoped(&fits, None, MemoryScope::Global, None)
+                .await
+                .is_ok()
+        );
+        let error = brain
+            .rememberscoped(&format!("{fits}and more"), None, MemoryScope::Global, None)
+            .await
+            .unwrap_err();
+        assert!(error.to_string().contains("cannot be longer"), "{error}");
     }
 
     #[tokio::test]

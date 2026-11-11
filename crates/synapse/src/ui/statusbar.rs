@@ -12,6 +12,7 @@ use tray_icon::{Icon, TrayIcon, TrayIconBuilder};
 #[derive(Debug, Clone, Copy)]
 pub enum Action {
     Open,
+    Logs,
     Data,
     Install,
     CheckUpdates,
@@ -23,6 +24,9 @@ pub enum Action {
 
 pub struct Statusbar {
     _tray: TrayIcon,
+    summary: MenuItem,
+    queue: MenuItem,
+    recent: Vec<MenuItem>,
 }
 
 impl Global for Statusbar {}
@@ -30,6 +34,12 @@ impl Global for Statusbar {}
 pub fn install(sender: Sender<Action>) -> anyhow::Result<Statusbar> {
     let menu = Menu::new();
     let open = MenuItem::new("Open Synapse", true, None);
+    let openlogs = MenuItem::new("Open Logs", true, None);
+    let summary = MenuItem::new("0 agents · 0 running", false, None);
+    let queue = MenuItem::new("0 queued · 0 errors today", false, None);
+    let recent = (0..4)
+        .map(|_| MenuItem::new("No recent activity", false, None))
+        .collect::<Vec<_>>();
     let install = MenuItem::new("Install CLI", true, None);
     let data = MenuItem::new("Open data folder", true, None);
     let updates = MenuItem::new("Check for Updates…", true, None);
@@ -41,6 +51,15 @@ pub fn install(sender: Sender<Action>) -> anyhow::Result<Statusbar> {
     let separator = PredefinedMenuItem::separator();
     let quit = MenuItem::new("Quit Synapse", true, None);
     menu.append_items(&[
+        &summary,
+        &queue,
+        &PredefinedMenuItem::separator(),
+        &recent[0],
+        &recent[1],
+        &recent[2],
+        &recent[3],
+        &PredefinedMenuItem::separator(),
+        &openlogs,
         &open,
         &install,
         &data,
@@ -51,6 +70,7 @@ pub fn install(sender: Sender<Action>) -> anyhow::Result<Statusbar> {
     ])?;
 
     let openid = open.id().clone();
+    let logsid = openlogs.id().clone();
     let installid = install.id().clone();
     let dataid = data.id().clone();
     let updatesid = updates.id().clone();
@@ -61,6 +81,8 @@ pub fn install(sender: Sender<Action>) -> anyhow::Result<Statusbar> {
     MenuEvent::set_event_handler(Some(move |event: MenuEvent| {
         let action = if event.id == openid {
             Some(Action::Open)
+        } else if event.id == logsid {
+            Some(Action::Logs)
         } else if event.id == installid {
             Some(Action::Install)
         } else if event.id == dataid {
@@ -84,14 +106,75 @@ pub fn install(sender: Sender<Action>) -> anyhow::Result<Statusbar> {
     }));
 
     let tray = TrayIconBuilder::new()
-        .with_tooltip("Synapse · local memory")
+        .with_tooltip("Synapse · local backend")
         .with_menu(Box::new(menu))
         .with_menu_on_left_click(true)
         .with_icon_as_template(true)
         .with_icon(icon()?)
         .build()?;
 
-    Ok(Statusbar { _tray: tray })
+    Ok(Statusbar {
+        _tray: tray,
+        summary,
+        queue,
+        recent,
+    })
+}
+
+impl Statusbar {
+    pub fn refresh(
+        &self,
+        summary: &synapsecore::backend::Summary,
+        events: &[synapsecore::backend::Event],
+    ) {
+        self.summary.set_text(format!(
+            "{} agents · {} running",
+            summary.liveagents, summary.running
+        ));
+        self.queue.set_text(format!(
+            "{} queued · {} errors today",
+            summary.queued, summary.errors
+        ));
+        for (index, item) in self.recent.iter().enumerate() {
+            let text = events
+                .iter()
+                .rev()
+                .nth(index)
+                .map(|event| {
+                    let source = if event.agent.is_empty() {
+                        event.source.as_str()
+                    } else {
+                        event.agent.as_str()
+                    };
+                    format!(
+                        "{} · {} · {}",
+                        source,
+                        event.kind,
+                        clipped(&event.message, 54)
+                    )
+                })
+                .unwrap_or_else(|| {
+                    if index == 0 {
+                        "No recent activity".to_owned()
+                    } else {
+                        " ".to_owned()
+                    }
+                });
+            item.set_text(text);
+        }
+    }
+}
+
+fn clipped(value: &str, limit: usize) -> String {
+    if value.chars().count() <= limit {
+        return value.to_owned();
+    }
+    let mut text = value
+        .chars()
+        .take(limit.saturating_sub(1))
+        .collect::<String>();
+    text.push('…');
+    text
 }
 
 /// macOS reads two separate things off the activation policy: whether the app

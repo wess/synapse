@@ -49,6 +49,20 @@ const BACKOFFCEILING: Duration = Duration::from_secs(60);
 /// worker log for is the most recent output, so the tail is what survives.
 const MAXLOG: u64 = 4 * 1024 * 1024;
 
+/// How many worker logs the folder keeps. [`MAXLOG`] bounds one file; a name is
+/// a file, and every team anybody ever ran leaves its names behind, so without
+/// this the folder is bounded by nothing. Newest first, and a worker that is
+/// still on the roster is never counted against it.
+const KEEPLOGS: usize = 32;
+
+/// How long a log nobody has written to is kept, whatever the count.
+const STALELOG: Duration = Duration::from_secs(30 * 86400);
+
+/// How long the MCP config written for a launch is kept. Far longer than a log,
+/// because a session still open may read its config again, and a file this
+/// small costs nothing to leave.
+const STALECONFIG: Duration = Duration::from_secs(90 * 86400);
+
 #[derive(Clone, Debug)]
 pub struct Spec {
     pub name: String,
@@ -85,6 +99,16 @@ impl Supervisor {
         let directory = crate::relay::directory()?;
         std::fs::create_dir_all(&directory)
             .with_context(|| format!("could not create {}", directory.display()))?;
+        // A worker's log is everything it printed, which is everything its tools
+        // returned. Owner-only like the rest of the data folder, rather than
+        // leaning on the folder above it.
+        let _ = crate::database::securedirectory(&directory);
+        let running = mesh
+            .workers()
+            .await
+            .map(|workers| workers.into_iter().map(|worker| worker.name).collect())
+            .unwrap_or_default();
+        sweep(&directory, &running);
         let log = directory.join(format!("{}.log", spec.name));
         // Read per launch rather than held, so raising the limit takes effect on
         // the next spawn instead of the next restart of whatever is supervising.
@@ -191,11 +215,7 @@ async fn monitor(
             break;
         }
         trim(&log);
-        let Ok(output) = std::fs::OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(&log)
-        else {
+        let Ok(output) = logfile(&log) else {
             let _ = mesh
                 .workerstate(&spec.name, "could not open the worker log", 0, restarts)
                 .await;
@@ -278,6 +298,60 @@ async fn monitor(
     }
     supervisor.workers.lock().await.remove(&spec.name);
     let _ = mesh.deleteworker(&spec.name).await;
+}
+
+/// Open a worker's log for appending, readable by its owner alone.
+fn logfile(log: &std::path::Path) -> std::io::Result<std::fs::File> {
+    let mut options = std::fs::OpenOptions::new();
+    options.create(true).append(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.mode(0o600);
+    }
+    let file = options.open(log)?;
+    // The mode above only applies to a file this call created.
+    let _ = crate::database::securefile(log);
+    Ok(file)
+}
+
+/// Bound the workers folder: the newest [`KEEPLOGS`] logs written to within
+/// [`STALELOG`], and launch configs younger than [`STALECONFIG`]. A worker in
+/// `running` keeps its log however quiet it has been. Nothing here is worth
+/// failing a launch over, so every error is a file left for next time.
+fn sweep(directory: &std::path::Path, running: &std::collections::HashSet<String>) {
+    let Ok(entries) = std::fs::read_dir(directory) else {
+        return;
+    };
+    let now = std::time::SystemTime::now();
+    let age = |path: &std::path::Path| {
+        std::fs::metadata(path)
+            .and_then(|metadata| metadata.modified())
+            .ok()
+            .and_then(|modified| now.duration_since(modified).ok())
+            .unwrap_or_default()
+    };
+    let mut logs = Vec::new();
+    for path in entries.flatten().map(|entry| entry.path()) {
+        let Some(name) = path.file_name().and_then(|name| name.to_str()) else {
+            continue;
+        };
+        if let Some(worker) = name.strip_suffix(".log") {
+            if !running.contains(worker) {
+                logs.push((age(&path), path));
+            }
+        } else if (name.ends_with(".mcp.json") || name.ends_with(".mcp.json.synapsebackup"))
+            && age(&path) > STALECONFIG
+        {
+            let _ = std::fs::remove_file(&path);
+        }
+    }
+    logs.sort();
+    for (index, (age, path)) in logs.into_iter().enumerate() {
+        if index >= KEEPLOGS || age > STALELOG {
+            let _ = std::fs::remove_file(path);
+        }
+    }
 }
 
 /// Keep a worker log under [`MAXLOG`] by dropping the oldest half, between runs
@@ -467,6 +541,79 @@ mod tests {
             kept.starts_with("old line\n"),
             "must resume at a line break"
         );
+    }
+
+    fn aged(path: &std::path::Path, days: u64) {
+        let file = std::fs::OpenOptions::new().write(true).open(path).unwrap();
+        file.set_modified(std::time::SystemTime::now() - Duration::from_secs(days * 86400))
+            .unwrap();
+    }
+
+    #[test]
+    fn the_workers_folder_keeps_recent_logs_and_drops_the_rest() {
+        let directory = tempfile::tempdir().unwrap();
+        let at = |name: &str| directory.path().join(name);
+        // More recent logs than the folder keeps, each a day older than the last.
+        for index in 0..KEEPLOGS + 6 {
+            let path = at(&format!("recent{index:02}.log"));
+            std::fs::write(&path, "output\n").unwrap();
+            aged(&path, index as u64 % 29);
+        }
+        for (name, days) in [
+            ("ancient.log", 45),
+            ("supervised.log", 400),
+            ("fresh.mcp.json", 10),
+            ("ancient.mcp.json", 120),
+            ("ancient.mcp.json.synapsebackup", 120),
+            ("notes.txt", 400),
+        ] {
+            std::fs::write(at(name), "{}").unwrap();
+            aged(&at(name), days);
+        }
+
+        sweep(
+            directory.path(),
+            &std::collections::HashSet::from(["supervised".to_owned()]),
+        );
+
+        let kept = |suffix: &str| {
+            std::fs::read_dir(directory.path())
+                .unwrap()
+                .flatten()
+                .filter(|entry| entry.file_name().to_string_lossy().ends_with(suffix))
+                .count()
+        };
+        assert!(!at("ancient.log").exists(), "nobody wrote to it in a month");
+        assert!(
+            at("supervised.log").exists(),
+            "a worker still on the roster keeps its log however old"
+        );
+        assert_eq!(
+            kept(".log"),
+            KEEPLOGS + 1,
+            "the newest, plus the supervised one"
+        );
+        assert!(at("fresh.mcp.json").exists());
+        assert!(!at("ancient.mcp.json").exists());
+        assert!(!at("ancient.mcp.json.synapsebackup").exists());
+        assert!(at("notes.txt").exists(), "only what Synapse wrote here");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_worker_log_is_readable_by_its_owner_alone_even_if_it_was_not_before() {
+        use std::os::unix::fs::PermissionsExt;
+        let directory = tempfile::tempdir().unwrap();
+        let fresh = directory.path().join("fresh.log");
+        drop(logfile(&fresh).unwrap());
+        let existing = directory.path().join("existing.log");
+        std::fs::write(&existing, "from an older release\n").unwrap();
+        std::fs::set_permissions(&existing, std::fs::Permissions::from_mode(0o644)).unwrap();
+        drop(logfile(&existing).unwrap());
+        for log in [fresh, existing] {
+            let mode = std::fs::metadata(&log).unwrap().permissions().mode() & 0o777;
+            assert_eq!(mode, 0o600, "{}", log.display());
+        }
     }
 
     #[test]

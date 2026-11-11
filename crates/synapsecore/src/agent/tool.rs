@@ -266,13 +266,25 @@ pub fn resolve(home: &Path, root: Option<&Path>, slug: &str) -> Result<Option<Ag
 /// A descriptor's file text and the layer it came from, so it can be shown or
 /// used as the seed for a copy in a layer the user owns.
 pub fn text(root: Option<&Path>, slug: &str) -> Result<(String, Source)> {
-    layer::read(KIND, BUILTINS, root, slug).with_context(|| format!("no tool named `{slug}`"))
+    layer::read(KIND, BUILTINS, root, slug)
+        .with_context(|| layer::unknown("tool", KIND, root, slug, "tool"))
 }
 
 pub fn save(slug: &str, user: bool, root: &Path, text: &str) -> Result<PathBuf> {
     let home = crate::files::home()?;
     parse(&home, slug, text, Source::User).context("that descriptor is not usable")?;
     layer::save(KIND, slug, user, root, text)
+}
+
+/// Approve this project's descriptor of that name as it reads now. Until then
+/// it is not resolved, and so nothing it names is run.
+pub fn allow(root: &Path, slug: &str) -> Result<PathBuf> {
+    layer::allow(KIND, root, slug)
+}
+
+/// This project's descriptors that are present and not approved.
+pub fn pending(root: Option<&Path>) -> Vec<String> {
+    layer::pending(KIND, root)
 }
 
 /// Remove a descriptor from a layer the user owns. A built-in has no file, so

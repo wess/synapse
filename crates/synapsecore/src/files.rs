@@ -1,5 +1,4 @@
 mod atomic;
-#[cfg(not(unix))]
 pub(crate) use atomic::replace as atomicreplace;
 mod index;
 mod rollback;

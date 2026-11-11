@@ -22,6 +22,12 @@ impl VaultStore {
         Self::from(crate::database::glance(path.as_ref()).await?)
     }
 
+    /// The vault's metadata over a store that is already open. See
+    /// [`crate::relay::Mesh::sharing`].
+    pub(crate) fn sharing(brain: &crate::brain::Brain) -> Result<Self> {
+        Self::from(brain.handle())
+    }
+
     fn from(opened: crate::database::Opened) -> Result<Self> {
         Ok(Self {
             pool: opened.pool,
@@ -293,10 +299,25 @@ fn now() -> Result<i64> {
         .as_secs() as i64)
 }
 
+/// Where an approved file sits: its folder resolved, its own name as written.
+///
+/// Resolving the name as well keys a link on whatever it points at, and then a
+/// link to an approved file is approved by it — in a folder nobody ever
+/// approved, which is exactly what the record exists to tell apart. For a file
+/// that is not a link the two spellings are the same, so nothing already
+/// approved moves.
 fn normalize(path: &Path) -> Result<String> {
-    path.canonicalize()
+    let name = path
+        .file_name()
+        .with_context(|| format!("{} does not name a file", path.display()))?;
+    let folder = match path.parent() {
+        Some(parent) if !parent.as_os_str().is_empty() => parent,
+        _ => Path::new("."),
+    };
+    folder
+        .canonicalize()
         .with_context(|| format!("could not resolve {}", path.display()))
-        .map(|path| path.display().to_string())
+        .map(|folder| folder.join(name).display().to_string())
 }
 
 #[cfg(test)]

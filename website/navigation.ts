@@ -9,7 +9,6 @@ export const sections = [
       "docs/knowledge/",
       "docs/mcp/",
       "docs/mesh/",
-      "docs/scenes/",
       "docs/skills/",
       "docs/servers/",
       "docs/sources/",

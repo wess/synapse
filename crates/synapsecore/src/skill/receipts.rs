@@ -46,6 +46,16 @@ impl Receipts {
         })
     }
 
+    /// The receipts over a store that is already open. See
+    /// [`crate::relay::Mesh::sharing`].
+    pub(crate) fn sharing(brain: &crate::brain::Brain) -> Self {
+        let opened = brain.handle();
+        Self {
+            pool: opened.pool,
+            _lock: opened.lock,
+        }
+    }
+
     /// Open without the whole-page integrity scan, for a caller that only
     /// reports. The session hook and the status line both want the number of
     /// proposals, and the status line redraws on every turn.

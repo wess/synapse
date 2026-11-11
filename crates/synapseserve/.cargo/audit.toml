@@ -1,0 +1,6 @@
+[advisories]
+# This crate is its own workspace root, so `cargo audit` run here does not read
+# the repository's `.cargo/audit.toml`. The reasoning for this exception lives
+# there. The server opens exactly one database, which it created, in a folder
+# only its own account can write: nobody else can put a write-ahead log beside it.
+ignore = ["RUSTSEC-2026-0459"]

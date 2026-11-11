@@ -27,17 +27,21 @@ pub async fn run() -> anyhow::Result<()> {
             }
         }
     }
+    // One open, shared. Each further one would be its own pool on the same
+    // file, and with other sessions writing in between, its own whole-file scan.
     let brain = crate::brain::Brain::open(&database).await?;
-    let vaults = crate::vault::VaultStore::open(&database).await?;
+    let vaults = crate::vault::VaultStore::sharing(&brain)?;
     // Read once at startup: the tool list a client sees is fixed for the life of
     // its session, so a mesh switched on mid-session takes effect the next time
     // that tool starts.
     let enabled = brain.mesh().await?;
     let mesh = if enabled {
-        let mesh = crate::relay::Mesh::open(&database).await?;
+        let mesh = crate::relay::Mesh::sharing(&brain)?;
         // Clear workers left behind by a session that was killed rather than
         // closed, before this one starts adding its own.
         let _ = crate::relay::reapstrays(&mesh).await;
+        // And roster rows left by sessions that never got to say goodbye.
+        let _ = mesh.retire().await;
         Some(mesh)
     } else {
         None
@@ -46,7 +50,7 @@ pub async fn run() -> anyhow::Result<()> {
     // client sees is fixed for the life of its session.
     let learning = brain.learn().await?;
     let receipts = match learning {
-        true => Some(crate::skill::Receipts::open(&database).await?),
+        true => Some(crate::skill::Receipts::sharing(&brain)),
         false => None,
     };
     let knowledge = brain.knowledge().await?;

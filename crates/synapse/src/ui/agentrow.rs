@@ -83,8 +83,8 @@ pub fn render(index: usize, row: Row, actions: Actions) -> AnyElement {
         .flex_col()
         .gap(px(12.0))
         .min_w(px(0.0))
-        .px(px(22.0))
-        .py(px(16.0))
+        .px(px(18.0))
+        .py(px(14.0))
         .child(
             div()
                 .flex()
@@ -180,15 +180,15 @@ pub fn render(index: usize, row: Row, actions: Actions) -> AnyElement {
                 .child(
                     Button::new(("instructions", index), "Edit instructions")
                         .variant(Variant::Subtle)
-                        .color(ColorName::Violet)
+                        .color(ColorName::Gray)
                         .size(Size::Xs)
                         .left_section(Icon::new(IconName::FileText).size(Size::Xs))
                         .on_click(move |event, window, cx| oninstructions(event, window, cx)),
                 )
                 .child(
-                    Button::new(("descriptor", index), "Descriptor")
+                    Button::new(("descriptor", index), "View descriptor")
                         .variant(Variant::Subtle)
-                        .color(ColorName::Violet)
+                        .color(ColorName::Gray)
                         .size(Size::Xs)
                         .left_section(Icon::new(IconName::PlugZap).size(Size::Xs))
                         .on_click(move |event, window, cx| ondescriptor(event, window, cx)),
@@ -196,7 +196,7 @@ pub fn render(index: usize, row: Row, actions: Actions) -> AnyElement {
                 .child(
                     Button::new(("settings", index), "Edit config")
                         .variant(Variant::Subtle)
-                        .color(ColorName::Violet)
+                        .color(ColorName::Gray)
                         .size(Size::Xs)
                         .left_section(Icon::new(IconName::Settings2).size(Size::Xs))
                         .on_click(move |event, window, cx| onsettings(event, window, cx)),
@@ -207,28 +207,24 @@ pub fn render(index: usize, row: Row, actions: Actions) -> AnyElement {
                 // repeating it was a control that could never be pressed.
                 .when(connected, |element| {
                     element
-                        .child(
+                        .when(outdated, |element| element.child(
                             Button::new(("update", index), "Update")
-                                .variant(if outdated {
-                                    Variant::Filled
-                                } else {
-                                    Variant::Subtle
-                                })
+                                .variant(Variant::Filled)
                                 .color(ColorName::Violet)
                                 .size(Size::Xs)
                                 .left_section(Icon::new(IconName::RefreshCw).size(Size::Xs))
                                 .on_click(move |event, window, cx| onupdate(event, window, cx)),
-                        )
+                        ))
                         .child(
-                            Button::new(("reset", index), "Reset")
+                            Button::new(("reset", index), "Reconnect")
                                 .variant(Variant::Subtle)
-                                .color(ColorName::Violet)
+                                .color(ColorName::Gray)
                                 .size(Size::Xs)
                                 .left_section(Icon::new(IconName::RotateCcw).size(Size::Xs))
                                 .on_click(move |event, window, cx| onreset(event, window, cx)),
                         )
                         .child(
-                            Button::new(("remove", index), "Remove")
+                            Button::new(("remove", index), "Disconnect")
                                 .variant(Variant::Subtle)
                                 .color(ColorName::Red)
                                 .size(Size::Xs)
@@ -238,7 +234,7 @@ pub fn render(index: usize, row: Row, actions: Actions) -> AnyElement {
                 })
                 .when(!connected, |element| {
                     element.child(
-                        Button::new(("setup", index), "Set up")
+                        Button::new(("setup", index), "Connect")
                             .variant(Variant::Filled)
                             .size(Size::Xs)
                             .color(ColorName::Violet)

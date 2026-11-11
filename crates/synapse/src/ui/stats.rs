@@ -117,7 +117,7 @@ fn header(days: Option<u32>, window: &dyn Fn(Option<u32>) -> Click, refresh: Cli
                 .flex()
                 .flex_col()
                 .gap(px(7.0))
-                .child(Title::new("Stats").order(2))
+                .child(Title::new("Usage").order(3))
                 .child(
                     Text::new(
                         "Tokens kept out of your sessions, compared with loading the same memory from an instruction file, and what each session carries.",

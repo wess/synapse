@@ -5,7 +5,7 @@ mod harness;
 mod launch;
 pub(crate) mod layer;
 mod model;
-mod process;
+pub(crate) mod process;
 pub mod role;
 pub(crate) mod store;
 pub mod team;

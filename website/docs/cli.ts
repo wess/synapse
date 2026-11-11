@@ -14,7 +14,7 @@ export const cli: Page = {
     { label: "Memory", id: "memory" },
     { label: "Learning", id: "learning" },
     { label: "Agent mesh", id: "mesh" },
-    { label: "Plugin development", id: "plugins" },
+    { label: "Local backend", id: "backend" },
     { label: "Skills", id: "skills" },
     { label: "Data and settings", id: "data" },
     { label: "Installation and paths", id: "installation" },
@@ -105,14 +105,18 @@ ${command("learn restore", "synapse learn restore &lt;id&gt; --confirm", "Remove
     ${command("compact", "synapse compact", "Answer a tool's pre-compaction hook. Asks the session to write down anything durable it settled before its context is compressed away, and recalls nothing \u2014 the window is being reclaimed. Synapse installs this for you when you connect Claude Code. Never blocks or rewrites the compaction. Reads the calling tool's JSON on stdin.")}
     ${command("statusline", "synapse statusline", "Print one status line for a connected tool, reading that tool's JSON on stdin.")}
 
-    <h2 id="plugins">Plugin development</h2>
-    <p>Plugins are local declarative packs, not executable extensions. API 1 supports scene palettes and PNG room or character art. See the <a href="../scenes/">Scenes and plugins guide</a> for the manifest and asset layout.</p>
-    ${command("plugin init", "synapse plugin init [folder] [--id <id>]", "Add <code>plugin.toml</code> to an existing folder without replacing one already there. The folder defaults to the current directory and its name becomes the plugin ID. Use <code>--id</code> when that folder name is not 1 to 64 lowercase letters and digits.")}
-    ${command("plugin create", "synapse plugin create <id> [folder]", "Create a scene-plugin manifest without overwriting anything. The folder defaults to <code>./&lt;id&gt;</code>. IDs contain 1 to 64 lowercase letters and digits; <code>workshop</code> is reserved for the built-in pack.")}
-    ${command("plugin check", "synapse plugin check [folder] [--json]", "Validate a development folder without installing it. Checks the manifest, API and kind, colors, declared paths, file types, size bounds, and path containment. The folder defaults to the current directory. Image decoding and dimensions are checked by the desktop renderer when it loads the art.")}
-    ${command("plugin install", "synapse plugin install [folder] [--replace]", "Validate, then copy only the manifest and assets it declares into the local plugin folder. Refuses an existing ID unless <code>--replace</code> is present. Replacement is staged first and keeps one hidden <code>.&lt;id&gt;.synapsebackup</code> rollback directory beside the installed copy.")}
-    ${command("plugin list", "synapse plugin list [--json]", "List the built-in pack and every valid installed plugin with ID, version, source, and display name. Invalid plugin folders are isolated and reported as warnings.")}
-    ${command("plugin path", "synapse plugin path", "Print the local plugin install folder. <code>SYNAPSE_DATA</code> relocates it for development and tests.")}
+    <h2 id="backend">Local backend</h2>
+    <p>The backend commands expose the same bounded runtime state as the native Logs view. Structured bodies are read from stdin. <code>backend api</code> is a versioned JSONL stdin/stdout protocol for local harnesses; it opens no listener.</p>
+    ${command("backend summary", "synapse backend summary", "Print live-agent, run, queue, and recent error counts.")}
+    ${command("backend events", "synapse backend events [--after &lt;id&gt;] [--limit &lt;n&gt;] [filters]", "Read the redacted event ledger. Cursor reads are ascending; initial reads return the newest bounded window.")}
+    ${command("backend emit", "synapse backend emit", "Read one event draft as JSON from stdin, redact it, and append it to the bounded ledger.")}
+    ${command("backend runs", "synapse backend runs [--limit &lt;n&gt;]", "List durable jobs. Run subcommands create, update, claim, renew, cancel, retry, and replay them.")}
+    ${command("backend artifact", "synapse backend artifact &lt;put|attach|list|read&gt;", "Store verified content-addressed output, attach it to a run, or read it back.")}
+    ${command("backend capability", "synapse backend capability &lt;list|allow|deny|check&gt;", "Manage exact default-deny capability decisions, optionally bound to a content digest.")}
+    ${command("backend trigger", "synapse backend trigger &lt;list|put|due|mark|tick&gt;", "Manage triggers. Tick dispatches due work on demand; no scheduler process stays resident.")}
+    ${command("backend route", "synapse backend route &lt;list|put|select|call&gt;", "Manage and invoke ordered inference routes. Local routes are loopback-only; remote routes require HTTPS.")}
+    ${command("backend evaluation", "synapse backend evaluation &lt;list|add&gt;", "Attach expected output, actual output, a normalized score, and a note to a run.")}
+    ${command("backend api", "synapse backend api", "Read versioned JSON requests one per line from stdin and write one response per line to stdout.")}
 
     <h2 id="skills">Skills</h2>
     <p>One Agent Skills library, installed into every connected tool. See the <a href="../skills/">skills guide</a> for the format and the folders involved.</p>
@@ -175,7 +179,8 @@ ${command("guidance adopt", "synapse guidance adopt --confirm", "Move unmanaged 
       <code>.synapse/tools/</code> in a repository first, then your data
       directory, then the ones Synapse ships \u2014 so a project can carry the tool
       its team works in, and you can correct a built-in without waiting for a
-      release. A described tool gets everything a built-in gets: connection,
+      release. A project's descriptor is used only once you have approved it as
+      it is written, with <code>synapse tool allow &lt;name&gt;</code>. A described tool gets everything a built-in gets: connection,
       shared guidance, the skill library, and the mesh.
     </p>
     <p>Follow the <a href="../harnesses/">custom harness guide</a> for a descriptor example, setup verification, and contribution instructions.</p>

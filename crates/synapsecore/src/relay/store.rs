@@ -1,3 +1,4 @@
+use crate::backend::{EventDraft, Level};
 use crate::relay::{AgentView, ChannelView, Message, MessageKind, Registration, WorkerView};
 use anyhow::{Context, Result};
 use sqlx::SqlitePool;
@@ -17,6 +18,19 @@ const RETENTION: i64 = 10_000;
 /// Absolute backlog bound. A lagging reader's unread messages are preserved past
 /// [`RETENTION`], but never beyond this.
 const MAXBACKLOG: i64 = 50_000;
+
+/// The longest message the mesh carries. History is bounded by row count, so
+/// without a bound on the row the bound on the table means nothing: one agent
+/// pasting a build log into a broadcast is delivered into every reader's
+/// context and kept for ten thousand messages.
+const MAXMESSAGE: usize = 256 * 1024;
+
+/// How long a roster row survives with nobody answering to it. A session that
+/// closes forgets its own row; one that was killed cannot, and a name somebody
+/// messaged once and nobody ever took is a row with no session to forget it.
+/// Each also holds a read cursor, and the slowest cursor is what keeps delivered
+/// messages from being pruned.
+const GONE: i64 = 30 * 86400;
 
 /// One roster row as the query returns it: name, role, status, progress note,
 /// project, tool, whether it is a person, whether it registered, how many
@@ -62,6 +76,14 @@ impl Mesh {
         Self::from(crate::database::glance(path.as_ref()).await?)
     }
 
+    /// The mesh over a store that is already open. One process asking for
+    /// memory, the mesh, the vault, and skill receipts is asking about one file,
+    /// and a pool apiece is four sets of connections, checks, and threads to
+    /// reach the same tables.
+    pub(crate) fn sharing(brain: &crate::brain::Brain) -> Result<Self> {
+        Self::from(brain.handle())
+    }
+
     fn from(opened: crate::database::Opened) -> Result<Self> {
         Ok(Self {
             pool: opened.pool,
@@ -93,6 +115,23 @@ impl Mesh {
         .execute(&self.pool)
         .await
         .context("could not join the mesh")?;
+        logevent(
+            &self.pool,
+            EventDraft {
+                source: "mesh".into(),
+                project: registration.project.clone(),
+                agent: name,
+                kind: "agent.join".into(),
+                message: format!("{} joined the mesh", registration.name),
+                fields: serde_json::json!({
+                    "role": registration.role,
+                    "tool": registration.tool,
+                    "human": registration.human,
+                }),
+                ..Default::default()
+            },
+        )
+        .await;
         Ok(())
     }
 
@@ -139,6 +178,33 @@ impl Mesh {
         .bind(name)
         .execute(&self.pool)
         .await?;
+        let project =
+            sqlx::query_scalar::<_, String>("SELECT project FROM meshagent WHERE name = ?")
+                .bind(name)
+                .fetch_optional(&self.pool)
+                .await
+                .ok()
+                .flatten()
+                .unwrap_or_default();
+        let level = if matches!(status, "failed" | "blocked" | "error" | "crashed") {
+            Level::Error
+        } else {
+            Level::Info
+        };
+        logevent(
+            &self.pool,
+            EventDraft {
+                source: "mesh".into(),
+                project,
+                agent: name.into(),
+                level,
+                kind: "agent.status".into(),
+                message: format!("{name} is {status}"),
+                fields: serde_json::json!({ "status": status, "note": note }),
+                ..Default::default()
+            },
+        )
+        .await;
         Ok(())
     }
 
@@ -161,6 +227,11 @@ impl Mesh {
         body: &str,
     ) -> Result<i64> {
         anyhow::ensure!(!body.trim().is_empty(), "a message cannot be empty");
+        anyhow::ensure!(
+            body.len() <= MAXMESSAGE,
+            "a message cannot be longer than {} KB; write the result to a file and send its path",
+            MAXMESSAGE / 1024
+        );
         let id = sqlx::query(
             "INSERT INTO meshmessage(sender, kind, target, body, created) VALUES (?, ?, ?, ?, ?)",
         )
@@ -174,6 +245,31 @@ impl Mesh {
         .context("could not post to the mesh")?
         .last_insert_rowid();
         self.prune().await?;
+        let project =
+            sqlx::query_scalar::<_, String>("SELECT project FROM meshagent WHERE name = ?")
+                .bind(sender)
+                .fetch_optional(&self.pool)
+                .await
+                .ok()
+                .flatten()
+                .unwrap_or_default();
+        logevent(
+            &self.pool,
+            EventDraft {
+                source: "mesh".into(),
+                project,
+                agent: sender.into(),
+                kind: "mesh.message".into(),
+                message: format!("{sender} sent a {} message", kind.value()),
+                fields: serde_json::json!({
+                    "message": id,
+                    "kind": kind.value(),
+                    "target": target,
+                }),
+                ..Default::default()
+            },
+        )
+        .await;
         Ok(id)
     }
 
@@ -287,6 +383,23 @@ impl Mesh {
             .collect())
     }
 
+    /// Forget every agent nobody has answered to in [`GONE`], returning how
+    /// many went. Their subscriptions go with them; their messages stay.
+    pub async fn retire(&self) -> Result<u64> {
+        let before = now()? - GONE;
+        sqlx::query(
+            "DELETE FROM meshsub WHERE agent IN (SELECT name FROM meshagent WHERE seen < ?)",
+        )
+        .bind(before)
+        .execute(&self.pool)
+        .await?;
+        Ok(sqlx::query("DELETE FROM meshagent WHERE seen < ?")
+            .bind(before)
+            .execute(&self.pool)
+            .await?
+            .rows_affected())
+    }
+
     /// Forget an agent that has left, so a session that ended stops appearing on
     /// the roster. Its subscriptions go with it; its messages stay in the feed.
     pub async fn forget(&self, name: &str) -> Result<()> {
@@ -348,6 +461,23 @@ impl Mesh {
         .execute(&self.pool)
         .await
         .context("could not record the worker")?;
+        logevent(
+            &self.pool,
+            EventDraft {
+                source: "worker".into(),
+                agent: worker.name.clone(),
+                session: worker.session.clone().unwrap_or_default(),
+                kind: "worker.start".into(),
+                message: format!("{} started", worker.name),
+                fields: serde_json::json!({
+                    "role": worker.role,
+                    "keepalive": worker.keepalive,
+                    "supervisor": worker.supervisor,
+                }),
+                ..Default::default()
+            },
+        )
+        .await;
         Ok(())
     }
 
@@ -365,14 +495,50 @@ impl Mesh {
             .bind(name)
             .execute(&self.pool)
             .await?;
+        let level = if matches!(status, "failed" | "error" | "crashed") {
+            Level::Error
+        } else {
+            Level::Info
+        };
+        logevent(
+            &self.pool,
+            EventDraft {
+                source: "worker".into(),
+                agent: name.into(),
+                level,
+                kind: "worker.status".into(),
+                message: format!("{name} is {status}"),
+                fields: serde_json::json!({
+                    "status": status,
+                    "process": process,
+                    "restarts": restarts,
+                }),
+                ..Default::default()
+            },
+        )
+        .await;
         Ok(())
     }
 
     pub async fn deleteworker(&self, name: &str) -> Result<()> {
-        sqlx::query("DELETE FROM meshworker WHERE name = ?")
+        let deleted = sqlx::query("DELETE FROM meshworker WHERE name = ?")
             .bind(name)
             .execute(&self.pool)
-            .await?;
+            .await?
+            .rows_affected();
+        if deleted > 0 {
+            logevent(
+                &self.pool,
+                EventDraft {
+                    source: "worker".into(),
+                    agent: name.into(),
+                    kind: "worker.stop".into(),
+                    message: format!("{name} stopped"),
+                    ..Default::default()
+                },
+            )
+            .await;
+        }
         Ok(())
     }
 
@@ -449,6 +615,10 @@ impl Mesh {
     }
 }
 
+async fn logevent(pool: &SqlitePool, draft: EventDraft) {
+    let _ = crate::backend::recordpool(pool, draft).await;
+}
+
 /// A background worker as persisted, so the roster survives the session that
 /// started it and `synapse relay ps` can report on it.
 pub struct WorkerRecord {
@@ -521,6 +691,53 @@ mod tests {
             role: "worker".to_owned(),
             ..Registration::default()
         }
+    }
+
+    #[tokio::test]
+    async fn a_message_the_size_of_a_log_is_refused() {
+        let (mesh, _directory) = mesh().await;
+        let fits = "x".repeat(MAXMESSAGE);
+        mesh.insert("lead", MessageKind::Broadcast, None, &fits)
+            .await
+            .unwrap();
+        let error = mesh
+            .insert("lead", MessageKind::Broadcast, None, &format!("{fits}x"))
+            .await
+            .unwrap_err();
+        assert!(error.to_string().contains("cannot be longer"), "{error}");
+    }
+
+    #[tokio::test]
+    async fn a_roster_row_nobody_has_answered_to_in_a_month_is_retired() {
+        let (mesh, _directory) = mesh().await;
+        for name in ["killed", "current"] {
+            mesh.register(&registration(name)).await.unwrap();
+            mesh.subscribe(name, "build").await.unwrap();
+        }
+        mesh.placeholder("nobody").await.unwrap();
+        mesh.placeholder("expected").await.unwrap();
+        sqlx::query("UPDATE meshagent SET seen = ? WHERE name IN ('killed', 'nobody')")
+            .bind(now().unwrap() - GONE - 1)
+            .execute(&mesh.pool)
+            .await
+            .unwrap();
+
+        assert_eq!(mesh.retire().await.unwrap(), 2);
+
+        let names: Vec<String> = sqlx::query_scalar("SELECT name FROM meshagent ORDER BY name")
+            .fetch_all(&mesh.pool)
+            .await
+            .unwrap();
+        assert_eq!(names, ["current", "expected"]);
+        let subscribed: Vec<String> = sqlx::query_scalar("SELECT agent FROM meshsub")
+            .fetch_all(&mesh.pool)
+            .await
+            .unwrap();
+        assert_eq!(
+            subscribed,
+            ["current"],
+            "a retired agent's seats go with it"
+        );
     }
 
     #[tokio::test]
@@ -640,6 +857,25 @@ mod tests {
             .unwrap();
 
         assert!(mesh.pending("lead").await.unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn agent_activity_is_written_to_the_event_ledger() {
+        let (mesh, _directory) = mesh().await;
+        mesh.register(&registration("lead")).await.unwrap();
+        mesh.setstatus("lead", "working", Some("shipping"))
+            .await
+            .unwrap();
+        mesh.insert("lead", MessageKind::Broadcast, None, "standup")
+            .await
+            .unwrap();
+
+        let kinds: Vec<String> =
+            sqlx::query_scalar("SELECT kind FROM event WHERE source = 'mesh' ORDER BY id")
+                .fetch_all(&mesh.pool)
+                .await
+                .unwrap();
+        assert_eq!(kinds, ["agent.join", "agent.status", "mesh.message"]);
     }
 
     #[tokio::test]

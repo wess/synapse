@@ -232,6 +232,51 @@ async fn a_request_without_a_usable_token_is_refused() {
 }
 
 #[tokio::test]
+async fn a_body_is_not_read_for_somebody_with_no_token() {
+    let (router, _directory) = server().await;
+    // Neither of these is JSON this server could parse. Refused for the body,
+    // the answer is a 4xx about the body — which is the server having read it.
+    // Refused for the token, it is a 401 and the body was never looked at.
+    let oversized = "x".repeat(9 * 1024 * 1024);
+    for body in ["{ not json", oversized.as_str()] {
+        for path in ["/push", "/pull"] {
+            for token in [None, Some("00000000000000000000000000000000")] {
+                let mut request = Request::builder()
+                    .method("POST")
+                    .uri(path)
+                    .header("content-type", "application/json");
+                if let Some(token) = token {
+                    request = request.header("authorization", format!("Bearer {token}"));
+                }
+                let response = router
+                    .clone()
+                    .oneshot(request.body(Body::from(body.to_owned())).unwrap())
+                    .await
+                    .unwrap();
+                assert_eq!(
+                    response.status(),
+                    StatusCode::UNAUTHORIZED,
+                    "{path} {token:?}"
+                );
+            }
+        }
+    }
+    // With a token, the same body is the problem it always was.
+    let request = Request::builder()
+        .method("POST")
+        .uri("/push")
+        .header("content-type", "application/json")
+        .header("authorization", format!("Bearer {TOKEN}"))
+        .body(Body::from("{ not json"))
+        .unwrap();
+    let status = router.clone().oneshot(request).await.unwrap().status();
+    assert!(
+        status.is_client_error() && status != StatusCode::UNAUTHORIZED,
+        "{status}"
+    );
+}
+
+#[tokio::test]
 async fn a_client_from_another_protocol_is_told_which_side_to_upgrade() {
     let (router, _directory) = server().await;
     let body = json!({ "protocol": PROTOCOL + 1, "since": 0, "limit": 10 });

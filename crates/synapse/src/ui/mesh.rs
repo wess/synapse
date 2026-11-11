@@ -21,6 +21,13 @@ pub struct Actions {
     pub toggleoffline: Click,
 }
 
+struct Roster {
+    agents: Vec<AgentView>,
+    workers: Vec<WorkerView>,
+    feed: Vec<Message>,
+    showoffline: bool,
+}
+
 pub fn render(view: View, actions: Actions, cx: &App) -> AnyElement {
     let theme = guise::theme(cx);
     let border = theme.border().hsla();
@@ -30,6 +37,14 @@ pub fn render(view: View, actions: Actions, cx: &App) -> AnyElement {
         refresh,
         toggleoffline,
     } = actions;
+    let View {
+        enabled,
+        showoffline,
+        agents,
+        workers,
+        feed,
+        error,
+    } = view;
 
     div()
         .id("meshmain")
@@ -57,7 +72,7 @@ pub fn render(view: View, actions: Actions, cx: &App) -> AnyElement {
                                 .flex()
                                 .flex_col()
                                 .gap(px(7.0))
-                                .child(Title::new("Mesh").order(2))
+                                .child(Title::new("Agents").order(3))
                                 .child(
                                     Text::new(
                                         "Workers, connected agents, and recent coordination activity.",
@@ -75,7 +90,7 @@ pub fn render(view: View, actions: Actions, cx: &App) -> AnyElement {
                                 .on_click(move |event, window, cx| refresh(event, window, cx)),
                         ),
                 )
-                .when_some(view.error, |element, error| {
+                .when_some(error, |element, error| {
                     element.child(
                         div()
                             .flex()
@@ -86,12 +101,14 @@ pub fn render(view: View, actions: Actions, cx: &App) -> AnyElement {
                             .child(Text::new(error).size(Size::Sm)),
                     )
                 })
-                .child(if view.enabled {
+                .child(if enabled {
                     connected(
-                        view.agents,
-                        view.workers,
-                        view.feed,
-                        view.showoffline,
+                        Roster {
+                            agents,
+                            workers,
+                            feed,
+                            showoffline,
+                        },
                         toggleoffline,
                         border,
                         surface,
@@ -150,15 +167,18 @@ fn off(enable: Click, border: gpui::Hsla, surface: gpui::Hsla) -> AnyElement {
 }
 
 fn connected(
-    mut agents: Vec<AgentView>,
-    mut workers: Vec<WorkerView>,
-    feed: Vec<Message>,
-    showoffline: bool,
+    roster: Roster,
     toggleoffline: Click,
     border: gpui::Hsla,
     surface: gpui::Hsla,
     cx: &App,
 ) -> AnyElement {
+    let Roster {
+        mut agents,
+        mut workers,
+        feed,
+        showoffline,
+    } = roster;
     let theme = guise::theme(cx);
     let workeragents = agents
         .iter()

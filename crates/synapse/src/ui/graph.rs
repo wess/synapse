@@ -283,7 +283,7 @@ fn header(
                 .flex()
                 .flex_col()
                 .gap(px(2.0))
-                .child(Title::new("Map").order(4))
+                .child(Title::new("Memory Map").order(4))
                 .child(Text::new(counted).size(Size::Xs).dimmed()),
         )
         .child(

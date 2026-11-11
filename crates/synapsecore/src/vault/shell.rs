@@ -81,7 +81,17 @@ fn render(
     state: &str,
 ) -> String {
     let previous = keys(previous);
-    let current = values.keys().cloned().collect::<BTreeSet<_>>();
+    // A scope is refused for a name like this long before here. Checked again
+    // because this is where it would be evaluated, and a second way in — a row
+    // edited by hand, a path added later — should not have to remember to.
+    let values = values
+        .iter()
+        .filter(|(name, _)| validkey(name))
+        .collect::<BTreeMap<_, _>>();
+    let current = values
+        .keys()
+        .map(|name| (*name).clone())
+        .collect::<BTreeSet<_>>();
     let mut lines = Vec::new();
     for name in previous.difference(&current) {
         lines.push(restore(shell, name));
@@ -107,7 +117,10 @@ fn keys(value: &str) -> BTreeSet<String> {
         .collect()
 }
 
-fn validkey(value: &str) -> bool {
+/// Whether `value` is a name a shell can assign to and nothing else. Every
+/// name that reaches the text below is interpolated bare, so this is the whole
+/// of what stands between a scope file and a command.
+pub(super) fn validkey(value: &str) -> bool {
     let mut characters = value.chars();
     characters
         .next()

@@ -1,31 +1,43 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
   <defs>
-    <linearGradient id="canvas" x1="160" y1="120" x2="860" y2="920" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#fbf9f6"/>
-      <stop offset="1" stop-color="#e8e0f2"/>
+    <linearGradient id="canvas" x1="168" y1="116" x2="844" y2="916" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#765bd1"/>
+      <stop offset="0.52" stop-color="#5a40a4"/>
+      <stop offset="1" stop-color="#35215f"/>
     </linearGradient>
-    <linearGradient id="node" x1="340" y1="270" x2="690" y2="760" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#7155c8"/>
-      <stop offset="1" stop-color="#4d358e"/>
+    <linearGradient id="node" x1="350" y1="278" x2="680" y2="754" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#fffdf7"/>
+      <stop offset="1" stop-color="#e9e1ff"/>
     </linearGradient>
     <filter id="shadow" x="0" y="0" width="1024" height="1024" filterUnits="userSpaceOnUse">
-      <feDropShadow dx="0" dy="24" stdDeviation="30" flood-color="#291d43" flood-opacity="0.22"/>
+      <feDropShadow dx="0" dy="26" stdDeviation="28" flood-color="#211438" flood-opacity="0.34"/>
+    </filter>
+    <filter id="node-shadow" x="-40%" y="-40%" width="180%" height="180%">
+      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#211438" flood-opacity="0.28"/>
     </filter>
   </defs>
-  <rect x="76" y="64" width="872" height="872" rx="208" fill="url(#canvas)" filter="url(#shadow)"/>
-  <rect x="88" y="76" width="848" height="848" rx="196" fill="none" stroke="#ffffff" stroke-opacity="0.7" stroke-width="12"/>
-  <g fill="none" stroke="url(#node)" stroke-linecap="round" stroke-width="38" opacity="0.92">
-    <path d="M304 308L512 506L720 308"/>
-    <path d="M304 308L334 718L512 506L690 718L720 308"/>
-    <path d="M334 718L690 718"/>
+  <rect x="72" y="58" width="880" height="880" rx="216" fill="url(#canvas)" filter="url(#shadow)"/>
+  <rect x="86" y="72" width="852" height="852" rx="202" fill="none" stroke="#fffdf7" stroke-opacity="0.22" stroke-width="10"/>
+  <path d="M165 234C227 133 345 98 490 98" fill="none" stroke="#ffffff" stroke-linecap="round" stroke-opacity="0.12" stroke-width="18"/>
+  <g fill="none" stroke="#d8cbff" stroke-linecap="round" stroke-linejoin="round" stroke-width="40" opacity="0.76">
+    <path d="M302 302L512 505L722 302"/>
+    <path d="M302 302L334 720L512 505L690 720L722 302"/>
+    <path d="M334 720L690 720"/>
   </g>
-  <g stroke="#ffffff" stroke-width="24">
-    <circle cx="304" cy="308" r="68" fill="url(#node)"/>
-    <circle cx="720" cy="308" r="68" fill="url(#node)"/>
-    <circle cx="334" cy="718" r="68" fill="url(#node)"/>
-    <circle cx="690" cy="718" r="68" fill="url(#node)"/>
-    <circle cx="512" cy="506" r="86" fill="url(#node)"/>
+  <g fill="url(#node)" filter="url(#node-shadow)">
+    <circle cx="302" cy="302" r="65"/>
+    <circle cx="722" cy="302" r="65"/>
+    <circle cx="334" cy="720" r="65"/>
+    <circle cx="690" cy="720" r="65"/>
+    <circle cx="512" cy="505" r="91"/>
   </g>
-  <circle cx="512" cy="506" r="24" fill="#ffffff"/>
+  <g fill="#5d43aa">
+    <circle cx="302" cy="302" r="22"/>
+    <circle cx="722" cy="302" r="22"/>
+    <circle cx="334" cy="720" r="22"/>
+    <circle cx="690" cy="720" r="22"/>
+  </g>
+  <circle cx="512" cy="505" r="31" fill="#5d43aa"/>
+  <circle cx="501" cy="494" r="10" fill="#ffffff" fill-opacity="0.72"/>
 </svg>

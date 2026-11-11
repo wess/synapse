@@ -6,6 +6,7 @@
 //! machine builds this crate on its own and gets the same commands.
 
 pub mod agent;
+pub mod backend;
 pub mod brain;
 pub mod cli;
 pub mod crashes;
@@ -25,5 +26,4 @@ pub mod sync;
 pub mod usage;
 pub mod vault;
 
-pub mod plugins;
 pub mod presence;

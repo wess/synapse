@@ -58,12 +58,23 @@ pub fn teams(root: Option<&Path>) -> Vec<(String, Source)> {
 }
 
 pub fn text(root: Option<&Path>, name: &str) -> Result<(String, Source)> {
-    layer::read(KIND, BUILTINS, root, name).with_context(|| format!("no team named `{name}`"))
+    layer::read(KIND, BUILTINS, root, name)
+        .with_context(|| layer::unknown("team", KIND, root, name, "relay team"))
 }
 
 pub fn save(name: &str, user: bool, root: &Path, text: &str) -> Result<std::path::PathBuf> {
     parse(name, text, Source::Project)?;
     layer::save(KIND, name, user, root, text)
+}
+
+/// Approve this project's file of that name as it reads now.
+pub fn allow(root: &Path, name: &str) -> Result<std::path::PathBuf> {
+    layer::allow(KIND, root, name)
+}
+
+/// This project's files that are present and not approved.
+pub fn pending(root: Option<&Path>) -> Vec<String> {
+    layer::pending(KIND, root)
 }
 
 pub fn delete(name: &str, user: bool, root: &Path) -> Result<std::path::PathBuf> {

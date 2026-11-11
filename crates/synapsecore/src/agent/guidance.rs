@@ -209,14 +209,26 @@ fn stripmanaged(content: &str) -> String {
     stripone(&stripone(content, START, END), OLDSTART, OLDEND)
 }
 
+/// Remove each managed block: an end marker and the nearest start marker
+/// before it.
+///
+/// Nearest, not first. Somebody who quotes the start marker in their own notes
+/// has written a start with no end of its own, and pairing from the first start
+/// would take everything between their sentence and Synapse's block with it.
 fn stripone(content: &str, startmarker: &str, endmarker: &str) -> String {
     let mut remaining = content.to_owned();
-    while let Some(start) = remaining.find(startmarker) {
-        let Some(relative) = remaining[start..].find(endmarker) else {
-            break;
-        };
-        let end = start + relative + endmarker.len();
-        remaining.replace_range(start..end, "");
+    let mut from = 0;
+    while let Some(relative) = remaining[from..].find(endmarker) {
+        let end = from + relative;
+        match remaining[from..end].rfind(startmarker) {
+            Some(start) => {
+                let start = from + start;
+                remaining.replace_range(start..end + endmarker.len(), "");
+                from = start;
+            }
+            // An end with nothing opening it is theirs too. Step past it.
+            None => from = end + endmarker.len(),
+        }
     }
     remaining
 }
@@ -278,6 +290,35 @@ fn ensurenewline(content: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_marker_somebody_quoted_in_their_own_notes_does_not_cost_them_what_follows() {
+        let directory = tempfile::tempdir().unwrap();
+        let file = directory.path().join("AGENTS.md");
+        let soul = directory.path().join("SOUL.md");
+        // An end with no start before it, then a start with no end after it:
+        // neither is a block, and everything around both is theirs.
+        let theirs = format!(
+            "# Mine\n\nSynapse closes its pointer with `{END}`,\n\
+             and opens it with a line reading `{START}`.\n\n\
+             ## Rules I wrote\n\nNever deploy on a Friday.\n"
+        );
+        fs::write(&file, &theirs).unwrap();
+
+        // Twice: the first write adds the block, the second has to find it.
+        writepointer(&file, &soul, false, true).unwrap();
+        writepointer(&file, &soul, false, true).unwrap();
+
+        let content = fs::read_to_string(&file).unwrap();
+        assert!(content.contains("Never deploy on a Friday."), "{content}");
+        assert!(content.contains("## Rules I wrote"));
+        assert_eq!(
+            content.matches(soul.to_str().unwrap()).count(),
+            1,
+            "and the block is still written once, not once per write"
+        );
+        assert_eq!(stripmanaged(&content).trim(), theirs.trim());
+    }
 
     #[test]
     fn sync_replaces_legacy_blocks_and_keeps_user_guidance() {

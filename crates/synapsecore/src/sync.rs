@@ -365,12 +365,22 @@ pub async fn once(brain: &Brain) -> Result<Option<Summary>> {
     }))
 }
 
+/// How long one push or pull may take. A page is bounded by the protocol, so
+/// this is generous for the slowest link and still an end.
+const REQUESTTIME: std::time::Duration = std::time::Duration::from_secs(60);
+
 async fn post<B: serde::Serialize, R: serde::de::DeserializeOwned>(
     config: &Config,
     path: &str,
     body: &B,
 ) -> Result<R> {
-    let response = reqwest::Client::new()
+    // Bounded like every other request this crate makes. Sync runs beside
+    // commands that have nothing to do with it, and a server that accepts the
+    // connection and then says nothing would hold each of them open forever.
+    let response = reqwest::Client::builder()
+        .timeout(REQUESTTIME)
+        .build()
+        .context("could not prepare the sync request")?
         .post(format!("{}{path}", config.server))
         .bearer_auth(&config.token)
         .json(body)

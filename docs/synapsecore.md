@@ -11,7 +11,7 @@ The repository has three independent Cargo workspaces:
 | Workspace | Responsibility | Validation |
 | --- | --- | --- |
 | Repository root | Native desktop and shared sync types | `cargo build --locked` |
-| `crates/synapsecore` | Memory, vaults, mesh, plugins, skills, setup, imports, CLI, MCP | `cargo test --locked` |
+| `crates/synapsecore` | Memory, vaults, mesh, skills, setup, imports, CLI, MCP | `cargo test --locked` |
 | `crates/synapseserve` | Optional opaque sync log server | `cargo test --locked` |
 
 A root test does not exercise the other workspaces. Core resolves independently
@@ -31,7 +31,8 @@ The library's public surface is declared in `crates/synapsecore/src/lib.rs`.
 | `agent`, `files`, `instructions` | Tool descriptors, managed configuration writes, shared guidance |
 | `skill`, `sources`, `servers` | Skill and MCP server libraries and their sources |
 | `relay` | Mesh messages, roles, teams, process supervision |
-| `plugins`, `presence` | Declarative scene packs and live MCP-session rooms |
+| `presence` | Live MCP-session registration and reported work state |
+| `backend` | Events, leased runs, artifacts, policy, triggers, routes, replay and evaluation |
 | `mcp`, `cli` | Protocol and command adapters |
 | `sync` | Client operations for the optional encrypted replication protocol |
 
@@ -54,6 +55,24 @@ redaction, imports, and sync identities must stay consistent.
 
 Memory is plaintext locally. Credential values use a separate encrypted store or
 macOS Keychain. Database snapshots do not include those values.
+
+## Backend interface
+
+`backend::Backend` shares the same database lock and WAL behavior as the rest of
+core. Its event stream is redacted before storage and bounded to 50,000 rows or
+30 days. Completed runs are retained for 90 days with a 10,000-run ceiling;
+steps, configurations, artifacts, request sizes, and route responses have their
+own bounds. Artifact reads verify the stored digest before returning bytes.
+
+Jobs are claimed with a short lease, renewed by the owning worker, and reclaimed
+after expiry until their attempt limit is reached. Capability checks deny when no
+exact decision exists. Local inference routes accept only loopback HTTP or an
+adapter-owned Unix socket; remote routes require HTTPS and HTTP redirects are
+refused.
+
+The CLI exposes this as `synapse backend`. `synapse backend api` is the stable
+versioned JSONL transport for non-Rust harnesses. It uses stdin/stdout rather than
+opening a local port, so it is dormant when no harness invokes it.
 
 ## Minimal build
 
