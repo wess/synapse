@@ -1,6 +1,11 @@
 use super::{Backend, Change, Comment, Review, Run, RunStats};
 use anyhow::{Context, Result};
 
+const CHANGELIMIT: i64 = 10_000;
+const REVIEWLIMIT: i64 = 1_000;
+const COMMENTLIMIT: i64 = 10_000;
+const TEXTLIMIT: usize = 64 * 1024;
+
 impl Backend {
     pub async fn runstats(&self, limit: i64) -> Result<Vec<RunStats>> {
         sqlx::query_as(
@@ -19,6 +24,7 @@ impl Backend {
         .map_err(Into::into)
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn recordchange(
         &self,
         runid: &str,
@@ -35,6 +41,12 @@ impl Backend {
             "invalid change operation"
         );
         anyhow::ensure!(!path.trim().is_empty(), "a change needs a path");
+        bounded(path, 4_096, "change path")?;
+        bounded(previouspath, 4_096, "previous change path")?;
+        bounded(beforedigest, 256, "before digest")?;
+        bounded(afterdigest, 256, "after digest")?;
+        bounded(summary, 16_384, "change summary")?;
+        ensureunder(&self.pool, "runchange", runid, CHANGELIMIT).await?;
         if let Some(stepid) = stepid {
             let belongs: bool =
                 sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM runstep WHERE id=? AND runid=?)")
@@ -53,8 +65,8 @@ impl Backend {
         .bind(redact(path))
         .bind(operation)
         .bind(redact(previouspath))
-        .bind(beforedigest)
-        .bind(afterdigest)
+        .bind(redact(beforedigest))
+        .bind(redact(afterdigest))
         .bind(redact(summary))
         .bind(now())
         .execute(&self.pool)
@@ -74,6 +86,19 @@ impl Backend {
         .map_err(Into::into)
     }
 
+    pub async fn recentchanges(&self, runid: &str, limit: i64) -> Result<Vec<Change>> {
+        let mut rows = sqlx::query_as(
+            "SELECT id,runid,stepid,path,operation,previouspath,beforedigest,afterdigest,summary,\
+             created FROM runchange WHERE runid=? ORDER BY id DESC LIMIT ?",
+        )
+        .bind(runid)
+        .bind(limit.clamp(1, 100))
+        .fetch_all(&self.pool)
+        .await?;
+        rows.reverse();
+        Ok(rows)
+    }
+
     async fn change(&self, id: i64) -> Result<Option<Change>> {
         sqlx::query_as(
             "SELECT id,runid,stepid,path,operation,previouspath,beforedigest,afterdigest,summary,\
@@ -86,6 +111,7 @@ impl Backend {
     }
 
     pub async fn forkrun(&self, parent: &str, title: &str) -> Result<Run> {
+        bounded(title, 512, "run title")?;
         let source = self
             .run(parent)
             .await?
@@ -104,6 +130,7 @@ impl Backend {
         self.run(&run.id).await?.context("forked run is missing")
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn submitreview(
         &self,
         runid: &str,
@@ -118,6 +145,10 @@ impl Backend {
             matches!(verdict, "pending" | "approved" | "changes"),
             "invalid review verdict"
         );
+        bounded(reviewer, 256, "reviewer")?;
+        bounded(summary, 16_384, "review summary")?;
+        bounded(reasoning, TEXTLIMIT, "review reasoning")?;
+        ensureunder(&self.pool, "runreview", runid, REVIEWLIMIT).await?;
         let time = now();
         let id = sqlx::query(
             "INSERT INTO runreview(runid,reviewer,verdict,summary,checks,reasoning,concerns,\
@@ -144,6 +175,18 @@ impl Backend {
              FROM runreview WHERE runid=? ORDER BY id",
         )
         .bind(runid)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(Into::into)
+    }
+
+    pub async fn recentreviews(&self, runid: &str, limit: i64) -> Result<Vec<Review>> {
+        sqlx::query_as(
+            "SELECT id,runid,reviewer,verdict,summary,checks,reasoning,concerns,created,updated \
+             FROM runreview WHERE runid=? ORDER BY id DESC LIMIT ?",
+        )
+        .bind(runid)
+        .bind(limit.clamp(1, 100))
         .fetch_all(&self.pool)
         .await
         .map_err(Into::into)
@@ -180,6 +223,35 @@ impl Backend {
             "invalid comment target"
         );
         anyhow::ensure!(!body.trim().is_empty(), "a comment cannot be empty");
+        bounded(author, 256, "comment author")?;
+        bounded(target, 4_096, "comment target")?;
+        bounded(body, TEXTLIMIT, "comment body")?;
+        ensureunder(&self.pool, "runcomment", runid, COMMENTLIMIT).await?;
+        if let Some(reviewid) = reviewid {
+            let belongs: bool =
+                sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM runreview WHERE id=? AND runid=?)")
+                    .bind(reviewid)
+                    .bind(runid)
+                    .fetch_one(&self.pool)
+                    .await?;
+            anyhow::ensure!(
+                belongs,
+                "review `{reviewid}` does not belong to run `{runid}`"
+            );
+        }
+        if let Some(parent) = parent {
+            let belongs: bool = sqlx::query_scalar(
+                "SELECT EXISTS(SELECT 1 FROM runcomment WHERE id=? AND runid=?)",
+            )
+            .bind(parent)
+            .bind(runid)
+            .fetch_one(&self.pool)
+            .await?;
+            anyhow::ensure!(
+                belongs,
+                "parent comment `{parent}` does not belong to run `{runid}`"
+            );
+        }
         let time = now();
         let id = sqlx::query(
             "INSERT INTO runcomment(runid,reviewid,author,targetkind,target,line,body,parent,\
@@ -214,6 +286,18 @@ impl Backend {
         .map_err(Into::into)
     }
 
+    pub async fn recentcomments(&self, runid: &str, limit: i64) -> Result<Vec<Comment>> {
+        sqlx::query_as(
+            "SELECT id,runid,reviewid,author,targetkind,target,line,body,parent,resolved,created,\
+             updated FROM runcomment WHERE runid=? ORDER BY resolved,id DESC LIMIT ?",
+        )
+        .bind(runid)
+        .bind(limit.clamp(1, 100))
+        .fetch_all(&self.pool)
+        .await
+        .map_err(Into::into)
+    }
+
     pub async fn resolvecomment(&self, id: i64, resolved: bool) -> Result<Comment> {
         let changed = sqlx::query("UPDATE runcomment SET resolved=?,updated=? WHERE id=?")
             .bind(resolved)
@@ -242,9 +326,29 @@ impl Backend {
 
 fn cleanjson(value: serde_json::Value) -> Result<String> {
     let text = serde_json::to_string(&value)?;
+    anyhow::ensure!(text.len() <= TEXTLIMIT, "review JSON is too large");
     let redacted = redact(&text);
     serde_json::from_str::<serde_json::Value>(&redacted).context("redaction made invalid JSON")?;
     Ok(redacted)
+}
+
+fn bounded(value: &str, limit: usize, label: &str) -> Result<()> {
+    anyhow::ensure!(value.len() <= limit, "{label} is too large");
+    Ok(())
+}
+
+async fn ensureunder(pool: &sqlx::SqlitePool, table: &str, runid: &str, limit: i64) -> Result<()> {
+    anyhow::ensure!(
+        matches!(table, "runchange" | "runreview" | "runcomment"),
+        "invalid collaboration table"
+    );
+    let query = format!("SELECT COUNT(*) FROM {table} WHERE runid=?");
+    let count: i64 = sqlx::query_scalar(&query)
+        .bind(runid)
+        .fetch_one(pool)
+        .await?;
+    anyhow::ensure!(count < limit, "{table} limit reached for this run");
+    Ok(())
 }
 
 fn redact(value: &str) -> String {

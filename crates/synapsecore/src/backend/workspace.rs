@@ -2,11 +2,16 @@ use super::store::{identifier, now};
 use super::{Backend, Checkpoint, Run, Step, Workspace};
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
-use std::io::Write;
+use std::io::{Read, Write};
 use std::path::{Component, Path, PathBuf};
-use std::process::{Command, Stdio};
+use std::process::{Child, Command, ExitStatus, Stdio};
 
 const FILELIMIT: usize = 1_000;
+const FILESIZELIMIT: u64 = 32 * 1024 * 1024;
+const CHECKPOINTLIMIT: u64 = 128 * 1024 * 1024;
+const STATELIMIT: usize = 2 * 1024 * 1024;
+const PATCHLIMIT: usize = 64 * 1024 * 1024;
+const GITTIMEOUT: std::time::Duration = std::time::Duration::from_secs(120);
 
 #[derive(Deserialize, Serialize)]
 struct Manifest {
@@ -42,14 +47,33 @@ impl Backend {
             "a checkpoint is limited to {FILELIMIT} files"
         );
         let root = canonicalroot(root)?;
+        let client = cleanvalue(client);
+        let mut seen = std::collections::HashSet::new();
+        let mut total = 0u64;
         let run = self
             .run(runid)
             .await?
             .with_context(|| format!("run `{runid}` does not exist"))?;
+        let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM runcheckpoint WHERE runid=?")
+            .bind(runid)
+            .fetch_one(&self.pool)
+            .await?;
+        anyhow::ensure!(count < 1_000, "checkpoint limit reached for this run");
+        let state = serde_json::to_string(&State {
+            run,
+            steps: self.steps(runid).await?,
+            client,
+        })?;
+        anyhow::ensure!(state.len() <= STATELIMIT, "checkpoint state is too large");
         let mut files = Vec::with_capacity(paths.len());
         for relative in paths {
             validrelative(relative)?;
             sensitive(relative)?;
+            anyhow::ensure!(
+                seen.insert(relative.clone()),
+                "checkpoint path is repeated: {}",
+                relative.display()
+            );
             let path = root.join(relative);
             if !path.exists() {
                 files.push(ManifestFile {
@@ -68,6 +92,17 @@ impl Backend {
                 .canonicalize()
                 .with_context(|| format!("could not resolve {}", path.display()))?;
             anyhow::ensure!(real.starts_with(&root), "checkpoint path leaves its root");
+            let size = real.metadata()?.len();
+            anyhow::ensure!(
+                size <= FILESIZELIMIT,
+                "{} is larger than 32 MiB",
+                relative.display()
+            );
+            total = total.saturating_add(size);
+            anyhow::ensure!(
+                total <= CHECKPOINTLIMIT,
+                "checkpoint content is larger than 128 MiB"
+            );
             let content = std::fs::read(&real)
                 .with_context(|| format!("could not read {}", relative.display()))?;
             if let Ok(text) = std::str::from_utf8(&content) {
@@ -85,6 +120,8 @@ impl Backend {
                     &content,
                 )
                 .await?;
+            self.attach(runid, &artifact.digest, "checkpointfile")
+                .await?;
             files.push(ManifestFile {
                 path: relative.display().to_string(),
                 digest: artifact.digest,
@@ -99,11 +136,7 @@ impl Backend {
                 &serde_json::to_vec(&Manifest { files })?,
             )
             .await?;
-        let state = serde_json::to_string(&State {
-            run,
-            steps: self.steps(runid).await?,
-            client,
-        })?;
+        self.attach(runid, &manifest.digest, "checkpoint").await?;
         let parent: String = sqlx::query_scalar(
             "SELECT id FROM runcheckpoint WHERE runid=? ORDER BY created DESC,id DESC LIMIT 1",
         )
@@ -140,11 +173,15 @@ impl Backend {
         let manifest: Manifest =
             serde_json::from_slice(&self.readartifact(&checkpoint.manifest).await?)
                 .context("checkpoint manifest is invalid")?;
+        anyhow::ensure!(
+            manifest.files.len() <= FILELIMIT,
+            "checkpoint manifest has too many files"
+        );
         for file in manifest.files {
             let relative = PathBuf::from(&file.path);
             validrelative(&relative)?;
             sensitive(&relative)?;
-            let path = root.join(&relative);
+            let path = safeoutputpath(&root, &relative)?;
             if file.absent {
                 if path.is_file() {
                     std::fs::remove_file(&path)
@@ -161,6 +198,14 @@ impl Backend {
         }
         let state: State =
             serde_json::from_str(&checkpoint.state).context("checkpoint state is invalid")?;
+        anyhow::ensure!(
+            state.run.id == checkpoint.runid
+                && state
+                    .steps
+                    .iter()
+                    .all(|step| step.runid == checkpoint.runid),
+            "checkpoint state belongs to another run"
+        );
         self.restorestate(&state).await?;
         sqlx::query("UPDATE runcheckpoint SET restored=? WHERE id=?")
             .bind(now())
@@ -211,6 +256,18 @@ impl Backend {
         .map_err(Into::into)
     }
 
+    pub async fn recentcheckpoints(&self, runid: &str, limit: i64) -> Result<Vec<Checkpoint>> {
+        sqlx::query_as(
+            "SELECT id,runid,parent,label,root,manifest,state,restored,created FROM runcheckpoint \
+             WHERE runid=? ORDER BY created DESC,id DESC LIMIT ?",
+        )
+        .bind(runid)
+        .bind(limit.clamp(1, 100))
+        .fetch_all(&self.pool)
+        .await
+        .map_err(Into::into)
+    }
+
     async fn checkpointbyid(&self, id: &str) -> Result<Option<Checkpoint>> {
         sqlx::query_as(
             "SELECT id,runid,parent,label,root,manifest,state,restored,created FROM runcheckpoint \
@@ -238,6 +295,10 @@ impl Backend {
         );
         let root = gitroot(root)?;
         let base = base.unwrap_or("HEAD");
+        anyhow::ensure!(
+            !base.starts_with('-') && base.len() <= 256,
+            "workspace base is invalid"
+        );
         let resolved = git(&root, &["rev-parse", "--verify", base])?;
         let id = identifier("workspace");
         let path = self
@@ -264,19 +325,28 @@ impl Backend {
         .bind(time)
         .execute(&self.pool)
         .await?;
-        let result = Command::new("git")
+        let mut child = Command::new("git")
             .arg("-C")
             .arg(&root)
             .args(["worktree", "add", "--detach"])
             .arg(&path)
             .arg(resolved.trim())
-            .output()
+            .stdout(Stdio::null())
+            .stderr(Stdio::piped())
+            .spawn()
             .context("could not start git worktree")?;
-        let status = if result.status.success() {
-            "ready"
-        } else {
-            "failed"
-        };
+        let stderr = child
+            .stderr
+            .take()
+            .context("git worktree stderr is unavailable")?;
+        let errors = std::thread::spawn(move || {
+            let mut content = Vec::new();
+            let _ = stderr.take(64 * 1024 + 1).read_to_end(&mut content);
+            content
+        });
+        let result = waitchild(&mut child, "git worktree")?;
+        let errors = errors.join().unwrap_or_default();
+        let status = if result.success() { "ready" } else { "failed" };
         sqlx::query("UPDATE runworkspace SET status=?,updated=? WHERE id=?")
             .bind(status)
             .bind(now())
@@ -284,9 +354,9 @@ impl Backend {
             .execute(&self.pool)
             .await?;
         anyhow::ensure!(
-            result.status.success(),
+            result.success(),
             "could not create worktree: {}",
-            String::from_utf8_lossy(&result.stderr).trim()
+            String::from_utf8_lossy(&errors).trim()
         );
         self.workspace(runid)
             .await?
@@ -316,7 +386,18 @@ impl Backend {
         let root = canonicalroot(Path::new(&workspace.root))?;
         let checkout = canonicalroot(Path::new(&workspace.path))?;
         git(&checkout, &["add", "-N", "."])?;
-        let names = gitbytes(&checkout, &["diff", "--name-only", "-z", "HEAD"])?;
+        let names = gitbytes(
+            &checkout,
+            &[
+                "diff",
+                "--no-ext-diff",
+                "--no-textconv",
+                "--name-only",
+                "-z",
+                "HEAD",
+            ],
+            1024 * 1024,
+        )?;
         let paths = names
             .split(|byte| *byte == 0)
             .filter(|value| !value.is_empty())
@@ -327,11 +408,29 @@ impl Backend {
             })
             .collect::<Result<Vec<_>>>()?;
         anyhow::ensure!(!paths.is_empty(), "workspace has no changes to merge");
+        anyhow::ensure!(paths.len() <= FILELIMIT, "workspace changes too many files");
+        let mut total = 0u64;
+        for path in &paths {
+            validrelative(path)?;
+            sensitive(path)?;
+            let candidate = checkout.join(path);
+            if candidate.is_file() {
+                total = total.saturating_add(candidate.metadata()?.len());
+                anyhow::ensure!(
+                    total <= CHECKPOINTLIMIT,
+                    "workspace changes are larger than 128 MiB"
+                );
+            }
+        }
         let existed = paths
             .iter()
             .map(|path| root.join(path).exists())
             .collect::<Vec<_>>();
-        let patch = gitbytes(&checkout, &["diff", "--binary", "--no-ext-diff", "HEAD"])?;
+        let patch = gitbytes(
+            &checkout,
+            &["diff", "--binary", "--no-ext-diff", "--no-textconv", "HEAD"],
+            PATCHLIMIT,
+        )?;
         anyhow::ensure!(!patch.is_empty(), "workspace has no patch to merge");
         applypatch(&root, &patch, true)?;
         self.checkpoint(
@@ -378,6 +477,14 @@ impl Backend {
             .bind(&workspace.id)
             .execute(&self.pool)
             .await?;
+        let _ = Command::new("git")
+            .arg("-C")
+            .arg(&root)
+            .args(["worktree", "remove", "--force"])
+            .arg(&checkout)
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status();
         self.workspace(runid)
             .await?
             .context("merged workspace is missing")
@@ -396,33 +503,40 @@ fn gitroot(root: &Path) -> Result<PathBuf> {
 }
 
 fn git(root: &Path, arguments: &[&str]) -> Result<String> {
-    let output = Command::new("git")
-        .arg("-C")
-        .arg(root)
-        .args(arguments)
-        .output()
-        .context("could not start git")?;
-    anyhow::ensure!(
-        output.status.success(),
-        "git failed: {}",
-        String::from_utf8_lossy(&output.stderr).trim()
-    );
-    String::from_utf8(output.stdout).context("git returned invalid text")
+    String::from_utf8(gitbytes(root, arguments, 64 * 1024)?).context("git returned invalid text")
 }
 
-fn gitbytes(root: &Path, arguments: &[&str]) -> Result<Vec<u8>> {
-    let output = Command::new("git")
+fn gitbytes(root: &Path, arguments: &[&str], limit: usize) -> Result<Vec<u8>> {
+    let mut child = Command::new("git")
         .arg("-C")
         .arg(root)
         .args(arguments)
-        .output()
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
         .context("could not start git")?;
+    let stdout = child.stdout.take().context("git stdout is unavailable")?;
+    let stderr = child.stderr.take().context("git stderr is unavailable")?;
+    let output = std::thread::spawn(move || {
+        let mut content = Vec::with_capacity(limit.min(1024 * 1024));
+        let _ = stdout.take(limit as u64 + 1).read_to_end(&mut content);
+        content
+    });
+    let errors = std::thread::spawn(move || {
+        let mut content = Vec::new();
+        let _ = stderr.take(64 * 1024 + 1).read_to_end(&mut content);
+        content
+    });
+    let status = waitchild(&mut child, "git")?;
+    let output = output.join().unwrap_or_default();
+    let errors = errors.join().unwrap_or_default();
+    anyhow::ensure!(output.len() <= limit, "git output is too large");
     anyhow::ensure!(
-        output.status.success(),
+        status.success(),
         "git failed: {}",
-        String::from_utf8_lossy(&output.stderr).trim()
+        String::from_utf8_lossy(&errors).trim()
     );
-    Ok(output.stdout)
+    Ok(output)
 }
 
 fn applypatch(root: &Path, patch: &[u8], check: bool) -> Result<()> {
@@ -433,22 +547,56 @@ fn applypatch(root: &Path, patch: &[u8], check: bool) -> Result<()> {
     }
     let mut child = command
         .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
+        .stdout(Stdio::null())
         .stderr(Stdio::piped())
         .spawn()
         .context("could not start git apply")?;
-    child
+    let stderr = child
+        .stderr
+        .take()
+        .context("git apply stderr is unavailable")?;
+    let errors = std::thread::spawn(move || {
+        let mut content = Vec::new();
+        let _ = stderr.take(64 * 1024 + 1).read_to_end(&mut content);
+        content
+    });
+    let mut stdin = child
         .stdin
         .take()
-        .context("git apply stdin is unavailable")?
-        .write_all(patch)?;
-    let output = child.wait_with_output()?;
+        .context("git apply stdin is unavailable")?;
+    let status = std::thread::scope(|scope| {
+        let writer = scope.spawn(move || stdin.write_all(patch));
+        let status = waitchild(&mut child, "git apply");
+        let written = writer
+            .join()
+            .unwrap_or_else(|_| Err(std::io::Error::other("git apply input writer panicked")));
+        status.and_then(|status| {
+            written.context("could not write the workspace patch")?;
+            Ok(status)
+        })
+    })?;
+    let errors = errors.join().unwrap_or_default();
     anyhow::ensure!(
-        output.status.success(),
+        status.success(),
         "workspace changes do not apply cleanly: {}",
-        String::from_utf8_lossy(&output.stderr).trim()
+        String::from_utf8_lossy(&errors).trim()
     );
     Ok(())
+}
+
+fn waitchild(child: &mut Child, label: &str) -> Result<ExitStatus> {
+    let deadline = std::time::Instant::now() + GITTIMEOUT;
+    loop {
+        if let Some(status) = child.try_wait()? {
+            return Ok(status);
+        }
+        if std::time::Instant::now() >= deadline {
+            let _ = child.kill();
+            let _ = child.wait();
+            anyhow::bail!("{label} timed out after 120 seconds");
+        }
+        std::thread::sleep(std::time::Duration::from_millis(25));
+    }
 }
 
 fn validrelative(path: &Path) -> Result<()> {
@@ -459,7 +607,51 @@ fn validrelative(path: &Path) -> Result<()> {
             .all(|part| matches!(part, Component::Normal(_))),
         "checkpoint path contains unsupported components"
     );
+    let text = path.display().to_string();
+    anyhow::ensure!(
+        crate::brain::redact(&text).body == text,
+        "checkpoint path appears to contain a credential"
+    );
     Ok(())
+}
+
+fn cleanvalue(mut value: serde_json::Value) -> serde_json::Value {
+    fn clean(value: &mut serde_json::Value) {
+        match value {
+            serde_json::Value::String(text) => *text = crate::brain::redact(text).body,
+            serde_json::Value::Array(items) => items.iter_mut().for_each(clean),
+            serde_json::Value::Object(items) => {
+                let original = std::mem::take(items);
+                for (key, mut value) in original {
+                    clean(&mut value);
+                    items.insert(crate::brain::redact(&key).body, value);
+                }
+            }
+            _ => {}
+        }
+    }
+    clean(&mut value);
+    value
+}
+
+fn safeoutputpath(root: &Path, relative: &Path) -> Result<PathBuf> {
+    let mut parent = root.to_path_buf();
+    if let Some(components) = relative.parent() {
+        for component in components.components() {
+            let Component::Normal(component) = component else {
+                anyhow::bail!("checkpoint path contains unsupported components");
+            };
+            parent.push(component);
+            if parent.exists() {
+                let metadata = std::fs::symlink_metadata(&parent)?;
+                anyhow::ensure!(
+                    !metadata.file_type().is_symlink() && metadata.is_dir(),
+                    "checkpoint output passes through a link or non-directory"
+                );
+            }
+        }
+    }
+    Ok(root.join(relative))
 }
 
 fn sensitive(path: &Path) -> Result<()> {

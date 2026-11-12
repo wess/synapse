@@ -1,6 +1,11 @@
 use super::{Backend, Preview, Runner};
 use anyhow::{Context, Result};
 
+const RUNNERLIMIT: i64 = 256;
+const PREVIEWLIMIT: i64 = 100;
+const TEXTLIMIT: usize = 64 * 1024;
+const RUNNERRETENTION: i64 = 30 * 86400;
+
 impl Backend {
     pub async fn putrunner(
         &self,
@@ -11,7 +16,27 @@ impl Backend {
         local: bool,
     ) -> Result<Runner> {
         validateid(id, "runner id")?;
+        anyhow::ensure!(name.len() <= 256, "runner name is too large");
+        anyhow::ensure!(endpoint.len() <= 4_096, "runner endpoint is too large");
+        anyhow::ensure!(
+            redact(endpoint) == endpoint,
+            "runner endpoint contains a credential"
+        );
         let time = now();
+        sqlx::query("DELETE FROM runner WHERE status='offline' AND updated<?")
+            .bind(time - RUNNERRETENTION)
+            .execute(&self.pool)
+            .await?;
+        let exists: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM runner WHERE id=?)")
+            .bind(id)
+            .fetch_one(&self.pool)
+            .await?;
+        if !exists {
+            let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM runner")
+                .fetch_one(&self.pool)
+                .await?;
+            anyhow::ensure!(count < RUNNERLIMIT, "runner limit reached");
+        }
         sqlx::query(
             "INSERT INTO runner(id,name,endpoint,capabilities,status,local,lastseen,created,updated) \
              VALUES(?,?,?,?,'online',?,?,?,?) ON CONFLICT(id) DO UPDATE SET name=excluded.name,\
@@ -36,10 +61,11 @@ impl Backend {
             matches!(status, "online" | "busy" | "draining" | "offline"),
             "invalid runner status"
         );
+        let time = now();
         let changed = sqlx::query("UPDATE runner SET status=?,lastseen=?,updated=? WHERE id=?")
             .bind(status)
-            .bind(now())
-            .bind(now())
+            .bind(time)
+            .bind(time)
             .bind(id)
             .execute(&self.pool)
             .await?
@@ -85,7 +111,24 @@ impl Backend {
             matches!(parsed.scheme(), "http" | "https"),
             "preview URL must use HTTP or HTTPS"
         );
+        anyhow::ensure!(url.len() <= 4_096, "preview URL is too large");
+        anyhow::ensure!(
+            parsed.username().is_empty() && parsed.password().is_none() && parsed.query().is_none(),
+            "preview URL cannot contain credentials or a query"
+        );
+        anyhow::ensure!(redact(url) == url, "preview URL contains a credential");
         let time = now();
+        let exists: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM runpreview WHERE id=?)")
+            .bind(id)
+            .fetch_one(&self.pool)
+            .await?;
+        if !exists {
+            let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM runpreview WHERE runid=?")
+                .bind(runid)
+                .fetch_one(&self.pool)
+                .await?;
+            anyhow::ensure!(count < PREVIEWLIMIT, "preview limit reached for this run");
+        }
         sqlx::query(
             "INSERT INTO runpreview(id,runid,runnerid,url,status,expires,created,updated) \
              VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET url=excluded.url,\
@@ -124,6 +167,18 @@ impl Backend {
         .await
         .map_err(Into::into)
     }
+
+    pub async fn recentpreviews(&self, runid: &str, limit: i64) -> Result<Vec<Preview>> {
+        sqlx::query_as(
+            "SELECT id,runid,runnerid,url,status,expires,created,updated FROM runpreview \
+             WHERE runid=? ORDER BY updated DESC,id LIMIT ?",
+        )
+        .bind(runid)
+        .bind(limit.clamp(1, 100))
+        .fetch_all(&self.pool)
+        .await
+        .map_err(Into::into)
+    }
 }
 
 fn validateid(value: &str, label: &str) -> Result<()> {
@@ -151,6 +206,7 @@ fn validpreviewstatus(value: &str) -> Result<()> {
 
 fn cleanjson(value: serde_json::Value) -> Result<String> {
     let text = serde_json::to_string(&value)?;
+    anyhow::ensure!(text.len() <= TEXTLIMIT, "runner capabilities are too large");
     let body = redact(&text);
     serde_json::from_str::<serde_json::Value>(&body).context("redaction made invalid JSON")?;
     Ok(body)

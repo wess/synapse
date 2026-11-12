@@ -19,7 +19,7 @@
 <body class="docs" data-root="../../">
   <div class="shell">
   <a class="skip" href="#content">Skip to content</a>
-  <div class="windowbar"><a href="../../">synapse / manual</a><span>v1.18.0 · on your machine</span></div>
+  <div class="windowbar"><a href="../../">synapse / manual</a><span>v1.18.1 · on your machine</span></div>
   <header class="topbar">
     <a class="wordmark" href="../../" aria-label="Synapse home"><img src="../../icon.svg" width="28" height="28" alt=""><span>synapse</span></a>
     <button class="navtoggle" type="button" aria-expanded="false" aria-controls="topnav">Menu</button>
@@ -109,7 +109,8 @@ capture ignored files. The harness supplies relative paths beneath one root:</p>
 <p>Restore replaces captured files, removes paths that were absent at capture time,
 and restores run and step state. Credential-shaped filenames, text that requires
 redaction, absolute paths, parent traversal, symlinks leaving the root, and more
-than 1,000 files are refused.</p>
+than 1,000 files are refused. One file may be at most 32 MiB and one checkpoint
+at most 128 MiB, so a malformed request cannot consume memory without a bound.</p>
 <h2 id="isolated-workspaces">Isolated workspaces</h2>
 <p>Give a run a detached Git worktree:</p>
 <div class="codeblock"><div class="codebar"><span>sh</span><button type="button" data-copy aria-live="polite">Copy</button></div><pre><code>synapse backend workspace create &quot;$RUN&quot; --root &quot;$PWD&quot;
@@ -120,7 +121,9 @@ than 1,000 files are refused.</p>
 <p>Merge checks the binary patch first, checkpoints every target path in the original
 checkout, applies the patch, records the file changes, and marks the workspace
 merged. It does not commit. Conflicting or credential-shaped changes are refused
-before the original checkout is modified.</p>
+before the original checkout is modified. Patches are capped at 64 MiB and Git
+output is read through fixed ceilings. The detached worktree is removed after a
+successful merge; its checkpoint and provenance remain.</p>
 <h2 id="fork-and-move-a-run">Fork and move a run</h2>
 <p>Forking keeps the parent task and input while isolating another approach:</p>
 <div class="codeblock"><div class="codebar"><span>sh</span><button type="button" data-copy aria-live="polite">Copy</button></div><pre><code>synapse backend run fork &quot;$RUN&quot; --title &quot;Try the smaller parser change&quot;
@@ -130,7 +133,9 @@ attached artifacts. Worktree paths and checkpoint roots stay local:</p>
 <div class="codeblock"><div class="codebar"><span>sh</span><button type="button" data-copy aria-live="polite">Copy</button></div><pre><code>synapse backend run export &quot;$RUN&quot; &gt; run.json
 synapse backend run import --project github.com/acme/parser &lt; run.json
 </code></pre></div>
-<p>The import receives a new local id and keeps the source id in <code>replayof</code>.</p>
+<p>The import receives a new local id and keeps the source id in <code>replayof</code>.
+Import structure, references, and size are validated before the new run is created;
+a bundle accepts at most 16 MiB of artifact content.</p>
 <h2 id="runners-and-previews">Runners and previews</h2>
 <p>A runner says which machine can claim work and what it can do. No hosted control
 plane is required:</p>
@@ -151,7 +156,8 @@ synapse backend runner heartbeat studio busy
 }' | synapse backend preview put &quot;$RUN&quot;
 </code></pre></div>
 <p>Synapse records the URL; it does not create a tunnel or publish a local port. A
-remote runner owns authentication and reachability.</p>
+remote runner owns authentication and reachability. Preview URLs may not contain
+credentials or query parameters; authentication belongs outside the stored URL.</p>
 <h2 id="jsonl-api">JSONL API</h2>
 <p><code>synapse backend api</code> reads one request per line and writes one correlated response
 per line. It opens no listener and exits at end of input.</p>
@@ -164,19 +170,26 @@ per line. It opens no listener and exits at end of input.</p>
 <ul>
 <li>Events retain 30 days and are capped at 50,000 rows.</li>
 <li>Runs retain 90 days and are capped at 10,000 rows. Active runs are not pruned.</li>
+<li>Completed run cleanup removes its managed detached worktree as well as its rows.</li>
 <li>Artifacts are content-addressed and verified when read.</li>
+<li>Individual artifacts are capped at 128 MiB; the local artifact store is capped
+at 10,000 records or 4 GiB, whichever comes first.</li>
+<li>Checkpoints, collaboration records, runners, previews, and evaluations have
+per-run or store-wide count limits.</li>
 <li>Secret-shaped text is refused or redacted before structured state is written.</li>
+<li>Filesystem restore rejects linked parent directories and artifact reads derive
+their path from the verified digest rather than trusting stored path text.</li>
 <li>Capabilities are default-deny and may be pinned to a content digest.</li>
 <li>A runner descriptor is not a trust grant. Project scopes still apply.</li>
 </ul>
-<footer class="articlefoot"><div class="articlemeta"><a href="https://github.com/wess/synapse/blob/main/docs/backend.md">View page source</a><span>Synapse 1.18.0</span></div><nav class="pagenav" aria-label="Guide pages"><a href="../../docs/cli/"><small>Previous</small><strong>CLI reference</strong></a><a href="../../docs/developing/"><small>Next</small><strong>Developing Synapse</strong></a></nav></footer>
+<footer class="articlefoot"><div class="articlemeta"><a href="https://github.com/wess/synapse/blob/main/docs/backend.md">View page source</a><span>Synapse 1.18.1</span></div><nav class="pagenav" aria-label="Guide pages"><a href="../../docs/cli/"><small>Previous</small><strong>CLI reference</strong></a><a href="../../docs/developing/"><small>Next</small><strong>Developing Synapse</strong></a></nav></footer>
     </main>
   <aside class="ontoc" aria-label="On this page"><span>Contents</span><ol><li><a href="#the-run-lifecycle">The run lifecycle</a></li><li><a href="#start-with-the-cli">Start with the CLI</a></li><li><a href="#checkpoints">Checkpoints</a></li><li><a href="#isolated-workspaces">Isolated workspaces</a></li><li><a href="#fork-and-move-a-run">Fork and move a run</a></li><li><a href="#runners-and-previews">Runners and previews</a></li><li><a href="#jsonl-api">JSONL API</a></li><li><a href="#retention-and-trust">Retention and trust</a></li></ol></aside>
   </div>
   <footer class="footer">
     <div class="footerupper"><div><a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">synapse</a><p>A shared memory. A little less starting over.</p></div>
       <nav aria-label="Footer"><a href="../../docs/">Manual</a><a href="../../tutorials/">Tutorials</a><a href="https://github.com/wess/synapse">Source</a><a href="https://github.com/wess/synapse/releases">Releases</a><a href="https://wess.io">By Wess</a></nav></div>
-    <p class="footerfine"><span>macOS &amp; Windows desktop · Linux CLI &amp; MCP</span><span>v1.18.0 · MIT · No account required</span></p>
+    <p class="footerfine"><span>macOS &amp; Windows desktop · Linux CLI &amp; MCP</span><span>v1.18.1 · MIT · No account required</span></p>
   </footer></div>
 </body>
 </html>

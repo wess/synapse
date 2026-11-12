@@ -85,7 +85,8 @@ synapse backend checkpoints restore checkpoint-…
 Restore replaces captured files, removes paths that were absent at capture time,
 and restores run and step state. Credential-shaped filenames, text that requires
 redaction, absolute paths, parent traversal, symlinks leaving the root, and more
-than 1,000 files are refused.
+than 1,000 files are refused. One file may be at most 32 MiB and one checkpoint
+at most 128 MiB, so a malformed request cannot consume memory without a bound.
 
 ## Isolated workspaces
 
@@ -104,7 +105,9 @@ synapse backend workspace merge "$RUN"
 Merge checks the binary patch first, checkpoints every target path in the original
 checkout, applies the patch, records the file changes, and marks the workspace
 merged. It does not commit. Conflicting or credential-shaped changes are refused
-before the original checkout is modified.
+before the original checkout is modified. Patches are capped at 64 MiB and Git
+output is read through fixed ceilings. The detached worktree is removed after a
+successful merge; its checkpoint and provenance remain.
 
 ## Fork and move a run
 
@@ -123,6 +126,8 @@ synapse backend run import --project github.com/acme/parser < run.json
 ```
 
 The import receives a new local id and keeps the source id in `replayof`.
+Import structure, references, and size are validated before the new run is created;
+a bundle accepts at most 16 MiB of artifact content.
 
 ## Runners and previews
 
@@ -151,7 +156,8 @@ printf '%s\n' '{
 ```
 
 Synapse records the URL; it does not create a tunnel or publish a local port. A
-remote runner owns authentication and reachability.
+remote runner owns authentication and reachability. Preview URLs may not contain
+credentials or query parameters; authentication belongs outside the stored URL.
 
 ## JSONL API
 
@@ -170,7 +176,14 @@ Method families mirror the CLI: `runs`, `steps`, `changes`, `reviews`, `comments
 
 - Events retain 30 days and are capped at 50,000 rows.
 - Runs retain 90 days and are capped at 10,000 rows. Active runs are not pruned.
+- Completed run cleanup removes its managed detached worktree as well as its rows.
 - Artifacts are content-addressed and verified when read.
+- Individual artifacts are capped at 128 MiB; the local artifact store is capped
+  at 10,000 records or 4 GiB, whichever comes first.
+- Checkpoints, collaboration records, runners, previews, and evaluations have
+  per-run or store-wide count limits.
 - Secret-shaped text is refused or redacted before structured state is written.
+- Filesystem restore rejects linked parent directories and artifact reads derive
+  their path from the verified digest rather than trusting stored path text.
 - Capabilities are default-deny and may be pinned to a content digest.
 - A runner descriptor is not a trust grant. Project scopes still apply.

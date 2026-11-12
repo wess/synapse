@@ -545,7 +545,7 @@ async fn migration_from_the_released_schema_preserves_memory() {
         .fetch_one(upgraded.pool())
         .await
         .unwrap();
-    assert_eq!(version, 20);
+    assert_eq!(version, 21);
     let backups = synapsecore::database::backupfolder(&path).unwrap();
     assert!(!synapsecore::database::snapshots(&backups).is_empty());
 }

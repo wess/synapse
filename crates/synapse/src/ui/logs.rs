@@ -352,7 +352,7 @@ fn activity(events: Vec<Event>, border: Hsla, surface: Hsla, cx: &App) -> AnyEle
                 )
                 .child(Text::new("Message").size(Size::Xs).dimmed()),
         )
-        .when(rows.len() == 0, |element| {
+        .when(rows.is_empty(), |element| {
             element.child(empty("No activity has been recorded yet."))
         })
         .children(rows)

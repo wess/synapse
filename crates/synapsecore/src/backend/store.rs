@@ -9,6 +9,7 @@ use sqlx::{QueryBuilder, Sqlite, SqlitePool};
 use std::fs::File;
 use std::io::Read;
 use std::path::{Path, PathBuf};
+use std::process::{Command, Stdio};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -18,6 +19,10 @@ const EVENTRETENTION: i64 = 30 * 86400;
 const MESSAGELIMIT: usize = 16 * 1024;
 const FIELDSLIMIT: usize = 64 * 1024;
 const ARTIFACTLIMIT: usize = 128 * 1024 * 1024;
+const ARTIFACTCOUNTLIMIT: i64 = 10_000;
+const ARTIFACTSTORELIMIT: i64 = 4 * 1024 * 1024 * 1024;
+const ATTACHMENTLIMIT: i64 = 10_000;
+const TEXTLIMIT: usize = 1024 * 1024;
 const STEPLIMIT: i64 = 1_000;
 const CONFIGLIMIT: i64 = 1_024;
 const RUNLIMIT: i64 = 10_000;
@@ -117,24 +122,28 @@ impl Backend {
     }
 
     pub async fn summary(&self) -> Result<Summary> {
-        let (running, failed, queued): (i64, i64, i64) = sqlx::query_as(
-      "SELECT COALESCE(SUM(status IN ('running','waiting')),0), COALESCE(SUM(status = 'failed'),0), COALESCE(SUM(status = 'queued'),0) FROM run",
-    )
-    .fetch_one(&self.pool)
-    .await?;
-        let errors: i64 =
-            sqlx::query_scalar("SELECT COUNT(*) FROM event WHERE level = 'error' AND created >= ?")
-                .bind(now() - 86400)
-                .fetch_one(&self.pool)
-                .await?;
-        let lastevent: i64 = sqlx::query_scalar("SELECT COALESCE(MAX(id),0) FROM event")
-            .fetch_one(&self.pool)
-            .await?;
-        let liveagents: i64 =
-            sqlx::query_scalar("SELECT COUNT(*) FROM meshagent WHERE registered = 1 AND seen >= ?")
-                .bind(now() - 90)
-                .fetch_one(&self.pool)
-                .await?;
+        let time = now();
+        let (running, failed, queued, errors, lastevent, liveagents): (
+            i64,
+            i64,
+            i64,
+            i64,
+            i64,
+            i64,
+        ) = sqlx::query_as(
+            "WITH counts AS (SELECT \
+             COALESCE(SUM(status IN ('running','waiting')),0) AS running, \
+             COALESCE(SUM(status='failed'),0) AS failed, \
+             COALESCE(SUM(status='queued'),0) AS queued FROM run) \
+             SELECT running,failed,queued, \
+             (SELECT COUNT(*) FROM event WHERE level='error' AND created>=?), \
+             (SELECT COALESCE(MAX(id),0) FROM event), \
+             (SELECT COUNT(*) FROM meshagent WHERE registered=1 AND seen>=?) FROM counts",
+        )
+        .bind(time - 86400)
+        .bind(time - 90)
+        .fetch_one(&self.pool)
+        .await?;
         Ok(Summary {
             liveagents: liveagents as usize,
             running: running as usize,
@@ -151,6 +160,8 @@ impl Backend {
         harness: &str,
         input: serde_json::Value,
     ) -> Result<Run> {
+        anyhow::ensure!(project.len() <= 4_096, "run project is too large");
+        validateword(harness, "run harness")?;
         let id = identifier("run");
         self.insertrun(&id, project, harness, cleanjson(input)?, "")
             .await
@@ -208,6 +219,8 @@ impl Backend {
         output: &str,
         error: &str,
     ) -> Result<Run> {
+        anyhow::ensure!(output.len() <= TEXTLIMIT, "run output is too large");
+        anyhow::ensure!(error.len() <= TEXTLIMIT, "run error is too large");
         let output = crate::brain::redact(output).body;
         let error = crate::brain::redact(error).body;
         let changed = sqlx::query(
@@ -339,6 +352,8 @@ impl Backend {
         output: &str,
         error: &str,
     ) -> Result<Step> {
+        anyhow::ensure!(output.len() <= TEXTLIMIT, "step output is too large");
+        anyhow::ensure!(error.len() <= TEXTLIMIT, "step error is too large");
         let time = now();
         let started = i64::from(status == StepStatus::Running) * time;
         let ended = i64::from(matches!(
@@ -406,10 +421,34 @@ impl Backend {
         let name = crate::brain::redact(name).body;
         let media = crate::brain::redact(media).body;
         let digest = hex(&Sha256::digest(content));
+        let exists: bool =
+            sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM artifact WHERE digest=?)")
+                .bind(&digest)
+                .fetch_one(&self.pool)
+                .await?;
+        if !exists {
+            let (count, size): (i64, i64) =
+                sqlx::query_as("SELECT COUNT(*),COALESCE(SUM(size),0) FROM artifact")
+                    .fetch_one(&self.pool)
+                    .await?;
+            anyhow::ensure!(count < ARTIFACTCOUNTLIMIT, "artifact count limit reached");
+            anyhow::ensure!(
+                size.saturating_add(content.len() as i64) <= ARTIFACTSTORELIMIT,
+                "artifact store is larger than 4 GiB"
+            );
+        }
         let folder = self.artifacts.join(&digest[..2]);
+        std::fs::create_dir_all(&self.artifacts)
+            .with_context(|| format!("could not create {}", self.artifacts.display()))?;
+        crate::database::securedirectory(&self.artifacts)?;
         std::fs::create_dir_all(&folder)
             .with_context(|| format!("could not create {}", folder.display()))?;
         crate::database::securedirectory(&folder)?;
+        let artifactroot = self.artifacts.canonicalize()?;
+        anyhow::ensure!(
+            folder.canonicalize()?.starts_with(&artifactroot),
+            "artifact folder leaves the artifact store"
+        );
         let path = folder.join(&digest);
         if !path.exists() {
             crate::files::atomicreplace(&path, content, None)?;
@@ -444,6 +483,21 @@ impl Backend {
 
     pub async fn attach(&self, runid: &str, digest: &str, role: &str) -> Result<()> {
         validateword(role, "artifact role")?;
+        let exists: bool = sqlx::query_scalar(
+            "SELECT EXISTS(SELECT 1 FROM runartifact WHERE runid=? AND digest=? AND role=?)",
+        )
+        .bind(runid)
+        .bind(digest)
+        .bind(role)
+        .fetch_one(&self.pool)
+        .await?;
+        if !exists {
+            let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM runartifact WHERE runid=?")
+                .bind(runid)
+                .fetch_one(&self.pool)
+                .await?;
+            anyhow::ensure!(count < ATTACHMENTLIMIT, "run artifact limit reached");
+        }
         sqlx::query("INSERT OR IGNORE INTO runartifact(runid,digest,role) VALUES(?,?,?)")
             .bind(runid)
             .bind(digest)
@@ -465,6 +519,10 @@ impl Backend {
     }
 
     pub async fn readartifact(&self, digest: &str) -> Result<Vec<u8>> {
+        anyhow::ensure!(
+            digest.len() == 64 && digest.bytes().all(|byte| byte.is_ascii_hexdigit()),
+            "artifact digest is invalid"
+        );
         let artifact = self
             .artifact(digest)
             .await?
@@ -473,8 +531,21 @@ impl Backend {
             artifact.size <= ARTIFACTLIMIT as i64,
             "artifact is too large"
         );
-        let file = File::open(&artifact.path)
-            .with_context(|| format!("could not open artifact `{digest}`"))?;
+        let root = self.artifacts.canonicalize()?;
+        let path = self.artifacts.join(&digest[..2]).join(digest);
+        let real = path
+            .canonicalize()
+            .with_context(|| format!("could not resolve artifact `{digest}`"))?;
+        anyhow::ensure!(
+            real.starts_with(root),
+            "artifact path leaves the artifact store"
+        );
+        anyhow::ensure!(
+            Path::new(&artifact.path) == path,
+            "artifact path does not match its digest"
+        );
+        let file =
+            File::open(&real).with_context(|| format!("could not open artifact `{digest}`"))?;
         anyhow::ensure!(
             file.metadata()?.len() <= ARTIFACTLIMIT as u64,
             "artifact is too large"
@@ -820,7 +891,7 @@ impl Backend {
     pub async fn callroute(
         &self,
         local: Option<bool>,
-        mut body: serde_json::Value,
+        body: serde_json::Value,
     ) -> Result<serde_json::Value> {
         let route = self
             .selectroute(local)
@@ -830,6 +901,7 @@ impl Backend {
             !route.endpoint.starts_with("unix://"),
             "Unix routes require a harness adapter"
         );
+        let mut body: serde_json::Value = serde_json::from_str(&cleanjson(body)?)?;
         let object = body
             .as_object_mut()
             .context("route request must be a JSON object")?;
@@ -874,6 +946,14 @@ impl Backend {
             (0.0..=1.0).contains(&score),
             "score must be between 0 and 1"
         );
+        anyhow::ensure!(expected.len() <= TEXTLIMIT, "expected output is too large");
+        anyhow::ensure!(actual.len() <= TEXTLIMIT, "actual output is too large");
+        anyhow::ensure!(note.len() <= TEXTLIMIT, "evaluation note is too large");
+        let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM evaluation WHERE runid=?")
+            .bind(runid)
+            .fetch_one(&self.pool)
+            .await?;
+        anyhow::ensure!(count < 1_000, "evaluation limit reached for this run");
         let id = sqlx::query(
             "INSERT INTO evaluation(runid,expected,actual,score,note,created) VALUES(?,?,?,?,?,?)",
         )
@@ -925,33 +1005,84 @@ impl Backend {
     }
 
     async fn pruneruns(&self, time: i64) -> Result<()> {
-        sqlx::query(
-            "DELETE FROM run WHERE status IN ('succeeded','failed','cancelled') AND updated<?",
+        let expired: Vec<String> = sqlx::query_scalar(
+            "SELECT id FROM run WHERE status IN ('succeeded','failed','cancelled') AND \
+             (updated<? OR id IN (SELECT id FROM run WHERE status IN \
+             ('succeeded','failed','cancelled') ORDER BY updated DESC,id DESC LIMIT -1 OFFSET ?)) \
+             ORDER BY updated,id LIMIT 256",
         )
         .bind(time - RUNRETENTION)
-        .execute(&self.pool)
-        .await?;
-        sqlx::query(
-            "DELETE FROM run WHERE id IN (SELECT id FROM run WHERE status IN \
-             ('succeeded','failed','cancelled') ORDER BY updated DESC,id DESC LIMIT -1 OFFSET ?)",
-        )
         .bind(RUNLIMIT)
-        .execute(&self.pool)
+        .fetch_all(&self.pool)
         .await?;
-        let orphaned: Vec<(String, String)> = sqlx::query_as(
-            "SELECT digest,path FROM artifact WHERE NOT EXISTS \
-             (SELECT 1 FROM runartifact WHERE runartifact.digest=artifact.digest) AND created<?",
+        for id in expired {
+            if let Some((root, path)) = sqlx::query_as::<_, (String, String)>(
+                "SELECT root,path FROM runworkspace WHERE runid=?",
+            )
+            .bind(&id)
+            .fetch_optional(&self.pool)
+            .await?
+            {
+                self.removemanagedworkspace(Path::new(&root), Path::new(&path))?;
+            }
+            sqlx::query("DELETE FROM run WHERE id=?")
+                .bind(id)
+                .execute(&self.pool)
+                .await?;
+        }
+        let orphaned: Vec<String> = sqlx::query_scalar(
+            "SELECT digest FROM artifact WHERE NOT EXISTS \
+             (SELECT 1 FROM runartifact WHERE runartifact.digest=artifact.digest) AND created<? \
+             ORDER BY created,digest LIMIT 1_000",
         )
         .bind(time - 86400)
         .fetch_all(&self.pool)
         .await?;
-        for (digest, path) in orphaned {
-            if std::fs::remove_file(&path).is_ok() {
+        for digest in orphaned {
+            if digest.len() != 64 || !digest.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+                continue;
+            }
+            let path = self.artifacts.join(&digest[..2]).join(&digest);
+            if std::fs::remove_file(path).is_ok() {
                 sqlx::query("DELETE FROM artifact WHERE digest=?")
                     .bind(digest)
                     .execute(&self.pool)
                     .await?;
             }
+        }
+        Ok(())
+    }
+
+    fn removemanagedworkspace(&self, root: &Path, path: &Path) -> Result<()> {
+        let managed = self
+            .artifacts
+            .parent()
+            .unwrap_or_else(|| Path::new("."))
+            .join("workspaces");
+        anyhow::ensure!(
+            path.parent() == Some(managed.as_path())
+                && path
+                    .file_name()
+                    .and_then(|name| name.to_str())
+                    .is_some_and(|name| name.starts_with("workspace-")),
+            "refusing to remove an unmanaged workspace"
+        );
+        if path.exists() {
+            let metadata = std::fs::symlink_metadata(path)?;
+            anyhow::ensure!(
+                metadata.is_dir() && !metadata.file_type().is_symlink(),
+                "refusing to remove a linked workspace"
+            );
+            std::fs::remove_dir_all(path)?;
+        }
+        if root.is_dir() {
+            let _ = Command::new("git")
+                .arg("-C")
+                .arg(root)
+                .args(["worktree", "prune"])
+                .stdout(Stdio::null())
+                .stderr(Stdio::null())
+                .status();
         }
         Ok(())
     }
@@ -964,6 +1095,15 @@ pub(crate) async fn recordpool(pool: &SqlitePool, mut draft: EventDraft) -> Resu
         draft.message.len() <= MESSAGELIMIT,
         "event message is too large"
     );
+    for (value, limit, label) in [
+        (&draft.project, 4_096, "event project"),
+        (&draft.agent, 256, "event agent"),
+        (&draft.session, 256, "event session"),
+        (&draft.runid, 256, "event run id"),
+        (&draft.traceid, 256, "event trace id"),
+    ] {
+        anyhow::ensure!(value.len() <= limit, "{label} is too large");
+    }
     let message = crate::brain::redact(&draft.message).body;
     for value in [
         &mut draft.project,
@@ -995,7 +1135,9 @@ pub(crate) async fn recordpool(pool: &SqlitePool, mut draft: EventDraft) -> Resu
     .execute(pool)
     .await?
     .last_insert_rowid();
-    pruneevents(pool, created).await?;
+    if id == 1 || id % 128 == 0 {
+        pruneevents(pool, created).await?;
+    }
     Ok(Event {
         id,
         created,
@@ -1043,12 +1185,20 @@ fn cleanjson(mut value: serde_json::Value) -> Result<String> {
         match value {
             serde_json::Value::String(text) => *text = crate::brain::redact(text).body,
             serde_json::Value::Array(items) => items.iter_mut().for_each(clean),
-            serde_json::Value::Object(items) => items.values_mut().for_each(clean),
+            serde_json::Value::Object(items) => {
+                let original = std::mem::take(items);
+                for (key, mut value) in original {
+                    clean(&mut value);
+                    items.insert(crate::brain::redact(&key).body, value);
+                }
+            }
             _ => {}
         }
     }
     clean(&mut value);
-    serde_json::to_string(&value).map_err(Into::into)
+    let text = serde_json::to_string(&value)?;
+    anyhow::ensure!(text.len() <= TEXTLIMIT, "JSON value is too large");
+    Ok(text)
 }
 
 fn validendpoint(endpoint: &str, local: bool) -> Result<()> {
@@ -1093,7 +1243,13 @@ pub(super) fn identifier(prefix: &str) -> String {
 }
 
 fn hex(bytes: &[u8]) -> String {
-    bytes.iter().map(|byte| format!("{byte:02x}")).collect()
+    const DIGITS: &[u8; 16] = b"0123456789abcdef";
+    let mut encoded = Vec::with_capacity(bytes.len() * 2);
+    for byte in bytes {
+        encoded.push(DIGITS[(byte >> 4) as usize]);
+        encoded.push(DIGITS[(byte & 0x0f) as usize]);
+    }
+    String::from_utf8(encoded).expect("hex digits are valid UTF-8")
 }
 
 pub(super) fn now() -> i64 {

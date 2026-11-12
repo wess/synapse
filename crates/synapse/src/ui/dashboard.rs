@@ -86,6 +86,7 @@ pub struct Dashboard {
     meshworkers: Vec<synapsecore::relay::WorkerView>,
     meshfeed: Vec<synapsecore::relay::Message>,
     logsummary: synapsecore::backend::Summary,
+    logbackend: Option<synapsecore::backend::Backend>,
     logevents: Vec<synapsecore::backend::Event>,
     logruns: Vec<synapsecore::backend::Run>,
     logrunstats: Vec<synapsecore::backend::RunStats>,
@@ -209,6 +210,9 @@ impl Dashboard {
         // The Memory page is the only thing that shows them.
         let (imports, importbatches) = (Vec::new(), Vec::new());
         let selectedmemory = memories.first().map(|memory| memory.id);
+        let logbackend = brain
+            .as_ref()
+            .and_then(|brain| synapsecore::backend::Backend::sharing(brain).ok());
         // A page opened directly arrives with its data; anywhere else the map
         // is read when it is navigated to, and never held stale.
         let graph = match page {
@@ -397,6 +401,7 @@ impl Dashboard {
             meshworkers: meshdata.workers,
             meshfeed: meshdata.feed,
             logsummary: synapsecore::backend::Summary::default(),
+            logbackend,
             logevents: Vec::new(),
             logruns: Vec::new(),
             logrunstats: Vec::new(),
@@ -1670,7 +1675,12 @@ impl Dashboard {
 
     fn inspectrun(&mut self, runid: String, cx: &mut Context<Self>) {
         self.logselectedrun = Some(runid);
-        cx.notify();
+        self.logrundetails.clear();
+        if self.logsloading {
+            cx.notify();
+        } else {
+            self.refreshlogs(cx);
+        }
     }
 
     fn refreshlogs(&mut self, cx: &mut Context<Self>) {
@@ -1680,12 +1690,17 @@ impl Dashboard {
         self.logsloading = true;
         self.logsrun = self.logsrun.wrapping_add(1);
         let run = self.logsrun;
-        let database = self.database.clone();
+        let backend = self.logbackend.clone();
+        let selectedrun = self.logselectedrun.clone();
         cx.notify();
         cx.spawn(async move |this, cx| {
             let result = cx
                 .background_executor()
-                .spawn(async move { loadlogs(&database) })
+                .spawn(async move {
+                    let backend = backend
+                        .ok_or_else(|| anyhow::anyhow!("the backend store is unavailable"))?;
+                    loadlogs(&backend, selectedrun.as_deref())
+                })
                 .await;
             this.update(cx, |this, cx| {
                 if this.logsrun != run {
@@ -1727,7 +1742,7 @@ impl Dashboard {
     fn schedulelogs(&mut self, cx: &mut Context<Self>) {
         let run = self.logsrun;
         cx.spawn(async move |this, cx| {
-            gpui::Timer::after(std::time::Duration::from_secs(2)).await;
+            gpui::Timer::after(std::time::Duration::from_secs(5)).await;
             this.update(cx, |this, cx| {
                 if this.page == Page::Logs && this.logsrun == run && !this.logspaused {
                     this.refreshlogs(cx);
@@ -3796,28 +3811,33 @@ struct LogData {
     capabilities: Vec<synapsecore::backend::Capability>,
 }
 
-fn loadlogs(database: &std::path::Path) -> anyhow::Result<LogData> {
+fn loadlogs(
+    backend: &synapsecore::backend::Backend,
+    selectedrun: Option<&str>,
+) -> anyhow::Result<LogData> {
     block(async {
-        let backend = synapsecore::backend::Backend::glance(database).await?;
         let summary = backend.summary().await?;
         let events = backend
             .events(&synapsecore::backend::EventFilter {
-                limit: 200,
+                limit: 32,
                 ..Default::default()
             })
             .await?;
-        let runs = backend.runs(20).await?;
-        let runstats = backend.runstats(20).await?;
+        let runs = backend.runs(8).await?;
+        let runstats = backend.runstats(8).await?;
         let mut rundetails = std::collections::HashMap::new();
-        for run in &runs {
+        if let Some(run) = selectedrun
+            .and_then(|id| runs.iter().find(|run| run.id == id))
+            .or_else(|| runs.first())
+        {
             rundetails.insert(
                 run.id.clone(),
                 logs::RunDetail {
-                    changes: backend.changes(&run.id).await?,
-                    reviews: backend.reviews(&run.id).await?,
-                    comments: backend.comments(&run.id).await?,
-                    checkpoints: backend.checkpoints(&run.id).await?,
-                    previews: backend.previews(&run.id).await?,
+                    changes: backend.recentchanges(&run.id, 20).await?,
+                    reviews: backend.recentreviews(&run.id, 5).await?,
+                    comments: backend.recentcomments(&run.id, 20).await?,
+                    checkpoints: backend.recentcheckpoints(&run.id, 10).await?,
+                    previews: backend.recentpreviews(&run.id, 10).await?,
                     workspace: backend.workspace(&run.id).await?,
                 },
             );

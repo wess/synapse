@@ -132,7 +132,10 @@ async fn changes_forks_reviews_and_comments_keep_the_run_context() {
         )
         .await
         .unwrap();
-    assert_eq!(backend.changes(&run.id).await.unwrap(), [change.clone()]);
+    assert_eq!(
+        backend.changes(&run.id).await.unwrap(),
+        std::slice::from_ref(&change)
+    );
 
     let review = backend
         .submitreview(
@@ -166,6 +169,37 @@ async fn changes_forks_reviews_and_comments_keep_the_run_context() {
             .await
             .unwrap()
             .resolved
+    );
+    let other = backend.createrun("/work", "test", json!({})).await.unwrap();
+    assert!(
+        backend
+            .comment(
+                &other.id,
+                Some(review.id),
+                "reviewer",
+                "run",
+                "",
+                0,
+                "This review belongs elsewhere.",
+                None,
+            )
+            .await
+            .is_err()
+    );
+    assert!(
+        backend
+            .comment(
+                &other.id,
+                None,
+                "reviewer",
+                "run",
+                "",
+                0,
+                "This parent belongs elsewhere.",
+                Some(comment.id),
+            )
+            .await
+            .is_err()
     );
 
     let fork = backend
@@ -232,6 +266,11 @@ async fn a_run_bundle_round_trips_history_reviews_and_artifacts() {
         .unwrap();
 
     let bundle = backend.exportbundle(&run.id).await.unwrap();
+    let mut invalid = bundle.clone();
+    invalid.changes[0].stepid = Some(999_999);
+    let before = backend.runs(100).await.unwrap().len();
+    assert!(backend.importbundle(invalid, None).await.is_err());
+    assert_eq!(backend.runs(100).await.unwrap().len(), before);
     let imported = backend
         .importbundle(bundle, Some("project-two"))
         .await
@@ -309,10 +348,11 @@ async fn checkpoints_restore_files_and_run_state_without_accepting_secrets() {
             &project,
             &["src/main.rs".into(), "src/new.rs".into()],
             "before edit",
-            json!({"cursor": 3}),
+            json!({"cursor": 3, "note": "TOKEN=secret-value"}),
         )
         .await
         .unwrap();
+    assert!(!checkpoint.state.contains("secret-value"));
 
     std::fs::write(project.join("src/main.rs"), "broken\n").unwrap();
     std::fs::write(project.join("src/new.rs"), "also broken\n").unwrap();
@@ -338,6 +378,43 @@ async fn checkpoints_restore_files_and_run_state_without_accepting_secrets() {
             .checkpoint(&run.id, &project, &[".env".into()], "bad", json!({}))
             .await
             .is_err()
+    );
+}
+
+#[cfg(unix)]
+#[tokio::test]
+async fn checkpoint_restore_refuses_a_symlinked_output_parent() {
+    use std::os::unix::fs::symlink;
+
+    let (folder, backend) = backend().await;
+    let project = folder.path().join("project");
+    let outside = folder.path().join("outside");
+    std::fs::create_dir_all(project.join("safe")).unwrap();
+    std::fs::create_dir_all(&outside).unwrap();
+    std::fs::write(project.join("safe/value.txt"), "before\n").unwrap();
+    std::fs::write(outside.join("value.txt"), "outside\n").unwrap();
+    let run = backend
+        .createrun(project.to_str().unwrap(), "test", json!({}))
+        .await
+        .unwrap();
+    let checkpoint = backend
+        .checkpoint(
+            &run.id,
+            &project,
+            &["safe/value.txt".into()],
+            "safe",
+            json!({}),
+        )
+        .await
+        .unwrap();
+    std::fs::remove_file(project.join("safe/value.txt")).unwrap();
+    std::fs::remove_dir(project.join("safe")).unwrap();
+    symlink(&outside, project.join("safe")).unwrap();
+
+    assert!(backend.restorecheckpoint(&checkpoint.id).await.is_err());
+    assert_eq!(
+        std::fs::read_to_string(outside.join("value.txt")).unwrap(),
+        "outside\n"
     );
 }
 
@@ -554,6 +631,32 @@ async fn artifact_reads_reject_files_that_grow_past_the_limit() {
 
     let error = backend.readartifact(&artifact.digest).await.unwrap_err();
     assert!(error.to_string().contains("too large"));
+}
+
+#[tokio::test]
+async fn artifact_reads_refuse_a_database_path_redirect() {
+    use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+
+    let (folder, backend) = backend().await;
+    let artifact = backend
+        .putartifact("output", "result", "application/octet-stream", b"small")
+        .await
+        .unwrap();
+    let outside = folder.path().join("outside");
+    std::fs::write(&outside, "small").unwrap();
+    let pool = SqlitePoolOptions::new()
+        .max_connections(1)
+        .connect_with(SqliteConnectOptions::new().filename(folder.path().join("brain.db")))
+        .await
+        .unwrap();
+    sqlx::query("UPDATE artifact SET path=? WHERE digest=?")
+        .bind(outside.display().to_string())
+        .bind(&artifact.digest)
+        .execute(&pool)
+        .await
+        .unwrap();
+
+    assert!(backend.readartifact(&artifact.digest).await.is_err());
 }
 
 #[tokio::test]

@@ -1,8 +1,11 @@
 use super::{Backend, PortableArtifact, Run, RunBundle};
 use anyhow::{Context, Result};
 use std::collections::HashMap;
+use std::fmt::Write;
 
 const VERSION: u32 = 1;
+const RECORDLIMIT: usize = 10_000;
+const BUNDLELIMIT: usize = 16 * 1024 * 1024;
 
 impl Backend {
     pub async fn exportbundle(&self, runid: &str) -> Result<RunBundle> {
@@ -39,6 +42,26 @@ impl Backend {
 
     pub async fn importbundle(&self, bundle: RunBundle, project: Option<&str>) -> Result<Run> {
         anyhow::ensure!(bundle.version == VERSION, "unsupported run bundle version");
+        anyhow::ensure!(
+            bundle.steps.len() <= 1_000
+                && bundle.changes.len() <= RECORDLIMIT
+                && bundle.reviews.len() <= 1_000
+                && bundle.comments.len() <= RECORDLIMIT
+                && bundle.evaluations.len() <= 1_000
+                && bundle.artifacts.len() <= 1_000,
+            "run bundle contains too many records"
+        );
+        let encoded = bundle.artifacts.iter().try_fold(0usize, |total, item| {
+            validatehex(&item.content)?;
+            total
+                .checked_add(item.content.len())
+                .context("run bundle is too large")
+        })?;
+        anyhow::ensure!(
+            encoded <= BUNDLELIMIT * 2,
+            "run bundle artifacts are larger than 16 MiB"
+        );
+        preflight(&bundle)?;
         let input = serde_json::from_str(&bundle.run.input).context("bundle input is not JSON")?;
         let run = self
             .createrun(
@@ -64,9 +87,18 @@ impl Backend {
             steps.insert(step.id, added.id);
         }
         for change in bundle.changes {
+            let stepid = match change.stepid {
+                Some(id) => Some(
+                    steps
+                        .get(&id)
+                        .copied()
+                        .context("bundle change names a missing step")?,
+                ),
+                None => None,
+            };
             self.recordchange(
                 &run.id,
-                change.stepid.and_then(|id| steps.get(&id).copied()),
+                stepid,
                 &change.path,
                 &change.operation,
                 &change.previouspath,
@@ -97,16 +129,34 @@ impl Backend {
         }
         let mut comments = HashMap::new();
         for comment in bundle.comments {
+            let reviewid = match comment.reviewid {
+                Some(id) => Some(
+                    reviews
+                        .get(&id)
+                        .copied()
+                        .context("bundle comment names a missing review")?,
+                ),
+                None => None,
+            };
+            let parent = match comment.parent {
+                Some(id) => Some(
+                    comments
+                        .get(&id)
+                        .copied()
+                        .context("bundle comment names a missing parent")?,
+                ),
+                None => None,
+            };
             let added = self
                 .comment(
                     &run.id,
-                    comment.reviewid.and_then(|id| reviews.get(&id).copied()),
+                    reviewid,
                     &comment.author,
                     &comment.targetkind,
                     &comment.target,
                     comment.line,
                     &comment.body,
-                    comment.parent.and_then(|id| comments.get(&id).copied()),
+                    parent,
                 )
                 .await?;
             if comment.resolved {
@@ -153,13 +203,64 @@ impl Backend {
 }
 
 fn hex(content: &[u8]) -> String {
-    content.iter().map(|byte| format!("{byte:02x}")).collect()
+    let mut encoded = String::with_capacity(content.len() * 2);
+    for byte in content {
+        write!(&mut encoded, "{byte:02x}").expect("writing to a string cannot fail");
+    }
+    encoded
 }
 
 fn decodehex(content: &str) -> Result<Vec<u8>> {
-    anyhow::ensure!(content.len().is_multiple_of(2), "artifact is not valid hex");
+    validatehex(content)?;
     (0..content.len())
         .step_by(2)
         .map(|at| u8::from_str_radix(&content[at..at + 2], 16).context("artifact is not valid hex"))
         .collect()
+}
+
+fn validatehex(content: &str) -> Result<()> {
+    anyhow::ensure!(content.len().is_multiple_of(2), "artifact is not valid hex");
+    anyhow::ensure!(
+        content.bytes().all(|byte| byte.is_ascii_hexdigit()),
+        "artifact is not valid hex"
+    );
+    Ok(())
+}
+
+fn preflight(bundle: &RunBundle) -> Result<()> {
+    serde_json::from_str::<serde_json::Value>(&bundle.run.input)
+        .context("bundle input is not JSON")?;
+    let mut steps = std::collections::HashSet::new();
+    for step in &bundle.steps {
+        anyhow::ensure!(steps.insert(step.id), "bundle repeats a step id");
+        serde_json::from_str::<serde_json::Value>(&step.input)
+            .context("bundle step input is not JSON")?;
+    }
+    for change in &bundle.changes {
+        anyhow::ensure!(
+            change.stepid.is_none_or(|id| steps.contains(&id)),
+            "bundle change names a missing step"
+        );
+    }
+    let mut reviews = std::collections::HashSet::new();
+    for review in &bundle.reviews {
+        anyhow::ensure!(reviews.insert(review.id), "bundle repeats a review id");
+        serde_json::from_str::<serde_json::Value>(&review.checks)
+            .context("review checks are invalid")?;
+        serde_json::from_str::<serde_json::Value>(&review.concerns)
+            .context("review concerns are invalid")?;
+    }
+    let mut comments = std::collections::HashSet::new();
+    for comment in &bundle.comments {
+        anyhow::ensure!(
+            comment.reviewid.is_none_or(|id| reviews.contains(&id)),
+            "bundle comment names a missing review"
+        );
+        anyhow::ensure!(
+            comment.parent.is_none_or(|id| comments.contains(&id)),
+            "bundle comment names a missing or later parent"
+        );
+        anyhow::ensure!(comments.insert(comment.id), "bundle repeats a comment id");
+    }
+    Ok(())
 }
