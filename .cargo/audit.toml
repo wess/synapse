@@ -12,4 +12,31 @@
 # the one path that opens a file somebody else could have made is
 # `synapse data restore`, which refuses a source with a log beside it before
 # SQLite sees either file (database/lifecycle.rs). Drop this the day sqlx moves.
-ignore = ["RUSTSEC-2026-0194", "RUSTSEC-2026-0195", "RUSTSEC-2026-0459"]
+# The desktop UI's current release pulls these maintenance-only advisories.
+# None reports a vulnerability, but none has a patched release either. Their
+# replacements require upstream API changes across the platform, font, HTTP,
+# and archive layers; keep the exact list here so every new warning still
+# fails CI. Recheck on every UI release and no later than 2027-02-12.
+ignore = [
+  "RUSTSEC-2024-0384", # instant, through the UI executor
+  "RUSTSEC-2024-0436", # paste, through the macOS graphics bindings
+  "RUSTSEC-2025-0052", # async-std, through archive downloads
+  "RUSTSEC-2025-0134", # rustls-pemfile, through the HTTP client
+  "RUSTSEC-2026-0173", # proc-macro-error2, through stacksafe
+  "RUSTSEC-2026-0192", # ttf-parser, through text and SVG rendering
+  "RUSTSEC-2026-0194", # quick-xml, optional xcb graph
+  "RUSTSEC-2026-0195", # quick-xml, optional xcb graph
+  "RUSTSEC-2026-0206", # rustybuzz, through text and SVG rendering
+  "RUSTSEC-2026-0370", # zvariant, Linux platform graph
+  "RUSTSEC-2026-0371", # zbus_names, Linux platform graph
+  "RUSTSEC-2026-0372", # zvariant_derive, Linux platform graph
+  "RUSTSEC-2026-0441", # pin-utils, through async-std
+  "RUSTSEC-2026-0459", # bundled SQLite; restore rejects adjacent WAL state
+]
+
+[output]
+# An exception above is a reviewed dependency constraint. Anything else is a
+# regression, including a new maintenance warning or a yanked package.
+deny = ["warnings"]
+quiet = false
+show_tree = true

@@ -1,6 +1,6 @@
 # Security, stability, and resource review
 
-Reviewed on 2026-10-26. Scope: Project Knowledge, its MCP/session integration, and the three dependency lockfiles. This is a source review and local validation, not a penetration test or a benchmark of the entire desktop app.
+Reviewed on 2026-10-26, with dependency policy refreshed on 2026-11-12. Scope: Project Knowledge, its MCP/session integration, and the three dependency lockfiles. This is a source review and local validation, not a penetration test or a benchmark of the entire desktop app.
 
 ## Fixes
 
@@ -28,9 +28,15 @@ Updated compatible patch versions where present in each lockfile:
 | tokio | 1.53.3 |
 | chacha20 | 0.10.2, replacing a yanked version |
 
-The configured RustSec audit reports zero vulnerabilities in all three lockfiles. The core and sync server have no advisory warnings after these updates.
+The configured RustSec audit reports no unacknowledged advisories in all three lockfiles. The core and sync server have no advisory warnings after these updates.
 
-The desktop lockfile still has 13 upstream maintenance-warning entries. Two existing suppressions remain for quick-xml 0.30: RUSTSEC-2026-0194 and RUSTSEC-2026-0195. An audit without those suppressions confirms both advisories. They are retained for GPUI's optional xcb build dependency; `cargo tree --target all -i quick-xml@0.30.0 --locked --offline` reports no dependency in the currently enabled graph. No additional suppression was introduced. Updating that optional graph requires an upstream-compatible dependency change.
+The desktop lockfile has 14 upstream maintenance warnings. They enter through the current UI release's executor, archive, HTTP, platform, graphics, text, and SVG dependency graphs. None describes a known vulnerability and none offers a patched version. Replacing them locally would mean carrying private forks of those layers, so the audit policy acknowledges their exact advisory IDs and rejects every new warning. The exceptions are due for review on every UI release and no later than 2027-02-12.
+
+Two compiler-compatibility warnings remain in `block` and `proc-macro-error2`. The first belongs to the macOS platform bindings; the second enters through the UI crate's stack-growth support. Both require upstream dependency changes. Current upstream source has already made stack-growth support optional, but that work is not in a compatible release yet.
+
+The bundled SQLite advisory remains mitigated at the trust boundary: restore refuses a database with adjacent write-ahead-log state before SQLite opens it. SQLx 0.9 still caps `libsqlite3-sys` below the patched 0.39 release, so there is no compatible upgrade. This exception stays explicit until SQLx accepts a patched bundled SQLite.
+
+CI now audits all three independent lockfiles and fails on any advisory or yanked package outside the reviewed list. Weekly dependency updates cover each Cargo workspace so compatible upstream fixes arrive without waiting for a manual sweep.
 
 ## Synthetic resource measurements
 

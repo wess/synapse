@@ -19,7 +19,7 @@
 <body class="docs" data-root="../../">
   <div class="shell">
   <a class="skip" href="#content">Skip to content</a>
-  <div class="windowbar"><a href="../../">synapse / manual</a><span>v1.18.1 · on your machine</span></div>
+  <div class="windowbar"><a href="../../">synapse / manual</a><span>v1.18.2 · on your machine</span></div>
   <header class="topbar">
     <a class="wordmark" href="../../" aria-label="Synapse home"><img src="../../icon.svg" width="28" height="28" alt=""><span>synapse</span></a>
     <button class="navtoggle" type="button" aria-expanded="false" aria-controls="topnav">Menu</button>
@@ -48,7 +48,7 @@
   </aside>
     <main class="article" id="content">
       <header class="articlehead"><nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../">Synapse</a><span aria-hidden="true">/</span><a href="../../docs/">Manual</a></nav><h1>Security, stability, and resource review</h1><p>Technical documentation for Security, stability, and resource review.</p></header>
-      <p>Reviewed on 2026-10-26. Scope: Project Knowledge, its MCP/session integration, and the three dependency lockfiles. This is a source review and local validation, not a penetration test or a benchmark of the entire desktop app.</p>
+      <p>Reviewed on 2026-10-26, with dependency policy refreshed on 2026-11-12. Scope: Project Knowledge, its MCP/session integration, and the three dependency lockfiles. This is a source review and local validation, not a penetration test or a benchmark of the entire desktop app.</p>
 <h2 id="fixes">Fixes</h2>
 <ul>
 <li>Redact the complete overview before taking an excerpt. Truncating first could expose the beginning of a credential or cut a private marker in half.</li>
@@ -77,8 +77,11 @@
 <tr><td>chacha20</td><td>0.10.2, replacing a yanked version</td></tr>
 </tbody>
 </table>
-<p>The configured RustSec audit reports zero vulnerabilities in all three lockfiles. The core and sync server have no advisory warnings after these updates.</p>
-<p>The desktop lockfile still has 13 upstream maintenance-warning entries. Two existing suppressions remain for quick-xml 0.30: RUSTSEC-2026-0194 and RUSTSEC-2026-0195. An audit without those suppressions confirms both advisories. They are retained for GPUI's optional xcb build dependency; <code>cargo tree --target all -i quick-xml@0.30.0 --locked --offline</code> reports no dependency in the currently enabled graph. No additional suppression was introduced. Updating that optional graph requires an upstream-compatible dependency change.</p>
+<p>The configured RustSec audit reports no unacknowledged advisories in all three lockfiles. The core and sync server have no advisory warnings after these updates.</p>
+<p>The desktop lockfile has 14 upstream maintenance warnings. They enter through the current UI release's executor, archive, HTTP, platform, graphics, text, and SVG dependency graphs. None describes a known vulnerability and none offers a patched version. Replacing them locally would mean carrying private forks of those layers, so the audit policy acknowledges their exact advisory IDs and rejects every new warning. The exceptions are due for review on every UI release and no later than 2027-02-12.</p>
+<p>Two compiler-compatibility warnings remain in <code>block</code> and <code>proc-macro-error2</code>. The first belongs to the macOS platform bindings; the second enters through the UI crate's stack-growth support. Both require upstream dependency changes. Current upstream source has already made stack-growth support optional, but that work is not in a compatible release yet.</p>
+<p>The bundled SQLite advisory remains mitigated at the trust boundary: restore refuses a database with adjacent write-ahead-log state before SQLite opens it. SQLx 0.9 still caps <code>libsqlite3-sys</code> below the patched 0.39 release, so there is no compatible upgrade. This exception stays explicit until SQLx accepts a patched bundled SQLite.</p>
+<p>CI now audits all three independent lockfiles and fails on any advisory or yanked package outside the reviewed list. Weekly dependency updates cover each Cargo workspace so compatible upstream fixes arrive without waiting for a manual sweep.</p>
 <h2 id="synthetic-resource-measurements">Synthetic resource measurements</h2>
 <p>Optimized local benchmark, 40 index requests, disposable fixture with 32 guides sharing 64 source files (4 MiB total):</p>
 <table>
@@ -103,14 +106,14 @@
 <li>Strict Clippy and formatting checks for the affected workspaces.</li>
 <li>Windows core cross-compilation with a local Zig C compiler. Windows native runtime and filesystem behavior were not exercised on a Windows machine in this review.</li>
 </ul>
-<footer class="articlefoot"><div class="articlemeta"><a href="https://github.com/wess/synapse/blob/main/docs/review.md">View page source</a><span>Synapse 1.18.1</span></div><nav class="pagenav" aria-label="Guide pages"><a href="../../docs/startup/"><small>Previous</small><strong>What launching costs</strong></a><a href="../../docs/windows/"><small>Next</small><strong>Windows</strong></a></nav></footer>
+<footer class="articlefoot"><div class="articlemeta"><a href="https://github.com/wess/synapse/blob/main/docs/review.md">View page source</a><span>Synapse 1.18.2</span></div><nav class="pagenav" aria-label="Guide pages"><a href="../../docs/startup/"><small>Previous</small><strong>What launching costs</strong></a><a href="../../docs/windows/"><small>Next</small><strong>Windows</strong></a></nav></footer>
     </main>
   <aside class="ontoc" aria-label="On this page"><span>Contents</span><ol><li><a href="#fixes">Fixes</a></li><li><a href="#dependency-updates">Dependency updates</a></li><li><a href="#synthetic-resource-measurements">Synthetic resource measurements</a></li><li><a href="#validation">Validation</a></li></ol></aside>
   </div>
   <footer class="footer">
     <div class="footerupper"><div><a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">synapse</a><p>A shared memory. A little less starting over.</p></div>
       <nav aria-label="Footer"><a href="../../docs/">Manual</a><a href="../../tutorials/">Tutorials</a><a href="https://github.com/wess/synapse">Source</a><a href="https://github.com/wess/synapse/releases">Releases</a><a href="https://wess.io">By Wess</a></nav></div>
-    <p class="footerfine"><span>macOS &amp; Windows desktop · Linux CLI &amp; MCP</span><span>v1.18.1 · MIT · No account required</span></p>
+    <p class="footerfine"><span>macOS &amp; Windows desktop · Linux CLI &amp; MCP</span><span>v1.18.2 · MIT · No account required</span></p>
   </footer></div>
 </body>
 </html>

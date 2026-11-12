@@ -13,6 +13,29 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  security:
+    name: dependency advisories
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+
+      # The policy denies every warning not explicitly reviewed in
+      # .cargo/audit.toml. Scan each independent lockfile.
+      - name: Desktop and sync wire
+        uses: rustsec/audit-check@69366f33c96575abad1ee0dba8212993eecbe998
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Core
+        uses: rustsec/audit-check@69366f33c96575abad1ee0dba8212993eecbe998
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          working-directory: crates/synapsecore
+      - name: Sync server
+        uses: rustsec/audit-check@69366f33c96575abad1ee0dba8212993eecbe998
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          working-directory: crates/synapseserve
+
   # macOS because the Keychain, shell-hook, and bundle tests are macOS-only —
   # on any other runner the suite silently skips the parts most worth checking.
   check:
