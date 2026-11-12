@@ -9,7 +9,7 @@ description = "Wire protocol and sealed envelopes shared by the Synapse client a
 [dependencies]
 anyhow.workspace = true
 base64.workspace = true
-chacha20poly1305 = "0.10"
+chacha20poly1305 = "0.11"
 serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true
