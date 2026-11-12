@@ -424,6 +424,7 @@ async fn a_run_can_receive_an_isolated_git_worktree() {
     let project = folder.path().join("project");
     std::fs::create_dir_all(&project).unwrap();
     git(&project, &["init"]);
+    git(&project, &["config", "core.autocrlf", "false"]);
     git(&project, &["config", "user.email", "test@example.test"]);
     git(&project, &["config", "user.name", "Test"]);
     std::fs::write(project.join("README.md"), "root\n").unwrap();
