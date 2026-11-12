@@ -117,9 +117,11 @@ Search, edit, export, restore, or delete stored memory from the app. Search matc
 ## Local runtime backend
 
 Synapse also provides the durable plumbing a local harness should not have to
-rebuild: a live redacted event ledger, leased jobs with retries and replay,
-content-addressed artifacts, default-deny capability decisions, triggers, model
-routes, and evaluations. The native **Logs** screen follows activity and runs;
+rebuild: a live redacted event ledger, leased jobs, change provenance, reversible
+checkpoints, isolated Git worktrees, review handoffs, comments, portable run
+bundles, content-addressed artifacts, runners, previews, default-deny capability
+decisions, triggers, model routes, and evaluations. The native **Activity** screen
+follows work and runs;
 the status-bar menu keeps the current counts and latest events visible without
 opening a window.
 
@@ -127,6 +129,9 @@ The interface is local and spawn-on-demand. `synapse backend api` reads one
 versioned JSON request per line on stdin and writes one response per line on
 stdout. It opens no listener and runs no permanent scheduler. Harnesses can use
 the same surface from Rust through `synapsecore::backend`.
+
+[Read the agent backend guide](docs/backend.md) for the lifecycle, safety rules,
+review format, runner protocol, and JSONL method families.
 
 ```sh
 synapse backend summary

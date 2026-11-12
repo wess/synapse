@@ -123,12 +123,139 @@ pub struct Run {
     pub output: String,
     pub error: String,
     pub replayof: String,
+    pub parent: String,
+    pub title: String,
     pub leaseowner: String,
     pub leaseuntil: i64,
     pub attempts: i64,
     pub maxattempts: i64,
     pub created: i64,
     pub updated: i64,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema, FromRow, PartialEq, Eq)]
+pub struct Change {
+    pub id: i64,
+    pub runid: String,
+    pub stepid: Option<i64>,
+    pub path: String,
+    pub operation: String,
+    pub previouspath: String,
+    pub beforedigest: String,
+    pub afterdigest: String,
+    pub summary: String,
+    pub created: i64,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema, FromRow, PartialEq, Eq)]
+pub struct Checkpoint {
+    pub id: String,
+    pub runid: String,
+    pub parent: String,
+    pub label: String,
+    pub root: String,
+    pub manifest: String,
+    pub state: String,
+    pub restored: i64,
+    pub created: i64,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema, FromRow, PartialEq, Eq)]
+pub struct Workspace {
+    pub id: String,
+    pub runid: String,
+    pub root: String,
+    pub path: String,
+    pub branch: String,
+    pub base: String,
+    pub status: String,
+    pub created: i64,
+    pub updated: i64,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema, FromRow, PartialEq, Eq)]
+pub struct Review {
+    pub id: i64,
+    pub runid: String,
+    pub reviewer: String,
+    pub verdict: String,
+    pub summary: String,
+    pub checks: String,
+    pub reasoning: String,
+    pub concerns: String,
+    pub created: i64,
+    pub updated: i64,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema, FromRow, PartialEq, Eq)]
+pub struct Comment {
+    pub id: i64,
+    pub runid: String,
+    pub reviewid: Option<i64>,
+    pub author: String,
+    pub targetkind: String,
+    pub target: String,
+    pub line: i64,
+    pub body: String,
+    pub parent: Option<i64>,
+    pub resolved: bool,
+    pub created: i64,
+    pub updated: i64,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema, FromRow, PartialEq, Eq)]
+pub struct Runner {
+    pub id: String,
+    pub name: String,
+    pub endpoint: String,
+    pub capabilities: String,
+    pub status: String,
+    pub local: bool,
+    pub lastseen: i64,
+    pub created: i64,
+    pub updated: i64,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema, FromRow, PartialEq, Eq)]
+pub struct Preview {
+    pub id: String,
+    pub runid: String,
+    pub runnerid: String,
+    pub url: String,
+    pub status: String,
+    pub expires: i64,
+    pub created: i64,
+    pub updated: i64,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
+pub struct PortableArtifact {
+    pub artifact: Artifact,
+    pub roles: Vec<String>,
+    pub content: String,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
+pub struct RunBundle {
+    pub version: u32,
+    pub run: Run,
+    pub steps: Vec<Step>,
+    pub changes: Vec<Change>,
+    pub reviews: Vec<Review>,
+    pub comments: Vec<Comment>,
+    pub evaluations: Vec<Evaluation>,
+    pub artifacts: Vec<PortableArtifact>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema, FromRow, PartialEq, Eq)]
+pub struct RunStats {
+    pub runid: String,
+    pub changes: i64,
+    pub reviews: i64,
+    pub opencomments: i64,
+    pub checkpoints: i64,
+    pub previews: i64,
+    pub workspace: String,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, JsonSchema, PartialEq, Eq, sqlx::Type)]

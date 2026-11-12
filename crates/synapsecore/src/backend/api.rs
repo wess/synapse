@@ -1,11 +1,12 @@
 //! Versioned JSONL interface for local harnesses.
 
-use super::{Backend, Decision, EventDraft, EventFilter, RunStatus, StepStatus};
+use super::{Backend, Decision, EventDraft, EventFilter, RunBundle, RunStatus, StepStatus};
 use anyhow::{Context, Result};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use serde_json::{Value, json};
 use std::io::{BufRead, Read, Write};
+use std::path::PathBuf;
 
 pub const VERSION: u32 = 1;
 const LINELIMIT: usize = 1024 * 1024;
@@ -119,6 +120,124 @@ struct RunRenew {
 }
 
 #[derive(Deserialize)]
+struct RunFork {
+    id: String,
+    #[serde(default)]
+    title: String,
+}
+
+#[derive(Deserialize)]
+struct ChangeRecord {
+    runid: String,
+    stepid: Option<i64>,
+    path: String,
+    operation: String,
+    #[serde(default)]
+    previouspath: String,
+    #[serde(default)]
+    beforedigest: String,
+    #[serde(default)]
+    afterdigest: String,
+    #[serde(default)]
+    summary: String,
+}
+
+#[derive(Deserialize)]
+struct ReviewSubmit {
+    runid: String,
+    #[serde(default)]
+    reviewer: String,
+    #[serde(default = "pending")]
+    verdict: String,
+    #[serde(default)]
+    summary: String,
+    #[serde(default)]
+    checks: Value,
+    #[serde(default)]
+    reasoning: String,
+    #[serde(default)]
+    concerns: Value,
+}
+
+#[derive(Deserialize)]
+struct CommentCreate {
+    runid: String,
+    reviewid: Option<i64>,
+    #[serde(default)]
+    author: String,
+    #[serde(default = "run_target")]
+    targetkind: String,
+    #[serde(default)]
+    target: String,
+    #[serde(default)]
+    line: i64,
+    body: String,
+    parent: Option<i64>,
+}
+
+#[derive(Deserialize)]
+struct CommentResolve {
+    id: i64,
+    #[serde(default = "yes")]
+    resolved: bool,
+}
+
+#[derive(Deserialize)]
+struct RunnerPut {
+    id: String,
+    name: String,
+    #[serde(default)]
+    endpoint: String,
+    #[serde(default)]
+    capabilities: Value,
+    #[serde(default = "yes")]
+    local: bool,
+}
+
+#[derive(Deserialize)]
+struct RunnerHeartbeat {
+    id: String,
+    #[serde(default = "online")]
+    status: String,
+}
+
+#[derive(Deserialize)]
+struct PreviewPut {
+    id: String,
+    runid: String,
+    runnerid: String,
+    url: String,
+    #[serde(default = "starting")]
+    status: String,
+    #[serde(default)]
+    expires: i64,
+}
+
+#[derive(Deserialize)]
+struct CheckpointCreate {
+    runid: String,
+    root: PathBuf,
+    paths: Vec<PathBuf>,
+    #[serde(default)]
+    label: String,
+    #[serde(default)]
+    state: Value,
+}
+
+#[derive(Deserialize)]
+struct WorkspaceCreate {
+    runid: String,
+    root: PathBuf,
+    base: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct BundleImport {
+    bundle: RunBundle,
+    project: Option<String>,
+}
+
+#[derive(Deserialize)]
 struct ArtifactPut {
     name: String,
     kind: String,
@@ -221,6 +340,26 @@ fn default_lease() -> i64 {
     60
 }
 
+fn pending() -> String {
+    "pending".to_owned()
+}
+
+fn run_target() -> String {
+    "run".to_owned()
+}
+
+fn online() -> String {
+    "online".to_owned()
+}
+
+fn starting() -> String {
+    "starting".to_owned()
+}
+
+fn yes() -> bool {
+    true
+}
+
 fn params<T: DeserializeOwned>(value: Value) -> Result<T> {
     serde_json::from_value(value).context("invalid request parameters")
 }
@@ -267,6 +406,23 @@ pub async fn handle(backend: &Backend, request: Request) -> Response {
                 let input = params::<Named>(request.params)?;
                 Response::ok(id.clone(), backend.replay(&input.id).await?)
             }
+            "runs.fork" => {
+                let input = params::<RunFork>(request.params)?;
+                Response::ok(id.clone(), backend.forkrun(&input.id, &input.title).await?)
+            }
+            "runs.export" => {
+                let input = params::<Named>(request.params)?;
+                Response::ok(id.clone(), backend.exportbundle(&input.id).await?)
+            }
+            "runs.import" => {
+                let input = params::<BundleImport>(request.params)?;
+                Response::ok(
+                    id.clone(),
+                    backend
+                        .importbundle(input.bundle, input.project.as_deref())
+                        .await?,
+                )
+            }
             "runs.claim" => {
                 let input = params::<RunClaim>(request.params)?;
                 Response::ok(id.clone(), backend.claim(&input.worker, input.lease).await?)
@@ -304,6 +460,78 @@ pub async fn handle(backend: &Backend, request: Request) -> Response {
                     backend
                         .updatestep(input.id, input.status, &input.output, &input.error)
                         .await?,
+                )
+            }
+            "changes.list" => {
+                let input = params::<RunNamed>(request.params)?;
+                Response::ok(id.clone(), backend.changes(&input.runid).await?)
+            }
+            "changes.record" => {
+                let input = params::<ChangeRecord>(request.params)?;
+                Response::ok(
+                    id.clone(),
+                    backend
+                        .recordchange(
+                            &input.runid,
+                            input.stepid,
+                            &input.path,
+                            &input.operation,
+                            &input.previouspath,
+                            &input.beforedigest,
+                            &input.afterdigest,
+                            &input.summary,
+                        )
+                        .await?,
+                )
+            }
+            "reviews.list" => {
+                let input = params::<RunNamed>(request.params)?;
+                Response::ok(id.clone(), backend.reviews(&input.runid).await?)
+            }
+            "reviews.submit" => {
+                let input = params::<ReviewSubmit>(request.params)?;
+                Response::ok(
+                    id.clone(),
+                    backend
+                        .submitreview(
+                            &input.runid,
+                            &input.reviewer,
+                            &input.verdict,
+                            &input.summary,
+                            input.checks,
+                            &input.reasoning,
+                            input.concerns,
+                        )
+                        .await?,
+                )
+            }
+            "comments.list" => {
+                let input = params::<RunNamed>(request.params)?;
+                Response::ok(id.clone(), backend.comments(&input.runid).await?)
+            }
+            "comments.create" => {
+                let input = params::<CommentCreate>(request.params)?;
+                Response::ok(
+                    id.clone(),
+                    backend
+                        .comment(
+                            &input.runid,
+                            input.reviewid,
+                            &input.author,
+                            &input.targetkind,
+                            &input.target,
+                            input.line,
+                            &input.body,
+                            input.parent,
+                        )
+                        .await?,
+                )
+            }
+            "comments.resolve" => {
+                let input = params::<CommentResolve>(request.params)?;
+                Response::ok(
+                    id.clone(),
+                    backend.resolvecomment(input.id, input.resolved).await?,
                 )
             }
             "artifacts.put" => {
@@ -438,6 +666,89 @@ pub async fn handle(backend: &Backend, request: Request) -> Response {
                         )
                         .await?,
                 )
+            }
+            "runners.list" => Response::ok(id.clone(), backend.runners().await?),
+            "runners.put" => {
+                let input = params::<RunnerPut>(request.params)?;
+                Response::ok(
+                    id.clone(),
+                    backend
+                        .putrunner(
+                            &input.id,
+                            &input.name,
+                            &input.endpoint,
+                            input.capabilities,
+                            input.local,
+                        )
+                        .await?,
+                )
+            }
+            "runners.heartbeat" => {
+                let input = params::<RunnerHeartbeat>(request.params)?;
+                Response::ok(
+                    id.clone(),
+                    backend.heartbeat(&input.id, &input.status).await?,
+                )
+            }
+            "previews.list" => {
+                let input = params::<RunNamed>(request.params)?;
+                Response::ok(id.clone(), backend.previews(&input.runid).await?)
+            }
+            "previews.put" => {
+                let input = params::<PreviewPut>(request.params)?;
+                Response::ok(
+                    id.clone(),
+                    backend
+                        .putpreview(
+                            &input.id,
+                            &input.runid,
+                            &input.runnerid,
+                            &input.url,
+                            &input.status,
+                            input.expires,
+                        )
+                        .await?,
+                )
+            }
+            "checkpoints.list" => {
+                let input = params::<RunNamed>(request.params)?;
+                Response::ok(id.clone(), backend.checkpoints(&input.runid).await?)
+            }
+            "checkpoints.create" => {
+                let input = params::<CheckpointCreate>(request.params)?;
+                Response::ok(
+                    id.clone(),
+                    backend
+                        .checkpoint(
+                            &input.runid,
+                            &input.root,
+                            &input.paths,
+                            &input.label,
+                            input.state,
+                        )
+                        .await?,
+                )
+            }
+            "checkpoints.restore" => {
+                let input = params::<Named>(request.params)?;
+                Response::ok(id.clone(), backend.restorecheckpoint(&input.id).await?)
+            }
+            "workspaces.get" => {
+                let input = params::<RunNamed>(request.params)?;
+                Response::ok(id.clone(), backend.workspace(&input.runid).await?)
+            }
+            "workspaces.create" => {
+                let input = params::<WorkspaceCreate>(request.params)?;
+                Response::ok(
+                    id.clone(),
+                    backend
+                        .createworkspace(&input.runid, &input.root, input.base.as_deref())
+                        .await?,
+                )
+            }
+            "workspaces.merge" => {
+                let input = params::<RunNamed>(request.params)?;
+                Response::ok(id.clone(), backend.mergeworkspace(&input.runid).await?)
             }
             unknown => anyhow::bail!("unknown backend method `{unknown}`"),
         }

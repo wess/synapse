@@ -51,6 +51,7 @@ pub fn render(page: Page, go: Navigation, cx: &App) -> impl IntoElement {
         text: theme.text().hsla(),
         dim: theme.dimmed().hsla(),
         hover: theme.surface_hover().hsla(),
+        selected: theme.primary().hsla(),
     };
     div()
         .flex_none()
@@ -127,7 +128,7 @@ pub fn render(page: Page, go: Navigation, cx: &App) -> impl IntoElement {
         ))
         .child(entry(
             "navlogs",
-            "Logs",
+            "Activity",
             IconName::Logs,
             page == Page::Logs,
             &colours,
@@ -194,6 +195,7 @@ struct Colours {
     text: Hsla,
     dim: Hsla,
     hover: Hsla,
+    selected: Hsla,
 }
 
 fn entry(
@@ -216,7 +218,12 @@ fn entry(
         .rounded(px(7.0))
         .focusable()
         .tab_index(0)
-        .when(here, |element| element.bg(hover))
+        .when(here, |element| {
+            element
+                .bg(hover)
+                .border_l_2()
+                .border_color(colours.selected)
+        })
         .text_color(if here { colours.text } else { colours.dim })
         .hover(move |style| style.bg(hover).text_color(text))
         .child(Icon::new(icon).size(Size::Xs))

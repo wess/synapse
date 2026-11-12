@@ -19,6 +19,7 @@ export const sections = [
     title: "Build with it",
     paths: [
       "docs/cli/",
+      "docs/backend/",
       "docs/developing/",
       "docs/synapsecore/",
       "docs/embedding/",

@@ -1,4 +1,4 @@
-use crate::backend::{Backend, Decision, EventDraft, EventFilter, RunStatus};
+use crate::backend::{Backend, Decision, EventDraft, EventFilter, RunBundle, RunStatus};
 use crate::cli::Outcome;
 use anyhow::{Context, Result};
 use serde::de::DeserializeOwned;
@@ -7,7 +7,7 @@ use std::ffi::OsString;
 use std::io::{Read, Write};
 use std::path::PathBuf;
 
-const USAGE: &str = "usage: synapse backend <summary|events|emit|runs|run|steps|artifact|capability|trigger|route|evaluation|api>";
+const USAGE: &str = "usage: synapse backend <summary|events|emit|runs|run|steps|changes|review|comment|artifact|runner|preview|checkpoints|workspace|capability|trigger|route|evaluation|api>";
 const INPUTLIMIT: u64 = 1024 * 1024;
 const ARTIFACTLIMIT: u64 = 128 * 1024 * 1024;
 
@@ -61,7 +61,14 @@ async fn command(backend: &Backend, action: &str, arguments: &[OsString]) -> Res
                 .steps(&text(arguments, 0, "usage: synapse backend steps <run>")?)
                 .await?,
         ),
+        "changes" => changes(backend, arguments).await,
+        "review" => review(backend, arguments).await,
+        "comment" => comment(backend, arguments).await,
         "artifact" => artifact(backend, arguments).await,
+        "runner" => runner(backend, arguments).await,
+        "preview" => preview(backend, arguments).await,
+        "checkpoints" => checkpoints(backend, arguments).await,
+        "workspace" => workspace(backend, arguments).await,
         "capability" => capability(backend, arguments).await,
         "trigger" => trigger(backend, arguments).await,
         "route" => route(backend, arguments).await,
@@ -74,7 +81,7 @@ async fn runcommand(backend: &Backend, arguments: &[OsString]) -> Result<()> {
     let action = text(
         arguments,
         0,
-        "usage: synapse backend run <create|update|replay|claim|renew|cancel|retry>",
+        "usage: synapse backend run <create|update|fork|replay|export|import|claim|renew|cancel|retry>",
     )?;
     match action.as_str() {
         "create" => {
@@ -111,6 +118,35 @@ async fn runcommand(backend: &Backend, arguments: &[OsString]) -> Result<()> {
                 )?)
                 .await?,
         ),
+        "fork" => {
+            let id = text(
+                arguments,
+                1,
+                "usage: synapse backend run fork <id> [--title <title>]",
+            )?;
+            printjson(
+                &backend
+                    .forkrun(&id, &value(arguments, "--title").unwrap_or_default())
+                    .await?,
+            )
+        }
+        "export" => printjson(
+            &backend
+                .exportbundle(&text(
+                    arguments,
+                    1,
+                    "usage: synapse backend run export <id>",
+                )?)
+                .await?,
+        ),
+        "import" => {
+            let bundle: RunBundle = inputjson(ARTIFACTLIMIT)?;
+            printjson(
+                &backend
+                    .importbundle(bundle, value(arguments, "--project").as_deref())
+                    .await?,
+            )
+        }
         "cancel" => printjson(
             &backend
                 .cancel(&text(
@@ -159,6 +195,355 @@ async fn runcommand(backend: &Backend, arguments: &[OsString]) -> Result<()> {
         }
         unknown => anyhow::bail!("unknown run command `{unknown}`"),
     }
+}
+
+async fn changes(backend: &Backend, arguments: &[OsString]) -> Result<()> {
+    let action = text(
+        arguments,
+        0,
+        "usage: synapse backend changes <list|record> <run>",
+    )?;
+    let run = text(
+        arguments,
+        1,
+        "usage: synapse backend changes <list|record> <run>",
+    )?;
+    match action.as_str() {
+        "list" => printjson(&backend.changes(&run).await?),
+        "record" => {
+            let input: ChangeInput = inputjson(INPUTLIMIT)?;
+            printjson(
+                &backend
+                    .recordchange(
+                        &run,
+                        input.stepid,
+                        &input.path,
+                        &input.operation,
+                        &input.previouspath,
+                        &input.beforedigest,
+                        &input.afterdigest,
+                        &input.summary,
+                    )
+                    .await?,
+            )
+        }
+        unknown => anyhow::bail!("unknown changes command `{unknown}`"),
+    }
+}
+
+#[derive(serde::Deserialize)]
+struct ChangeInput {
+    stepid: Option<i64>,
+    path: String,
+    operation: String,
+    #[serde(default)]
+    previouspath: String,
+    #[serde(default)]
+    beforedigest: String,
+    #[serde(default)]
+    afterdigest: String,
+    #[serde(default)]
+    summary: String,
+}
+
+async fn review(backend: &Backend, arguments: &[OsString]) -> Result<()> {
+    let action = text(
+        arguments,
+        0,
+        "usage: synapse backend review <list|submit> <run>",
+    )?;
+    let run = text(
+        arguments,
+        1,
+        "usage: synapse backend review <list|submit> <run>",
+    )?;
+    match action.as_str() {
+        "list" => printjson(&backend.reviews(&run).await?),
+        "submit" => {
+            let input: ReviewInput = inputjson(INPUTLIMIT)?;
+            printjson(
+                &backend
+                    .submitreview(
+                        &run,
+                        &input.reviewer,
+                        &input.verdict,
+                        &input.summary,
+                        input.checks,
+                        &input.reasoning,
+                        input.concerns,
+                    )
+                    .await?,
+            )
+        }
+        unknown => anyhow::bail!("unknown review command `{unknown}`"),
+    }
+}
+
+#[derive(serde::Deserialize)]
+struct ReviewInput {
+    #[serde(default)]
+    reviewer: String,
+    #[serde(default = "pending")]
+    verdict: String,
+    #[serde(default)]
+    summary: String,
+    #[serde(default)]
+    checks: Value,
+    #[serde(default)]
+    reasoning: String,
+    #[serde(default)]
+    concerns: Value,
+}
+
+async fn comment(backend: &Backend, arguments: &[OsString]) -> Result<()> {
+    let action = text(
+        arguments,
+        0,
+        "usage: synapse backend comment <list|add|resolve> ...",
+    )?;
+    match action.as_str() {
+        "list" => printjson(
+            &backend
+                .comments(&text(
+                    arguments,
+                    1,
+                    "usage: synapse backend comment list <run>",
+                )?)
+                .await?,
+        ),
+        "add" => {
+            let run = text(arguments, 1, "usage: synapse backend comment add <run>")?;
+            let input: CommentInput = inputjson(INPUTLIMIT)?;
+            printjson(
+                &backend
+                    .comment(
+                        &run,
+                        input.reviewid,
+                        &input.author,
+                        &input.targetkind,
+                        &input.target,
+                        input.line,
+                        &input.body,
+                        input.parent,
+                    )
+                    .await?,
+            )
+        }
+        "resolve" | "reopen" => {
+            let id = text(
+                arguments,
+                1,
+                "usage: synapse backend comment <resolve|reopen> <id>",
+            )?
+            .parse()?;
+            printjson(&backend.resolvecomment(id, action == "resolve").await?)
+        }
+        unknown => anyhow::bail!("unknown comment command `{unknown}`"),
+    }
+}
+
+#[derive(serde::Deserialize)]
+struct CommentInput {
+    reviewid: Option<i64>,
+    #[serde(default)]
+    author: String,
+    #[serde(default = "run_target")]
+    targetkind: String,
+    #[serde(default)]
+    target: String,
+    #[serde(default)]
+    line: i64,
+    body: String,
+    parent: Option<i64>,
+}
+
+async fn runner(backend: &Backend, arguments: &[OsString]) -> Result<()> {
+    let action = text(
+        arguments,
+        0,
+        "usage: synapse backend runner <list|put|heartbeat>",
+    )?;
+    match action.as_str() {
+        "list" => printjson(&backend.runners().await?),
+        "put" => {
+            let id = text(arguments, 1, "usage: synapse backend runner put <id>")?;
+            let input: RunnerInput = inputjson(INPUTLIMIT)?;
+            printjson(
+                &backend
+                    .putrunner(
+                        &id,
+                        &input.name,
+                        &input.endpoint,
+                        input.capabilities,
+                        input.local,
+                    )
+                    .await?,
+            )
+        }
+        "heartbeat" => {
+            let id = text(
+                arguments,
+                1,
+                "usage: synapse backend runner heartbeat <id> <status>",
+            )?;
+            let status = text(
+                arguments,
+                2,
+                "usage: synapse backend runner heartbeat <id> <status>",
+            )?;
+            printjson(&backend.heartbeat(&id, &status).await?)
+        }
+        unknown => anyhow::bail!("unknown runner command `{unknown}`"),
+    }
+}
+
+#[derive(serde::Deserialize)]
+struct RunnerInput {
+    name: String,
+    #[serde(default)]
+    endpoint: String,
+    #[serde(default)]
+    capabilities: Value,
+    #[serde(default = "yes")]
+    local: bool,
+}
+
+async fn preview(backend: &Backend, arguments: &[OsString]) -> Result<()> {
+    let action = text(
+        arguments,
+        0,
+        "usage: synapse backend preview <list|put> <run>",
+    )?;
+    let run = text(
+        arguments,
+        1,
+        "usage: synapse backend preview <list|put> <run>",
+    )?;
+    match action.as_str() {
+        "list" => printjson(&backend.previews(&run).await?),
+        "put" => {
+            let input: PreviewInput = inputjson(INPUTLIMIT)?;
+            printjson(
+                &backend
+                    .putpreview(
+                        &input.id,
+                        &run,
+                        &input.runnerid,
+                        &input.url,
+                        &input.status,
+                        input.expires,
+                    )
+                    .await?,
+            )
+        }
+        unknown => anyhow::bail!("unknown preview command `{unknown}`"),
+    }
+}
+
+async fn checkpoints(backend: &Backend, arguments: &[OsString]) -> Result<()> {
+    let action = text(
+        arguments,
+        0,
+        "usage: synapse backend checkpoints <list|create|restore> ...",
+    )?;
+    match action.as_str() {
+        "list" => printjson(
+            &backend
+                .checkpoints(&text(
+                    arguments,
+                    1,
+                    "usage: synapse backend checkpoints list <run>",
+                )?)
+                .await?,
+        ),
+        "create" => {
+            let run = text(
+                arguments,
+                1,
+                "usage: synapse backend checkpoints create <run> --root <path>",
+            )?;
+            let root = PathBuf::from(required(arguments, "--root")?);
+            let input: CheckpointInput = inputjson(INPUTLIMIT)?;
+            printjson(
+                &backend
+                    .checkpoint(&run, &root, &input.paths, &input.label, input.state)
+                    .await?,
+            )
+        }
+        "restore" => printjson(
+            &backend
+                .restorecheckpoint(&text(
+                    arguments,
+                    1,
+                    "usage: synapse backend checkpoints restore <id>",
+                )?)
+                .await?,
+        ),
+        unknown => anyhow::bail!("unknown checkpoints command `{unknown}`"),
+    }
+}
+
+#[derive(serde::Deserialize)]
+struct CheckpointInput {
+    paths: Vec<PathBuf>,
+    #[serde(default)]
+    label: String,
+    #[serde(default)]
+    state: Value,
+}
+
+async fn workspace(backend: &Backend, arguments: &[OsString]) -> Result<()> {
+    let action = text(
+        arguments,
+        0,
+        "usage: synapse backend workspace <get|create|merge> <run>",
+    )?;
+    let run = text(
+        arguments,
+        1,
+        "usage: synapse backend workspace <get|create|merge> <run>",
+    )?;
+    match action.as_str() {
+        "get" => printjson(&backend.workspace(&run).await?),
+        "create" => printjson(
+            &backend
+                .createworkspace(
+                    &run,
+                    &PathBuf::from(required(arguments, "--root")?),
+                    value(arguments, "--base").as_deref(),
+                )
+                .await?,
+        ),
+        "merge" => printjson(&backend.mergeworkspace(&run).await?),
+        unknown => anyhow::bail!("unknown workspace command `{unknown}`"),
+    }
+}
+
+#[derive(serde::Deserialize)]
+struct PreviewInput {
+    id: String,
+    runnerid: String,
+    url: String,
+    #[serde(default = "starting")]
+    status: String,
+    #[serde(default)]
+    expires: i64,
+}
+
+fn pending() -> String {
+    "pending".to_owned()
+}
+
+fn run_target() -> String {
+    "run".to_owned()
+}
+
+fn starting() -> String {
+    "starting".to_owned()
+}
+
+fn yes() -> bool {
+    true
 }
 
 #[derive(serde::Deserialize)]

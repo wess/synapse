@@ -498,6 +498,13 @@ async fn migration_from_the_released_schema_preserves_memory() {
         .await
         .unwrap();
     for table in [
+        "runcomment",
+        "runreview",
+        "runchange",
+        "runcheckpoint",
+        "runworkspace",
+        "runpreview",
+        "runner",
         "runartifact",
         "runstep",
         "evaluation",
@@ -538,7 +545,7 @@ async fn migration_from_the_released_schema_preserves_memory() {
         .fetch_one(upgraded.pool())
         .await
         .unwrap();
-    assert_eq!(version, 19);
+    assert_eq!(version, 20);
     let backups = synapsecore::database::backupfolder(&path).unwrap();
     assert!(!synapsecore::database::snapshots(&backups).is_empty());
 }

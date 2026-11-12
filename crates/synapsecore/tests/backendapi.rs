@@ -114,6 +114,65 @@ async fn jsonl_refuses_to_expand_a_large_artifact() {
     assert!(response.error.unwrap().contains("too large for JSONL"));
 }
 
+#[tokio::test]
+async fn jsonl_exposes_collaboration_and_runner_records() {
+    let root = tempfile::tempdir().unwrap();
+    let backend = Backend::open(root.path().join("brain.db")).await.unwrap();
+    let run = backend
+        .createrun("demo", "test", json!({"task": "build"}))
+        .await
+        .unwrap();
+    let requests = [
+        json!({
+          "version": 1,
+          "id": "change",
+          "method": "changes.record",
+          "params": {
+            "runid": run.id,
+            "path": "src/main.rs",
+            "operation": "modify",
+            "summary": "Handle the empty state"
+          }
+        }),
+        json!({
+          "version": 1,
+          "id": "review",
+          "method": "reviews.submit",
+          "params": {
+            "runid": run.id,
+            "reviewer": "reviewer",
+            "verdict": "approved",
+            "summary": "Ready",
+            "checks": [{"name": "test", "status": "passed"}]
+          }
+        }),
+        json!({
+          "version": 1,
+          "id": "runner",
+          "method": "runners.put",
+          "params": {
+            "id": "local-one",
+            "name": "Local runner",
+            "capabilities": ["shell", "preview"]
+          }
+        }),
+    ]
+    .map(|request| request.to_string())
+    .join("\n");
+    let mut output = Vec::new();
+    synapsecore::backend::api::serve(&backend, std::io::Cursor::new(requests), &mut output)
+        .await
+        .unwrap();
+    let responses = String::from_utf8(output)
+        .unwrap()
+        .lines()
+        .map(|line| serde_json::from_str::<Value>(line).unwrap())
+        .collect::<Vec<_>>();
+    assert_eq!(responses[0]["result"]["path"], "src/main.rs");
+    assert_eq!(responses[1]["result"]["verdict"], "approved");
+    assert_eq!(responses[2]["result"]["status"], "online");
+}
+
 #[test]
 fn backend_cli_emits_and_queries_events() {
     let root = tempfile::tempdir().unwrap();

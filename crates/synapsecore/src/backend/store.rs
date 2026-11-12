@@ -26,9 +26,9 @@ static NEXT: AtomicU64 = AtomicU64::new(0);
 
 #[derive(Clone)]
 pub struct Backend {
-    pool: SqlitePool,
+    pub(super) pool: SqlitePool,
     _lock: Arc<File>,
-    artifacts: PathBuf,
+    pub(super) artifacts: PathBuf,
 }
 
 impl Backend {
@@ -184,7 +184,7 @@ impl Backend {
     }
 
     pub async fn run(&self, id: &str) -> Result<Option<Run>> {
-        sqlx::query_as("SELECT id,project,harness,status,input,output,error,replayof,leaseowner,leaseuntil,attempts,maxattempts,created,updated FROM run WHERE id = ?")
+        sqlx::query_as("SELECT id,project,harness,status,input,output,error,replayof,parent,title,leaseowner,leaseuntil,attempts,maxattempts,created,updated FROM run WHERE id = ?")
       .bind(id)
       .fetch_optional(&self.pool)
       .await
@@ -193,7 +193,7 @@ impl Backend {
 
     pub async fn runs(&self, limit: i64) -> Result<Vec<Run>> {
         sqlx::query_as(
-      "SELECT id,project,harness,status,input,output,error,replayof,leaseowner,leaseuntil,attempts,maxattempts,created,updated FROM run ORDER BY updated DESC,id DESC LIMIT ?",
+      "SELECT id,project,harness,status,input,output,error,replayof,parent,title,leaseowner,leaseuntil,attempts,maxattempts,created,updated FROM run ORDER BY updated DESC,id DESC LIMIT ?",
     )
     .bind(limit.clamp(1, 500))
     .fetch_all(&self.pool)
@@ -396,6 +396,12 @@ impl Backend {
             content.len() <= ARTIFACTLIMIT,
             "artifact is larger than 128 MiB"
         );
+        if let Ok(text) = std::str::from_utf8(content) {
+            anyhow::ensure!(
+                crate::brain::redact(text).body == text,
+                "artifact content appears to contain a credential or private block"
+            );
+        }
         validateword(kind, "artifact kind")?;
         let name = crate::brain::redact(name).body;
         let media = crate::brain::redact(media).body;
@@ -1080,7 +1086,7 @@ fn validendpoint(endpoint: &str, local: bool) -> Result<()> {
     Ok(())
 }
 
-fn identifier(prefix: &str) -> String {
+pub(super) fn identifier(prefix: &str) -> String {
     let nonce = NEXT.fetch_add(1, Ordering::Relaxed);
     let seed = format!("{prefix}:{}:{}:{nonce}", std::process::id(), now());
     format!("{prefix}-{}", &hex(&Sha256::digest(seed))[..24])
@@ -1090,7 +1096,7 @@ fn hex(bytes: &[u8]) -> String {
     bytes.iter().map(|byte| format!("{byte:02x}")).collect()
 }
 
-fn now() -> i64 {
+pub(super) fn now() -> i64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap_or_default()

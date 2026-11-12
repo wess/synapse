@@ -4,6 +4,7 @@ import type { Page } from "./types";
 import { repositoryurl } from "./deploy";
 
 const descriptions: Record<string, string> = {
+  backend: "Runs, provenance, checkpoints, workspaces, reviews, runners, previews, and the local JSONL API.",
   developing: "Build, test, document, and publish each Synapse surface from its own workspace.",
   synapsecore: "The shipped core library, its public modules, storage boundary, and independent build.",
   embedding: "Choose MCP, CLI automation, or the Rust library, and preserve scope and response budgets.",

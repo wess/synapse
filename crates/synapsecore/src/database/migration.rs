@@ -3,7 +3,7 @@ use anyhow::{Context, Result};
 use sqlx::SqlitePool;
 use std::path::Path;
 
-pub const LATEST: i64 = 19;
+pub const LATEST: i64 = 20;
 
 /// The vault's own schema, in its own file. One table today, with the numbered
 /// migration around it anyway: the day it grows a column is not the day to
@@ -456,6 +456,73 @@ const MIGRATIONS: &[Migration] = &[
     Migration {
         version: 19,
         statements: &["ALTER TABLE trigger ADD COLUMN claimed INTEGER NOT NULL DEFAULT 0"],
+    },
+    Migration {
+        version: 20,
+        statements: &[
+            "ALTER TABLE run ADD COLUMN parent TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE run ADD COLUMN title TEXT NOT NULL DEFAULT ''",
+            "CREATE INDEX runparent ON run(parent,created) WHERE parent != ''",
+            "CREATE TABLE runchange(\
+             id INTEGER PRIMARY KEY AUTOINCREMENT, \
+             runid TEXT NOT NULL REFERENCES run(id) ON DELETE CASCADE, \
+             stepid INTEGER REFERENCES runstep(id) ON DELETE SET NULL, \
+             path TEXT NOT NULL, operation TEXT NOT NULL \
+             CHECK(operation IN ('create','modify','delete','rename')), \
+             previouspath TEXT NOT NULL DEFAULT '', beforedigest TEXT NOT NULL DEFAULT '', \
+             afterdigest TEXT NOT NULL DEFAULT '', summary TEXT NOT NULL DEFAULT '', \
+             created INTEGER NOT NULL)",
+            "CREATE INDEX runchangerun ON runchange(runid,id)",
+            "CREATE TABLE runcheckpoint(\
+             id TEXT PRIMARY KEY, runid TEXT NOT NULL REFERENCES run(id) ON DELETE CASCADE, \
+             parent TEXT NOT NULL DEFAULT '', label TEXT NOT NULL DEFAULT '', \
+             root TEXT NOT NULL, manifest TEXT NOT NULL REFERENCES artifact(digest) ON DELETE RESTRICT, \
+             state TEXT NOT NULL DEFAULT '{}', restored INTEGER NOT NULL DEFAULT 0, \
+             created INTEGER NOT NULL)",
+            "CREATE INDEX runcheckpointrun ON runcheckpoint(runid,created,id)",
+            "CREATE TABLE runworkspace(\
+             id TEXT PRIMARY KEY, runid TEXT NOT NULL UNIQUE REFERENCES run(id) ON DELETE CASCADE, \
+             root TEXT NOT NULL, path TEXT NOT NULL, branch TEXT NOT NULL DEFAULT '', \
+             base TEXT NOT NULL DEFAULT '', status TEXT NOT NULL DEFAULT 'ready' \
+             CHECK(status IN ('creating','ready','merging','merged','failed','removed')), \
+             created INTEGER NOT NULL, updated INTEGER NOT NULL)",
+            "CREATE INDEX runworkspacestatus ON runworkspace(status,updated)",
+            "CREATE TABLE runreview(\
+             id INTEGER PRIMARY KEY AUTOINCREMENT, \
+             runid TEXT NOT NULL REFERENCES run(id) ON DELETE CASCADE, reviewer TEXT NOT NULL DEFAULT '', \
+             verdict TEXT NOT NULL DEFAULT 'pending' \
+             CHECK(verdict IN ('pending','approved','changes')), \
+             summary TEXT NOT NULL DEFAULT '', checks TEXT NOT NULL DEFAULT '[]', \
+             reasoning TEXT NOT NULL DEFAULT '', concerns TEXT NOT NULL DEFAULT '[]', \
+             created INTEGER NOT NULL, updated INTEGER NOT NULL)",
+            "CREATE INDEX runreviewrun ON runreview(runid,id)",
+            "CREATE TABLE runcomment(\
+             id INTEGER PRIMARY KEY AUTOINCREMENT, \
+             runid TEXT NOT NULL REFERENCES run(id) ON DELETE CASCADE, \
+             reviewid INTEGER REFERENCES runreview(id) ON DELETE CASCADE, \
+             author TEXT NOT NULL DEFAULT '', targetkind TEXT NOT NULL \
+             CHECK(targetkind IN ('run','event','step','artifact','change','file')), \
+             target TEXT NOT NULL DEFAULT '', line INTEGER NOT NULL DEFAULT 0, \
+             body TEXT NOT NULL, parent INTEGER REFERENCES runcomment(id) ON DELETE CASCADE, \
+             resolved INTEGER NOT NULL DEFAULT 0 CHECK(resolved IN (0,1)), \
+             created INTEGER NOT NULL, updated INTEGER NOT NULL)",
+            "CREATE INDEX runcommentrun ON runcomment(runid,id)",
+            "CREATE INDEX runcommentreview ON runcomment(reviewid,id) WHERE reviewid IS NOT NULL",
+            "CREATE TABLE runner(\
+             id TEXT PRIMARY KEY, name TEXT NOT NULL, endpoint TEXT NOT NULL DEFAULT '', \
+             capabilities TEXT NOT NULL DEFAULT '[]', status TEXT NOT NULL DEFAULT 'offline' \
+             CHECK(status IN ('online','busy','draining','offline')), local INTEGER NOT NULL DEFAULT 1 \
+             CHECK(local IN (0,1)), lastseen INTEGER NOT NULL DEFAULT 0, \
+             created INTEGER NOT NULL, updated INTEGER NOT NULL)",
+            "CREATE INDEX runnerstatus ON runner(status,lastseen DESC)",
+            "CREATE TABLE runpreview(\
+             id TEXT PRIMARY KEY, runid TEXT NOT NULL REFERENCES run(id) ON DELETE CASCADE, \
+             runnerid TEXT NOT NULL REFERENCES runner(id) ON DELETE CASCADE, \
+             url TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'starting' \
+             CHECK(status IN ('starting','ready','stopped','failed','expired')), \
+             expires INTEGER NOT NULL DEFAULT 0, created INTEGER NOT NULL, updated INTEGER NOT NULL)",
+            "CREATE INDEX runpreviewrun ON runpreview(runid,updated DESC)",
+        ],
     },
 ];
 

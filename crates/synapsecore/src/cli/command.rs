@@ -11,7 +11,7 @@ Usage: synapse [command]
 
 Commands:
   app                              Open the desktop application
-  backend <summary|events|runs|artifact|capability|trigger|route|evaluation|api>
+  backend <summary|events|runs|changes|review|comment|artifact|runner|preview|api>
                                    Inspect and drive the local agent runtime
   mcp                              Run the MCP stdio server
   mcp list [--json]                List the MCP servers in your library

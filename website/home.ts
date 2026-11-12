@@ -37,7 +37,7 @@ const body = `
       <article><h3>Connect your tools.</h3><p>Use the built-in connectors or add a TOML descriptor for another harness. Ainz has a reciprocal bridge: connect it here or there and both products agree.</p><a href="docs/harnesses/">Supported &amp; custom tools</a> · <a href="https://wess.io/ainz/">Meet Ainz</a></article>
       <article><h3>Keep one skill library.</h3><p>Save a reusable procedure once. Review proposed skills, approve revisions, and update managed copies without overwriting your edits.</p><a href="docs/skills/">Skills &amp; learning</a></article>
       <article><h3>Work together.</h3><p>Turn on the optional mesh for direct messages, roles, teams, and bounded background workers. Join the conversation from your terminal.</p><a href="docs/mesh/">The agent mesh</a></article>
-      <article><h3>See what is running.</h3><p>Follow live events, durable jobs, artifacts, triggers, routes, and evaluations from one local operational view.</p><a href="docs/app/#logs">Logs and runtime status</a></article>
+      <article><h3>See how the work happened.</h3><p>Follow runs, changed files, reviews, checkpoints, isolated workspaces, runners, previews, and live events from one local view.</p><a href="docs/app/#logs">Activity and runtime status</a></article>
     </div>
   </section>
   <section class="boundary" aria-labelledby="boundarytitle">

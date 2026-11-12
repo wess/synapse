@@ -13,7 +13,7 @@ export const app: Page = {
     { label: "Memory", id: "memory" },
     { label: "MCP", id: "servers" },
     { label: "Mesh", id: "mesh" },
-    { label: "Logs", id: "logs" },
+    { label: "Activity", id: "logs" },
     { label: "Skills", id: "skills" },
     { label: "Vaults", id: "vaults" },
     { label: "Settings", id: "settings" },
@@ -32,7 +32,7 @@ export const app: Page = {
         <tr><td>Skills</td><td>Keep one Agent Skills library, install it into every connected tool, and find skills other people published.</td><td>The library in the Synapse data directory, and skill folders inside each tool.</td></tr>
         <tr><td>MCP</td><td>Keep one list of MCP servers, give it to every connected tool, and find servers in the registry.</td><td>Server files in the Synapse data directory, their secrets in the vault, and each tool's MCP entries through its own CLI.</td></tr>
         <tr><td>Mesh</td><td>Turn the agent mesh on and watch who has joined, what they report, and what they send each other.</td><td>One local preference. The roster and messages are written by the agents themselves.</td></tr>
-        <tr><td>Logs</td><td>Follow live harness activity, durable runs, and local automation.</td><td>Nothing. The screen reads the bounded local runtime ledger.</td></tr>
+        <tr><td>Activity</td><td>Follow runs, changed-file provenance, reviews, workspaces, runners, previews, and live harness events.</td><td>Nothing. The screen reads bounded local runtime state.</td></tr>
         <tr><td>Vaults</td><td>Manage labels, stored values, mappings, the value store itself, and approved project scopes.</td><td>Vault metadata, stored values, and <code>.synapse.yaml</code>.</td></tr>
         <tr><td>Settings</td><td>Manage shared guidance, recall, the mesh, self-improvement, the worker limit, appearance, CLI, and shell integration.</td><td><code>SOUL.md</code>, global pointers, local preferences, the CLI launcher, and one managed shell block.</td></tr>
       </tbody>
@@ -111,9 +111,10 @@ export const app: Page = {
     <p>Once on, supervised workers lead the screen and are grouped into working and needs-attention states. The side roster shows other agents that are online now; offline and expected rows stay collapsed until you ask for them. Recent messages remain below the live roster. Nothing on this screen changes what agents do — it reports. <strong>Refresh</strong> re-reads the database, which is also what opening the screen does.</p>
     <p>See <a href="../mesh/">Agent mesh</a> for roles, teams, and the command line.</p>
 
-    <h2 id="logs">Logs and runtime status</h2>
-    <p>Logs combines the live event feed with current runs, triggers, inference routes, and capability decisions. Pause stops following without stopping collection; Refresh performs one immediate bounded read. The screen polls only while it is open.</p>
-    <p>The status-bar menu is the compact view: live-agent, running, queued, and error counts followed by the latest four events. <strong>Open Logs</strong> takes the full window directly to this screen.</p>
+    <h2 id="logs">Activity and runtime status</h2>
+    <p>Activity combines the live event feed with runs, changed-file counts, review and comment state, checkpoints, isolated workspaces, registered runners, live previews, triggers, inference routes, and capability decisions. Each run row says what durable evidence exists instead of making you reconstruct it from logs.</p>
+    <p><strong>Pause</strong> stops following without stopping collection; <strong>Refresh</strong> performs one immediate bounded read. The screen polls only while it is open. The status-bar menu is the compact view: live-agent, running, queued, and error counts followed by the latest four events. <strong>Open Activity</strong> takes the full window directly to this screen.</p>
+    <p>Use the <a href="../backend/">agent backend guide</a> to create runs, checkpoints, workspaces, reviews, runners, and previews from a harness or the CLI.</p>
 
     <h2 id="skills">Skills</h2>
     <p>The Skills screen lists your library, and beside each skill a badge per connected tool saying whether that tool has it, has an older copy, or has one Synapse did not write. <strong>Install</strong> on a skill copies it wherever it is missing or behind; <strong>Install all</strong> does the lot.</p>

@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Agent backend — Synapse</title>
+  <meta name="description" content="Runs, provenance, checkpoints, workspaces, reviews, runners, previews, and the local JSONL API.">
+  <meta name="theme-color" content="#352879">
+  <meta property="og:title" content="Agent backend — Synapse">
+  <meta property="og:description" content="Runs, provenance, checkpoints, workspaces, reviews, runners, previews, and the local JSONL API.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://wess.io/synapse/docs/backend/">
+  <link rel="canonical" href="https://wess.io/synapse/docs/backend/">
+  <link rel="icon" href="../../icon.svg" type="image/svg+xml">
+  <link rel="preload" href="../../pixel.ttf" as="font" type="font/ttf" crossorigin>
+  <link rel="stylesheet" href="../../style.css">
+  <script type="module" src="../../site.js"></script>
+</head>
+<body class="docs" data-root="../../">
+  <div class="shell">
+  <a class="skip" href="#content">Skip to content</a>
+  <div class="windowbar"><a href="../../">synapse / manual</a><span>v1.18.0 · on your machine</span></div>
+  <header class="topbar">
+    <a class="wordmark" href="../../" aria-label="Synapse home"><img src="../../icon.svg" width="28" height="28" alt=""><span>synapse</span></a>
+    <button class="navtoggle" type="button" aria-expanded="false" aria-controls="topnav">Menu</button>
+    <nav id="topnav" aria-label="Primary">
+      <a href="../../docs/" aria-current="page">Docs</a>
+      <a href="../../tutorials/">Tutorials</a>
+      <a href="https://github.com/wess/synapse">Source</a>
+      <a class="navdownload" href="../../docs/install/">Install</a>
+    </nav>
+  </header>
+  <div class="doclayout">
+  <aside class="docsrail" aria-label="Documentation navigation">
+    <div class="searchbox">
+      <label for="docssearch">Search docs &amp; tutorials</label>
+      <input id="docssearch" type="search" placeholder="Memory, vaults, restore…" autocomplete="off" aria-controls="searchresults">
+      <div id="searchresults" class="searchresults" data-results hidden></div>
+      <span class="searchstatus" data-searchstatus role="status" aria-live="polite"></span>
+    </div>
+    <details class="railnav" open>
+      <summary>Browse all guides</summary>
+      <nav aria-label="All guides">
+        <h2>Start here</h2><ul><li><a href="../../docs/">Start here</a></li><li><a href="../../docs/install/">Install and connect</a></li><li><a href="../../docs/harnesses/">Supported and custom harnesses</a></li><li><a href="../../docs/app/">Desktop app reference</a></li></ul><h2>Reference</h2><ul><li><a href="../../docs/memory/">Memory and recall</a></li><li><a href="../../docs/knowledge/">Project Knowledge</a></li><li><a href="../../docs/mcp/">MCP tool reference</a></li><li><a href="../../docs/mesh/">Agent mesh</a></li><li><a href="../../docs/skills/">Skills</a></li><li><a href="../../docs/servers/">MCP servers</a></li><li><a href="../../docs/sources/">Sources</a></li></ul><h2>Your machine</h2><ul><li><a href="../../docs/vault/">Vaults and scopes</a></li><li><a href="../../docs/data/">Data lifecycle</a></li><li><a href="../../docs/config/">Configuration and paths</a></li><li><a href="../../docs/security/">Security model</a></li><li><a href="../../docs/sync/">Encrypted sync</a></li><li><a href="../../docs/troubleshoot/">Troubleshooting</a></li></ul><h2>Build with it</h2><ul><li><a href="../../docs/cli/">CLI reference</a></li><li><a href="../../docs/backend/" aria-current="page">Agent backend</a></li><li><a href="../../docs/developing/">Developing Synapse</a></li><li><a href="../../docs/synapsecore/">The core library</a></li><li><a href="../../docs/embedding/">Embedding Synapse</a></li><li><a href="../../docs/retrieval/">Retrieval checks</a></li><li><a href="../../docs/map/">The memory map</a></li><li><a href="../../docs/startup/">What launching costs</a></li><li><a href="../../docs/review/">Security, stability, and resource review</a></li><li><a href="../../docs/windows/">Windows</a></li><li><a href="../../docs/federation/">Federation proposal</a></li></ul>
+        <h2>Tutorials</h2><ul><li><a href="../../tutorials/">Tutorials</a></li><li><a href="../../tutorials/connect/">Install and connect your first tools</a></li><li><a href="../../tutorials/continuity/">Carry one decision between tools</a></li><li><a href="../../tutorials/curate/">Curate and optimize memory</a></li><li><a href="../../tutorials/secrets/">Use a scoped secret in either shell mode</a></li><li><a href="../../tutorials/skills/">Keep one skill library across every tool</a></li><li><a href="../../tutorials/learn/">Let your agents write skills</a></li><li><a href="../../tutorials/launch/">Start a tool with everything in place</a></li><li><a href="../../tutorials/mesh/">Run a team of agents and drive it yourself</a></li><li><a href="../../tutorials/overseer/">Hand a job to one agent and watch it grow a team</a></li><li><a href="../../tutorials/recovery/">Export and restore safely</a></li><li><a href="../../tutorials/lifecycle/">Check, migrate, and remove Synapse</a></li></ul>
+      </nav>
+    </details>
+  </aside>
+    <main class="article" id="content">
+      <header class="articlehead"><nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../">Synapse</a><span aria-hidden="true">/</span><a href="../../docs/">Manual</a></nav><h1>Agent backend</h1><p>Runs, provenance, checkpoints, workspaces, reviews, runners, previews, and the local JSONL API.</p></header>
+      <p>Synapse gives agent harnesses one local record of work: what ran, what changed,
+what was reviewed, where it ran, and how to recover it. The native <strong>Activity</strong>
+screen is the readable view. The CLI and JSONL API are the integration surfaces.</p>
+<p>It does not replace a coding harness. A harness owns the model loop and tools;
+Synapse keeps the durable state around that work.</p>
+<h2 id="the-run-lifecycle">The run lifecycle</h2>
+<p>One task is one <strong>run</strong>. A run may have ordered steps, changed-file records,
+artifacts, checkpoints, reviews, comments, evaluations, a workspace, and previews.</p>
+<ol>
+<li>Create a run with the project identity, harness name, and structured input.</li>
+<li>Claim it from a runner. Renew the lease while work continues.</li>
+<li>Record steps and changes as they happen. Store large output as artifacts.</li>
+<li>Create checkpoints before risky edits. A checkpoint saves only explicit paths.</li>
+<li>Submit a review with checks, reasoning, and unresolved concerns. Comments may
+target the run, an event, step, artifact, change, or file and line.</li>
+<li>Mark the run succeeded, failed, waiting, or cancelled.</li>
+</ol>
+<p>The event ledger is useful for observation, not authority. Structured run records
+are the source of truth.</p>
+<h2 id="start-with-the-cli">Start with the CLI</h2>
+<p>Create a run by sending its input on stdin:</p>
+<div class="codeblock"><div class="codebar"><span>sh</span><button type="button" data-copy aria-live="polite">Copy</button></div><pre><code>printf '%s\n' '{&quot;task&quot;:&quot;update the parser&quot;}' | \
+  synapse backend run create --project github.com/acme/parser --harness mytool
+</code></pre></div>
+<p>Use the returned run id as <code>$RUN</code>. Record a changed file:</p>
+<div class="codeblock"><div class="codebar"><span>sh</span><button type="button" data-copy aria-live="polite">Copy</button></div><pre><code>printf '%s\n' '{
+  &quot;path&quot;:&quot;src/parser.rs&quot;,
+  &quot;operation&quot;:&quot;modify&quot;,
+  &quot;summary&quot;:&quot;Handle an empty token stream&quot;
+}' | synapse backend changes record &quot;$RUN&quot;
+</code></pre></div>
+<p>Submit a review handoff:</p>
+<div class="codeblock"><div class="codebar"><span>sh</span><button type="button" data-copy aria-live="polite">Copy</button></div><pre><code>printf '%s\n' '{
+  &quot;reviewer&quot;:&quot;reviewer&quot;,
+  &quot;verdict&quot;:&quot;changes&quot;,
+  &quot;summary&quot;:&quot;One regression case is missing&quot;,
+  &quot;checks&quot;:[{&quot;name&quot;:&quot;cargo test&quot;,&quot;status&quot;:&quot;passed&quot;}],
+  &quot;reasoning&quot;:&quot;The empty input path is uncovered.&quot;,
+  &quot;concerns&quot;:[&quot;Add an empty-input test&quot;]
+}' | synapse backend review submit &quot;$RUN&quot;
+</code></pre></div>
+<p>Read it back without knowing the storage schema:</p>
+<div class="codeblock"><div class="codebar"><span>sh</span><button type="button" data-copy aria-live="polite">Copy</button></div><pre><code>synapse backend changes list &quot;$RUN&quot;
+synapse backend review list &quot;$RUN&quot;
+synapse backend comment list &quot;$RUN&quot;
+</code></pre></div>
+<h2 id="checkpoints">Checkpoints</h2>
+<p>A checkpoint is deliberately explicit. Synapse does not sweep a repository or
+capture ignored files. The harness supplies relative paths beneath one root:</p>
+<div class="codeblock"><div class="codebar"><span>sh</span><button type="button" data-copy aria-live="polite">Copy</button></div><pre><code>printf '%s\n' '{
+  &quot;paths&quot;:[&quot;src/parser.rs&quot;,&quot;tests/parser.rs&quot;],
+  &quot;label&quot;:&quot;before parser rewrite&quot;,
+  &quot;state&quot;:{&quot;phase&quot;:&quot;editing&quot;}
+}' | synapse backend checkpoints create &quot;$RUN&quot; --root &quot;$PWD&quot;
+</code></pre></div>
+<p>Restore with the returned checkpoint id:</p>
+<div class="codeblock"><div class="codebar"><span>sh</span><button type="button" data-copy aria-live="polite">Copy</button></div><pre><code>synapse backend checkpoints restore checkpoint-…
+</code></pre></div>
+<p>Restore replaces captured files, removes paths that were absent at capture time,
+and restores run and step state. Credential-shaped filenames, text that requires
+redaction, absolute paths, parent traversal, symlinks leaving the root, and more
+than 1,000 files are refused.</p>
+<h2 id="isolated-workspaces">Isolated workspaces</h2>
+<p>Give a run a detached Git worktree:</p>
+<div class="codeblock"><div class="codebar"><span>sh</span><button type="button" data-copy aria-live="polite">Copy</button></div><pre><code>synapse backend workspace create &quot;$RUN&quot; --root &quot;$PWD&quot;
+</code></pre></div>
+<p>The returned path is the worker's checkout. Accept its work explicitly:</p>
+<div class="codeblock"><div class="codebar"><span>sh</span><button type="button" data-copy aria-live="polite">Copy</button></div><pre><code>synapse backend workspace merge &quot;$RUN&quot;
+</code></pre></div>
+<p>Merge checks the binary patch first, checkpoints every target path in the original
+checkout, applies the patch, records the file changes, and marks the workspace
+merged. It does not commit. Conflicting or credential-shaped changes are refused
+before the original checkout is modified.</p>
+<h2 id="fork-and-move-a-run">Fork and move a run</h2>
+<p>Forking keeps the parent task and input while isolating another approach:</p>
+<div class="codeblock"><div class="codebar"><span>sh</span><button type="button" data-copy aria-live="polite">Copy</button></div><pre><code>synapse backend run fork &quot;$RUN&quot; --title &quot;Try the smaller parser change&quot;
+</code></pre></div>
+<p>Export carries the run, steps, changes, reviews, comments, evaluations, and
+attached artifacts. Worktree paths and checkpoint roots stay local:</p>
+<div class="codeblock"><div class="codebar"><span>sh</span><button type="button" data-copy aria-live="polite">Copy</button></div><pre><code>synapse backend run export &quot;$RUN&quot; &gt; run.json
+synapse backend run import --project github.com/acme/parser &lt; run.json
+</code></pre></div>
+<p>The import receives a new local id and keeps the source id in <code>replayof</code>.</p>
+<h2 id="runners-and-previews">Runners and previews</h2>
+<p>A runner says which machine can claim work and what it can do. No hosted control
+plane is required:</p>
+<div class="codeblock"><div class="codebar"><span>sh</span><button type="button" data-copy aria-live="polite">Copy</button></div><pre><code>printf '%s\n' '{
+  &quot;name&quot;:&quot;Studio Mac&quot;,
+  &quot;capabilities&quot;:[&quot;shell&quot;,&quot;git&quot;,&quot;preview&quot;],
+  &quot;local&quot;:true
+}' | synapse backend runner put studio
+
+synapse backend runner heartbeat studio busy
+</code></pre></div>
+<p>A runner may attach a development URL to a run:</p>
+<div class="codeblock"><div class="codebar"><span>sh</span><button type="button" data-copy aria-live="polite">Copy</button></div><pre><code>printf '%s\n' '{
+  &quot;id&quot;:&quot;parser-preview&quot;,
+  &quot;runnerid&quot;:&quot;studio&quot;,
+  &quot;url&quot;:&quot;http://127.0.0.1:4000&quot;,
+  &quot;status&quot;:&quot;ready&quot;
+}' | synapse backend preview put &quot;$RUN&quot;
+</code></pre></div>
+<p>Synapse records the URL; it does not create a tunnel or publish a local port. A
+remote runner owns authentication and reachability.</p>
+<h2 id="jsonl-api">JSONL API</h2>
+<p><code>synapse backend api</code> reads one request per line and writes one correlated response
+per line. It opens no listener and exits at end of input.</p>
+<div class="codeblock"><div class="codebar"><span>json</span><button type="button" data-copy aria-live="polite">Copy</button></div><pre><code>{&quot;version&quot;:1,&quot;id&quot;:&quot;runs&quot;,&quot;method&quot;:&quot;runs.list&quot;,&quot;params&quot;:{&quot;limit&quot;:20}}
+</code></pre></div>
+<p>Method families mirror the CLI: <code>runs</code>, <code>steps</code>, <code>changes</code>, <code>reviews</code>, <code>comments</code>,
+<code>artifacts</code>, <code>checkpoints</code>, <code>workspaces</code>, <code>runners</code>, <code>previews</code>, <code>events</code>,
+<code>capabilities</code>, <code>triggers</code>, <code>routes</code>, and <code>evaluations</code>.</p>
+<h2 id="retention-and-trust">Retention and trust</h2>
+<ul>
+<li>Events retain 30 days and are capped at 50,000 rows.</li>
+<li>Runs retain 90 days and are capped at 10,000 rows. Active runs are not pruned.</li>
+<li>Artifacts are content-addressed and verified when read.</li>
+<li>Secret-shaped text is refused or redacted before structured state is written.</li>
+<li>Capabilities are default-deny and may be pinned to a content digest.</li>
+<li>A runner descriptor is not a trust grant. Project scopes still apply.</li>
+</ul>
+<footer class="articlefoot"><div class="articlemeta"><a href="https://github.com/wess/synapse/blob/main/docs/backend.md">View page source</a><span>Synapse 1.18.0</span></div><nav class="pagenav" aria-label="Guide pages"><a href="../../docs/cli/"><small>Previous</small><strong>CLI reference</strong></a><a href="../../docs/developing/"><small>Next</small><strong>Developing Synapse</strong></a></nav></footer>
+    </main>
+  <aside class="ontoc" aria-label="On this page"><span>Contents</span><ol><li><a href="#the-run-lifecycle">The run lifecycle</a></li><li><a href="#start-with-the-cli">Start with the CLI</a></li><li><a href="#checkpoints">Checkpoints</a></li><li><a href="#isolated-workspaces">Isolated workspaces</a></li><li><a href="#fork-and-move-a-run">Fork and move a run</a></li><li><a href="#runners-and-previews">Runners and previews</a></li><li><a href="#jsonl-api">JSONL API</a></li><li><a href="#retention-and-trust">Retention and trust</a></li></ol></aside>
+  </div>
+  <footer class="footer">
+    <div class="footerupper"><div><a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">synapse</a><p>A shared memory. A little less starting over.</p></div>
+      <nav aria-label="Footer"><a href="../../docs/">Manual</a><a href="../../tutorials/">Tutorials</a><a href="https://github.com/wess/synapse">Source</a><a href="https://github.com/wess/synapse/releases">Releases</a><a href="https://wess.io">By Wess</a></nav></div>
+    <p class="footerfine"><span>macOS &amp; Windows desktop · Linux CLI &amp; MCP</span><span>v1.18.0 · MIT · No account required</span></p>
+  </footer></div>
+</body>
+</html>

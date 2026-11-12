@@ -110,7 +110,14 @@ ${command("learn restore", "synapse learn restore &lt;id&gt; --confirm", "Remove
     ${command("backend summary", "synapse backend summary", "Print live-agent, run, queue, and recent error counts.")}
     ${command("backend events", "synapse backend events [--after &lt;id&gt;] [--limit &lt;n&gt;] [filters]", "Read the redacted event ledger. Cursor reads are ascending; initial reads return the newest bounded window.")}
     ${command("backend emit", "synapse backend emit", "Read one event draft as JSON from stdin, redact it, and append it to the bounded ledger.")}
-    ${command("backend runs", "synapse backend runs [--limit &lt;n&gt;]", "List durable jobs. Run subcommands create, update, claim, renew, cancel, retry, and replay them.")}
+    ${command("backend runs", "synapse backend runs [--limit &lt;n&gt;]", "List durable jobs. Run subcommands create, update, fork, export, import, claim, renew, cancel, retry, and replay them.")}
+    ${command("backend changes", "synapse backend changes &lt;list|record&gt; &lt;run&gt;", "Keep file-level provenance beside a run, optionally tied to the step that produced it.")}
+    ${command("backend review", "synapse backend review &lt;list|submit&gt; &lt;run&gt;", "Submit or read a review with checks, reasoning, concerns, and a verdict.")}
+    ${command("backend comment", "synapse backend comment &lt;list|add|resolve|reopen&gt;", "Attach threaded feedback to a run, event, step, artifact, change, or file and line.")}
+    ${command("backend checkpoints", "synapse backend checkpoints &lt;list|create|restore&gt;", "Capture explicit safe paths plus run state, or restore them before retrying risky work.")}
+    ${command("backend workspace", "synapse backend workspace &lt;get|create|merge&gt; &lt;run&gt;", "Create an isolated Git worktree and merge its accepted patch after a clean preflight and checkpoint.")}
+    ${command("backend runner", "synapse backend runner &lt;list|put|heartbeat&gt;", "Register a runner and report whether it is online, busy, draining, or offline.")}
+    ${command("backend preview", "synapse backend preview &lt;list|put&gt; &lt;run&gt;", "Attach a runner-owned development URL and lifecycle state to a run.")}
     ${command("backend artifact", "synapse backend artifact &lt;put|attach|list|read&gt;", "Store verified content-addressed output, attach it to a run, or read it back.")}
     ${command("backend capability", "synapse backend capability &lt;list|allow|deny|check&gt;", "Manage exact default-deny capability decisions, optionally bound to a content digest.")}
     ${command("backend trigger", "synapse backend trigger &lt;list|put|due|mark|tick&gt;", "Manage triggers. Tick dispatches due work on demand; no scheduler process stays resident.")}

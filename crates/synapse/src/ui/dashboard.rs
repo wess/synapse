@@ -88,6 +88,10 @@ pub struct Dashboard {
     logsummary: synapsecore::backend::Summary,
     logevents: Vec<synapsecore::backend::Event>,
     logruns: Vec<synapsecore::backend::Run>,
+    logrunstats: Vec<synapsecore::backend::RunStats>,
+    logrundetails: std::collections::HashMap<String, logs::RunDetail>,
+    logselectedrun: Option<String>,
+    logrunners: Vec<synapsecore::backend::Runner>,
     logtriggers: Vec<synapsecore::backend::Trigger>,
     logroutes: Vec<synapsecore::backend::Route>,
     logcapabilities: Vec<synapsecore::backend::Capability>,
@@ -395,6 +399,10 @@ impl Dashboard {
             logsummary: synapsecore::backend::Summary::default(),
             logevents: Vec::new(),
             logruns: Vec::new(),
+            logrunstats: Vec::new(),
+            logrundetails: std::collections::HashMap::new(),
+            logselectedrun: None,
+            logrunners: Vec::new(),
             logtriggers: Vec::new(),
             logroutes: Vec::new(),
             logcapabilities: Vec::new(),
@@ -1660,6 +1668,11 @@ impl Dashboard {
         }
     }
 
+    fn inspectrun(&mut self, runid: String, cx: &mut Context<Self>) {
+        self.logselectedrun = Some(runid);
+        cx.notify();
+    }
+
     fn refreshlogs(&mut self, cx: &mut Context<Self>) {
         if self.logsloading || self.logspaused || self.page != Page::Logs {
             return;
@@ -1681,9 +1694,19 @@ impl Dashboard {
                 this.logsloading = false;
                 match result {
                     Ok(data) => {
+                        if this
+                            .logselectedrun
+                            .as_ref()
+                            .is_none_or(|selected| !data.runs.iter().any(|run| &run.id == selected))
+                        {
+                            this.logselectedrun = data.runs.first().map(|run| run.id.clone());
+                        }
                         this.logsummary = data.summary;
                         this.logevents = data.events;
                         this.logruns = data.runs;
+                        this.logrunstats = data.runstats;
+                        this.logrundetails = data.rundetails;
+                        this.logrunners = data.runners;
                         this.logtriggers = data.triggers;
                         this.logroutes = data.routes;
                         this.logcapabilities = data.capabilities;
@@ -3142,12 +3165,17 @@ impl Dashboard {
         }
 
         if self.page == Page::Logs {
+            let host = cx.entity().downgrade();
             return shell
                 .child(logs::render(
                     logs::View {
                         summary: self.logsummary.clone(),
                         events: self.logevents.clone(),
                         runs: self.logruns.clone(),
+                        runstats: self.logrunstats.clone(),
+                        rundetails: self.logrundetails.clone(),
+                        selectedrun: self.logselectedrun.clone(),
+                        runners: self.logrunners.clone(),
                         triggers: self.logtriggers.clone(),
                         routes: self.logroutes.clone(),
                         capabilities: self.logcapabilities.clone(),
@@ -3158,14 +3186,20 @@ impl Dashboard {
                     logs::Actions {
                         refresh: Box::new(cx.listener(|this, _, _, cx| this.refreshlogs(cx))),
                         toggle: Box::new(cx.listener(|this, _, _, cx| this.togglelogs(cx))),
+                        inspect: std::rc::Rc::new(move |runid, _, _, cx| {
+                            host.update(cx, |this, cx| this.inspectrun(runid, cx)).ok();
+                        }),
                     },
                     cx,
                 ))
                 .child(
                     StatusBar::new()
                         .height(36.0)
-                        .left(Text::new("Local event ledger · 30 day retention").size(Size::Xs))
-                        .right(Text::new("Live while this page is open").size(Size::Xs)),
+                        .left(
+                            Text::new("Runs, reviews, workspaces, and events · stored locally")
+                                .size(Size::Xs),
+                        )
+                        .right(Text::new("Refreshes while this page is open").size(Size::Xs)),
                 )
                 .into_any_element();
         }
@@ -3754,6 +3788,9 @@ struct LogData {
     summary: synapsecore::backend::Summary,
     events: Vec<synapsecore::backend::Event>,
     runs: Vec<synapsecore::backend::Run>,
+    runstats: Vec<synapsecore::backend::RunStats>,
+    rundetails: std::collections::HashMap<String, logs::RunDetail>,
+    runners: Vec<synapsecore::backend::Runner>,
     triggers: Vec<synapsecore::backend::Trigger>,
     routes: Vec<synapsecore::backend::Route>,
     capabilities: Vec<synapsecore::backend::Capability>,
@@ -3770,6 +3807,22 @@ fn loadlogs(database: &std::path::Path) -> anyhow::Result<LogData> {
             })
             .await?;
         let runs = backend.runs(20).await?;
+        let runstats = backend.runstats(20).await?;
+        let mut rundetails = std::collections::HashMap::new();
+        for run in &runs {
+            rundetails.insert(
+                run.id.clone(),
+                logs::RunDetail {
+                    changes: backend.changes(&run.id).await?,
+                    reviews: backend.reviews(&run.id).await?,
+                    comments: backend.comments(&run.id).await?,
+                    checkpoints: backend.checkpoints(&run.id).await?,
+                    previews: backend.previews(&run.id).await?,
+                    workspace: backend.workspace(&run.id).await?,
+                },
+            );
+        }
+        let runners = backend.runners().await?;
         let triggers = backend.triggers().await?;
         let routes = backend.routes().await?;
         let capabilities = backend.capabilities().await?;
@@ -3777,6 +3830,9 @@ fn loadlogs(database: &std::path::Path) -> anyhow::Result<LogData> {
             summary,
             events,
             runs,
+            runstats,
+            rundetails,
+            runners,
             triggers,
             routes,
             capabilities,

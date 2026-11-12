@@ -1,4 +1,6 @@
 use serde_json::json;
+use std::path::Path;
+use std::process::Command;
 use synapsecore::backend::{
     Backend, Decision, EventDraft, EventFilter, Level, RunStatus, StepStatus,
 };
@@ -80,6 +82,12 @@ async fn runs_steps_artifacts_replay_and_evaluations_share_identity() {
         .await
         .unwrap();
     assert!(artifact.name.contains("[redacted]"));
+    assert!(
+        backend
+            .putartifact("secret", "report", "text/plain", b"TOKEN=secret-value")
+            .await
+            .is_err()
+    );
     backend
         .attach(&run.id, &artifact.digest, "output")
         .await
@@ -101,6 +109,292 @@ async fn runs_steps_artifacts_replay_and_evaluations_share_identity() {
         .await
         .unwrap();
     assert_eq!(evaluation.score, 1.0);
+}
+
+#[tokio::test]
+async fn changes_forks_reviews_and_comments_keep_the_run_context() {
+    let (_folder, backend) = backend().await;
+    let run = backend
+        .createrun("/work", "test", json!({"task": "build"}))
+        .await
+        .unwrap();
+    let step = backend.addstep(&run.id, "edit", json!({})).await.unwrap();
+    let change = backend
+        .recordchange(
+            &run.id,
+            Some(step.id),
+            "src/main.rs",
+            "modify",
+            "",
+            "before",
+            "after",
+            "Handle the empty state",
+        )
+        .await
+        .unwrap();
+    assert_eq!(backend.changes(&run.id).await.unwrap(), [change.clone()]);
+
+    let review = backend
+        .submitreview(
+            &run.id,
+            "reviewer",
+            "changes",
+            "One issue remains",
+            json!([{"name": "cargo test", "status": "passed"}]),
+            "The empty branch is not covered.",
+            json!(["Add a regression test"]),
+        )
+        .await
+        .unwrap();
+    let comment = backend
+        .comment(
+            &run.id,
+            Some(review.id),
+            "wess",
+            "change",
+            &change.id.to_string(),
+            12,
+            "Cover this branch.",
+            None,
+        )
+        .await
+        .unwrap();
+    assert!(!comment.resolved);
+    assert!(
+        backend
+            .resolvecomment(comment.id, true)
+            .await
+            .unwrap()
+            .resolved
+    );
+
+    let fork = backend
+        .forkrun(&run.id, "Try the smaller fix")
+        .await
+        .unwrap();
+    assert_eq!(fork.parent, run.id);
+    assert_eq!(fork.title, "Try the smaller fix");
+    assert_eq!(fork.input, run.input);
+}
+
+#[tokio::test]
+async fn a_run_bundle_round_trips_history_reviews_and_artifacts() {
+    let (_folder, backend) = backend().await;
+    let run = backend
+        .createrun("project-one", "test", json!({"task": "build"}))
+        .await
+        .unwrap();
+    backend
+        .recordchange(
+            &run.id,
+            None,
+            "src/main.rs",
+            "modify",
+            "",
+            "before",
+            "after",
+            "Changed the entry point",
+        )
+        .await
+        .unwrap();
+    let review = backend
+        .submitreview(
+            &run.id,
+            "reviewer",
+            "approved",
+            "Ready",
+            json!([{"name": "test", "status": "passed"}]),
+            "The change is bounded.",
+            json!([]),
+        )
+        .await
+        .unwrap();
+    backend
+        .comment(
+            &run.id,
+            Some(review.id),
+            "wess",
+            "file",
+            "src/main.rs",
+            1,
+            "Keep this small.",
+            None,
+        )
+        .await
+        .unwrap();
+    let artifact = backend
+        .putartifact("report", "report", "text/plain", b"portable")
+        .await
+        .unwrap();
+    backend
+        .attach(&run.id, &artifact.digest, "output")
+        .await
+        .unwrap();
+
+    let bundle = backend.exportbundle(&run.id).await.unwrap();
+    let imported = backend
+        .importbundle(bundle, Some("project-two"))
+        .await
+        .unwrap();
+    assert_eq!(imported.project, "project-two");
+    assert_eq!(imported.replayof, run.id);
+    assert_eq!(backend.changes(&imported.id).await.unwrap().len(), 1);
+    assert_eq!(backend.reviews(&imported.id).await.unwrap().len(), 1);
+    assert_eq!(backend.comments(&imported.id).await.unwrap().len(), 1);
+    assert_eq!(
+        backend.artifacts(&imported.id).await.unwrap()[0].digest,
+        artifact.digest
+    );
+}
+
+#[tokio::test]
+async fn runners_and_previews_are_explicit_local_runtime_records() {
+    let (_folder, backend) = backend().await;
+    let run = backend
+        .createrun("/work", "test", json!({"task": "preview"}))
+        .await
+        .unwrap();
+    let runner = backend
+        .putrunner(
+            "studio-mac",
+            "Studio Mac",
+            "",
+            json!(["shell", "preview"]),
+            true,
+        )
+        .await
+        .unwrap();
+    assert_eq!(runner.status, "online");
+    assert_eq!(
+        backend.heartbeat(&runner.id, "busy").await.unwrap().status,
+        "busy"
+    );
+    let preview = backend
+        .putpreview(
+            "preview-one",
+            &run.id,
+            &runner.id,
+            "http://127.0.0.1:4000",
+            "ready",
+            0,
+        )
+        .await
+        .unwrap();
+    assert_eq!(backend.previews(&run.id).await.unwrap(), [preview]);
+    assert!(
+        backend
+            .putpreview("bad", &run.id, &runner.id, "file:///tmp/site", "ready", 0,)
+            .await
+            .is_err()
+    );
+}
+
+#[tokio::test]
+async fn checkpoints_restore_files_and_run_state_without_accepting_secrets() {
+    let (folder, backend) = backend().await;
+    let project = folder.path().join("project");
+    std::fs::create_dir_all(project.join("src")).unwrap();
+    std::fs::write(project.join("src/main.rs"), "fn main() {}\n").unwrap();
+    let run = backend
+        .createrun(project.to_str().unwrap(), "test", json!({}))
+        .await
+        .unwrap();
+    backend
+        .updaterun(&run.id, RunStatus::Running, "working", "")
+        .await
+        .unwrap();
+    let checkpoint = backend
+        .checkpoint(
+            &run.id,
+            &project,
+            &["src/main.rs".into(), "src/new.rs".into()],
+            "before edit",
+            json!({"cursor": 3}),
+        )
+        .await
+        .unwrap();
+
+    std::fs::write(project.join("src/main.rs"), "broken\n").unwrap();
+    std::fs::write(project.join("src/new.rs"), "also broken\n").unwrap();
+    backend
+        .updaterun(&run.id, RunStatus::Failed, "", "broken")
+        .await
+        .unwrap();
+    let restored = backend.restorecheckpoint(&checkpoint.id).await.unwrap();
+    assert!(restored.restored > 0);
+    assert_eq!(
+        std::fs::read_to_string(project.join("src/main.rs")).unwrap(),
+        "fn main() {}\n"
+    );
+    assert!(!project.join("src/new.rs").exists());
+    assert_eq!(
+        backend.run(&run.id).await.unwrap().unwrap().status,
+        RunStatus::Running
+    );
+
+    std::fs::write(project.join(".env"), "TOKEN=secret-value\n").unwrap();
+    assert!(
+        backend
+            .checkpoint(&run.id, &project, &[".env".into()], "bad", json!({}))
+            .await
+            .is_err()
+    );
+}
+
+#[tokio::test]
+async fn a_run_can_receive_an_isolated_git_worktree() {
+    let (folder, backend) = backend().await;
+    let project = folder.path().join("project");
+    std::fs::create_dir_all(&project).unwrap();
+    git(&project, &["init"]);
+    git(&project, &["config", "user.email", "test@example.test"]);
+    git(&project, &["config", "user.name", "Test"]);
+    std::fs::write(project.join("README.md"), "root\n").unwrap();
+    git(&project, &["add", "README.md"]);
+    git(&project, &["commit", "-m", "Initial"]);
+    let run = backend
+        .createrun(project.to_str().unwrap(), "test", json!({}))
+        .await
+        .unwrap();
+    let workspace = backend
+        .createworkspace(&run.id, &project, None)
+        .await
+        .unwrap();
+    assert_eq!(workspace.status, "ready");
+    assert_eq!(
+        std::fs::read_to_string(Path::new(&workspace.path).join("README.md")).unwrap(),
+        "root\n"
+    );
+    std::fs::write(Path::new(&workspace.path).join("README.md"), "worker\n").unwrap();
+    assert_eq!(
+        std::fs::read_to_string(project.join("README.md")).unwrap(),
+        "root\n"
+    );
+    let merged = backend.mergeworkspace(&run.id).await.unwrap();
+    assert_eq!(merged.status, "merged");
+    assert_eq!(
+        std::fs::read_to_string(project.join("README.md")).unwrap(),
+        "worker\n"
+    );
+    assert_eq!(backend.checkpoints(&run.id).await.unwrap().len(), 1);
+    assert_eq!(
+        backend.changes(&run.id).await.unwrap()[0].operation,
+        "modify"
+    );
+}
+
+fn git(root: &Path, arguments: &[&str]) {
+    let output = Command::new("git")
+        .arg("-C")
+        .arg(root)
+        .args(arguments)
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
 }
 
 #[tokio::test]
