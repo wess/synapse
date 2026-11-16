@@ -461,7 +461,11 @@ mod tests {
         let (mesh, directory) = mesh().await;
         let _logs = logsinto(&directory);
         let supervisor = Supervisor::new();
-        supervisor.launch(&mesh, spec("backend")).await.unwrap();
+        supervisor
+            .workers
+            .lock()
+            .await
+            .insert("backend".to_owned(), Arc::new(AtomicBool::new(false)));
 
         let error = supervisor
             .launch(&mesh, spec("backend"))
