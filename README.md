@@ -66,7 +66,7 @@ Claude Code, using the recalled convention
   bun install
 ```
 
-You choose which decisions to keep. Connected agents can recall those decisions across sessions; project-scoped recall includes global guidance and that project's memory. Synapse shares saved context, not the full conversation. An agent still needs to consult memory and follow it.
+You choose which decisions to keep. Connected agents can recall those decisions across sessions; project-scoped recall includes global guidance and that project's memory. Implementation-derived memory can cite the files that support it, so recall marks the claim for verification when those files change without silently deleting it. Synapse shares saved context, not the full conversation. An agent still needs to consult memory and follow it.
 
 [Walk through this example](https://wess.io/synapse/tutorials/continuity/), including how to inspect the saved record, correct it, and check its project scope.
 
@@ -102,7 +102,7 @@ See the [installation guide](https://wess.io/synapse/docs/install/) for CLI setu
 
 | Capability | How you use it |
 | --- | --- |
-| Project memory | Save decisions, corrections, and conventions. Recall them in a later session or another connected agent, from any clone or worktree of the same repository. Credentials are stripped before anything is stored. |
+| Project memory | Save decisions, corrections, and conventions. Recall them in a later session or another connected agent, from any clone or worktree of the same repository. Cite inspected repository files for implementation facts and Synapse flags the claim when that evidence changes. Credentials are stripped before anything is stored. |
 | Existing memory | Preview and import Claude and Codex memory without changing the originals. Undo an import batch when needed. |
 | Project Knowledge | Opt into repository Markdown guides for architecture, stack, database, and testing. Connected agents create and refresh them when asked; Synapse shares a compact index and flags changed sources. See [Project Knowledge](docs/knowledge.md). |
 | Shared guidance | Edit one `SOUL.md` and point your connected tools at it. |

@@ -1,9 +1,9 @@
 //! repository guides shared by connected agents. The agent authors the text;
 //! Synapse stores it, checks its sources, and serves only the requested pages.
-mod check;
-mod io;
+pub(crate) mod check;
+pub(crate) mod io;
 mod model;
-mod paths;
+pub(crate) mod paths;
 #[cfg(test)]
 mod security;
 mod store;

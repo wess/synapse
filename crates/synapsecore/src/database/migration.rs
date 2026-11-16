@@ -3,7 +3,7 @@ use anyhow::{Context, Result};
 use sqlx::SqlitePool;
 use std::path::Path;
 
-pub const LATEST: i64 = 22;
+pub const LATEST: i64 = 23;
 
 /// The vault's own schema, in its own file. One table today, with the numbered
 /// migration around it anyway: the day it grows a column is not the day to
@@ -561,6 +561,17 @@ const MIGRATIONS: &[Migration] = &[
              baselinetrials INTEGER NOT NULL DEFAULT 0, baselinereward REAL NOT NULL DEFAULT 0, \
              learnedtrials INTEGER NOT NULL DEFAULT 0, learnedreward REAL NOT NULL DEFAULT 0, \
              updated INTEGER NOT NULL, PRIMARY KEY(kind,context))",
+        ],
+    },
+    Migration {
+        version: 23,
+        statements: &[
+            // Optional evidence for implementation-derived project memory. The wire format stays
+            // untouched: these hashes describe this checkout and are deliberately local.
+            "CREATE TABLE memoryevidence(\
+             memoryid INTEGER NOT NULL REFERENCES memorymeta(memoryid) ON DELETE CASCADE, \
+             path TEXT NOT NULL, digest TEXT NOT NULL, PRIMARY KEY(memoryid,path))",
+            "CREATE INDEX memoryevidencepath ON memoryevidence(path)",
         ],
     },
 ];

@@ -208,7 +208,7 @@ async fn relationships(pool: &SqlitePool) -> Result<()> {
     Ok(())
 }
 
-async fn version(pool: &SqlitePool) -> Result<i64> {
+pub(crate) async fn version(pool: &SqlitePool) -> Result<i64> {
     sqlx::query_scalar("PRAGMA user_version")
         .fetch_one(pool)
         .await

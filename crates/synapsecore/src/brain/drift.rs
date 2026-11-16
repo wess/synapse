@@ -80,6 +80,9 @@ pub struct Drift {
     /// A dense set of similar memories hit the pair or finding safety limit.
     pub partial: bool,
     pub findings: Vec<Finding>,
+    /// Evidence-bound memories whose repository sources no longer prove current, or could not be
+    /// checked inside the bounded scan.
+    pub evidence: Vec<crate::brain::MemoryEvidence>,
 }
 
 impl Brain {
@@ -101,6 +104,12 @@ impl Brain {
         let findings = self
             .filterdrift(findings, &memories.iter().collect::<Vec<_>>(), folder, true)
             .await?;
+        let evidence = self
+            .evidence(memories, folder)
+            .await?
+            .into_iter()
+            .filter(|report| report.status != crate::brain::EvidenceStatus::Current)
+            .collect();
         Ok(Drift {
             root: checkout.root().map(Path::to_path_buf),
             project,
@@ -108,6 +117,7 @@ impl Brain {
             capped,
             partial,
             findings,
+            evidence,
         })
     }
 }

@@ -1,5 +1,6 @@
 pub mod drift;
 mod eval;
+mod evidence;
 mod gram;
 mod graph;
 mod ingest;
@@ -15,6 +16,7 @@ pub(crate) mod settings;
 mod store;
 
 pub use eval::{Case, Evaluation, Scored, cases};
+pub use evidence::{EvidenceStatus, MemoryEvidence};
 pub use graph::{Graph, Kind as NodeKind, Link, NODES, Node, Tie, build as buildmap, map};
 pub use model::{
     Explanation, Memory, MemoryScope, Optimization, Ranked, RecallRequest, RecallResponse,

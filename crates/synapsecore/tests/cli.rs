@@ -114,6 +114,53 @@ fn success(output: Output) -> String {
 }
 
 #[test]
+fn cli_attaches_repository_evidence_and_drift_reports_source_changes() {
+    let root = tempfile::tempdir().unwrap();
+    let project = root.path().join("project");
+    fs::create_dir_all(project.join(".git")).unwrap();
+    fs::create_dir_all(project.join("src")).unwrap();
+    fs::write(project.join("src/session.rs"), "pub fn refresh() {}\n").unwrap();
+
+    success(runfrom(
+        root.path(),
+        Some(&project),
+        &[
+            "memory",
+            "add",
+            "session",
+            "--project",
+            ".",
+            "--evidence",
+            "src/session.rs",
+        ],
+        Some("Refresh rotates the token."),
+    ));
+    fs::write(
+        project.join("src/session.rs"),
+        "pub fn refresh() { rotate_twice(); }\n",
+    )
+    .unwrap();
+
+    let report: Value = serde_json::from_str(&success(runfrom(
+        root.path(),
+        Some(&project),
+        &["memory", "drift", ".", "--json"],
+        None,
+    )))
+    .unwrap();
+    assert_eq!(report["evidence"][0]["status"], "needsverification");
+    assert_eq!(report["evidence"][0]["changed"][0], "src/session.rs");
+
+    let strict = runfrom(
+        root.path(),
+        Some(&project),
+        &["memory", "drift", ".", "--strict"],
+        None,
+    );
+    assert_eq!(strict.status.code(), Some(1));
+}
+
+#[test]
 fn cli_roundtrips_memory_vault_scope_and_data() {
     let root = tempfile::tempdir().unwrap();
     let root = root.path();

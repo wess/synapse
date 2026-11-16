@@ -27,6 +27,11 @@ export const memory: Page = {
     ${code("shell", `printf '%s\n' 'Use Bun for JavaScript tasks in this repository.' \\
   | synapse memory add tooling`)}
     <p><code>memory add</code> and <code>memory edit</code> read the body from stdin. This keeps long content and shell metacharacters out of command arguments. Empty or whitespace-only memory is rejected.</p>
+    <p>When a project fact comes from current implementation, attach the repository files you inspected. Synapse stores their hashes with the memory and checks them during recall. Do not attach files to preferences or deliberate decisions: those do not become false because code changed.</p>
+    ${code("shell", `printf '%s\n' 'Refresh rotates both active tokens.' \\
+  | synapse memory add session --project . \\
+      --evidence src/session/refresh.rs \\
+      --evidence src/session/token.rs`)}
     <p>Credentials are taken out before anything is stored, whether the memory comes from a tool, the CLI, the desktop editor, or an import. A value assigned to a secret-sounding name (<code>GITHUB_TOKEN=…</code>, <code>--password=…</code>), a password inside a URL, a <code>Bearer</code> token, a provider token with a known prefix (<code>sk-</code>, <code>ghp_</code>, <code>AKIA</code>, <code>xoxb-</code>, and others), and a PEM private key block are each replaced with <code>[redacted]</code>, and anything between <code>&lt;private&gt;</code> and <code>&lt;/private&gt;</code> is removed. The variable name stays, so the memory still says what to set. A reference such as <code>GITHUB_TOKEN=$(gh auth token)</code> is kept as written. <code>remember</code> reports how many parts it removed. Values belong in the <a href="../vault/">vault</a>.</p>
 
     <h2 id="scope">Global and project scope</h2>
@@ -108,9 +113,10 @@ Matches:    1
 
     <h2 id="drift">Drift and relevance</h2>
     <p>Recall compares candidates by how many query terms they cover and removes weak matches below half the best candidate's coverage. The best match survives. Owner-facing <code>memory list</code> and <code>--explain</code> remain available to inspect all matches.</p>
-    <p>Drift checks flag missing project paths, conflicting claims, and duplicates. A warning does not delete or supersede anything. Recall includes findings in <code>drift</code>; session-start context leaves stale records and older conflicting or duplicate records out and reports that decision. Review the evidence before correcting or resolving it.</p>
+    <p>Drift checks flag missing project paths, conflicting claims, duplicates, and repository evidence that changed, disappeared, or could not be checked inside the bounded source budget. A warning does not delete or supersede anything. Recall includes lexical findings in <code>drift</code> and source status in <code>evidence</code>; session-start context leaves stale path records out, keeps both sides of an uncertain conflict, and warns about evidence that needs verification.</p>
     ${code("shell", `synapse memory drift . --json
 synapse memory list "project tooling" --explain`)}
+    <p>Evidence status is <code>current</code>, <code>needsverification</code>, or <code>unchecked</code>. A source change does not prove the claim false, so the memory remains visible. Inspect the current files, then store the confirmed claim with current <code>sources</code> and <code>supersedes</code> pointing to the old memory. Evidence is local checkout metadata and does not change the pinned encrypted sync wire format.</p>
     <p><a href="../retrieval/">Retrieval checks</a> documents the fixtures, exact-read edge cases, and measurement limits.</p>
 
     <h2 id="control">Inspect and correct</h2>
@@ -119,7 +125,7 @@ synapse memory list "project tooling" --explain`)}
   | synapse memory edit 24 tooling
 
 synapse memory show 24`)}
-    <p>Editing changes the stored original. Recall optimization does not.</p>
+    <p>Editing changes the stored original. Recall optimization does not. Editing also clears repository evidence attached to the old wording; reattach current sources by storing the verified claim as a new memory and superseding the edited one.</p>
 
     <h2 id="map">See the whole store at once</h2>
     <p>Search answers a question you already have. The <a href="../app/#map">Map</a> answers the one you do not: what is in here. It draws every memory as a circle, clustered by project, with a line to whatever replaced it and a fainter line between memories that use the same uncommon words. Click one to read it.</p>

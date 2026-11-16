@@ -59,7 +59,7 @@ export const mcp: Page = {
     "additionalContext": "Synapse holds this project's durable memory, and this session is about to be compacted\u2026"
   }
 }`)}
-    <p>It asks for an explicit list of what the session settled and is not already stored, and for a <code>remember</code> call for each one. It deliberately recalls <em>nothing</em>: the context window is being reclaimed, and spending it re-injecting memory the session already had is the opposite of what a compaction is for.</p>
+    <p>It first asks the compaction summary to carry an ephemeral task checkpoint: the active outcome, accepted constraints, settled choices, current implementation state, unresolved questions, and checks still required. That checkpoint is explicitly not durable memory. Separately, it asks for a list of durable facts the session settled and for a <code>remember</code> call for each one. It deliberately recalls <em>nothing</em>: the context window is being reclaimed, and spending it re-injecting memory the session already had is the opposite of what a compaction is for.</p>
     <p>Afterwards, Claude Code starts the session hook again with <code>source</code> set to <code>compact</code>. That run prints no connection notice, since you saw it when the session began, and hands the memory back: the same recent memory the session started with, re-read, so anything it remembered before compacting comes back too. A hook installed by an earlier release is updated to fire on compaction the next time the MCP server starts.</p>
     <p>The compaction itself is never blocked, cancelled, or rewritten. A memory tool that traded a session's whole context for a reminder would be a worse bargain than forgetting.</p>
 
@@ -70,6 +70,7 @@ export const mcp: Page = {
   "source": "synapse",
   "scope": "project",
   "project": "/Users/example/project",
+  "sources": ["src/module.ts"],
   "supersedes": [18]
 }`)}
     <table>
@@ -79,13 +80,19 @@ export const mcp: Page = {
         <tr><td><code>source</code></td><td>string or null</td><td>No</td><td>An origin such as a project path, repository name, or topic.</td></tr>
         <tr><td><code>scope</code></td><td><code>project</code> or <code>global</code></td><td>No</td><td>Defaults to project. Use global only for context that should appear everywhere.</td></tr>
         <tr><td><code>project</code></td><td>string or null</td><td>For project scope</td><td>Absolute working-project path. Synapse resolves nested paths to the project root, then files the memory under that repository's <code>origin</code> remote (<code>host/owner/repo</code>) when it has one, and under the root's path when it does not.</td></tr>
+        <tr><td><code>sources</code></td><td>array of strings or null</td><td>No</td><td>Repository-relative files actually inspected to support an implementation-derived project fact. Omit for preferences and deliberate decisions. Each guarded source is limited to 2 MiB and one capture to 16 MiB total.</td></tr>
         <tr><td><code>supersedes</code></td><td>array of integers or null</td><td>No</td><td>Ids of memories this one replaces \u2014 usually ids that came back from an earlier <code>recall</code>. Each stops being recalled. Nothing is deleted. An id that no longer resolves is skipped rather than failing the write.</td></tr>
       </tbody>
     </table>
     ${code("json", `{
   "id": 24,
   "stored": true,
-  "superseded": [18]
+  "superseded": [18],
+  "evidence": {
+    "memory": 24,
+    "status": "current",
+    "sources": ["src/module.ts"]
+  }
 }`)}
     <p><code>redacted</code> appears only when something was taken out before storing, and says how many parts: a credential or a <code>&lt;private&gt;</code> section. The stored text is then not the text that was sent, so do not rely on the removed value being in memory.</p>
     <p>The store and the replacement happen in one transaction. Without <code>supersedes</code>, a correction is a second memory contradicting the first, both come back from the next recall, and the ranking decides which one an agent acts on \u2014 including the version its own author had already retracted.</p>
@@ -118,9 +125,18 @@ export const mcp: Page = {
       "project": "github.com/example/project",
       "created": 1785250000
     }
+  ],
+  "evidence": [
+    {
+      "memory": 24,
+      "status": "current",
+      "sources": ["src/module.ts"]
+    }
   ]
 }`)}
     <p>Two fields appear only when they are true of the result. <code>abridged</code> marks a memory returned in part, because the response budget could not carry the rest. The part is its opening sentence when that sentence holds a word the query matched, and otherwise the passage around the match, cut with <code>…</code> at both ends \u2014 use <code>readmemory</code> with its id and the same project before acting on the part you cannot see. <code>superseded</code> never appears here at all, because a replaced memory is not recalled.</p>
+
+    <p>When a returned memory has repository sources, the top-level <code>evidence</code> list reports <code>current</code>, <code>needsverification</code>, or <code>unchecked</code> for that memory id. Changed evidence never hides a memory. Verify current code before acting, then remember the confirmed claim with current <code>sources</code> and supersede the old id.</p>
 
     <h2 id="readmemory">readmemory</h2>
     <p>Read one memory by id after recall identifies it. The body is an exact page of stored text, including code and whitespace. No model or additional index is involved.</p>

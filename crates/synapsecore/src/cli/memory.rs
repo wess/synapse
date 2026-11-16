@@ -243,13 +243,16 @@ fn show(
 
 fn add(runtime: &tokio::runtime::Runtime, brain: &Brain, arguments: &[OsString]) -> Result<()> {
     let (scope, project) = memoryscope(arguments)?;
-    let source = positional(arguments, 1, &["--global", "--project"]);
+    let source = positional(arguments, 1, &["--global", "--project", "--evidence"]);
+    let evidence = optionvalues(arguments, "--evidence");
     let body = readmemory()?;
-    let id = runtime.block_on(brain.rememberscoped(
+    let (id, _) = runtime.block_on(brain.rememberreplacingevidenced(
         &body,
         source.as_deref(),
         scope,
         project.as_deref(),
+        &[],
+        &evidence,
     ))?;
     match crate::brain::redact(&body).count {
         0 => println!("Stored memory #{id}"),
@@ -430,7 +433,7 @@ fn positional(arguments: &[OsString], start: usize, options: &[&str]) -> Option<
             continue;
         }
         let value = value.to_str()?;
-        if value == "--project" {
+        if value == "--project" || value == "--evidence" {
             skip = true;
             continue;
         }
@@ -440,6 +443,17 @@ fn positional(arguments: &[OsString], start: usize, options: &[&str]) -> Option<
         return Some(value.to_owned());
     }
     None
+}
+
+fn optionvalues(arguments: &[OsString], option: &str) -> Vec<String> {
+    arguments
+        .iter()
+        .enumerate()
+        .filter(|(_, value)| *value == option)
+        .filter_map(|(index, _)| arguments.get(index + 1))
+        .filter_map(|value| value.to_str())
+        .map(ToOwned::to_owned)
+        .collect()
 }
 
 fn optionvalue(arguments: &[OsString], option: &str) -> Option<String> {

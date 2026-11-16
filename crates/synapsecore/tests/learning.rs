@@ -498,6 +498,7 @@ async fn migration_from_the_released_schema_preserves_memory() {
         .await
         .unwrap();
     for table in [
+        "memoryevidence",
         "policystate",
         "policyarm",
         "policydecision",
@@ -548,7 +549,7 @@ async fn migration_from_the_released_schema_preserves_memory() {
         .fetch_one(upgraded.pool())
         .await
         .unwrap();
-    assert_eq!(version, 22);
+    assert_eq!(version, 23);
     let backups = synapsecore::database::backupfolder(&path).unwrap();
     assert!(!synapsecore::database::snapshots(&backups).is_empty());
 }

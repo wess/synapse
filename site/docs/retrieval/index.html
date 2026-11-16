@@ -20,7 +20,7 @@
 <body class="docs" data-root="../../">
   <div class="shell">
   <a class="skip" href="#content">Skip to content</a>
-  <div class="machinebar"><a href="../../">Synapse field manual</a><span><i aria-hidden="true"></i>local · v1.19.2</span></div>
+  <div class="machinebar"><a href="../../">Synapse field manual</a><span><i aria-hidden="true"></i>local · v1.19.3</span></div>
   <header class="topbar">
     <a class="wordmark" href="../../" aria-label="Synapse home"><img src="../../icon.svg" width="28" height="28" alt=""><span>synapse</span></a>
     <button class="navtoggle" type="button" aria-expanded="false" aria-controls="topnav">Menu</button>
@@ -33,7 +33,7 @@
   </header>
   <div class="doclayout">
   <aside class="docsrail" aria-label="Documentation navigation">
-    <p class="manualmark">Field manual <span>v1.19.2</span></p>
+    <p class="manualmark">Field manual <span>v1.19.3</span></p>
     <div class="searchbox">
       <label for="docssearch">Search docs &amp; tutorials</label>
       <input id="docssearch" type="search" placeholder="Memory, vaults, restore…" autocomplete="off" aria-controls="searchresults">
@@ -49,7 +49,7 @@
     </details>
   </aside>
     <main class="article" id="content">
-      <header class="articlehead"><nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../">Synapse</a><span aria-hidden="true">/</span><a href="../../docs/">Manual</a></nav><h1>Retrieval checks</h1><p>Ranking, drift, exact UTF-8 paging, relevance checks, and reproducible performance fixtures.</p><div class="articleledger"><span>reference</span><span>release 1.19.2</span></div></header>
+      <header class="articlehead"><nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../">Synapse</a><span aria-hidden="true">/</span><a href="../../docs/">Manual</a></nav><h1>Retrieval checks</h1><p>Ranking, drift, exact UTF-8 paging, relevance checks, and reproducible performance fixtures.</p><div class="articleledger"><span>reference</span><span>release 1.19.3</span></div></header>
       <p>Recall finds relevant memories within the configured budget. <code>readmemory</code> reads the
 exact stored body of one hit in bounded pages. Both apply the same global plus
 current-project scope and exclude superseded records. Neither requires a model or
@@ -71,14 +71,29 @@ still gets it. <code>memory list</code> and <code>--explain</code> show every ma
 <ul>
 <li>a path the memory names that is gone from the checkout (stale),</li>
 <li>two memories that say opposite things or carry different numbers (conflict),</li>
-<li>two memories that say the same thing (duplicate).</li>
+<li>two memories that say the same thing (duplicate),</li>
+<li>repository evidence attached to a project memory that changed, disappeared,
+or could not be checked within the bounded source budget.</li>
 </ul>
 <p>Recall returns everything and lists findings in <code>drift</code>. When a newer memory
 contradicts a returned one but didn't match the query, recall quotes it. The
-session hook leaves stale memories and the older half of a conflicting or
-duplicate pair out of what it injects, and says so. <code>remember</code> reports what a
-new memory contradicts or repeats. <code>synapse memory drift</code> runs the check on
-everything a folder can see. Nothing is superseded or deleted automatically.</p>
+session hook leaves stale memories out and warns about conflicting or duplicate
+pairs without guessing which context applies. <code>remember</code> reports what a new
+memory contradicts or repeats. <code>synapse memory drift</code> runs the check on everything
+a folder can see. Nothing is superseded or deleted automatically.</p>
+<p>Implementation-derived project memory can cite up to 64 repository-relative
+source files through <code>remember.sources</code> or repeated CLI <code>--evidence</code> options.
+Synapse records SHA-256 hashes with the memory using the same guarded, 2 MiB per
+file and 16 MiB aggregate source scan used by Project Knowledge. Recall reports
+the evidence as <code>current</code>, <code>needsverification</code>, or <code>unchecked</code>. A changed source
+does not prove the claim false, so the memory remains visible. Inspect the current
+code, then write the confirmed claim with current sources and supersede the old
+memory. Preferences and deliberate decisions should not carry source evidence.
+Editing a memory body clears its prior evidence because the new wording was not
+what those hashes originally supported.</p>
+<p>Evidence is local checkout metadata and is not added to the pinned encrypted sync
+wire format. A memory arriving through sync therefore has no evidence until it is
+revalidated locally.</p>
 <p>Relative paths are only checked for project memory in its own checkout. Paths
 under another account's home, temp folders, and build output are never called
 missing.</p>
@@ -156,14 +171,14 @@ gives the share ranked first, the share found, MRR, the share whose answer text
 survived the response budget, and noise on unanswerable cases. Run it on a copy of
 a real store (<code>SYNAPSE_DATA</code> pointed at the copy, never the live folder) before and
 after the change, and keep resource cost in view alongside it.</p>
-<footer class="articlefoot"><div class="articlemeta"><a href="https://github.com/wess/synapse/blob/main/docs/retrieval.md">View page source</a><span>Synapse 1.19.2</span></div><nav class="pagenav" aria-label="Guide pages"><a href="../../docs/embedding/"><small>Previous</small><strong>Embedding Synapse</strong></a><a href="../../docs/map/"><small>Next</small><strong>The memory map</strong></a></nav></footer>
+<footer class="articlefoot"><div class="articlemeta"><a href="https://github.com/wess/synapse/blob/main/docs/retrieval.md">View page source</a><span>Synapse 1.19.3</span></div><nav class="pagenav" aria-label="Guide pages"><a href="../../docs/embedding/"><small>Previous</small><strong>Embedding Synapse</strong></a><a href="../../docs/map/"><small>Next</small><strong>The memory map</strong></a></nav></footer>
     </main>
   <aside class="ontoc" aria-label="On this page"><span>On this page</span><ol><li><a href="#drift">Drift</a></li><li><a href="#exact-reading">Exact reading</a></li><li><a href="#correctness-fixtures">Correctness fixtures</a></li><li><a href="#performance-fixture">Performance fixture</a></li><li><a href="#relevance">Relevance</a></li></ol></aside>
   </div>
   <footer class="footer">
     <div class="footerupper"><div><a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">synapse</a><p>A shared memory. A little less starting over.</p></div>
       <nav aria-label="Footer"><a href="../../docs/">Manual</a><a href="../../tutorials/">Tutorials</a><a href="https://github.com/wess/synapse">Source</a><a href="https://github.com/wess/synapse/releases">Releases</a><a href="https://wess.io">By Wess</a></nav></div>
-    <p class="footerfine"><span>macOS &amp; Windows desktop · Linux CLI &amp; MCP</span><span>v1.19.2 · MIT · No account required</span></p>
+    <p class="footerfine"><span>macOS &amp; Windows desktop · Linux CLI &amp; MCP</span><span>v1.19.3 · MIT · No account required</span></p>
   </footer></div>
 </body>
 </html>

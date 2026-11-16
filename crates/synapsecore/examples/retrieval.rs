@@ -51,6 +51,7 @@ async fn main() -> Result<()> {
                     knowledge: None,
                     optimization: settings.optimization,
                     memories: memories.into_iter().map(Into::into).collect(),
+                    evidence: Vec::new(),
                     drift: Vec::new(),
                 };
                 Ok(serde_json::to_vec(&response)?.len())
@@ -73,6 +74,7 @@ async fn main() -> Result<()> {
                 knowledge: None,
                 optimization: settings.optimization,
                 memories: memories.into_iter().map(Into::into).collect(),
+                evidence: Vec::new(),
                 drift,
             };
             Ok(serde_json::to_vec(&response)?.len())

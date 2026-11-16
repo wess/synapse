@@ -54,6 +54,29 @@ async fn example(database: &Path, project: &Path) -> anyhow::Result<()> {
 }
 ```
 
+For a fact derived from repository implementation, use
+`rememberreplacingevidenced` and pass the relative files actually inspected. Do
+not attach source files to preferences or deliberate decisions. Evidence is
+project-only: Synapse hashes each guarded source under the supplied checkout and
+`Brain::evidence` later reports `Current`, `Needsverification`, or `Unchecked`.
+A changed hash does not hide the memory. After inspecting current code, store the
+confirmed claim with fresh evidence and pass the old id in `supersedes`.
+
+```rust
+let sources = vec!["src/session/refresh.rs".to_owned()];
+let (id, _) = brain.rememberreplacingevidenced(
+  "Refresh rotates both active tokens.",
+  Some("source inspection"),
+  MemoryScope::Project,
+  Some(&project),
+  &[],
+  &sources,
+).await?;
+
+let memory = brain.memory(id).await?.expect("stored memory");
+let evidence = brain.evidence(&[memory], Some(&project)).await?;
+```
+
 The project argument is an absolute working-project path, not a repository key
 supplied by the caller. Synapse resolves it to the repository identity. A scoped
 recall includes that project's current records and global records, excluding

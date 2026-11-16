@@ -47,6 +47,9 @@ pub struct Report {
     /// Possible conflicts and duplicates need human judgment, so both stay visible.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub flagged: Vec<Finding>,
+    /// Evidence-bound memories whose cited sources changed or could not be checked.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub evidence: Vec<crate::brain::MemoryEvidence>,
     /// Set instead of the rest when Synapse could not be read at all.
     pub problem: Option<String>,
 }
@@ -141,12 +144,15 @@ fn reminder(report: &Report) -> String {
         // using is not worth the interruption.
         return String::new();
     }
-    let mut text = "Synapse holds this project's durable memory, and this session is about to be \
-         compacted: anything it learned that is not already in Synapse is about to be lost. Carry \
-         through the compaction an explicit list of every durable fact, decision, convention, \
+    let mut text = "This session is about to be compacted. Carry through a task checkpoint naming \
+         the user's active outcome, accepted constraints, settled choices, current implementation \
+         state, unresolved questions, and checks still required. That checkpoint is temporary \
+         session context: do not store it as durable memory. Synapse holds this project's durable \
+         memory, so also carry through an explicit list of every durable fact, decision, convention, \
          preference, or correction this session settled that Synapse does not already hold, and \
          call `remember` for each one at the first opportunity. Passing task status, file \
-         contents, and anything recalled unchanged are not durable memory: leave them out of both."
+         contents, and anything recalled unchanged are not durable memory: leave them out of the \
+         durable list and memory calls."
         .to_owned();
     if report.memories > 0 {
         text.push_str(
@@ -257,6 +263,7 @@ fn context(report: &Report) -> String {
     context.push_str(&recalled(report));
     context.push_str(&withheld(report));
     context.push_str(&flagged(report));
+    context.push_str(&evidence(report));
     context
 }
 
@@ -301,6 +308,37 @@ fn flagged(report: &Report) -> String {
     )
 }
 
+fn evidence(report: &Report) -> String {
+    if report.evidence.is_empty() {
+        return String::new();
+    }
+    let notes = report
+        .evidence
+        .iter()
+        .map(|evidence| {
+            let paths = evidence
+                .changed
+                .iter()
+                .chain(evidence.missing.iter())
+                .chain(evidence.unchecked.iter())
+                .cloned()
+                .collect::<Vec<_>>()
+                .join(", ");
+            format!(
+                "- memory #{}: {:?} ({paths})",
+                evidence.memory, evidence.status
+            )
+            .to_lowercase()
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+    format!(
+        "\n\nRepository evidence for these memories changed or could not be checked:\n\n{notes}\n\
+         Verify the current source before acting. Store the confirmed claim with current `sources` \
+         and `supersedes` pointing to the old memory."
+    )
+}
+
 /// What a session is handed back after compaction.
 ///
 /// The summary a compaction writes keeps what the model thought mattered, and
@@ -326,10 +364,11 @@ fn restored(report: &Report) -> String {
     format!(
         "This session was just compacted, which dropped the memory Synapse handed over when it \
          started. Here it is again, most recent first, including anything remembered earlier in \
-         this session:\n\n{}{}{}{knowledge}",
+         this session:\n\n{}{}{}{}{knowledge}",
         recalled(report),
         withheld(report),
-        flagged(report)
+        flagged(report),
+        evidence(report)
     )
 }
 
@@ -425,6 +464,7 @@ fn collect(root: Option<&Path>, recall: Recall) -> Report {
             recalled: Vec::new(),
             held: Vec::new(),
             flagged: Vec::new(),
+            evidence: Vec::new(),
             problem: Some(shortened(&format!("{error:#}"))),
         },
     }
@@ -503,6 +543,16 @@ fn gather(root: Option<&Path>, recall: Recall) -> Result<Report> {
             }
             Recall::No => (Vec::new(), Vec::new(), Vec::new(), 0),
         };
+        let evidence = if matches!(recall, Recall::Yes(_)) {
+            brain
+                .evidence(&recalled, root)
+                .await?
+                .into_iter()
+                .filter(|report| report.status != crate::brain::EvidenceStatus::Current)
+                .collect()
+        } else {
+            Vec::new()
+        };
         let report = Report {
             connected: true,
             memories,
@@ -517,6 +567,7 @@ fn gather(root: Option<&Path>, recall: Recall) -> Result<Report> {
             recalled,
             held,
             flagged,
+            evidence,
             problem: None,
         };
         if let Recall::Yes(handed) = recall {
@@ -657,6 +708,7 @@ mod tests {
             recalled: Vec::new(),
             held: Vec::new(),
             flagged: Vec::new(),
+            evidence: Vec::new(),
             problem: None,
         }
     }
@@ -750,6 +802,36 @@ mod tests {
         assert!(empty.contains("`remember`"));
         assert!(!empty.contains("`supersedes`"));
         assert!(reminder(&report()).contains("`supersedes`"));
+    }
+
+    #[test]
+    fn compaction_carries_task_state_without_storing_it_as_memory() {
+        let text = reminder(&report());
+        assert!(text.contains("user's active outcome"));
+        assert!(text.contains("checks still required"));
+        assert!(text.contains("temporary session context"));
+        assert!(text.contains("do not store it as durable memory"));
+    }
+
+    #[test]
+    fn startup_warns_when_repository_evidence_needs_verification() {
+        let report = Report {
+            recalled: vec![memory("Refresh rotates one token.", "source inspection")],
+            evidence: vec![crate::brain::MemoryEvidence {
+                memory: 1,
+                status: crate::brain::EvidenceStatus::Needsverification,
+                sources: vec!["src/session.rs".to_owned()],
+                changed: vec!["src/session.rs".to_owned()],
+                missing: Vec::new(),
+                unchecked: Vec::new(),
+            }],
+            ..report()
+        };
+        let text = context(&report);
+        assert!(text.contains("memory #1: needsverification"));
+        assert!(text.contains("src/session.rs"));
+        assert!(text.contains("Verify the current source before acting"));
+        assert!(text.contains("`supersedes` pointing to the old memory"));
     }
 
     #[test]

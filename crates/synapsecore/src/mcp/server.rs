@@ -73,7 +73,7 @@ impl Server {
     }
 
     #[tool(
-        description = "Store a durable fact, decision, preference, convention, or correction. When it corrects something an earlier recall returned, pass that memory's id in `supersedes` so the outdated version stops being recalled; nothing is deleted. `drift` in the response lists existing memories this one contradicts or repeats: if it replaces one, remember it again with `supersedes` naming both ids."
+        description = "Store a durable fact, decision, preference, convention, or correction. For an implementation-derived project fact, pass the repository-relative files actually inspected in `sources`; omit them for preferences and deliberate decisions. When it corrects or revalidates something an earlier recall returned, pass that memory's id in `supersedes` so the old version stops being recalled; nothing is deleted. `drift` lists existing memories this one contradicts or repeats."
     )]
     async fn remember(
         &self,
@@ -84,13 +84,19 @@ impl Server {
         let redacted = crate::brain::redact(&request.content).count;
         let (id, superseded) = self
             .brain
-            .rememberreplacing(
+            .rememberreplacingevidenced(
                 &request.content,
                 request.source.as_deref(),
                 request.scope.unwrap_or(MemoryScope::Project),
                 project.as_deref(),
                 request.supersedes.as_deref().unwrap_or_default(),
+                request.sources.as_deref().unwrap_or_default(),
             )
+            .await
+            .map_err(|error| error.to_string())?;
+        let evidence = self
+            .brain
+            .evidenceone(id, project.as_deref())
             .await
             .map_err(|error| error.to_string())?;
         let drift = self
@@ -103,12 +109,13 @@ impl Server {
             stored: true,
             superseded,
             redacted,
+            evidence,
             drift,
         }))
     }
 
     #[tool(
-        description = "Recall durable context with a focused query and the smallest practical limit. Use the lean budget first; a per-call budget can only reduce the configured ceiling. For an `abridged` hit, use `readmemory` with its id and the same project to read the exact text in bounded pages. `drift` marks hits that look stale or that another memory may contradict or repeat; compare contexts before treating a pair as a correction."
+        description = "Recall durable context with a focused query and the smallest practical limit. Use the lean budget first. For an `abridged` hit, use `readmemory` with its id and the same project. `drift` marks stale, conflicting, or repeated claims. `evidence` reports whether cited repository sources still match; verify `needsverification` or `unchecked` claims against current code, then store the confirmed claim with current sources and supersede the old memory."
     )]
     async fn recall(
         &self,
@@ -131,10 +138,16 @@ impl Server {
             .drifted(&memories, project.as_deref())
             .await
             .unwrap_or_default();
+        let evidence = self
+            .brain
+            .evidence(&memories, project.as_deref())
+            .await
+            .map_err(|error| error.to_string())?;
         let sent = crate::usage::bodies(&memories);
         let response = RecallResponse {
             optimization: settings.optimization,
             memories: memories.into_iter().map(Recalled::from).collect(),
+            evidence,
             drift,
             knowledge: if self.brain.knowledge().await.unwrap_or(false) {
                 crate::knowledge::work::catalog(project.as_deref()).await

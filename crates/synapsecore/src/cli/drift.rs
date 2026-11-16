@@ -24,10 +24,12 @@ pub fn run(
         true => println!("{}", serde_json::to_string_pretty(&drift)?),
         false => print!("{}", report(&drift)),
     }
-    Ok(Outcome::Exit(match strict && !drift.findings.is_empty() {
-        true => 1,
-        false => 0,
-    }))
+    Ok(Outcome::Exit(
+        match strict && (!drift.findings.is_empty() || !drift.evidence.is_empty()) {
+            true => 1,
+            false => 0,
+        },
+    ))
 }
 
 fn options(arguments: &[OsString]) -> Result<(PathBuf, bool)> {
@@ -60,16 +62,20 @@ fn report(drift: &Drift) -> String {
         count => format!("{} memories", thousands(count)),
     };
     let mut text = String::new();
-    if drift.findings.is_empty() {
+    if drift.findings.is_empty() && drift.evidence.is_empty() {
         text.push_str(&format!("No drift in {counted}{scope}.\n"));
     } else {
         text.push_str(&format!("Drift in {counted}{scope}\n\n"));
         for finding in &drift.findings {
             text.push_str(&entry(finding));
         }
+        for evidence in &drift.evidence {
+            text.push_str(&evidenceentry(evidence));
+        }
+        let total = drift.findings.len() + drift.evidence.len();
         text.push_str(&format!(
             "\n{}. Nothing was changed.\n",
-            match drift.findings.len() {
+            match total {
                 1 => "1 finding".to_owned(),
                 count => format!("{count} findings"),
             }
@@ -93,6 +99,26 @@ fn report(drift: &Drift) -> String {
         );
     }
     text
+}
+
+fn evidenceentry(evidence: &crate::brain::MemoryEvidence) -> String {
+    let paths = evidence
+        .changed
+        .iter()
+        .chain(evidence.missing.iter())
+        .chain(evidence.unchecked.iter())
+        .cloned()
+        .collect::<Vec<_>>()
+        .join(", ");
+    let label = match evidence.status {
+        crate::brain::EvidenceStatus::Needsverification => "evidence",
+        crate::brain::EvidenceStatus::Unchecked => "unchecked",
+        crate::brain::EvidenceStatus::Current => "current",
+    };
+    format!(
+        "  {label:<10} #{} needs verification against {paths}\n  {:<10} inspect the current source, then remember the confirmed claim with sources and supersede #{}\n",
+        evidence.memory, "", evidence.memory
+    )
 }
 
 fn entry(finding: &Finding) -> String {
@@ -154,6 +180,7 @@ mod tests {
                     "#1 and #2 say nearly the same thing.",
                 ),
             ],
+            evidence: Vec::new(),
         };
         let text = report(&drift);
         assert!(
@@ -175,6 +202,7 @@ mod tests {
             capped: true,
             partial: false,
             findings: Vec::new(),
+            evidence: Vec::new(),
         };
         let text = report(&drift);
         assert!(

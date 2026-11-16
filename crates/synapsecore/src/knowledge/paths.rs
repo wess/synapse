@@ -1,7 +1,7 @@
 use anyhow::{Context, Result, ensure};
 use std::path::{Component, Path, PathBuf};
 
-pub(super) fn root(path: &Path) -> Result<PathBuf> {
+pub(crate) fn root(path: &Path) -> Result<PathBuf> {
     crate::brain::projectroot(path)?.context("project folder does not exist")
 }
 
@@ -17,7 +17,7 @@ pub(super) fn name(value: &str) -> Result<()> {
     Ok(())
 }
 
-pub(super) fn validsource(relative: &str) -> Result<()> {
+pub(crate) fn validsource(relative: &str) -> Result<()> {
     let path = Path::new(relative);
     ensure!(
         !relative.is_empty()

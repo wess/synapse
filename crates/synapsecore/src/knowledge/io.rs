@@ -7,7 +7,7 @@ use std::io::Read;
 use std::io::Write;
 use std::path::{Component, Path, PathBuf};
 
-pub(super) struct Folder {
+pub(crate) struct Folder {
     pub path: PathBuf,
     #[cfg(any(unix, windows))]
     handle: File,
@@ -16,7 +16,7 @@ pub(super) struct Folder {
 }
 
 impl Folder {
-    pub fn open(path: &Path) -> Result<Self> {
+    pub(crate) fn open(path: &Path) -> Result<Self> {
         #[cfg(unix)]
         let handle = {
             use std::os::unix::fs::OpenOptionsExt;
@@ -164,7 +164,7 @@ impl Folder {
         }
     }
 
-    pub fn source(&self, relative: &str) -> Result<File> {
+    pub(crate) fn source(&self, relative: &str) -> Result<File> {
         let mut parts = Path::new(relative).components().peekable();
         let mut folder = None;
         while let Some(part) = parts.next() {

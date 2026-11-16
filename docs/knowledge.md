@@ -35,6 +35,12 @@ Session hooks deliver a compact guide index and an excerpt of the overview, incl
 
 Guides describe the checkout being used. They are not stored as global memories or shared by repository identity across different worktrees. Existing project decisions still belong in memory, and repeatable procedures still belong in skills.
 
+Project Knowledge hashes the sources behind a whole guide. For a small
+implementation-derived fact that belongs in ordinary memory, attach repository
+sources directly through `remember.sources` instead. Recall then marks that one
+claim when its evidence changes, without requiring or refreshing a guide. Neither
+mechanism should attach code to a preference or deliberate project decision.
+
 ## Refresh
 
 Ask your connected agent:

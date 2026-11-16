@@ -20,7 +20,7 @@
 <body class="docs" data-root="../../">
   <div class="shell">
   <a class="skip" href="#content">Skip to content</a>
-  <div class="machinebar"><a href="../../">Synapse field manual</a><span><i aria-hidden="true"></i>local · v1.19.2</span></div>
+  <div class="machinebar"><a href="../../">Synapse field manual</a><span><i aria-hidden="true"></i>local · v1.19.3</span></div>
   <header class="topbar">
     <a class="wordmark" href="../../" aria-label="Synapse home"><img src="../../icon.svg" width="28" height="28" alt=""><span>synapse</span></a>
     <button class="navtoggle" type="button" aria-expanded="false" aria-controls="topnav">Menu</button>
@@ -33,7 +33,7 @@
   </header>
   <div class="doclayout">
   <aside class="docsrail" aria-label="Documentation navigation">
-    <p class="manualmark">Field manual <span>v1.19.2</span></p>
+    <p class="manualmark">Field manual <span>v1.19.3</span></p>
     <div class="searchbox">
       <label for="docssearch">Search docs &amp; tutorials</label>
       <input id="docssearch" type="search" placeholder="Memory, vaults, restore…" autocomplete="off" aria-controls="searchresults">
@@ -49,7 +49,7 @@
     </details>
   </aside>
     <main class="article" id="content">
-      <header class="articlehead"><nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../">Synapse</a><span aria-hidden="true">/</span><a href="../../docs/">Manual</a></nav><h1>Project Knowledge</h1><p>Technical documentation for Project Knowledge.</p><div class="articleledger"><span>reference</span><span>release 1.19.2</span></div></header>
+      <header class="articlehead"><nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../">Synapse</a><span aria-hidden="true">/</span><a href="../../docs/">Manual</a></nav><h1>Project Knowledge</h1><p>Technical documentation for Project Knowledge.</p><div class="articleledger"><span>reference</span><span>release 1.19.3</span></div></header>
       <p>Project Knowledge gives connected coding agents a shared, repository-local guide to an application. The agent examines the code and writes Markdown; Synapse makes the guides available across sessions and tools. There is no model training, background agent, or additional model provider to configure.</p>
 <h2 id="enable">Enable</h2>
 <p>In the desktop app, open <strong>Settings → Project Knowledge → On</strong>, or run:</p>
@@ -71,6 +71,11 @@
 <p>Each file has TOML frontmatter containing a short description and SHA-256 hashes of the inspected source files, followed by its Markdown body. You can edit the Markdown in your usual editor and include the guides in normal code review. Synapse also creates <code>write.lock</code> in that directory to coordinate concurrent saves; it contains no project content and does not need to be versioned.</p>
 <p>Session hooks deliver a compact guide index and an excerpt of the overview, including after compaction. Agents using MCP without a session hook are instructed to request the index at startup; ordinary memory recall also includes the index while the feature is enabled. Complete guide bodies are read on demand through <code>knowledge</code>, in pages of at most 6,000 UTF-8 bytes. The index includes at most 32 guides and an overview excerpt of at most 1,800 bytes.</p>
 <p>Guides describe the checkout being used. They are not stored as global memories or shared by repository identity across different worktrees. Existing project decisions still belong in memory, and repeatable procedures still belong in skills.</p>
+<p>Project Knowledge hashes the sources behind a whole guide. For a small
+implementation-derived fact that belongs in ordinary memory, attach repository
+sources directly through <code>remember.sources</code> instead. Recall then marks that one
+claim when its evidence changes, without requiring or refreshing a guide. Neither
+mechanism should attach code to a preference or deliberate project decision.</p>
 <h2 id="refresh">Refresh</h2>
 <p>Ask your connected agent:</p>
 <blockquote>
@@ -93,14 +98,14 @@
 <div class="codeblock"><div class="codebar"><span>sh</span><button type="button" data-copy aria-live="polite">Copy</button></div><pre><code>synapse settings knowledge off
 </code></pre></div>
 <p>Synapse immediately refuses further knowledge-tool calls and stops including guides in new session handoffs and memory recall. Restart connected tools to remove the tool definitions and guidance from their next session. Context already delivered to an active agent cannot be withdrawn. Existing Markdown files remain in the repository and are still available through ordinary file access.</p>
-<footer class="articlefoot"><div class="articlemeta"><a href="https://github.com/wess/synapse/blob/main/docs/knowledge.md">View page source</a><span>Synapse 1.19.2</span></div><nav class="pagenav" aria-label="Guide pages"><a href="../../docs/memory/"><small>Previous</small><strong>Memory and recall</strong></a><a href="../../docs/mcp/"><small>Next</small><strong>MCP tool reference</strong></a></nav></footer>
+<footer class="articlefoot"><div class="articlemeta"><a href="https://github.com/wess/synapse/blob/main/docs/knowledge.md">View page source</a><span>Synapse 1.19.3</span></div><nav class="pagenav" aria-label="Guide pages"><a href="../../docs/memory/"><small>Previous</small><strong>Memory and recall</strong></a><a href="../../docs/mcp/"><small>Next</small><strong>MCP tool reference</strong></a></nav></footer>
     </main>
   <aside class="ontoc" aria-label="On this page"><span>On this page</span><ol><li><a href="#enable">Enable</a></li><li><a href="#files-and-session-behavior">Files and session behavior</a></li><li><a href="#refresh">Refresh</a></li><li><a href="#resource-use-and-filesystem-access">Resource use and filesystem access</a></li><li><a href="#disable">Disable</a></li></ol></aside>
   </div>
   <footer class="footer">
     <div class="footerupper"><div><a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">synapse</a><p>A shared memory. A little less starting over.</p></div>
       <nav aria-label="Footer"><a href="../../docs/">Manual</a><a href="../../tutorials/">Tutorials</a><a href="https://github.com/wess/synapse">Source</a><a href="https://github.com/wess/synapse/releases">Releases</a><a href="https://wess.io">By Wess</a></nav></div>
-    <p class="footerfine"><span>macOS &amp; Windows desktop · Linux CLI &amp; MCP</span><span>v1.19.2 · MIT · No account required</span></p>
+    <p class="footerfine"><span>macOS &amp; Windows desktop · Linux CLI &amp; MCP</span><span>v1.19.3 · MIT · No account required</span></p>
   </footer></div>
 </body>
 </html>

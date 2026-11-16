@@ -187,6 +187,9 @@ pub struct RememberRequest {
     /// being stored corrects or supersedes it, so the outdated one stops coming back. Nothing is
     /// deleted: a superseded memory stays readable and can be restored.
     pub supersedes: Option<Vec<i64>>,
+    /// Repository-relative files inspected to support an implementation-derived project memory.
+    /// Omit for preferences and deliberate decisions, which do not become false when code moves.
+    pub sources: Option<Vec<String>>,
 }
 
 #[derive(Debug, Serialize, JsonSchema)]
@@ -201,6 +204,9 @@ pub struct RememberResponse {
     /// the text it sent, and does not go on believing a value was saved.
     #[serde(skip_serializing_if = "iszerocount")]
     pub redacted: usize,
+    /// Current evidence recorded with this memory, when source files were supplied.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub evidence: Option<crate::brain::MemoryEvidence>,
     /// Existing memories this one contradicts or repeats.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub drift: Vec<crate::brain::drift::Finding>,
@@ -228,6 +234,10 @@ pub struct RecallResponse {
     pub knowledge: Option<crate::knowledge::Catalog>,
     pub optimization: Optimization,
     pub memories: Vec<Recalled>,
+    /// Repository evidence attached to returned memories. Changed or missing sources mark a claim
+    /// for verification; they never delete it or silently treat it as false.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub evidence: Vec<crate::brain::MemoryEvidence>,
     /// Memories here that look stale or are contradicted or repeated by another.
     /// The newer of a pair is more likely current.
     #[serde(skip_serializing_if = "Vec::is_empty")]

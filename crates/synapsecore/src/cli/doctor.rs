@@ -67,6 +67,7 @@ pub struct Drifted {
     pub stale: usize,
     pub conflicting: usize,
     pub repeated: usize,
+    pub evidence: usize,
     pub limited: bool,
 }
 
@@ -84,6 +85,7 @@ impl Drifted {
             stale: count(Concern::Stale),
             conflicting: count(Concern::Conflict),
             repeated: count(Concern::Duplicate),
+            evidence: drift.evidence.len(),
             limited: drift.capped || drift.partial,
         }
     }
@@ -92,14 +94,15 @@ impl Drifted {
         if *self == Self::default() {
             return "none found from this folder".to_owned();
         }
-        if self.stale + self.conflicting + self.repeated == 0 {
+        if self.stale + self.conflicting + self.repeated + self.evidence == 0 {
             return "none found in the checked portion (see synapse memory drift)".to_owned();
         }
         format!(
-            "{} stale, {} conflicting, {} repeated{} (see synapse memory drift)",
+            "{} stale, {} conflicting, {} repeated, {} evidence{} (see synapse memory drift)",
             self.stale,
             self.conflicting,
             self.repeated,
+            self.evidence,
             if self.limited { "; check limited" } else { "" }
         )
     }
@@ -588,11 +591,12 @@ mod tests {
                 finding(Concern::Conflict),
                 finding(Concern::Conflict),
             ],
+            evidence: Vec::new(),
         };
         let drifted = Drifted::of(&drift);
         assert_eq!(
             drifted.line(),
-            "1 stale, 2 conflicting, 0 repeated (see synapse memory drift)"
+            "1 stale, 2 conflicting, 0 repeated, 0 evidence (see synapse memory drift)"
         );
         assert_eq!(
             Drifted::of(&Drift {

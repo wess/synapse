@@ -79,6 +79,31 @@ impl Brain {
         project: Option<&Path>,
         supersedes: &[i64],
     ) -> Result<(i64, Vec<i64>)> {
+        self.rememberreplacingevidenced(body, source, scope, project, supersedes, &[])
+            .await
+    }
+
+    /// Stores a project memory with optional repository sources supporting the claim. Evidence is
+    /// captured before the write and committed with it, so a memory never claims evidence that was
+    /// only partly recorded.
+    pub async fn rememberreplacingevidenced(
+        &self,
+        body: &str,
+        source: Option<&str>,
+        scope: MemoryScope,
+        project: Option<&Path>,
+        supersedes: &[i64],
+        sources: &[String],
+    ) -> Result<(i64, Vec<i64>)> {
+        anyhow::ensure!(
+            sources.is_empty() || scope == MemoryScope::Project,
+            "repository evidence can only be attached to project memory"
+        );
+        let evidence = match (sources.is_empty(), project) {
+            (true, _) => Vec::new(),
+            (false, Some(project)) => crate::brain::evidence::capture(project, sources)?,
+            (false, None) => anyhow::bail!("repository evidence needs a project path"),
+        };
         let body = stored(body)?;
         let body = body.as_str();
         let source = sourced(source);
@@ -108,6 +133,14 @@ impl Brain {
         .bind(created)
         .execute(&mut *transaction)
         .await?;
+        for source in evidence {
+            sqlx::query("INSERT INTO memoryevidence(memoryid, path, digest) VALUES (?, ?, ?)")
+                .bind(id)
+                .bind(source.path)
+                .bind(source.digest)
+                .execute(&mut *transaction)
+                .await?;
+        }
         let mut replaced = Vec::new();
         for old in supersedes {
             let done = sqlx::query("UPDATE memorymeta SET superseded = ? WHERE memoryid = ?")
@@ -552,6 +585,12 @@ impl Brain {
             return Ok(None);
         }
         crate::brain::gram::index(&mut transaction, id).await?;
+        // Edited wording is a new claim. Keeping evidence captured for the old wording would make
+        // the edit look verified when nobody inspected its sources.
+        sqlx::query("DELETE FROM memoryevidence WHERE memoryid = ?")
+            .bind(id)
+            .execute(&mut *transaction)
+            .await?;
         sqlx::query("UPDATE memorymeta SET scope = ?, project = ?, native = 1 WHERE memoryid = ?")
             .bind(scope.value())
             .bind(project)

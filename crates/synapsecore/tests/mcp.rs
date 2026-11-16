@@ -11,6 +11,8 @@ use std::process::{Command, Stdio};
 #[test]
 fn mcp_stdio_lists_and_calls_every_tool() {
     let root = tempfile::tempdir().unwrap();
+    std::fs::create_dir_all(root.path().join("src")).unwrap();
+    std::fs::write(root.path().join("src/session.rs"), "pub fn refresh() {}\n").unwrap();
     let mut child = Command::new(env!("CARGO_BIN_EXE_synapse-cli"))
         .arg("mcp")
         .env("SYNAPSE_HOME", root.path().join("home"))
@@ -73,7 +75,8 @@ fn mcp_stdio_lists_and_calls_every_tool() {
                     "content": "mcp durable marker",
                     "source": "protocoltest",
                     "scope": "project",
-                    "project": root.path()
+                    "project": root.path(),
+                    "sources": ["src/session.rs"]
                 }
             }
         }),
@@ -97,6 +100,30 @@ fn mcp_stdio_lists_and_calls_every_tool() {
             }
         }),
         4,
+    );
+    std::fs::write(
+        root.path().join("src/session.rs"),
+        "pub fn refresh() { rotate_twice(); }\n",
+    )
+    .unwrap();
+    let changed = call(
+        &mut stdin,
+        &mut stdout,
+        json!({
+            "jsonrpc": "2.0",
+            "id": 8,
+            "method": "tools/call",
+            "params": {
+                "name": "recall",
+                "arguments": {
+                    "query": "durable marker",
+                    "limit": 4,
+                    "budget": "lean",
+                    "project": root.path()
+                }
+            }
+        }),
+        8,
     );
     // A correction arriving through the tool the model actually calls: the old
     // memory stops being recalled without anyone deleting it.
@@ -169,6 +196,10 @@ fn mcp_stdio_lists_and_calls_every_tool() {
     );
     assert!(remembered.to_string().contains("stored"));
     assert_eq!(
+        remembered["result"]["structuredContent"]["evidence"]["status"],
+        "current"
+    );
+    assert_eq!(
         recalled["result"]["structuredContent"]["optimization"],
         "lean"
     );
@@ -176,6 +207,14 @@ fn mcp_stdio_lists_and_calls_every_tool() {
     assert_eq!(
         recalled["result"]["structuredContent"]["memories"][0]["scope"],
         "project"
+    );
+    assert_eq!(
+        recalled["result"]["structuredContent"]["evidence"][0]["status"],
+        "current"
+    );
+    assert_eq!(
+        changed["result"]["structuredContent"]["evidence"][0]["status"],
+        "needsverification"
     );
     assert_eq!(
         corrected["result"]["structuredContent"]["superseded"],

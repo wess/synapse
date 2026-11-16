@@ -25,14 +25,31 @@ Recall and the session hook check what they hand over:
 
 - a path the memory names that is gone from the checkout (stale),
 - two memories that say opposite things or carry different numbers (conflict),
-- two memories that say the same thing (duplicate).
+- two memories that say the same thing (duplicate),
+- repository evidence attached to a project memory that changed, disappeared,
+  or could not be checked within the bounded source budget.
 
 Recall returns everything and lists findings in `drift`. When a newer memory
 contradicts a returned one but didn't match the query, recall quotes it. The
-session hook leaves stale memories and the older half of a conflicting or
-duplicate pair out of what it injects, and says so. `remember` reports what a
-new memory contradicts or repeats. `synapse memory drift` runs the check on
-everything a folder can see. Nothing is superseded or deleted automatically.
+session hook leaves stale memories out and warns about conflicting or duplicate
+pairs without guessing which context applies. `remember` reports what a new
+memory contradicts or repeats. `synapse memory drift` runs the check on everything
+a folder can see. Nothing is superseded or deleted automatically.
+
+Implementation-derived project memory can cite up to 64 repository-relative
+source files through `remember.sources` or repeated CLI `--evidence` options.
+Synapse records SHA-256 hashes with the memory using the same guarded, 2 MiB per
+file and 16 MiB aggregate source scan used by Project Knowledge. Recall reports
+the evidence as `current`, `needsverification`, or `unchecked`. A changed source
+does not prove the claim false, so the memory remains visible. Inspect the current
+code, then write the confirmed claim with current sources and supersede the old
+memory. Preferences and deliberate decisions should not carry source evidence.
+Editing a memory body clears its prior evidence because the new wording was not
+what those hashes originally supported.
+
+Evidence is local checkout metadata and is not added to the pinned encrypted sync
+wire format. A memory arriving through sync therefore has no evidence until it is
+revalidated locally.
 
 Relative paths are only checked for project memory in its own checkout. Paths
 under another account's home, temp folders, and build output are never called

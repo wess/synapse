@@ -4,30 +4,30 @@ use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
 use std::io::Read;
 
-pub(super) const SOURCELIMIT: usize = 2 * 1024 * 1024;
+pub(crate) const SOURCELIMIT: usize = 2 * 1024 * 1024;
 const SCANLIMIT: usize = 16 * 1024 * 1024;
 
 #[derive(Clone)]
-pub(super) enum Checked {
+pub(crate) enum Checked {
     Hash(String),
     Missing,
     Unchecked,
 }
 
-pub(super) struct Check {
+pub(crate) struct Check {
     hashes: BTreeMap<String, Checked>,
-    pub bytes: usize,
+    pub(crate) bytes: usize,
 }
 
 impl Check {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             hashes: BTreeMap::new(),
             bytes: 0,
         }
     }
 
-    pub fn source(&mut self, root: &Folder, path: &str) -> Checked {
+    pub(crate) fn source(&mut self, root: &Folder, path: &str) -> Checked {
         if let Some(checked) = self.hashes.get(path) {
             return checked.clone();
         }
