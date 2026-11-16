@@ -20,7 +20,7 @@
 <body class="docs" data-root="../../">
   <div class="shell">
   <a class="skip" href="#content">Skip to content</a>
-  <div class="machinebar"><a href="../../">Synapse field manual</a><span><i aria-hidden="true"></i>local · v1.19.1</span></div>
+  <div class="machinebar"><a href="../../">Synapse field manual</a><span><i aria-hidden="true"></i>local · v1.19.2</span></div>
   <header class="topbar">
     <a class="wordmark" href="../../" aria-label="Synapse home"><img src="../../icon.svg" width="28" height="28" alt=""><span>synapse</span></a>
     <button class="navtoggle" type="button" aria-expanded="false" aria-controls="topnav">Menu</button>
@@ -33,7 +33,7 @@
   </header>
   <div class="doclayout">
   <aside class="docsrail" aria-label="Documentation navigation">
-    <p class="manualmark">Field manual <span>v1.19.1</span></p>
+    <p class="manualmark">Field manual <span>v1.19.2</span></p>
     <div class="searchbox">
       <label for="docssearch">Search docs &amp; tutorials</label>
       <input id="docssearch" type="search" placeholder="Memory, vaults, restore…" autocomplete="off" aria-controls="searchresults">
@@ -49,7 +49,7 @@
     </details>
   </aside>
     <main class="article" id="content">
-      <header class="articlehead"><nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../">Synapse</a><span aria-hidden="true">/</span><a href="../../docs/">Manual</a></nav><h1>Data lifecycle</h1><p>Locate the database, understand startup checks and automatic backups, export a consistent snapshot, and restore safely.</p><div class="articleledger"><span>reference</span><span>release 1.19.1</span></div></header>
+      <header class="articlehead"><nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../">Synapse</a><span aria-hidden="true">/</span><a href="../../docs/">Manual</a></nav><h1>Data lifecycle</h1><p>Locate the database, understand startup checks and automatic backups, export a consistent snapshot, and restore safely.</p><div class="articleledger"><span>reference</span><span>release 1.19.2</span></div></header>
 
     <h2 id="files">Files and permissions</h2>
     <p>On macOS, the default data directory is <code>~/Library/Application Support/synapse</code>. Run <code>synapse path</code> to print the resolved data, shared-guidance, and CLI paths for the current environment.</p>
@@ -135,14 +135,14 @@ synapse data check</code></pre>
     <h2 id="wipe">Memory wipe is not a reset</h2>
     <p><code>synapse memory wipe --confirm</code> removes every memory entry and import batch but leaves <code>SOUL.md</code>, settings, vault labels, stored values, global mappings, and scope approvals. Use it when you want a clean memory history without rebuilding guidance or credential setup.</p>
     <p>There is no one-command factory reset. To remove Synapse completely, first forget each secret through the app or CLI, then quit all processes and remove the application, installed launcher, and data directory deliberately. On the encrypted store the data directory <em>is</em> the credential store, so removing it takes every value with it — <code>synapse uninstall --data</code> says so before it acts.</p>
-  <footer class="articlefoot"><div class="articlemeta"><a href="https://github.com/wess/synapse/blob/main/website/docs/data.ts">View page source</a><span>Synapse 1.19.1</span></div><nav class="pagenav" aria-label="Guide pages"><a href="../../docs/vault/"><small>Previous</small><strong>Vaults and scopes</strong></a><a href="../../docs/config/"><small>Next</small><strong>Configuration and paths</strong></a></nav></footer>
+  <footer class="articlefoot"><div class="articlemeta"><a href="https://github.com/wess/synapse/blob/main/website/docs/data.ts">View page source</a><span>Synapse 1.19.2</span></div><nav class="pagenav" aria-label="Guide pages"><a href="../../docs/vault/"><small>Previous</small><strong>Vaults and scopes</strong></a><a href="../../docs/config/"><small>Next</small><strong>Configuration and paths</strong></a></nav></footer>
     </main>
   <aside class="ontoc" aria-label="On this page"><span>On this page</span><ol><li><a href="#files">Files and permissions</a></li><li><a href="#startup">Startup</a></li><li><a href="#backups">Automatic backups</a></li><li><a href="#export">Export</a></li><li><a href="#restore">Restore</a></li><li><a href="#wipe">Memory wipe</a></li></ol></aside>
   </div>
   <footer class="footer">
     <div class="footerupper"><div><a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">synapse</a><p>A shared memory. A little less starting over.</p></div>
       <nav aria-label="Footer"><a href="../../docs/">Manual</a><a href="../../tutorials/">Tutorials</a><a href="https://github.com/wess/synapse">Source</a><a href="https://github.com/wess/synapse/releases">Releases</a><a href="https://wess.io">By Wess</a></nav></div>
-    <p class="footerfine"><span>macOS &amp; Windows desktop · Linux CLI &amp; MCP</span><span>v1.19.1 · MIT · No account required</span></p>
+    <p class="footerfine"><span>macOS &amp; Windows desktop · Linux CLI &amp; MCP</span><span>v1.19.2 · MIT · No account required</span></p>
   </footer></div>
 </body>
 </html>

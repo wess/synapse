@@ -190,12 +190,12 @@ input { caret-color: var(--orange); }
   min-height: 2.75rem;
   align-items: center;
   justify-content: space-between;
-  padding-left: .9rem;
+  padding: .75rem 0 .75rem .9rem;
   border-bottom: 2px solid var(--screenline);
   background: var(--screen);
   font: .75rem/1.5 var(--pixel);
 }
-.codebar button { align-self: stretch; padding: 0 .8rem; border: 0; border-left: 2px solid var(--screenline); background: transparent; color: inherit; }
+.codebar button { align-self: stretch; margin-block: -.75rem; padding: .75rem .8rem; border: 0; border-left: 2px solid var(--screenline); background: transparent; color: inherit; }
 .codebar button:hover { background: #3c36ad; }
 .codeblock pre { overflow-x: auto; margin: 0; padding: 1.1rem; font: .82rem/1.8 var(--mono); tab-size: 2; }
 code { font-family: var(--mono); }
