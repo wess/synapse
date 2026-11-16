@@ -1,87 +1,101 @@
-@media (min-width: 1500px) {
-  .shell { margin-block: 2rem; }
-}
 @media (max-width: 1200px) {
-  .shell { margin: .75rem; }
-  .hero { gap: 2rem; }
-  .doclayout { grid-template-columns: 13rem minmax(0, 1fr); gap: 2rem; }
+  .memoryscreen { grid-template-columns: .72fr 1.28fr; }
+  .screenintro { padding: 2.5rem; }
+  .workstationcontrols { grid-template-columns: 1fr auto; }
+  .workstationcontrols > p { grid-column: 1 / -1; }
+  .doclayout { grid-template-columns: 14rem minmax(0, 1fr); gap: 2rem; }
   .ontoc { display: none; }
   .article { max-width: none; }
 }
-@media (max-width: 860px) {
-  .hero { grid-template-columns: 1fr; padding-block: 3rem; }
-  .herocopy { max-width: 38rem; }
-  .herocopy h1 { font-size: clamp(1.7rem, 5.4vw, 2.8rem); }
-  .herocopy h2 { font-size: 2.5rem; }
-  .console { max-width: 42rem; width: 100%; }
-  .topbar nav { gap: 1rem; }
-  .wordmark { font-size: .8rem; }
-  .wordmark img { width: 25px; height: 25px; }
+
+@media (max-width: 900px) {
+  .memoryscreen { grid-template-columns: 1fr; }
+  .screenintro { border-right: 0; border-bottom: 2px solid var(--screenline); }
+  .screenintro h1 { font-size: clamp(4rem, 14vw, 6.8rem); }
+  .handoff { width: calc(100% - 2.5rem); justify-self: center; }
+  .workstationcontrols { grid-template-columns: 1fr; }
+  .heroactions { flex-wrap: wrap; }
+  .sectionintro, .boundary { gap: 2rem; }
   .doclayout { grid-template-columns: 1fr; padding-top: 1.5rem; }
-  .docsrail { position: static; max-height: none; overflow: visible; border-bottom: 1px solid var(--line); padding-bottom: 1rem; }
+  .docsrail { position: static; max-height: none; overflow: visible; border-bottom: var(--edge); padding-bottom: 1rem; }
+  .manualmark { width: fit-content; gap: 2rem; }
   .searchbox { margin-bottom: 1rem; }
-  .railnav summary { display: flex; justify-content: space-between; padding: .6rem .75rem; border: 1px solid var(--line); cursor: pointer; font: .8rem/1.8 var(--mono); list-style: none; }
+  .railnav summary { display: flex; justify-content: space-between; padding: .6rem .75rem; border: 2px solid var(--ink); background: var(--case); cursor: pointer; font: .75rem/1.8 var(--pixel); list-style: none; }
   .railnav summary::-webkit-details-marker { display: none; }
   .railnav summary::after { content: "+"; }
   .railnav[open] summary::after { content: "−"; }
   .railnav nav { max-height: 50vh; overflow-y: auto; padding-top: 1rem; }
-  .docsrail nav a { min-height: 2.75rem; display: flex; align-items: center; }
+  .docsrail nav a { display: flex; min-height: 2.75rem; align-items: center; }
   .articlehead { margin-bottom: 2rem; }
-  .sectionintro, .boundary { gap: 2rem; }
-  .workflowrows article { gap: .5rem 2rem; }
-  .workflowrows h3 { font-size: .68rem; }
 }
-@media (max-width: 640px) {
-  .shell { margin: 0; border: 0; }
-  .windowbar { padding-inline: 1rem; font-size: .7rem; }
-  .windowbar > span { display: none; }
-  .topbar { padding-block: .9rem; }
-  .navtoggle { display: block; font: .75rem/1.5 var(--mono); }
-  .topbar nav { position: absolute; top: 100%; left: 0; right: 0; display: none; align-items: stretch; gap: 0; padding: .5rem var(--gutter) 1rem; border-bottom: 1px solid var(--line); background: var(--paper); }
+
+@media (max-width: 700px) {
+  body { font-size: 1rem; }
+  .shell { width: 100%; margin: 0; border: 0; }
+  .machinebar { padding-inline: .75rem; }
+  .machinebar > span { font-size: 0; }
+  .machinebar i { font-size: initial; }
+  .topbar { padding-block: .7rem; }
+  .navtoggle { display: block; }
+  .topbar nav { position: absolute; top: 100%; right: 0; left: 0; display: none; align-items: stretch; gap: 0; padding: .5rem var(--gutter) 1rem; border-bottom: var(--edge); background: var(--case); }
   .topbar nav[data-open] { display: flex; flex-direction: column; }
-  .topbar nav a { padding: .75rem .5rem; }
-  .home .topbar nav { background: var(--screen); border-color: var(--screenline); }
-  .home .navtoggle { border-color: var(--screenline); }
-  .herocopy h1 { font-size: 1.8rem; }
-  .herocopy h2 { font-size: 2.1rem; }
-  .herocopy > p { font-size: 1rem; }
-  .heroactions { align-items: stretch; flex-direction: column; }
-  .buffer { padding: 1rem .85rem; font-size: .69rem; }
-  .buffer .nick { min-width: 4.2rem; }
-  .buffer .indent, .buffer pre { padding-left: 4.2rem; }
-  .consolestatus span:last-child { display: none; }
-  .systemline { gap: .35rem; flex-direction: column; }
+  .topbar nav a { min-height: 2.75rem; padding: .75rem .5rem; }
+  .topbar nav .navdownload { margin-top: .4rem; text-align: center; }
+  .workstation { padding: .65rem; }
+  .workstationhead { grid-template-columns: 3.2rem 1fr auto; font-size: .75rem; }
+  .screenintro { padding: 1.15rem 1rem; }
+  .screenintro h1 { margin-bottom: .55rem; font-size: clamp(3.2rem, 16vw, 4.4rem); }
+  .screenintro h2 { max-width: none; font-size: 1.8rem; }
+  .screenintro p { margin-top: .65rem; font-size: .92rem; line-height: 1.35; }
+  .handoff { width: calc(100% - 1.25rem); margin: .65rem; font-size: .75rem; }
+  .handoffhead { padding: .55rem .7rem; font-size: .75rem; }
+  .handoffhead span:last-child { display: none; }
+  .session { padding: .65rem .75rem; }
+  .session p { margin: .35rem 0; }
+  .memorytape { grid-template-columns: 1fr; gap: .2rem; }
+  .memorytape { padding: .55rem .75rem; }
+  .memorytape span:last-child { display: none; }
+  .session b { min-width: 4.2rem; }
+  .session > code { margin: .45rem 0 0 4.2rem; }
+  .handoffstatus { padding: .5rem .7rem; font-size: .75rem; }
+  .workstationcontrols { gap: 1rem; padding: 1rem; }
+  .heroactions { flex-direction: column; align-items: stretch; }
+  .systemline { flex-direction: column; }
   .workflows, .guidegate { padding-block: 3rem; }
   .sectionintro, .boundary, .workflowrows article { grid-template-columns: 1fr; }
   .sectionintro { gap: 1rem; margin-bottom: 2rem; }
-  .sectionintro h2 br { display: none; }
-  .workflowrows article { gap: .6rem; }
-  .workflowrows h3 { font-size: .75rem; line-height: 1.9; }
-  .boundary { padding-block: 2.5rem; gap: 1rem; }
+  .sectionintro h2, .boundary h2 { font-size: 2.7rem; }
+  .workflowrows article { gap: .5rem; }
+  .workflowrows h3 { grid-row: auto; }
+  .boundarycopy { padding: 3rem var(--gutter); border-right: 0; border-bottom: 2px solid var(--screenline); }
+  .boundary dl { padding: 2rem var(--gutter); }
   .boundary dl > div { grid-template-columns: 6rem 1fr; gap: .7rem; }
   .guidelist { grid-template-columns: 1fr; }
-  .guidelist a:nth-child(odd) { padding-right: 0; }
-  .closing { padding-block: 2.5rem; }
+  .guidelist a:nth-child(odd) { border-right: 0; }
+  .guidelist a:nth-child(even) { padding-left: 0; }
+  .closing { padding-block: 2.3rem; }
   .closing .heroactions { width: 100%; }
-  .closing .heroactions > a:not(.button) { padding-block: .5rem; }
-  .footerupper { flex-direction: column; }
-  .footerfine { flex-direction: column; gap: .5rem; }
-  .article table { display: block; overflow-x: auto; }
-  .articlehead h1 { font-size: 2.4rem; }
-  .articlehead > p { font-size: 1rem; }
+  .footerupper, .footerfine { flex-direction: column; }
+  .footerfine { gap: .5rem; }
+  .article { padding-inline: 0; }
+  .articlehead h1 { font-size: 3rem; }
+  .articlehead > p { font-size: 1.08rem; }
+  .articleledger { flex-direction: column; gap: .2rem; }
   .command { grid-template-columns: 1fr; gap: .7rem; }
   .steps > li { padding-left: 2.8rem; }
-  .pagenav { gap: .65rem; }
-  .pagenav a { padding: .7rem; }
+  .pagenav { gap: .55rem; }
+  .pagenav a { padding: .65rem; }
 }
+
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
 @media print {
   body, .shell { margin: 0; border: 0; background: white; color: black; box-shadow: none; }
-  .windowbar, .topbar, .docsrail, .ontoc, .footer, .pagenav, .codebar button { display: none; }
-  .doclayout { display: block; padding: 0; }
+  .machinebar, .topbar, .docsrail, .ontoc, .footer, .pagenav, .codebar button { display: none; }
+  .doclayout { display: block; padding: 0; background: white; }
   .article { max-width: none; }
   .codeblock { break-inside: avoid; background: #f0f0f0; color: black; }
 }

@@ -1611,19 +1611,7 @@ impl Dashboard {
         };
     }
 
-    /// Everything that was left out of the first frame, done once there is a
-    /// frame.
-    ///
-    /// This runs immediately after the window is created, so the reads are the
-    /// same reads in the same order — what changed is that the user is looking
-    /// at a window while they happen instead of at nothing. The slow one is
-    /// tool detection, which asks every installed coding agent for its
-    /// `--version`, and how long that takes is a fact about somebody else's
-    /// CLI rather than about Synapse.
-    ///
-    /// A page opened directly with `SYNAPSE_PAGE` fills itself here too, for
-    /// the reason it always did: arriving on a screen that reports an empty
-    /// library is worse than arriving on one that is still filling.
+    /// Finish the slow reads after the first frame, including direct page loads.
     pub fn opened(&mut self, cx: &mut Context<Self>) {
         let database = self.database.clone();
         cx.spawn(async move |this, cx| {

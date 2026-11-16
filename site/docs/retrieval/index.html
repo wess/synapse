@@ -5,21 +5,22 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Retrieval checks — Synapse</title>
   <meta name="description" content="Ranking, drift, exact UTF-8 paging, relevance checks, and reproducible performance fixtures.">
-  <meta name="theme-color" content="#352879">
+  <meta name="theme-color" content="#25208f">
   <meta property="og:title" content="Retrieval checks — Synapse">
   <meta property="og:description" content="Ranking, drift, exact UTF-8 paging, relevance checks, and reproducible performance fixtures.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://wess.io/synapse/docs/retrieval/">
   <link rel="canonical" href="https://wess.io/synapse/docs/retrieval/">
   <link rel="icon" href="../../icon.svg" type="image/svg+xml">
-  <link rel="preload" href="../../pixel.ttf" as="font" type="font/ttf" crossorigin>
+  <link rel="preload" href="../../saira.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="../../silkscreen.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="../../style.css">
   <script type="module" src="../../site.js"></script>
 </head>
 <body class="docs" data-root="../../">
   <div class="shell">
   <a class="skip" href="#content">Skip to content</a>
-  <div class="windowbar"><a href="../../">synapse / manual</a><span>v1.19.0 · on your machine</span></div>
+  <div class="machinebar"><a href="../../">Synapse field manual</a><span><i aria-hidden="true"></i>local · v1.19.1</span></div>
   <header class="topbar">
     <a class="wordmark" href="../../" aria-label="Synapse home"><img src="../../icon.svg" width="28" height="28" alt=""><span>synapse</span></a>
     <button class="navtoggle" type="button" aria-expanded="false" aria-controls="topnav">Menu</button>
@@ -32,6 +33,7 @@
   </header>
   <div class="doclayout">
   <aside class="docsrail" aria-label="Documentation navigation">
+    <p class="manualmark">Field manual <span>v1.19.1</span></p>
     <div class="searchbox">
       <label for="docssearch">Search docs &amp; tutorials</label>
       <input id="docssearch" type="search" placeholder="Memory, vaults, restore…" autocomplete="off" aria-controls="searchresults">
@@ -47,7 +49,7 @@
     </details>
   </aside>
     <main class="article" id="content">
-      <header class="articlehead"><nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../">Synapse</a><span aria-hidden="true">/</span><a href="../../docs/">Manual</a></nav><h1>Retrieval checks</h1><p>Ranking, drift, exact UTF-8 paging, relevance checks, and reproducible performance fixtures.</p></header>
+      <header class="articlehead"><nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../">Synapse</a><span aria-hidden="true">/</span><a href="../../docs/">Manual</a></nav><h1>Retrieval checks</h1><p>Ranking, drift, exact UTF-8 paging, relevance checks, and reproducible performance fixtures.</p><div class="articleledger"><span>reference</span><span>release 1.19.1</span></div></header>
       <p>Recall finds relevant memories within the configured budget. <code>readmemory</code> reads the
 exact stored body of one hit in bounded pages. Both apply the same global plus
 current-project scope and exclude superseded records. Neither requires a model or
@@ -154,14 +156,14 @@ gives the share ranked first, the share found, MRR, the share whose answer text
 survived the response budget, and noise on unanswerable cases. Run it on a copy of
 a real store (<code>SYNAPSE_DATA</code> pointed at the copy, never the live folder) before and
 after the change, and keep resource cost in view alongside it.</p>
-<footer class="articlefoot"><div class="articlemeta"><a href="https://github.com/wess/synapse/blob/main/docs/retrieval.md">View page source</a><span>Synapse 1.19.0</span></div><nav class="pagenav" aria-label="Guide pages"><a href="../../docs/embedding/"><small>Previous</small><strong>Embedding Synapse</strong></a><a href="../../docs/map/"><small>Next</small><strong>The memory map</strong></a></nav></footer>
+<footer class="articlefoot"><div class="articlemeta"><a href="https://github.com/wess/synapse/blob/main/docs/retrieval.md">View page source</a><span>Synapse 1.19.1</span></div><nav class="pagenav" aria-label="Guide pages"><a href="../../docs/embedding/"><small>Previous</small><strong>Embedding Synapse</strong></a><a href="../../docs/map/"><small>Next</small><strong>The memory map</strong></a></nav></footer>
     </main>
-  <aside class="ontoc" aria-label="On this page"><span>Contents</span><ol><li><a href="#drift">Drift</a></li><li><a href="#exact-reading">Exact reading</a></li><li><a href="#correctness-fixtures">Correctness fixtures</a></li><li><a href="#performance-fixture">Performance fixture</a></li><li><a href="#relevance">Relevance</a></li></ol></aside>
+  <aside class="ontoc" aria-label="On this page"><span>On this page</span><ol><li><a href="#drift">Drift</a></li><li><a href="#exact-reading">Exact reading</a></li><li><a href="#correctness-fixtures">Correctness fixtures</a></li><li><a href="#performance-fixture">Performance fixture</a></li><li><a href="#relevance">Relevance</a></li></ol></aside>
   </div>
   <footer class="footer">
     <div class="footerupper"><div><a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">synapse</a><p>A shared memory. A little less starting over.</p></div>
       <nav aria-label="Footer"><a href="../../docs/">Manual</a><a href="../../tutorials/">Tutorials</a><a href="https://github.com/wess/synapse">Source</a><a href="https://github.com/wess/synapse/releases">Releases</a><a href="https://wess.io">By Wess</a></nav></div>
-    <p class="footerfine"><span>macOS &amp; Windows desktop · Linux CLI &amp; MCP</span><span>v1.19.0 · MIT · No account required</span></p>
+    <p class="footerfine"><span>macOS &amp; Windows desktop · Linux CLI &amp; MCP</span><span>v1.19.1 · MIT · No account required</span></p>
   </footer></div>
 </body>
 </html>

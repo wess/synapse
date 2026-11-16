@@ -355,8 +355,6 @@ pub fn render(view: View, actions: Actions, cx: &App) -> AnyElement {
         .into_any_element()
 }
 
-/// Master control for outcome-driven choice ranking. It is on by default, but unlike the
-/// per-context controls on Activity this switch also stops collecting new outcomes.
 fn adaptivepanel(
     enabled: bool,
     on: Click,

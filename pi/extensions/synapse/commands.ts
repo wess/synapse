@@ -1,23 +1,18 @@
-// The slash commands, for the times a person wants the answer themselves.
-//
-// Everything here the model can already do with a tool. These exist because
-// "what does Synapse know about this project" and "who else is on the mesh" are
-// questions somebody asks between turns, and spending a turn asking the model to
-// ask the server is a poor way to find out.
+// direct slash-command views of answers the model can already request.
 
 import type { ExtensionAPI, ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
 import type { Client, Outcome } from "./client.ts";
 import { run } from "./command.ts";
 import { memories, roster, stored } from "./render.ts";
 
-interface Report {
+type Report = {
   memories: number;
   project: string | null;
   mesh: boolean;
   agents: number;
   vault: string;
   problem: string | null;
-}
+};
 
 export function commands(pi: ExtensionAPI, client: Client, command: string, root: string): void {
   pi.registerCommand("synapse", {

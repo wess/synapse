@@ -5,21 +5,22 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Export and restore safely — Synapse</title>
   <meta name="description" content="Create a validated snapshot, make one reversible change, stop every database user, restore, and prove the previous state came back — including what a snapshot deliberately does not carry.">
-  <meta name="theme-color" content="#352879">
+  <meta name="theme-color" content="#25208f">
   <meta property="og:title" content="Export and restore safely — Synapse">
   <meta property="og:description" content="Create a validated snapshot, make one reversible change, stop every database user, restore, and prove the previous state came back — including what a snapshot deliberately does not carry.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://wess.io/synapse/tutorials/recovery/">
   <link rel="canonical" href="https://wess.io/synapse/tutorials/recovery/">
   <link rel="icon" href="../../icon.svg" type="image/svg+xml">
-  <link rel="preload" href="../../pixel.ttf" as="font" type="font/ttf" crossorigin>
+  <link rel="preload" href="../../saira.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="../../silkscreen.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="../../style.css">
   <script type="module" src="../../site.js"></script>
 </head>
 <body class="tutorial" data-root="../../">
   <div class="shell">
   <a class="skip" href="#content">Skip to content</a>
-  <div class="windowbar"><a href="../../">synapse / tutorials</a><span>v1.19.0 · on your machine</span></div>
+  <div class="machinebar"><a href="../../">Synapse workbook</a><span><i aria-hidden="true"></i>local · v1.19.1</span></div>
   <header class="topbar">
     <a class="wordmark" href="../../" aria-label="Synapse home"><img src="../../icon.svg" width="28" height="28" alt=""><span>synapse</span></a>
     <button class="navtoggle" type="button" aria-expanded="false" aria-controls="topnav">Menu</button>
@@ -32,6 +33,7 @@
   </header>
   <div class="doclayout">
   <aside class="docsrail" aria-label="Documentation navigation">
+    <p class="manualmark">Field manual <span>v1.19.1</span></p>
     <div class="searchbox">
       <label for="docssearch">Search docs &amp; tutorials</label>
       <input id="docssearch" type="search" placeholder="Memory, vaults, restore…" autocomplete="off" aria-controls="searchresults">
@@ -47,7 +49,7 @@
     </details>
   </aside>
     <main class="article" id="content">
-      <header class="articlehead"><nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../">Synapse</a><span aria-hidden="true">/</span><a href="../../tutorials/">Tutorials</a></nav><h1>Export and restore safely</h1><p>Create a validated snapshot, make one reversible change, stop every database user, restore, and prove the previous state came back — including what a snapshot deliberately does not carry.</p></header>
+      <header class="articlehead"><nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../">Synapse</a><span aria-hidden="true">/</span><a href="../../tutorials/">Tutorials</a></nav><h1>Export and restore safely</h1><p>Create a validated snapshot, make one reversible change, stop every database user, restore, and prove the previous state came back — including what a snapshot deliberately does not carry.</p><div class="articleledger"><span>guided exercise</span><span>release 1.19.1</span></div></header>
 
     <h2 id="outcome">Outcome and prerequisites</h2>
     <p>You will take a consistent snapshot of the whole store, make a change you can see, restore over it, and prove the change is gone. Then you will understand exactly what a snapshot contains, what it deliberately leaves out, and how that affects moving to another machine.</p>
@@ -245,14 +247,14 @@ cp -R ~/Library/Application\ Support/synapse ~/Desktop/synapse-full-copy</code><
 
     <h2>Next step</h2>
     <p>Finish the maintainer level with <a href="../lifecycle/">Check, migrate, and remove Synapse</a>, which covers the health report in full and both removal paths.</p>
-  <footer class="articlefoot"><div class="articlemeta"><a href="https://github.com/wess/synapse/blob/main/website/tutorials/recovery.ts">View page source</a><span>Synapse 1.19.0</span></div><nav class="pagenav" aria-label="Guide pages"><a href="../../tutorials/overseer/"><small>Previous</small><strong>Hand a job to one agent and watch it grow a team</strong></a><a href="../../tutorials/lifecycle/"><small>Next</small><strong>Check, migrate, and remove Synapse</strong></a></nav></footer>
+  <footer class="articlefoot"><div class="articlemeta"><a href="https://github.com/wess/synapse/blob/main/website/tutorials/recovery.ts">View page source</a><span>Synapse 1.19.1</span></div><nav class="pagenav" aria-label="Guide pages"><a href="../../tutorials/overseer/"><small>Previous</small><strong>Hand a job to one agent and watch it grow a team</strong></a><a href="../../tutorials/lifecycle/"><small>Next</small><strong>Check, migrate, and remove Synapse</strong></a></nav></footer>
     </main>
-  <aside class="ontoc" aria-label="On this page"><span>Contents</span><ol><li><a href="#outcome">Outcome</a></li><li><a href="#check">Check first</a></li><li><a href="#export">Export</a></li><li><a href="#change">Make a change</a></li><li><a href="#stop">Stop every user</a></li><li><a href="#restore">Restore</a></li><li><a href="#verify">Verify</a></li><li><a href="#notmoved">What did not move</a></li><li><a href="#automatic">Automatic backups</a></li><li><a href="#newmac">Moving to a new Mac</a></li></ol></aside>
+  <aside class="ontoc" aria-label="On this page"><span>On this page</span><ol><li><a href="#outcome">Outcome</a></li><li><a href="#check">Check first</a></li><li><a href="#export">Export</a></li><li><a href="#change">Make a change</a></li><li><a href="#stop">Stop every user</a></li><li><a href="#restore">Restore</a></li><li><a href="#verify">Verify</a></li><li><a href="#notmoved">What did not move</a></li><li><a href="#automatic">Automatic backups</a></li><li><a href="#newmac">Moving to a new Mac</a></li></ol></aside>
   </div>
   <footer class="footer">
     <div class="footerupper"><div><a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">synapse</a><p>A shared memory. A little less starting over.</p></div>
       <nav aria-label="Footer"><a href="../../docs/">Manual</a><a href="../../tutorials/">Tutorials</a><a href="https://github.com/wess/synapse">Source</a><a href="https://github.com/wess/synapse/releases">Releases</a><a href="https://wess.io">By Wess</a></nav></div>
-    <p class="footerfine"><span>macOS &amp; Windows desktop · Linux CLI &amp; MCP</span><span>v1.19.0 · MIT · No account required</span></p>
+    <p class="footerfine"><span>macOS &amp; Windows desktop · Linux CLI &amp; MCP</span><span>v1.19.1 · MIT · No account required</span></p>
   </footer></div>
 </body>
 </html>

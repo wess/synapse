@@ -1,17 +1,12 @@
-// Running the synapse command and reading what it printed.
-//
-// A handful of things a session needs are reports rather than tools — the
-// startup notice, the status line, the roster behind `/mesh` — and they already
-// exist as commands with their own wording. Shelling out to them keeps one
-// source of truth for that wording instead of a second copy here that drifts.
+// reports reuse CLI wording instead of keeping a second copy here.
 
 import { spawn } from "node:child_process";
 
-export interface Ran {
+export type Ran = {
   ok: boolean;
   out: string;
   err: string;
-}
+};
 
 export function run(
   command: string,

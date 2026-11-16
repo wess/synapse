@@ -67,11 +67,11 @@ async function reminder(command: string, root: string): Promise<string> {
   }
 }
 
-interface Opening {
+type Opening = {
   headline: string;
   context: string;
   reachable: boolean;
-}
+};
 
 /**
  * The session hook's own payload: `systemMessage` for the person, and

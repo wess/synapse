@@ -1,39 +1,9 @@
-//! The store as a map.
+//! A bounded 3D map shared by the desktop and terminal views.
 //!
-//! Memory is a list everywhere else in Synapse, and a list is the right shape
-//! for reading one memory and the wrong shape for seeing a store. It sorts by
-//! age, which is the one relationship between two memories that carries no
-//! meaning, and it says nothing about the thing a person actually wants to
-//! know: which projects this machine holds anything about, where the weight
-//! is, and what a decision made last week sits next to.
-//!
-//! So: nodes and links, laid out here rather than in either dashboard, and laid
-//! out in three dimensions. A graph is not a flat thing: on a plane a cluster
-//! with more neighbours than the plane has room for either overlaps itself or
-//! shoves everything else off the map, and both of those are the layout lying
-//! about the store. In a volume it uses the third direction instead.
-//!
-//! The window and the terminal draw the same map because they are handed the
-//! same coordinates — a layout computed twice is two layouts that disagree
-//! about the same machine by next year, and neither one is drawing. The window
-//! turns the cloud; the terminal draws the front of it, which is where the
-//! window's camera starts.
-//!
-//! Three kinds of link, and only one of them is inferred:
-//!
-//! - **Scope** ties a memory to its project, or to global memory. Recorded.
-//! - **Supersedes** ties a memory to the one that replaced it. Recorded, and
-//!   the reason a correction is visible as a correction rather than as two
-//!   memories that happen to be about the same thing.
-//! - **Shared** ties two memories that use enough of the same uncommon words.
-//!   Inferred, drawn faintest, and never the only thing holding a node on the
-//!   map.
-//!
-//! Everything here is bounded. [`NODES`] memories are read and no more, the
-//! passes over them are a fixed count, and the inferred links are capped per
-//! node — a map of a store this machine cannot draw is worth less than a map
-//! of its newest corner, and a page that costs a second to open is a page
-//! nobody opens twice.
+//! Scope and supersession links come from the store; shared-word links are
+//! inferred and capped per node. One layout keeps both surfaces consistent,
+//! while the third dimension prevents dense clusters from flattening into
+//! overlap. [`NODES`] bounds the work and makes truncation explicit.
 
 use crate::brain::{Brain, Memory, MemoryScope};
 use anyhow::Result;
@@ -41,10 +11,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 /// How many memories the map draws.
 ///
-/// Both dashboards read this rather than choosing for themselves, so the two
-/// cannot show different halves of the same store. Past a couple of hundred
-/// nodes a force layout stops being a map and becomes a cloud, and the map
-/// says how many it left out rather than pretending it drew everything.
+/// Shared by both views; beyond this the force layout stops being legible.
 pub const NODES: usize = 160;
 
 /// One memory, or one thing memories belong to.

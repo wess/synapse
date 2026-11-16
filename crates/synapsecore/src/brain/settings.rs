@@ -40,8 +40,7 @@ pub async fn writelearn(pool: &SqlitePool, enabled: bool) -> Result<()> {
     writevalue(pool, "learn", if enabled { "on" } else { "off" }).await
 }
 
-/// Whether local outcomes may influence route and runner selection. On by default because the
-/// policy remains behind deterministic eligibility gates and falls back until evidence is strong.
+/// Whether local outcomes may influence eligible route and runner selection.
 pub async fn adaptive(pool: &SqlitePool) -> Result<bool> {
     Ok(value(pool, "adaptive").await?.as_deref() != Some("off"))
 }

@@ -1,29 +1,8 @@
-//! What a connected tool shows the user about Synapse.
+//! Session-start, pre-compaction, and status-line output for connected tools.
 //!
-//! `session` answers a Claude Code SessionStart hook. Its `systemMessage` is
-//! displayed in the terminal at startup, beside the welcome box, which is the
-//! only way to state the connection before the model has written anything. The
-//! same call also tells the model the notice has already been shown, so the
-//! line does not appear twice for a tool that has both the hook and the
-//! guidance pointer.
-//!
-//! It also carries the memory itself. Asking a model to call `recall` before it
-//! starts is guidance it may or may not follow, and a session that skips it
-//! works from nothing while reporting a connection — so the hook does the recall
-//! and hands the result over as context. Guidance still asks for `recall`,
-//! because a focused query mid-task is the case this cannot cover.
-//!
-//! The same hook runs again after a compaction, with `source` set to
-//! `compact`. It prints no notice then, and hands the memory back instead,
-//! because the compaction dropped it.
-//!
-//! `compact` answers the PreCompact hook, at the other end of the same
-//! session. It is the only place Synapse asks for memory rather than handing it
-//! over, because compaction is the only moment where not having written
-//! something down costs immediately.
-//!
-//! `statusline` answers Claude Code's `statusLine` command and prints the one
-//! line under the prompt for the rest of the session.
+//! Startup recalls memory before the model can skip it and reports the
+//! connection once. Compaction asks the session to preserve what it learned,
+//! then restores durable memory into the compacted context.
 
 use crate::brain::drift::{Checkout, Concern, Finding};
 use crate::brain::{Brain, Memory, Optimization};

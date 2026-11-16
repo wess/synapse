@@ -1,29 +1,9 @@
-//! Carrying memories between machines through a server that cannot read them.
+//! Optional opaque sync between local stores.
 //!
-//! The server holds sealed envelopes and a sequence number. It cannot tell a
-//! stored memory from a deleted one, cannot say how many anyone has, and
-//! resolves nothing — clients do that, because only they can see the contents.
-//! Everything that makes that true lives in `synapsesync`; this is the half
-//! that reads and writes the local store.
-//!
-//! Nothing here is required to use Synapse. A machine with no server configured
-//! keeps every memory locally and loses no capability, which is also why an
-//! outage is not an emergency.
-//!
-//! ## Where the key lives
-//!
-//! In the local database, beside the memories it protects.
-//!
-//! That reads wrong for about a second and then stops: `brain.db` already holds
-//! every memory in plaintext. A key stored next to them protects nothing that
-//! was not already readable by anyone holding the file, and it is not what the
-//! key is for. The key exists so the *server* cannot read what it stores —
-//! including a server somebody else runs, which is the whole reason the
-//! envelopes are sealed at all.
-//!
-//! Keychain would be marginally better and is worth doing when a device
-//! keypair exists to seal it to. It would not change what an attacker with the
-//! database can read today.
+//! The server sees sealed operations and sequence numbers only; clients resolve
+//! contents. The envelope key lives beside plaintext memory in `brain.db`
+//! because it protects data from the server, not from someone who has the local
+//! database. No sync configuration means fully local operation.
 
 use crate::brain::{Brain, MemoryScope};
 use anyhow::{Context, Result};

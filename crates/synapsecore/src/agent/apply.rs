@@ -1,24 +1,7 @@
-//! The four things a person does to a connection, in one place.
+//! Shared connection operations for every surface.
 //!
-//! Connecting is not one write — it is the tool's own CLI registering a server,
-//! a managed block in an instruction file, Claude Code's hooks, and now a
-//! record of what descriptor it was all done from. Every surface needs the same
-//! four verbs over that, and a verb assembled separately in the window, the
-//! terminal, and the CLI is a verb that means three things by next year.
-//!
-//! So the composition lives here and the surfaces only choose which one to
-//! call:
-//!
-//! - [`connect`] wires a tool in, leaving a working registration alone.
-//! - [`refresh`] writes the registration again, for a descriptor that moved in
-//!   a release.
-//! - [`reset`] takes the connection out and makes it again, for when refreshing
-//!   is not enough because what is there has to go first.
-//! - [`remove`] takes it out and leaves it out.
-//!
-//! Each one keeps the connection record in step, because a record that survives
-//! its connection is worse than no record: it reports a tool as current the
-//! moment somebody disconnects it.
+//! Each operation keeps registration, managed guidance, hooks, and the
+//! descriptor receipt in step.
 
 use crate::agent::{Agent, Detection, Removed, receipt};
 use anyhow::Result;

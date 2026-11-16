@@ -5,21 +5,22 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>MCP servers — Synapse</title>
   <meta name="description" content="Keep one list of MCP servers, give it to every connected tool, and keep their tokens in the vault rather than in each tool&#039;s config.">
-  <meta name="theme-color" content="#352879">
+  <meta name="theme-color" content="#25208f">
   <meta property="og:title" content="MCP servers — Synapse">
   <meta property="og:description" content="Keep one list of MCP servers, give it to every connected tool, and keep their tokens in the vault rather than in each tool&#039;s config.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://wess.io/synapse/docs/servers/">
   <link rel="canonical" href="https://wess.io/synapse/docs/servers/">
   <link rel="icon" href="../../icon.svg" type="image/svg+xml">
-  <link rel="preload" href="../../pixel.ttf" as="font" type="font/ttf" crossorigin>
+  <link rel="preload" href="../../saira.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="../../silkscreen.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="../../style.css">
   <script type="module" src="../../site.js"></script>
 </head>
 <body class="docs" data-root="../../">
   <div class="shell">
   <a class="skip" href="#content">Skip to content</a>
-  <div class="windowbar"><a href="../../">synapse / manual</a><span>v1.19.0 · on your machine</span></div>
+  <div class="machinebar"><a href="../../">Synapse field manual</a><span><i aria-hidden="true"></i>local · v1.19.1</span></div>
   <header class="topbar">
     <a class="wordmark" href="../../" aria-label="Synapse home"><img src="../../icon.svg" width="28" height="28" alt=""><span>synapse</span></a>
     <button class="navtoggle" type="button" aria-expanded="false" aria-controls="topnav">Menu</button>
@@ -32,6 +33,7 @@
   </header>
   <div class="doclayout">
   <aside class="docsrail" aria-label="Documentation navigation">
+    <p class="manualmark">Field manual <span>v1.19.1</span></p>
     <div class="searchbox">
       <label for="docssearch">Search docs &amp; tutorials</label>
       <input id="docssearch" type="search" placeholder="Memory, vaults, restore…" autocomplete="off" aria-controls="searchresults">
@@ -47,7 +49,7 @@
     </details>
   </aside>
     <main class="article" id="content">
-      <header class="articlehead"><nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../">Synapse</a><span aria-hidden="true">/</span><a href="../../docs/">Manual</a></nav><h1>MCP servers</h1><p>Keep one list of MCP servers, give it to every connected tool, and keep their tokens in the vault rather than in each tool's config.</p></header>
+      <header class="articlehead"><nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../">Synapse</a><span aria-hidden="true">/</span><a href="../../docs/">Manual</a></nav><h1>MCP servers</h1><p>Keep one list of MCP servers, give it to every connected tool, and keep their tokens in the vault rather than in each tool's config.</p><div class="articleledger"><span>reference</span><span>release 1.19.1</span></div></header>
 
     <h2 id="why">Why a library</h2>
     <p>Every coding tool keeps its own list of MCP servers in its own format, so the same server ends up configured three times, and its token sits in plaintext in three files. Synapse keeps one list instead. Each server is a small TOML file in the Synapse data directory, and its secrets are held as references into the vault rather than as values.</p>
@@ -161,14 +163,14 @@ synapse mcp install server-name</code></pre>
       <li>A server's secrets are handed to it whenever a tool starts it, from any folder. The mapping you set up is the permission; there is no per-project scope for library servers.</li>
       <li>Deleting a server with <code>synapse mcp delete &lt;name&gt; --confirm</code> takes it out of every tool Synapse gave it to and forgets its vault. A tool's own entry by the same name is left alone.</li>
     </ul>
-  <footer class="articlefoot"><div class="articlemeta"><a href="https://github.com/wess/synapse/blob/main/website/docs/servers.ts">View page source</a><span>Synapse 1.19.0</span></div><nav class="pagenav" aria-label="Guide pages"><a href="../../docs/skills/"><small>Previous</small><strong>Skills</strong></a><a href="../../docs/sources/"><small>Next</small><strong>Sources</strong></a></nav></footer>
+  <footer class="articlefoot"><div class="articlemeta"><a href="https://github.com/wess/synapse/blob/main/website/docs/servers.ts">View page source</a><span>Synapse 1.19.1</span></div><nav class="pagenav" aria-label="Guide pages"><a href="../../docs/skills/"><small>Previous</small><strong>Skills</strong></a><a href="../../docs/sources/"><small>Next</small><strong>Sources</strong></a></nav></footer>
     </main>
-  <aside class="ontoc" aria-label="On this page"><span>Contents</span><ol><li><a href="#why">Why a library</a></li><li><a href="#adding">Adding a server</a></li><li><a href="#secrets">Secrets</a></li><li><a href="#installing">Installing</a></li><li><a href="#states">What each state means</a></li><li><a href="#adopting">Adopting what you already have</a></li><li><a href="#finding">Finding servers</a></li><li><a href="#limits">Limits</a></li></ol></aside>
+  <aside class="ontoc" aria-label="On this page"><span>On this page</span><ol><li><a href="#why">Why a library</a></li><li><a href="#adding">Adding a server</a></li><li><a href="#secrets">Secrets</a></li><li><a href="#installing">Installing</a></li><li><a href="#states">What each state means</a></li><li><a href="#adopting">Adopting what you already have</a></li><li><a href="#finding">Finding servers</a></li><li><a href="#limits">Limits</a></li></ol></aside>
   </div>
   <footer class="footer">
     <div class="footerupper"><div><a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">synapse</a><p>A shared memory. A little less starting over.</p></div>
       <nav aria-label="Footer"><a href="../../docs/">Manual</a><a href="../../tutorials/">Tutorials</a><a href="https://github.com/wess/synapse">Source</a><a href="https://github.com/wess/synapse/releases">Releases</a><a href="https://wess.io">By Wess</a></nav></div>
-    <p class="footerfine"><span>macOS &amp; Windows desktop · Linux CLI &amp; MCP</span><span>v1.19.0 · MIT · No account required</span></p>
+    <p class="footerfine"><span>macOS &amp; Windows desktop · Linux CLI &amp; MCP</span><span>v1.19.1 · MIT · No account required</span></p>
   </footer></div>
 </body>
 </html>

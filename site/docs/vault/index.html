@@ -5,21 +5,22 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Vaults and scopes — Synapse</title>
   <meta name="description" content="Keep values in an encrypted store or macOS Keychain, map names through approved YAML, understand precedence, and choose a command-scoped or ambient environment.">
-  <meta name="theme-color" content="#352879">
+  <meta name="theme-color" content="#25208f">
   <meta property="og:title" content="Vaults and scopes — Synapse">
   <meta property="og:description" content="Keep values in an encrypted store or macOS Keychain, map names through approved YAML, understand precedence, and choose a command-scoped or ambient environment.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://wess.io/synapse/docs/vault/">
   <link rel="canonical" href="https://wess.io/synapse/docs/vault/">
   <link rel="icon" href="../../icon.svg" type="image/svg+xml">
-  <link rel="preload" href="../../pixel.ttf" as="font" type="font/ttf" crossorigin>
+  <link rel="preload" href="../../saira.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="../../silkscreen.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="../../style.css">
   <script type="module" src="../../site.js"></script>
 </head>
 <body class="docs" data-root="../../">
   <div class="shell">
   <a class="skip" href="#content">Skip to content</a>
-  <div class="windowbar"><a href="../../">synapse / manual</a><span>v1.19.0 · on your machine</span></div>
+  <div class="machinebar"><a href="../../">Synapse field manual</a><span><i aria-hidden="true"></i>local · v1.19.1</span></div>
   <header class="topbar">
     <a class="wordmark" href="../../" aria-label="Synapse home"><img src="../../icon.svg" width="28" height="28" alt=""><span>synapse</span></a>
     <button class="navtoggle" type="button" aria-expanded="false" aria-controls="topnav">Menu</button>
@@ -32,6 +33,7 @@
   </header>
   <div class="doclayout">
   <aside class="docsrail" aria-label="Documentation navigation">
+    <p class="manualmark">Field manual <span>v1.19.1</span></p>
     <div class="searchbox">
       <label for="docssearch">Search docs &amp; tutorials</label>
       <input id="docssearch" type="search" placeholder="Memory, vaults, restore…" autocomplete="off" aria-controls="searchresults">
@@ -47,7 +49,7 @@
     </details>
   </aside>
     <main class="article" id="content">
-      <header class="articlehead"><nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../">Synapse</a><span aria-hidden="true">/</span><a href="../../docs/">Manual</a></nav><h1>Vaults and scopes</h1><p>Keep values in an encrypted store or macOS Keychain, map names through approved YAML, understand precedence, and choose a command-scoped or ambient environment.</p></header>
+      <header class="articlehead"><nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../">Synapse</a><span aria-hidden="true">/</span><a href="../../docs/">Manual</a></nav><h1>Vaults and scopes</h1><p>Keep values in an encrypted store or macOS Keychain, map names through approved YAML, understand precedence, and choose a command-scoped or ambient environment.</p><div class="articleledger"><span>reference</span><span>release 1.19.1</span></div></header>
 
     <h2 id="model">Storage model</h2>
     <p>A vault is an organizational name. A secret record connects a vault-local label to an environment-variable name and an account reference. <code>brain.db</code> stores that metadata and never a value; the value itself goes to whichever store this machine keeps values in.</p>
@@ -257,14 +259,14 @@ eval &quot;$(synapse hook zsh)&quot;
     <p>Every process launched from the activated shell can read the values. Prefer synapse run for a sensitive one-off command. Do not enable shell tracing such as set -x while the hook is evaluating environment changes, because tracing can print plaintext values.</p>
   </aside>
     <p>MCP <code>vaultstatus</code> and CLI <code>status</code> report names, scope states, and warnings. They do not read or reveal values. To remove a value and its metadata, run <code>synapse secret forget work.database</code>. A vault can be deleted only after all of its secrets are forgotten.</p>
-  <footer class="articlefoot"><div class="articlemeta"><a href="https://github.com/wess/synapse/blob/main/website/docs/vault.ts">View page source</a><span>Synapse 1.19.0</span></div><nav class="pagenav" aria-label="Guide pages"><a href="../../docs/sources/"><small>Previous</small><strong>Sources</strong></a><a href="../../docs/data/"><small>Next</small><strong>Data lifecycle</strong></a></nav></footer>
+  <footer class="articlefoot"><div class="articlemeta"><a href="https://github.com/wess/synapse/blob/main/website/docs/vault.ts">View page source</a><span>Synapse 1.19.1</span></div><nav class="pagenav" aria-label="Guide pages"><a href="../../docs/sources/"><small>Previous</small><strong>Sources</strong></a><a href="../../docs/data/"><small>Next</small><strong>Data lifecycle</strong></a></nav></footer>
     </main>
-  <aside class="ontoc" aria-label="On this page"><span>Contents</span><ol><li><a href="#model">Storage model</a></li><li><a href="#backend">Where values live</a></li><li><a href="#create">Create a secret</a></li><li><a href="#copy">Get a value back</a></li><li><a href="#files">Scope files</a></li><li><a href="#approval">Approval</a></li><li><a href="#precedence">Precedence and deny</a></li><li><a href="#modes">Choose a boundary</a></li></ol></aside>
+  <aside class="ontoc" aria-label="On this page"><span>On this page</span><ol><li><a href="#model">Storage model</a></li><li><a href="#backend">Where values live</a></li><li><a href="#create">Create a secret</a></li><li><a href="#copy">Get a value back</a></li><li><a href="#files">Scope files</a></li><li><a href="#approval">Approval</a></li><li><a href="#precedence">Precedence and deny</a></li><li><a href="#modes">Choose a boundary</a></li></ol></aside>
   </div>
   <footer class="footer">
     <div class="footerupper"><div><a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">synapse</a><p>A shared memory. A little less starting over.</p></div>
       <nav aria-label="Footer"><a href="../../docs/">Manual</a><a href="../../tutorials/">Tutorials</a><a href="https://github.com/wess/synapse">Source</a><a href="https://github.com/wess/synapse/releases">Releases</a><a href="https://wess.io">By Wess</a></nav></div>
-    <p class="footerfine"><span>macOS &amp; Windows desktop · Linux CLI &amp; MCP</span><span>v1.19.0 · MIT · No account required</span></p>
+    <p class="footerfine"><span>macOS &amp; Windows desktop · Linux CLI &amp; MCP</span><span>v1.19.1 · MIT · No account required</span></p>
   </footer></div>
 </body>
 </html>

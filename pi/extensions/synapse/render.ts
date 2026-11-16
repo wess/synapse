@@ -1,21 +1,15 @@
-// Turning a tool's answer into something a person reads.
-//
-// The tools answer in JSON because a model reads them. A slash command is the
-// one path where a person is the reader, so these four take the same structured
-// answer and lay it out — and fall back to the raw text whenever the shape is
-// not what this expects, because a readable-but-unstyled answer beats an empty
-// one.
+// human-readable views of structured tool answers, with raw text as fallback.
 
-export interface Memory {
+export type Memory = {
   id: number;
   body: string;
   source: string;
   scope: string;
   project: string;
   created: number;
-}
+};
 
-export interface Agent {
+export type Agent = {
   name: string;
   role: string;
   status: string;
@@ -23,13 +17,13 @@ export interface Agent {
   human: boolean;
   online: boolean;
   tool: string;
-}
+};
 
-export interface Finding {
+export type Finding = {
   concern: string;
   ids: number[];
   note: string;
-}
+};
 
 export function memories(structured: unknown, fallback: string): string {
   const answer = structured as { memories?: Memory[]; drift?: Finding[] } | undefined;

@@ -137,10 +137,7 @@ for (const phrase of [
   if (!app.includes(phrase)) fail(`desktop app reference is missing: ${phrase}`);
 }
 
-// every command family in `HELP` (src/cli/command.rs). When a command is added
-// there it has to appear here too, or the site can quietly ship without it —
-// which is how `launch`, `mux`, `relay`, and `skill` were all documented but
-// unverified for four releases.
+// keep the manual in step with the released CLI surface.
 for (const command of [
   "synapse app",
   "synapse mcp",
@@ -175,7 +172,6 @@ for (const command of [
   if (!corpus.includes(command)) fail(`documentation is missing command family: ${command}`);
 }
 
-// the subcommands that do something a reader cannot guess from the family name.
 for (const command of [
   "synapse tool create",
   "synapse relay team",
@@ -233,9 +229,7 @@ for (const command of [
   if (!corpus.includes(command)) fail(`documentation is missing subcommand: ${command}`);
 }
 
-// The four always-present tools, the four self-improvement adds, then the
-// sixteen the mesh adds. A tool that ships without documentation is one an
-// agent can call and a reader cannot look up.
+// every advertised MCP tool needs a manual entry.
 for (const tool of [
   "remember",
   "recall",
@@ -265,8 +259,7 @@ for (const tool of [
   if (!corpus.includes(tool)) fail(`documentation is missing MCP tool: ${tool}`);
 }
 
-// Every environment variable the binary reads. `grep -rho 'SYNAPSE_[A-Z_]*'
-// src` is the list this has to keep up with.
+// every public environment variable needs a manual entry.
 for (const variable of [
   "SYNAPSE_DATA",
   "SYNAPSE_HOME",
@@ -282,8 +275,6 @@ for (const variable of [
   if (!corpus.includes(variable)) fail(`documentation is missing environment variable: ${variable}`);
 }
 
-// Each tutorial level needs at least one page, so the ladder cannot lose a rung
-// without the build saying so.
 const tutorialindex = await Bun.file(join(output, "tutorials", "index.html")).text();
 for (const level of ["Newcomer", "Daily driver", "Team operator", "Maintainer"]) {
   if (!tutorialindex.includes(level)) fail(`tutorial index is missing the ${level} level`);
@@ -315,7 +306,18 @@ for (const match of commands.matchAll(/^  ([a-z]+)(?: ([a-z]+))?/gm)) {
   if (!corpus.includes(command)) fail(`released CLI command is undocumented: ${command}`);
 }
 if (/fonts\.googleapis|fonts\.gstatic/.test(corpus)) fail("site fonts must be self-hosted");
-if (!relativefiles.has("pixel.ttf") || !relativefiles.has("fontlicense.txt")) fail("missing font or license");
+for (const asset of [
+  "bitcount.woff2",
+  "saira.woff2",
+  "sairabold.woff2",
+  "silkscreen.woff2",
+  "silkscreenbold.woff2",
+  "fontlicensebitcount.txt",
+  "fontlicensesaira.txt",
+  "fontlicensesilkscreen.txt",
+]) {
+  if (!relativefiles.has(asset)) fail(`missing font asset: ${asset}`);
+}
 
 if (failures.length) {
   console.error(failures.join("\n"));

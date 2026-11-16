@@ -27,7 +27,17 @@ const styles = await Promise.all(
 );
 await Bun.write(join(output, "style.css"), `${styles.join("\n")}\n`);
 
-for (const asset of ["site.js", "pixel.ttf", "fontlicense.txt"]) {
+for (const asset of [
+  "site.js",
+  "bitcount.woff2",
+  "saira.woff2",
+  "sairabold.woff2",
+  "silkscreen.woff2",
+  "silkscreenbold.woff2",
+  "fontlicensebitcount.txt",
+  "fontlicensesaira.txt",
+  "fontlicensesilkscreen.txt",
+]) {
   await Bun.write(join(output, asset), Bun.file(join(import.meta.dir, asset)));
 }
 

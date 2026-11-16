@@ -1,40 +1,28 @@
-// A Model Context Protocol client over `synapse mcp`.
-//
-// This is the whole reason the package exists. pi has no MCP client of its own,
-// and every Synapse capability an agent can reach — memory, vault metadata, the
-// mesh — lives behind that one stdio server. Talking to it directly, rather than
-// re-implementing the commands, means the tool set this extension offers is
-// whatever the installed Synapse offers: turn the mesh on and sixteen more tools
-// appear here on the next start, with no version of this file to update.
-//
-// The transport is newline-delimited JSON-RPC on the child's stdio, and replies
-// are matched by id. That matters more than it sounds: a mesh agent parks on
-// `wait` for minutes at a time, and nothing else may stop while it is out.
+// newline-delimited MCP over `synapse mcp`; replies are matched by id so a
+// parked mesh request cannot block other calls.
 
 import { spawn } from "node:child_process";
 
-/** One tool as the server advertises it. The schema is passed to pi verbatim. */
-export interface Tool {
+export type Tool = {
   name: string;
   description: string;
   schema: Record<string, unknown>;
-}
+};
 
-/** What one call came back with. `failed` is the server's own verdict. */
-export interface Outcome {
+export type Outcome = {
   text: string;
   structured: unknown;
   failed: boolean;
-}
+};
 
-export interface Client {
+export type Client = {
   readonly tools: Tool[];
   /** The server's model-facing guidance, sourced from SOUL.md. */
   readonly instructions: string;
   readonly version: string;
   call(name: string, input: Record<string, unknown>, signal?: AbortSignal): Promise<Outcome>;
   close(): void;
-}
+};
 
 const PROTOCOL = "2025-06-18";
 /** How long the handshake may take before the server is treated as broken. A

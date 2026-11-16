@@ -1,35 +1,8 @@
-//! The store as a map, and a way to move around inside it.
+//! Camera, painting, and picking for the shared memory map.
 //!
-//! Every other page here is a list, and a list is the wrong shape for the
-//! question people actually ask a memory store: not *what is in it* but *what
-//! is it about*. Projects come out as clusters, a correction comes out as a
-//! line to the thing it corrected, and a memory nothing else touches comes out
-//! looking like one — which is usually either the most interesting node on the
-//! map or the one that should not be there.
-//!
-//! Nothing about the *map* is decided here. The nodes, the links, and their
-//! coordinates in the unit cube all come from [`synapsecore::brain::map`], so
-//! the window and the terminal draw the same machine; this file is the camera
-//! and the paint.
-//!
-//! **Why one canvas rather than elements.** The first version of this page laid
-//! nodes out as absolutely positioned `div`s over a canvas of links, which made
-//! clicking free. In three dimensions that stops working: a node's size and
-//! opacity depend on how far away it is, the draw order has to be back to
-//! front, and a glow is several overlapping circles rather than one box. All of
-//! that is per-frame arithmetic, and layout is not where arithmetic goes. So
-//! everything is painted — through `paint_quad` and `paint_path`, the same
-//! pipeline `guise::GpuView` submits to — and the click is answered by
-//! [`pick`], which projects the same points the paint did and takes the nearest
-//! circle the pointer landed in. `GpuScene` itself is quads and textures with
-//! no rotation, so the links, which are most of what makes this look like
-//! anything, cannot come from it.
-//!
-//! **Why it is dark whatever the theme is.** A glow is light added to what is
-//! behind it. On a light background there is nothing to add to: every halo
-//! reads as a smudge and the whole thing turns grey. The plot is a viewport
-//! onto something, the way a photograph is dark in a bright room, and the page
-//! around it stays the user's theme.
+//! One canvas keeps depth sorting, projection, links, and hit testing on the
+//! same geometry. The plot stays dark in both themes because its additive
+//! glows lose their structure on a light surface.
 
 use gpui::prelude::*;
 use gpui::{
@@ -43,15 +16,10 @@ use std::rc::Rc;
 use synapsecore::brain::{Graph, Memory, MemoryScope, Node, NodeKind, Tie};
 
 pub type Click = Box<dyn Fn(&ClickEvent, &mut Window, &mut App) + 'static>;
-/// The mouse, in the four shapes this page has to answer. Named rather than
-/// written out, because a map is the one page here where every one of them
-/// means something and four boxed closures of the same size in a row is four
-/// chances to wire one to the wrong verb.
 pub type Press = Box<dyn Fn(&MouseDownEvent, &mut Window, &mut App) + 'static>;
 pub type Drag = Box<dyn Fn(&MouseMoveEvent, &mut Window, &mut App) + 'static>;
 pub type Release = Box<dyn Fn(&MouseUpEvent, &mut Window, &mut App) + 'static>;
 pub type Zoom = Box<dyn Fn(&ScrollWheelEvent, &mut Window, &mut App) + 'static>;
-/// Opening one node, by the id the map carries for it.
 pub type Select = Box<dyn Fn(i64) -> Click>;
 
 /// Where the map is being looked at from.

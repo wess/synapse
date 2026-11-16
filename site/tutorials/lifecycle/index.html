@@ -5,21 +5,22 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Check, migrate, and remove Synapse — Synapse</title>
   <meta name="description" content="Read a full health report, understand what a schema migration does to your store, disconnect one tool, and remove everything Synapse installed while keeping your memory and your own files.">
-  <meta name="theme-color" content="#352879">
+  <meta name="theme-color" content="#25208f">
   <meta property="og:title" content="Check, migrate, and remove Synapse — Synapse">
   <meta property="og:description" content="Read a full health report, understand what a schema migration does to your store, disconnect one tool, and remove everything Synapse installed while keeping your memory and your own files.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://wess.io/synapse/tutorials/lifecycle/">
   <link rel="canonical" href="https://wess.io/synapse/tutorials/lifecycle/">
   <link rel="icon" href="../../icon.svg" type="image/svg+xml">
-  <link rel="preload" href="../../pixel.ttf" as="font" type="font/ttf" crossorigin>
+  <link rel="preload" href="../../saira.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="../../silkscreen.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="../../style.css">
   <script type="module" src="../../site.js"></script>
 </head>
 <body class="tutorial" data-root="../../">
   <div class="shell">
   <a class="skip" href="#content">Skip to content</a>
-  <div class="windowbar"><a href="../../">synapse / tutorials</a><span>v1.19.0 · on your machine</span></div>
+  <div class="machinebar"><a href="../../">Synapse workbook</a><span><i aria-hidden="true"></i>local · v1.19.1</span></div>
   <header class="topbar">
     <a class="wordmark" href="../../" aria-label="Synapse home"><img src="../../icon.svg" width="28" height="28" alt=""><span>synapse</span></a>
     <button class="navtoggle" type="button" aria-expanded="false" aria-controls="topnav">Menu</button>
@@ -32,6 +33,7 @@
   </header>
   <div class="doclayout">
   <aside class="docsrail" aria-label="Documentation navigation">
+    <p class="manualmark">Field manual <span>v1.19.1</span></p>
     <div class="searchbox">
       <label for="docssearch">Search docs &amp; tutorials</label>
       <input id="docssearch" type="search" placeholder="Memory, vaults, restore…" autocomplete="off" aria-controls="searchresults">
@@ -47,7 +49,7 @@
     </details>
   </aside>
     <main class="article" id="content">
-      <header class="articlehead"><nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../">Synapse</a><span aria-hidden="true">/</span><a href="../../tutorials/">Tutorials</a></nav><h1>Check, migrate, and remove Synapse</h1><p>Read a full health report, understand what a schema migration does to your store, disconnect one tool, and remove everything Synapse installed while keeping your memory and your own files.</p></header>
+      <header class="articlehead"><nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../">Synapse</a><span aria-hidden="true">/</span><a href="../../tutorials/">Tutorials</a></nav><h1>Check, migrate, and remove Synapse</h1><p>Read a full health report, understand what a schema migration does to your store, disconnect one tool, and remove everything Synapse installed while keeping your memory and your own files.</p><div class="articleledger"><span>guided exercise</span><span>release 1.19.1</span></div></header>
 
     <h2 id="outcome">Outcome and prerequisites</h2>
     <p>You will produce the report to attach to a bug, verify the store's integrity and schema version, understand what happens when a release changes the schema, and then walk both removal paths — one tool, and everything — reading what each will do before it does it.</p>
@@ -79,7 +81,7 @@
       <span>text</span>
       <button type="button" data-copy aria-live="polite">Copy</button>
     </div>
-    <pre><code>Synapse 1.19.0
+    <pre><code>Synapse 1.19.1
 
 Store
   State          ok
@@ -288,14 +290,14 @@ synapse uninstall --data --confirm</code></pre>
 
     <h2>Next step</h2>
     <p>That is the whole maintainer track. If something in it did not behave as described, <code>synapse doctor --json</code> plus the exact command you ran is everything a bug report needs. See <a href="../../docs/troubleshoot/">Troubleshooting</a> for the common failures and what each one means.</p>
-  <footer class="articlefoot"><div class="articlemeta"><a href="https://github.com/wess/synapse/blob/main/website/tutorials/lifecycle.ts">View page source</a><span>Synapse 1.19.0</span></div><nav class="pagenav" aria-label="Guide pages"><a href="../../tutorials/recovery/"><small>Previous</small><strong>Export and restore safely</strong></a><span></span></nav></footer>
+  <footer class="articlefoot"><div class="articlemeta"><a href="https://github.com/wess/synapse/blob/main/website/tutorials/lifecycle.ts">View page source</a><span>Synapse 1.19.1</span></div><nav class="pagenav" aria-label="Guide pages"><a href="../../tutorials/recovery/"><small>Previous</small><strong>Export and restore safely</strong></a><span></span></nav></footer>
     </main>
-  <aside class="ontoc" aria-label="On this page"><span>Contents</span><ol><li><a href="#outcome">Outcome</a></li><li><a href="#doctor">One health report</a></li><li><a href="#check">Check the store</a></li><li><a href="#migrations">Migrations</a></li><li><a href="#disconnect">Disconnect one tool</a></li><li><a href="#preview">Read the uninstall preview</a></li><li><a href="#uninstall">Remove everything</a></li><li><a href="#survives">What survives</a></li></ol></aside>
+  <aside class="ontoc" aria-label="On this page"><span>On this page</span><ol><li><a href="#outcome">Outcome</a></li><li><a href="#doctor">One health report</a></li><li><a href="#check">Check the store</a></li><li><a href="#migrations">Migrations</a></li><li><a href="#disconnect">Disconnect one tool</a></li><li><a href="#preview">Read the uninstall preview</a></li><li><a href="#uninstall">Remove everything</a></li><li><a href="#survives">What survives</a></li></ol></aside>
   </div>
   <footer class="footer">
     <div class="footerupper"><div><a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">synapse</a><p>A shared memory. A little less starting over.</p></div>
       <nav aria-label="Footer"><a href="../../docs/">Manual</a><a href="../../tutorials/">Tutorials</a><a href="https://github.com/wess/synapse">Source</a><a href="https://github.com/wess/synapse/releases">Releases</a><a href="https://wess.io">By Wess</a></nav></div>
-    <p class="footerfine"><span>macOS &amp; Windows desktop · Linux CLI &amp; MCP</span><span>v1.19.0 · MIT · No account required</span></p>
+    <p class="footerfine"><span>macOS &amp; Windows desktop · Linux CLI &amp; MCP</span><span>v1.19.1 · MIT · No account required</span></p>
   </footer></div>
 </body>
 </html>

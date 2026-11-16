@@ -18,8 +18,7 @@ use anyhow::{Context, Result};
 pub(crate) use self::rank::cleancontext;
 
 impl Backend {
-    /// The master switch for outcome-driven selection. It defaults on and retains history when
-    /// disabled so re-enabling can resume without a new warm-up.
+    /// The master switch. Disabling it retains history.
     pub async fn adaptive(&self) -> Result<bool> {
         crate::brain::settings::adaptive(&self.pool).await
     }

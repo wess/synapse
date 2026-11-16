@@ -5,21 +5,22 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Install and connect your first tools — Synapse</title>
   <meta name="description" content="Go from the signed release archive to a working local MCP connection, and verify the same memory from the desktop app, the terminal, and the coding tool itself.">
-  <meta name="theme-color" content="#352879">
+  <meta name="theme-color" content="#25208f">
   <meta property="og:title" content="Install and connect your first tools — Synapse">
   <meta property="og:description" content="Go from the signed release archive to a working local MCP connection, and verify the same memory from the desktop app, the terminal, and the coding tool itself.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://wess.io/synapse/tutorials/connect/">
   <link rel="canonical" href="https://wess.io/synapse/tutorials/connect/">
   <link rel="icon" href="../../icon.svg" type="image/svg+xml">
-  <link rel="preload" href="../../pixel.ttf" as="font" type="font/ttf" crossorigin>
+  <link rel="preload" href="../../saira.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="../../silkscreen.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="../../style.css">
   <script type="module" src="../../site.js"></script>
 </head>
 <body class="tutorial" data-root="../../">
   <div class="shell">
   <a class="skip" href="#content">Skip to content</a>
-  <div class="windowbar"><a href="../../">synapse / tutorials</a><span>v1.19.0 · on your machine</span></div>
+  <div class="machinebar"><a href="../../">Synapse workbook</a><span><i aria-hidden="true"></i>local · v1.19.1</span></div>
   <header class="topbar">
     <a class="wordmark" href="../../" aria-label="Synapse home"><img src="../../icon.svg" width="28" height="28" alt=""><span>synapse</span></a>
     <button class="navtoggle" type="button" aria-expanded="false" aria-controls="topnav">Menu</button>
@@ -32,6 +33,7 @@
   </header>
   <div class="doclayout">
   <aside class="docsrail" aria-label="Documentation navigation">
+    <p class="manualmark">Field manual <span>v1.19.1</span></p>
     <div class="searchbox">
       <label for="docssearch">Search docs &amp; tutorials</label>
       <input id="docssearch" type="search" placeholder="Memory, vaults, restore…" autocomplete="off" aria-controls="searchresults">
@@ -47,7 +49,7 @@
     </details>
   </aside>
     <main class="article" id="content">
-      <header class="articlehead"><nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../">Synapse</a><span aria-hidden="true">/</span><a href="../../tutorials/">Tutorials</a></nav><h1>Install and connect your first tools</h1><p>Go from the signed release archive to a working local MCP connection, and verify the same memory from the desktop app, the terminal, and the coding tool itself.</p></header>
+      <header class="articlehead"><nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../">Synapse</a><span aria-hidden="true">/</span><a href="../../tutorials/">Tutorials</a></nav><h1>Install and connect your first tools</h1><p>Go from the signed release archive to a working local MCP connection, and verify the same memory from the desktop app, the terminal, and the coding tool itself.</p><div class="articleledger"><span>guided exercise</span><span>release 1.19.1</span></div></header>
 
     <h2 id="outcome">Outcome and prerequisites</h2>
     <p>You will install Synapse, install its command-line tool, connect at least one coding tool, store one harmless memory, and see that same record through three separate surfaces. By the end you will also know exactly which files were touched and how to take every one of them back.</p>
@@ -97,7 +99,7 @@ synapse path</code></pre>
       <span>text</span>
       <button type="button" data-copy aria-live="polite">Copy</button>
     </div>
-    <pre><code>synapse 1.19.0</code></pre>
+    <pre><code>synapse 1.19.1</code></pre>
   </div>
 
   <div class="codeblock">
@@ -256,14 +258,14 @@ Documentation examples use the source label synapsetutorial.</code></pre>
 
     <h2>Next step</h2>
     <p>Continue with <a href="../continuity/">Carry one decision between tools</a> to prove a real handoff across a session boundary and a tool boundary.</p>
-  <footer class="articlefoot"><div class="articlemeta"><a href="https://github.com/wess/synapse/blob/main/website/tutorials/connect.ts">View page source</a><span>Synapse 1.19.0</span></div><nav class="pagenav" aria-label="Guide pages"><a href="../../tutorials/"><small>Previous</small><strong>Tutorials</strong></a><a href="../../tutorials/continuity/"><small>Next</small><strong>Carry one decision between tools</strong></a></nav></footer>
+  <footer class="articlefoot"><div class="articlemeta"><a href="https://github.com/wess/synapse/blob/main/website/tutorials/connect.ts">View page source</a><span>Synapse 1.19.1</span></div><nav class="pagenav" aria-label="Guide pages"><a href="../../tutorials/"><small>Previous</small><strong>Tutorials</strong></a><a href="../../tutorials/continuity/"><small>Next</small><strong>Carry one decision between tools</strong></a></nav></footer>
     </main>
-  <aside class="ontoc" aria-label="On this page"><span>Contents</span><ol><li><a href="#outcome">Outcome</a></li><li><a href="#install">Install the app</a></li><li><a href="#cli">Install the CLI</a></li><li><a href="#connect">Connect a tool</a></li><li><a href="#wrote">What connecting wrote</a></li><li><a href="#restart">Restart the tool</a></li><li><a href="#store">Store a memory</a></li><li><a href="#verify">Verify three ways</a></li><li><a href="#wrong">If something is wrong</a></li></ol></aside>
+  <aside class="ontoc" aria-label="On this page"><span>On this page</span><ol><li><a href="#outcome">Outcome</a></li><li><a href="#install">Install the app</a></li><li><a href="#cli">Install the CLI</a></li><li><a href="#connect">Connect a tool</a></li><li><a href="#wrote">What connecting wrote</a></li><li><a href="#restart">Restart the tool</a></li><li><a href="#store">Store a memory</a></li><li><a href="#verify">Verify three ways</a></li><li><a href="#wrong">If something is wrong</a></li></ol></aside>
   </div>
   <footer class="footer">
     <div class="footerupper"><div><a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">synapse</a><p>A shared memory. A little less starting over.</p></div>
       <nav aria-label="Footer"><a href="../../docs/">Manual</a><a href="../../tutorials/">Tutorials</a><a href="https://github.com/wess/synapse">Source</a><a href="https://github.com/wess/synapse/releases">Releases</a><a href="https://wess.io">By Wess</a></nav></div>
-    <p class="footerfine"><span>macOS &amp; Windows desktop · Linux CLI &amp; MCP</span><span>v1.19.0 · MIT · No account required</span></p>
+    <p class="footerfine"><span>macOS &amp; Windows desktop · Linux CLI &amp; MCP</span><span>v1.19.1 · MIT · No account required</span></p>
   </footer></div>
 </body>
 </html>

@@ -1,23 +1,8 @@
-//! Ranking a query against two indexes and fusing the answers.
+//! Ranking across stemmed words and trigram fragments.
 //!
-//! `memory` is tokenized by word and stemmed, so "deploying" finds "deploys".
-//! `memorygram` is tokenized by three-character pieces, so "hashpw" finds
-//! `scripts/hashpw.sh` and a word the stemmer has never seen still matches
-//! its own fragments. Neither is right on its own: words miss fragments, and
-//! fragments rank "overwhelm" for "helm".
-//!
-//! Each index ranks the query on its own and the two lists are merged by
-//! reciprocal rank: a memory scores `1 / (K + position)` in each list it
-//! appears in. A memory both indexes like rises above one only a single index
-//! likes, and the raw scores of two differently built indexes never have to be
-//! compared with each other, which is the part that cannot be done honestly.
-//!
-//! A memory's `source` — the topic it was filed under — is indexed too, at
-//! well under the weight of its body, so a topic word helps a memory without
-//! letting its label outrank what another memory actually says.
-//!
-//! Terms are OR'd, so a memory sharing one word with a long question still
-//! matches. For recall, [`floor`] drops weak matches before the limit.
+//! Reciprocal-rank fusion combines the two result lists without pretending
+//! their raw scores are comparable. The source label has lower weight than the
+//! body, terms are OR'd, and recall drops weak matches through [`floor`].
 
 use anyhow::{Context, Result};
 use sqlx::SqlitePool;

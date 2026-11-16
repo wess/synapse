@@ -8,7 +8,7 @@ const current = (page: Page, kind: Page["kind"]) => page.kind === kind ? ' aria-
 
 const topnav = (page: Page, root: string) => `
   <a class="skip" href="#content">Skip to content</a>
-  <div class="windowbar"><a href="${root}">synapse / ${page.kind === "home" ? "local memory" : page.kind === "docs" ? "manual" : "tutorials"}</a><span>v${version} · on your machine</span></div>
+  <div class="machinebar"><a href="${root}">Synapse ${page.kind === "home" ? "memory system" : page.kind === "docs" ? "field manual" : "workbook"}</a><span><i aria-hidden="true"></i>local · v${version}</span></div>
   <header class="topbar">
     <a class="wordmark" href="${root}" aria-label="Synapse home"><img src="${root}icon.svg" width="28" height="28" alt=""><span>synapse</span></a>
     <button class="navtoggle" type="button" aria-expanded="false" aria-controls="topnav">Menu</button>
@@ -26,6 +26,7 @@ const links = (items: Page[], page: Page, root: string) => items.map((item) =>
 
 const rail = (page: Page, pages: Page[], root: string) => `
   <aside class="docsrail" aria-label="Documentation navigation">
+    <p class="manualmark">Field manual <span>v${version}</span></p>
     <div class="searchbox">
       <label for="docssearch">Search docs &amp; tutorials</label>
       <input id="docssearch" type="search" placeholder="Memory, vaults, restore…" autocomplete="off" aria-controls="searchresults">
@@ -42,7 +43,7 @@ const rail = (page: Page, pages: Page[], root: string) => `
   </aside>`;
 
 const ontoc = (page: Page) => page.toc?.length ? `
-  <aside class="ontoc" aria-label="On this page"><span>Contents</span><ol>${page.toc.map((item) => `<li><a href="#${item.id}">${item.label}</a></li>`).join("")}</ol></aside>` : "";
+  <aside class="ontoc" aria-label="On this page"><span>On this page</span><ol>${page.toc.map((item) => `<li><a href="#${item.id}">${item.label}</a></li>`).join("")}</ol></aside>` : "";
 
 const footer = (root: string) => `
   <footer class="footer">
@@ -65,7 +66,7 @@ const articlefoot = (page: Page, pages: Page[], root: string) => {
 const article = (page: Page, pages: Page[], root: string) => `
   <div class="doclayout">${rail(page, pages, root)}
     <main class="article" id="content">
-      <header class="articlehead"><nav class="breadcrumb" aria-label="Breadcrumb"><a href="${root}">Synapse</a><span aria-hidden="true">/</span><a href="${root}${page.kind === "docs" ? "docs/" : "tutorials/"}">${page.kind === "docs" ? "Manual" : "Tutorials"}</a></nav><h1>${page.title}</h1><p>${page.description}</p></header>
+      <header class="articlehead"><nav class="breadcrumb" aria-label="Breadcrumb"><a href="${root}">Synapse</a><span aria-hidden="true">/</span><a href="${root}${page.kind === "docs" ? "docs/" : "tutorials/"}">${page.kind === "docs" ? "Manual" : "Tutorials"}</a></nav><h1>${page.title}</h1><p>${page.description}</p><div class="articleledger"><span>${page.kind === "docs" ? "reference" : "guided exercise"}</span><span>release ${version}</span></div></header>
       ${page.body}${articlefoot(page, pages, root)}
     </main>${ontoc(page)}
   </div>`;
@@ -82,14 +83,15 @@ export const render = (page: Page, pages: Page[]) => {
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${title}</title>
   <meta name="description" content="${description}">
-  <meta name="theme-color" content="#352879">
+  <meta name="theme-color" content="#25208f">
   <meta property="og:title" content="${title}">
   <meta property="og:description" content="${description}">
   <meta property="og:type" content="website">
   <meta property="og:url" content="${canonical}">
   <link rel="canonical" href="${canonical}">
   <link rel="icon" href="${root}icon.svg" type="image/svg+xml">
-  <link rel="preload" href="${root}pixel.ttf" as="font" type="font/ttf" crossorigin>
+  <link rel="preload" href="${root}saira.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="${root}silkscreen.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="${root}style.css">
   <script type="module" src="${root}site.js"></script>
 </head>
