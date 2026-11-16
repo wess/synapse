@@ -116,13 +116,14 @@ ${command("learn restore", "synapse learn restore &lt;id&gt; --confirm", "Remove
     ${command("backend comment", "synapse backend comment &lt;list|add|resolve|reopen&gt;", "Attach threaded feedback to a run, event, step, artifact, change, or file and line.")}
     ${command("backend checkpoints", "synapse backend checkpoints &lt;list|create|restore&gt;", "Capture explicit safe paths plus run state, or restore them before retrying risky work.")}
     ${command("backend workspace", "synapse backend workspace &lt;get|create|merge&gt; &lt;run&gt;", "Create an isolated Git worktree and merge its accepted patch after a clean preflight and checkpoint.")}
-    ${command("backend runner", "synapse backend runner &lt;list|put|heartbeat&gt;", "Register a runner and report whether it is online, busy, draining, or offline.")}
+    ${command("backend runner", "synapse backend runner &lt;list|put|heartbeat|select&gt;", "Register a runner, report whether it is online, busy, draining, or offline, or select an eligible runner for a run using local outcome history.")}
     ${command("backend preview", "synapse backend preview &lt;list|put&gt; &lt;run&gt;", "Attach a runner-owned development URL and lifecycle state to a run.")}
     ${command("backend artifact", "synapse backend artifact &lt;put|attach|list|read&gt;", "Store verified content-addressed output, attach it to a run, or read it back.")}
     ${command("backend capability", "synapse backend capability &lt;list|allow|deny|check&gt;", "Manage exact default-deny capability decisions, optionally bound to a content digest.")}
     ${command("backend trigger", "synapse backend trigger &lt;list|put|due|mark|tick&gt;", "Manage triggers. Tick dispatches due work on demand; no scheduler process stays resident.")}
     ${command("backend route", "synapse backend route &lt;list|put|select|call&gt;", "Manage and invoke ordered inference routes. Local routes are loopback-only; remote routes require HTTPS.")}
     ${command("backend evaluation", "synapse backend evaluation &lt;list|add&gt;", "Attach expected output, actual output, a normalized score, and a note to a run.")}
+    ${command("backend policy", "synapse backend policy &lt;decisions|arms|states|enable|disable|reset&gt;", "Inspect quiet route and runner learning, pause or resume one task class, or reset its aggregates. Normal learning and fallback need no interaction.")}
     ${command("backend api", "synapse backend api", "Read versioned JSON requests one per line from stdin and write one response per line to stdout.")}
 
     <h2 id="skills">Skills</h2>

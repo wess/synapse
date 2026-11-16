@@ -14,7 +14,7 @@
 .searchempty { padding: .8rem; }
 .searchstatus { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .railnav summary { display: none; }
-.docsrail nav h2 { margin: 1.6rem 0 .5rem; font: .63rem/1.8 var(--pixel); color: var(--accent); }
+.docsrail nav h2 { margin: 1.6rem 0 .5rem; font: .7rem/1.8 var(--pixel); color: var(--accent); }
 .docsrail nav h2:first-child { margin-top: 0; }
 .docsrail ul { list-style: none; padding: 0; margin: 0; }
 .docsrail nav a { display: block; padding: .32rem .6rem; color: var(--inksoft); font-size: .83rem; line-height: 1.55; text-decoration: none; }
@@ -45,7 +45,7 @@
 .steps > li { position: relative; margin-top: 2.5rem; padding: 0 0 1rem 3.5rem; counter-increment: step; }
 .steps > li::before { position: absolute; left: 0; top: 0; display: grid; place-items: center; width: 2.2rem; height: 2.2rem; border: 1px solid var(--line); color: var(--accent); font: .8rem var(--mono); content: counter(step, decimal-leading-zero); }
 .steps h2, .steps h3 { margin-top: 0; }
-.ontoc > span { font: .65rem/1.8 var(--pixel); color: var(--accent); }
+.ontoc > span { font: .7rem/1.8 var(--pixel); color: var(--accent); }
 .ontoc ol { margin: 1rem 0 0; padding: 0; list-style: none; }
 .ontoc li { margin-top: .55rem; }
 .ontoc a { color: var(--inksoft); text-decoration: none; font-size: .78rem; line-height: 1.5; }
@@ -56,5 +56,5 @@
 .pagenav a { padding: 1rem; border: 1px solid var(--line); text-decoration: none; }
 .pagenav a:last-child { text-align: right; }
 .pagenav a:hover { background: #eae4ed; }
-.pagenav small { display: block; margin-bottom: .3rem; color: var(--inksoft); font: .65rem/1.6 var(--mono); }
+.pagenav small { display: block; margin-bottom: .3rem; color: var(--inksoft); font: .7rem/1.6 var(--mono); }
 .pagenav strong { font-size: .85rem; font-weight: 600; }

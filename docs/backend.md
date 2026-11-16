@@ -144,6 +144,14 @@ printf '%s\n' '{
 synapse backend runner heartbeat studio busy
 ```
 
+Ask Synapse which eligible runner should receive a run. A run may request capabilities
+with a `capabilities` array in its input; missing capabilities, non-matching locality,
+and any runner that is not online are filtered before ranking:
+
+```sh
+synapse backend runner select "$RUN" --local
+```
+
 A runner may attach a development URL to a run:
 
 ```sh
@@ -159,6 +167,39 @@ Synapse records the URL; it does not create a tunnel or publish a local port. A
 remote runner owns authentication and reachability. Preview URLs may not contain
 credentials or query parameters; authentication belongs outside the stored URL.
 
+## Background choice learning
+
+Synapse quietly learns which eligible routes and runners work best for broad local
+task classes such as code, tests, review, documentation, research, and operations.
+It does not store task text. The decision ledger holds only the task class, choice
+names, mode, confidence, duration, and normalized outcome.
+
+The first configured choice remains the deterministic fallback. Learning starts in
+shadow mode, explores at most one in twenty decisions, and makes a learned choice
+only after every eligible option has enough outcomes and the measured advantage is
+large enough. A regression pauses that policy for a day, starts a fresh comparison
+window, and immediately returns selection to the deterministic fallback. No prompt
+or approval is part of this loop.
+
+Capability decisions, runner state, route locality, permissions, and other safety
+boundaries are applied before the policy sees a choice. Learning cannot grant access
+or make an ineligible choice eligible. Run completion supplies a coarse outcome;
+an attached evaluation replaces it with the normalized evaluation score. Route
+transport failures are recorded automatically.
+
+The Activity screen shows learned contexts and offers pause, resume, and reset
+controls. The same inspection controls are available without opening the app:
+
+```sh
+synapse backend policy states
+synapse backend policy decisions --limit 50
+synapse backend policy disable runner code
+synapse backend policy enable runner code
+synapse backend policy reset runner code
+```
+
+Reset removes learned aggregates but retains the bounded decision audit trail.
+
 ## JSONL API
 
 `synapse backend api` reads one request per line and writes one correlated response
@@ -170,12 +211,16 @@ per line. It opens no listener and exits at end of input.
 
 Method families mirror the CLI: `runs`, `steps`, `changes`, `reviews`, `comments`,
 `artifacts`, `checkpoints`, `workspaces`, `runners`, `previews`, `events`,
-`capabilities`, `triggers`, `routes`, and `evaluations`.
+`capabilities`, `triggers`, `routes`, `evaluations`, and `policy`. Runner selection is
+`runners.select`; policy inspection and controls are `policy.decisions`, `policy.arms`,
+`policy.states`, `policy.enable`, and `policy.reset`.
 
 ## Retention and trust
 
 - Events retain 30 days and are capped at 50,000 rows.
 - Runs retain 90 days and are capped at 10,000 rows. Active runs are not pruned.
+- Policy decisions retain 90 days and are capped at 50,000 rows. Aggregate arms
+  retain one year and are capped at 10,000 rows.
 - Completed run cleanup removes its managed detached worktree as well as its rows.
 - Artifacts are content-addressed and verified when read.
 - Individual artifacts are capped at 128 MiB; the local artifact store is capped

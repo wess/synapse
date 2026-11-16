@@ -3,6 +3,7 @@
 pub mod api;
 mod collaboration;
 mod model;
+mod policy;
 mod portability;
 mod runner;
 mod store;
@@ -12,7 +13,8 @@ pub(crate) use store::recordpool;
 
 pub use model::{
     Artifact, Capability, Change, Checkpoint, Comment, Decision, Evaluation, Event, EventDraft,
-    EventFilter, Level, PortableArtifact, Preview, Review, Route, Run, RunBundle, RunStats,
-    RunStatus, Runner, Step, StepStatus, Summary, Trigger, Workspace,
+    EventFilter, Level, PolicyArm, PolicyChoice, PolicyDecision, PolicyState, PortableArtifact,
+    Preview, Review, Route, Run, RunBundle, RunStats, RunStatus, Runner, Step, StepStatus, Summary,
+    Trigger, Workspace,
 };
 pub use store::Backend;

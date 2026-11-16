@@ -235,7 +235,27 @@ impl Backend {
         .await?
         .rows_affected();
         anyhow::ensure!(changed == 1, "run `{id}` does not exist");
-        self.run(id).await?.context("updated run is missing")
+        let run = self.run(id).await?.context("updated run is missing")?;
+        let fallback = match status {
+            RunStatus::Succeeded => Some(0.75),
+            RunStatus::Failed => Some(0.0),
+            RunStatus::Cancelled => Some(0.25),
+            _ => None,
+        };
+        if let Some(fallback) = fallback {
+            // Policy bookkeeping must never turn a completed run into a failed update.
+            let reward = policyreward(&self.pool, &run).await.unwrap_or(fallback);
+            let _ = self
+                .rewardrun(
+                    &run.id,
+                    reward,
+                    run.updated
+                        .saturating_sub(run.created)
+                        .saturating_mul(1_000),
+                )
+                .await;
+        }
+        Ok(run)
     }
 
     pub async fn replay(&self, id: &str) -> Result<Run> {
@@ -285,7 +305,23 @@ impl Backend {
         if changed == 0 {
             return Ok(None);
         }
-        self.run(&id).await
+        let run = self.run(&id).await?;
+        if let Some(run) = &run {
+            let pending: Option<String> = sqlx::query_scalar(
+                "SELECT selected FROM policydecision WHERE kind='runner' AND runid=? \
+                 AND reward IS NULL ORDER BY id DESC LIMIT 1",
+            )
+            .bind(&run.id)
+            .fetch_optional(&self.pool)
+            .await
+            .unwrap_or(None);
+            if pending.as_deref() != Some(worker) {
+                let _ = self
+                    .observechoice("runner", &run.harness, worker, &run.id)
+                    .await;
+            }
+        }
+        Ok(run)
     }
 
     pub async fn renew(&self, id: &str, worker: &str, lease: i64) -> Result<bool> {
@@ -893,45 +929,71 @@ impl Backend {
         local: Option<bool>,
         body: serde_json::Value,
     ) -> Result<serde_json::Value> {
-        let route = self
-            .selectroute(local)
-            .await?
-            .context("no route is available")?;
+        let mut routes = self.routes().await?;
+        routes.retain(|route| route.enabled && local.is_none_or(|local| route.local == local));
+        let choices = routes
+            .iter()
+            .map(|route| route.name.clone())
+            .collect::<Vec<_>>();
+        anyhow::ensure!(!choices.is_empty(), "no route is available");
+        let runid = body
+            .get("runid")
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or_default();
+        let context = routecontext(&body);
+        let choice = self.choose("route", &context, &choices, runid).await?;
+        let route = routes
+            .into_iter()
+            .find(|route| route.name == choice.action)
+            .context("selected route is unavailable")?;
         anyhow::ensure!(
             !route.endpoint.starts_with("unix://"),
             "Unix routes require a harness adapter"
         );
-        let mut body: serde_json::Value = serde_json::from_str(&cleanjson(body)?)?;
-        let object = body
-            .as_object_mut()
-            .context("route request must be a JSON object")?;
-        if !route.model.is_empty() && !object.contains_key("model") {
-            object.insert("model".to_owned(), route.model.clone().into());
-        }
-        let mut response = reqwest::Client::builder()
-            .timeout(std::time::Duration::from_secs(120))
-            .redirect(reqwest::redirect::Policy::none())
-            .build()?
-            .post(&route.endpoint)
-            .json(&body)
-            .send()
-            .await?;
-        anyhow::ensure!(
-            response.status().is_success(),
-            "route returned {}",
-            response.status()
-        );
-        let length = response.content_length().unwrap_or(0);
-        anyhow::ensure!(length <= 16 * 1024 * 1024, "route response is too large");
-        let mut bytes = Vec::with_capacity(length as usize);
-        while let Some(chunk) = response.chunk().await? {
+        let started = std::time::Instant::now();
+        let result: Result<serde_json::Value> = async {
+            let mut body: serde_json::Value = serde_json::from_str(&cleanjson(body)?)?;
+            let object = body
+                .as_object_mut()
+                .context("route request must be a JSON object")?;
+            if !route.model.is_empty() && !object.contains_key("model") {
+                object.insert("model".to_owned(), route.model.clone().into());
+            }
+            let mut response = reqwest::Client::builder()
+                .timeout(std::time::Duration::from_secs(120))
+                .redirect(reqwest::redirect::Policy::none())
+                .build()?
+                .post(&route.endpoint)
+                .json(&body)
+                .send()
+                .await?;
             anyhow::ensure!(
-                bytes.len() + chunk.len() <= 16 * 1024 * 1024,
-                "route response is too large"
+                response.status().is_success(),
+                "route returned {}",
+                response.status()
             );
-            bytes.extend_from_slice(&chunk);
+            let length = response.content_length().unwrap_or(0);
+            anyhow::ensure!(length <= 16 * 1024 * 1024, "route response is too large");
+            let mut bytes = Vec::with_capacity(length as usize);
+            while let Some(chunk) = response.chunk().await? {
+                anyhow::ensure!(
+                    bytes.len() + chunk.len() <= 16 * 1024 * 1024,
+                    "route response is too large"
+                );
+                bytes.extend_from_slice(&chunk);
+            }
+            serde_json::from_slice(&bytes).context("route response is not JSON")
         }
-        serde_json::from_slice(&bytes).context("route response is not JSON")
+        .await;
+        let duration = started.elapsed().as_millis().min(i64::MAX as u128) as i64;
+        let _ = self
+            .rewarddecision(
+                choice.decision.id,
+                if result.is_ok() { 1.0 } else { 0.0 },
+                duration,
+            )
+            .await;
+        result
     }
 
     pub async fn evaluate(
@@ -966,13 +1028,26 @@ impl Backend {
         .execute(&self.pool)
         .await?
         .last_insert_rowid();
-        sqlx::query_as(
+        let evaluation = sqlx::query_as(
             "SELECT id,runid,expected,actual,score,note,created FROM evaluation WHERE id=?",
         )
         .bind(id)
         .fetch_one(&self.pool)
-        .await
-        .map_err(Into::into)
+        .await?;
+        if let Some(run) = self.run(runid).await? {
+            if let Ok(reward) = policyreward(&self.pool, &run).await {
+                let _ = self
+                    .rewardrun(
+                        runid,
+                        reward,
+                        run.updated
+                            .saturating_sub(run.created)
+                            .saturating_mul(1_000),
+                    )
+                    .await;
+            }
+        }
+        Ok(evaluation)
     }
 
     pub async fn evaluations(&self, runid: &str) -> Result<Vec<Evaluation>> {
@@ -1199,6 +1274,41 @@ fn cleanjson(mut value: serde_json::Value) -> Result<String> {
     let text = serde_json::to_string(&value)?;
     anyhow::ensure!(text.len() <= TEXTLIMIT, "JSON value is too large");
     Ok(text)
+}
+
+fn routecontext(body: &serde_json::Value) -> String {
+    for key in ["context", "harness", "kind"] {
+        if let Some(value) = body.get(key).and_then(serde_json::Value::as_str) {
+            return super::policy::cleancontext(value);
+        }
+    }
+    let task = body
+        .get("task")
+        .and_then(serde_json::Value::as_str)
+        .unwrap_or_default()
+        .to_ascii_lowercase();
+    super::policy::cleancontext(&task)
+}
+
+async fn policyreward(pool: &SqlitePool, run: &Run) -> Result<f64> {
+    let score: Option<f64> = sqlx::query_scalar("SELECT AVG(score) FROM evaluation WHERE runid=?")
+        .bind(&run.id)
+        .fetch_one(pool)
+        .await?;
+    let retry = ((run.attempts - 1).max(0) as f64 * 0.05).min(0.2);
+    let reward = match score {
+        Some(score) => {
+            let success = f64::from(run.status == RunStatus::Succeeded) * 0.1;
+            score * 0.9 + success - retry
+        }
+        None => match run.status {
+            RunStatus::Succeeded => 0.75 - retry,
+            RunStatus::Failed => 0.0,
+            RunStatus::Cancelled => 0.25,
+            _ => 0.5,
+        },
+    };
+    Ok(reward.clamp(0.0, 1.0))
 }
 
 fn validendpoint(endpoint: &str, local: bool) -> Result<()> {

@@ -19,7 +19,7 @@
 <body class="docs" data-root="../../">
   <div class="shell">
   <a class="skip" href="#content">Skip to content</a>
-  <div class="windowbar"><a href="../../">synapse / manual</a><span>v1.18.3 · on your machine</span></div>
+  <div class="windowbar"><a href="../../">synapse / manual</a><span>v1.19.0 · on your machine</span></div>
   <header class="topbar">
     <a class="wordmark" href="../../" aria-label="Synapse home"><img src="../../icon.svg" width="28" height="28" alt=""><span>synapse</span></a>
     <button class="navtoggle" type="button" aria-expanded="false" aria-controls="topnav">Menu</button>
@@ -147,6 +147,11 @@ plane is required:</p>
 
 synapse backend runner heartbeat studio busy
 </code></pre></div>
+<p>Ask Synapse which eligible runner should receive a run. A run may request capabilities
+with a <code>capabilities</code> array in its input; missing capabilities, non-matching locality,
+and any runner that is not online are filtered before ranking:</p>
+<div class="codeblock"><div class="codebar"><span>sh</span><button type="button" data-copy aria-live="polite">Copy</button></div><pre><code>synapse backend runner select &quot;$RUN&quot; --local
+</code></pre></div>
 <p>A runner may attach a development URL to a run:</p>
 <div class="codeblock"><div class="codebar"><span>sh</span><button type="button" data-copy aria-live="polite">Copy</button></div><pre><code>printf '%s\n' '{
   &quot;id&quot;:&quot;parser-preview&quot;,
@@ -158,6 +163,31 @@ synapse backend runner heartbeat studio busy
 <p>Synapse records the URL; it does not create a tunnel or publish a local port. A
 remote runner owns authentication and reachability. Preview URLs may not contain
 credentials or query parameters; authentication belongs outside the stored URL.</p>
+<h2 id="background-choice-learning">Background choice learning</h2>
+<p>Synapse quietly learns which eligible routes and runners work best for broad local
+task classes such as code, tests, review, documentation, research, and operations.
+It does not store task text. The decision ledger holds only the task class, choice
+names, mode, confidence, duration, and normalized outcome.</p>
+<p>The first configured choice remains the deterministic fallback. Learning starts in
+shadow mode, explores at most one in twenty decisions, and makes a learned choice
+only after every eligible option has enough outcomes and the measured advantage is
+large enough. A regression pauses that policy for a day, starts a fresh comparison
+window, and immediately returns selection to the deterministic fallback. No prompt
+or approval is part of this loop.</p>
+<p>Capability decisions, runner state, route locality, permissions, and other safety
+boundaries are applied before the policy sees a choice. Learning cannot grant access
+or make an ineligible choice eligible. Run completion supplies a coarse outcome;
+an attached evaluation replaces it with the normalized evaluation score. Route
+transport failures are recorded automatically.</p>
+<p>The Activity screen shows learned contexts and offers pause, resume, and reset
+controls. The same inspection controls are available without opening the app:</p>
+<div class="codeblock"><div class="codebar"><span>sh</span><button type="button" data-copy aria-live="polite">Copy</button></div><pre><code>synapse backend policy states
+synapse backend policy decisions --limit 50
+synapse backend policy disable runner code
+synapse backend policy enable runner code
+synapse backend policy reset runner code
+</code></pre></div>
+<p>Reset removes learned aggregates but retains the bounded decision audit trail.</p>
 <h2 id="jsonl-api">JSONL API</h2>
 <p><code>synapse backend api</code> reads one request per line and writes one correlated response
 per line. It opens no listener and exits at end of input.</p>
@@ -165,11 +195,15 @@ per line. It opens no listener and exits at end of input.</p>
 </code></pre></div>
 <p>Method families mirror the CLI: <code>runs</code>, <code>steps</code>, <code>changes</code>, <code>reviews</code>, <code>comments</code>,
 <code>artifacts</code>, <code>checkpoints</code>, <code>workspaces</code>, <code>runners</code>, <code>previews</code>, <code>events</code>,
-<code>capabilities</code>, <code>triggers</code>, <code>routes</code>, and <code>evaluations</code>.</p>
+<code>capabilities</code>, <code>triggers</code>, <code>routes</code>, <code>evaluations</code>, and <code>policy</code>. Runner selection is
+<code>runners.select</code>; policy inspection and controls are <code>policy.decisions</code>, <code>policy.arms</code>,
+<code>policy.states</code>, <code>policy.enable</code>, and <code>policy.reset</code>.</p>
 <h2 id="retention-and-trust">Retention and trust</h2>
 <ul>
 <li>Events retain 30 days and are capped at 50,000 rows.</li>
 <li>Runs retain 90 days and are capped at 10,000 rows. Active runs are not pruned.</li>
+<li>Policy decisions retain 90 days and are capped at 50,000 rows. Aggregate arms
+retain one year and are capped at 10,000 rows.</li>
 <li>Completed run cleanup removes its managed detached worktree as well as its rows.</li>
 <li>Artifacts are content-addressed and verified when read.</li>
 <li>Individual artifacts are capped at 128 MiB; the local artifact store is capped
@@ -182,14 +216,14 @@ their path from the verified digest rather than trusting stored path text.</li>
 <li>Capabilities are default-deny and may be pinned to a content digest.</li>
 <li>A runner descriptor is not a trust grant. Project scopes still apply.</li>
 </ul>
-<footer class="articlefoot"><div class="articlemeta"><a href="https://github.com/wess/synapse/blob/main/docs/backend.md">View page source</a><span>Synapse 1.18.3</span></div><nav class="pagenav" aria-label="Guide pages"><a href="../../docs/cli/"><small>Previous</small><strong>CLI reference</strong></a><a href="../../docs/developing/"><small>Next</small><strong>Developing Synapse</strong></a></nav></footer>
+<footer class="articlefoot"><div class="articlemeta"><a href="https://github.com/wess/synapse/blob/main/docs/backend.md">View page source</a><span>Synapse 1.19.0</span></div><nav class="pagenav" aria-label="Guide pages"><a href="../../docs/cli/"><small>Previous</small><strong>CLI reference</strong></a><a href="../../docs/developing/"><small>Next</small><strong>Developing Synapse</strong></a></nav></footer>
     </main>
-  <aside class="ontoc" aria-label="On this page"><span>Contents</span><ol><li><a href="#the-run-lifecycle">The run lifecycle</a></li><li><a href="#start-with-the-cli">Start with the CLI</a></li><li><a href="#checkpoints">Checkpoints</a></li><li><a href="#isolated-workspaces">Isolated workspaces</a></li><li><a href="#fork-and-move-a-run">Fork and move a run</a></li><li><a href="#runners-and-previews">Runners and previews</a></li><li><a href="#jsonl-api">JSONL API</a></li><li><a href="#retention-and-trust">Retention and trust</a></li></ol></aside>
+  <aside class="ontoc" aria-label="On this page"><span>Contents</span><ol><li><a href="#the-run-lifecycle">The run lifecycle</a></li><li><a href="#start-with-the-cli">Start with the CLI</a></li><li><a href="#checkpoints">Checkpoints</a></li><li><a href="#isolated-workspaces">Isolated workspaces</a></li><li><a href="#fork-and-move-a-run">Fork and move a run</a></li><li><a href="#runners-and-previews">Runners and previews</a></li><li><a href="#background-choice-learning">Background choice learning</a></li><li><a href="#jsonl-api">JSONL API</a></li><li><a href="#retention-and-trust">Retention and trust</a></li></ol></aside>
   </div>
   <footer class="footer">
     <div class="footerupper"><div><a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">synapse</a><p>A shared memory. A little less starting over.</p></div>
       <nav aria-label="Footer"><a href="../../docs/">Manual</a><a href="../../tutorials/">Tutorials</a><a href="https://github.com/wess/synapse">Source</a><a href="https://github.com/wess/synapse/releases">Releases</a><a href="https://wess.io">By Wess</a></nav></div>
-    <p class="footerfine"><span>macOS &amp; Windows desktop · Linux CLI &amp; MCP</span><span>v1.18.3 · MIT · No account required</span></p>
+    <p class="footerfine"><span>macOS &amp; Windows desktop · Linux CLI &amp; MCP</span><span>v1.19.0 · MIT · No account required</span></p>
   </footer></div>
 </body>
 </html>

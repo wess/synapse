@@ -112,7 +112,7 @@ export const app: Page = {
     <p>See <a href="../mesh/">Agent mesh</a> for roles, teams, and the command line.</p>
 
     <h2 id="logs">Activity and runtime status</h2>
-    <p>Activity combines the live event feed with runs, changed-file counts, review and comment state, checkpoints, isolated workspaces, registered runners, live previews, triggers, inference routes, and capability decisions. Each run row says what durable evidence exists instead of making you reconstruct it from logs.</p>
+    <p>Activity combines the live event feed with runs, changed-file counts, review and comment state, checkpoints, isolated workspaces, registered runners, live previews, triggers, inference routes, capability decisions, and bounded route and runner learning. Learning uses broad task classes and numeric outcomes rather than task text. It stays in the background, falls back to deterministic ordering when evidence is weak, and pauses itself after a regression. Pause, resume, and reset controls are available for inspection, not required during ordinary work.</p>
     <p><strong>Pause</strong> stops following without stopping collection; <strong>Refresh</strong> performs one immediate bounded read. The screen polls every five seconds only while it is open, reuses the app's database connection, and loads file-level detail for the selected run only. The status-bar menu is the compact view: live-agent, running, queued, and error counts followed by the latest four events. <strong>Open Activity</strong> takes the full window directly to this screen.</p>
     <p>Use the <a href="../backend/">agent backend guide</a> to create runs, checkpoints, workspaces, reviews, runners, and previews from a harness or the CLI.</p>
 

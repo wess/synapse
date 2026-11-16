@@ -3,7 +3,7 @@ use anyhow::{Context, Result};
 use sqlx::SqlitePool;
 use std::path::Path;
 
-pub const LATEST: i64 = 21;
+pub const LATEST: i64 = 22;
 
 /// The vault's own schema, in its own file. One table today, with the numbered
 /// migration around it anyway: the day it grows a column is not the day to
@@ -530,6 +530,37 @@ const MIGRATIONS: &[Migration] = &[
             "CREATE INDEX eventlevelcreated ON event(level,created DESC)",
             "CREATE INDEX runstatusupdated ON run(status,updated DESC,id DESC)",
             "CREATE INDEX runcommentopen ON runcomment(runid,resolved,id DESC)",
+        ],
+    },
+    Migration {
+        version: 22,
+        statements: &[
+            // Local policy observations. These hold names and bounded numeric outcomes, never
+            // prompts or output. The policy may rank an already eligible choice; it cannot make
+            // one eligible.
+            "CREATE TABLE policydecision(\
+             id INTEGER PRIMARY KEY AUTOINCREMENT, kind TEXT NOT NULL, context TEXT NOT NULL, \
+             baseline TEXT NOT NULL, selected TEXT NOT NULL, recommendation TEXT NOT NULL, \
+             mode TEXT NOT NULL CHECK(mode IN ('baseline','shadow','explore','learned','observed')), \
+             confidence REAL NOT NULL DEFAULT 0, reason TEXT NOT NULL DEFAULT '', \
+             runid TEXT NOT NULL DEFAULT '', reward REAL, duration INTEGER NOT NULL DEFAULT 0, \
+             created INTEGER NOT NULL, updated INTEGER NOT NULL)",
+            "CREATE INDEX policydecisioncontext ON policydecision(kind,context,id DESC)",
+            "CREATE INDEX policydecisionrun ON policydecision(runid,id DESC) WHERE runid != ''",
+            "CREATE INDEX policydecisioncreated ON policydecision(created)",
+            "CREATE TABLE policyarm(\
+             kind TEXT NOT NULL, context TEXT NOT NULL, action TEXT NOT NULL, \
+             trials INTEGER NOT NULL DEFAULT 0, reward REAL NOT NULL DEFAULT 0, \
+             duration INTEGER NOT NULL DEFAULT 0, updated INTEGER NOT NULL, \
+             PRIMARY KEY(kind,context,action))",
+            "CREATE INDEX policyarmupdated ON policyarm(updated)",
+            "CREATE TABLE policystate(\
+             kind TEXT NOT NULL, context TEXT NOT NULL, version INTEGER NOT NULL DEFAULT 1, \
+             enabled INTEGER NOT NULL DEFAULT 1 CHECK(enabled IN (0,1)), \
+             disableduntil INTEGER NOT NULL DEFAULT 0, regressions INTEGER NOT NULL DEFAULT 0, \
+             baselinetrials INTEGER NOT NULL DEFAULT 0, baselinereward REAL NOT NULL DEFAULT 0, \
+             learnedtrials INTEGER NOT NULL DEFAULT 0, learnedreward REAL NOT NULL DEFAULT 0, \
+             updated INTEGER NOT NULL, PRIMARY KEY(kind,context))",
         ],
     },
 ];

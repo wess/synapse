@@ -202,6 +202,25 @@ struct RunnerHeartbeat {
 }
 
 #[derive(Deserialize)]
+struct RunnerSelect {
+    runid: String,
+    local: Option<bool>,
+}
+
+#[derive(Deserialize)]
+struct PolicyScope {
+    kind: String,
+    context: String,
+}
+
+#[derive(Deserialize)]
+struct PolicyToggle {
+    kind: String,
+    context: String,
+    enabled: bool,
+}
+
+#[derive(Deserialize)]
 struct PreviewPut {
     id: String,
     runid: String,
@@ -668,6 +687,13 @@ pub async fn handle(backend: &Backend, request: Request) -> Response {
                 )
             }
             "runners.list" => Response::ok(id.clone(), backend.runners().await?),
+            "runners.select" => {
+                let input = params::<RunnerSelect>(request.params)?;
+                Response::ok(
+                    id.clone(),
+                    backend.selectrunner(&input.runid, input.local).await?,
+                )
+            }
             "runners.put" => {
                 let input = params::<RunnerPut>(request.params)?;
                 Response::ok(
@@ -689,6 +715,26 @@ pub async fn handle(backend: &Backend, request: Request) -> Response {
                     id.clone(),
                     backend.heartbeat(&input.id, &input.status).await?,
                 )
+            }
+            "policy.decisions" => {
+                let input = params::<Limited>(request.params)?;
+                Response::ok(id.clone(), backend.policydecisions(input.limit).await?)
+            }
+            "policy.arms" => Response::ok(id.clone(), backend.policyarms().await?),
+            "policy.states" => Response::ok(id.clone(), backend.policystates().await?),
+            "policy.enable" => {
+                let input = params::<PolicyToggle>(request.params)?;
+                Response::ok(
+                    id.clone(),
+                    backend
+                        .setpolicyenabled(&input.kind, &input.context, input.enabled)
+                        .await?,
+                )
+            }
+            "policy.reset" => {
+                let input = params::<PolicyScope>(request.params)?;
+                backend.resetpolicy(&input.kind, &input.context).await?;
+                Response::ok(id.clone(), json!({ "reset": true }))
             }
             "previews.list" => {
                 let input = params::<RunNamed>(request.params)?;

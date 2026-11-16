@@ -329,6 +329,57 @@ async fn runners_and_previews_are_explicit_local_runtime_records() {
 }
 
 #[tokio::test]
+async fn runner_policy_never_crosses_capability_or_locality_filters() {
+    let (_folder, backend) = backend().await;
+    let run = backend
+        .createrun("/work", "build", json!({"capabilities":["shell"]}))
+        .await
+        .unwrap();
+    backend
+        .putrunner("shell-local", "Shell local", "", json!(["shell"]), true)
+        .await
+        .unwrap();
+    backend
+        .putrunner(
+            "preview-local",
+            "Preview local",
+            "",
+            json!(["preview"]),
+            true,
+        )
+        .await
+        .unwrap();
+    backend
+        .putrunner(
+            "shell-remote",
+            "Shell remote",
+            "https://runner.example.test",
+            json!(["shell"]),
+            false,
+        )
+        .await
+        .unwrap();
+
+    let selected = backend
+        .selectrunner(&run.id, Some(true))
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(selected.id, "shell-local");
+    let decision = &backend.policydecisions(10).await.unwrap()[0];
+    assert_eq!(decision.kind, "runner");
+    assert_eq!(decision.context, "code");
+    assert_eq!(decision.selected, "shell-local");
+    assert_eq!(decision.mode, "baseline");
+
+    let malformed = backend
+        .createrun("/work", "build", json!({"capabilities":"shell"}))
+        .await
+        .unwrap();
+    assert!(backend.selectrunner(&malformed.id, None).await.is_err());
+}
+
+#[tokio::test]
 async fn checkpoints_restore_files_and_run_state_without_accepting_secrets() {
     let (folder, backend) = backend().await;
     let project = folder.path().join("project");
@@ -737,6 +788,10 @@ async fn routes_apply_the_configured_model_and_bound_chunked_responses() {
     );
     let request = received.recv().unwrap();
     assert!(request.contains("\"model\":\"configured\""));
+    let decision = &routed.policydecisions(1).await.unwrap()[0];
+    assert_eq!(decision.kind, "route");
+    assert_eq!(decision.context, "default");
+    assert_eq!(decision.reward, Some(1.0));
 
     let (_folder, routed) = backend().await;
     let endpoint = oversizedserver();
@@ -746,6 +801,137 @@ async fn routes_apply_the_configured_model_and_bound_chunked_responses() {
         .unwrap();
     let error = routed.callroute(Some(true), json!({})).await.unwrap_err();
     assert!(error.to_string().contains("response is too large"));
+    assert_eq!(
+        routed.policydecisions(1).await.unwrap()[0].reward,
+        Some(0.0)
+    );
+}
+
+#[tokio::test]
+async fn policy_learns_quietly_and_rolls_back_a_regression() {
+    let (_folder, backend) = backend().await;
+    let choices = vec!["baseline".to_owned(), "better".to_owned()];
+
+    let first = backend.choose("route", "code", &choices, "").await.unwrap();
+    assert_eq!(first.action, "baseline");
+    assert_eq!(first.decision.mode, "baseline");
+    backend
+        .rewarddecision(first.decision.id, 0.5, 10)
+        .await
+        .unwrap();
+
+    let mut learned = None;
+    for _ in 0..120 {
+        let choice = backend.choose("route", "code", &choices, "").await.unwrap();
+        let reward = if choice.action == "better" { 1.0 } else { 0.5 };
+        backend
+            .rewarddecision(choice.decision.id, reward, 10)
+            .await
+            .unwrap();
+        if choice.decision.mode == "learned" {
+            learned = Some(choice);
+            break;
+        }
+    }
+    let learned = learned.expect("policy never gathered enough evidence");
+    assert_eq!(learned.action, "better");
+
+    for _ in 0..3 {
+        let choice = backend.choose("route", "code", &choices, "").await.unwrap();
+        assert_eq!(choice.decision.mode, "learned");
+        backend
+            .rewarddecision(choice.decision.id, 0.0, 10)
+            .await
+            .unwrap();
+    }
+    let state = backend.policystates().await.unwrap().remove(0);
+    assert_eq!(state.regressions, 1);
+    assert!(state.disableduntil > state.updated);
+    let fallback = backend.choose("route", "code", &choices, "").await.unwrap();
+    assert_eq!(fallback.action, "baseline");
+    assert_eq!(fallback.decision.mode, "shadow");
+}
+
+#[tokio::test]
+async fn policy_context_is_bounded_classification_not_task_text() {
+    let (_folder, backend) = backend().await;
+    let secret = "TOKEN=never-store-this-value";
+    let choice = backend
+        .choose("route", secret, &["local".to_owned()], "")
+        .await
+        .unwrap();
+    assert_eq!(choice.decision.context, "default");
+    assert!(
+        !serde_json::to_string(&choice.decision)
+            .unwrap()
+            .contains(secret)
+    );
+}
+
+#[tokio::test]
+async fn a_late_revision_after_reset_updates_only_the_audit_trail() {
+    let (_folder, backend) = backend().await;
+    let choice = backend
+        .choose("route", "code", &["local".to_owned()], "")
+        .await
+        .unwrap();
+    backend
+        .rewarddecision(choice.decision.id, 0.5, 10)
+        .await
+        .unwrap();
+    backend.resetpolicy("route", "code").await.unwrap();
+
+    let revised = backend
+        .rewarddecision(choice.decision.id, 1.0, 20)
+        .await
+        .unwrap();
+    assert_eq!(revised.reward, Some(1.0));
+    assert!(backend.policyarms().await.unwrap().is_empty());
+    assert!(backend.policystates().await.unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn run_outcomes_train_observed_workers_without_a_prompt() {
+    let (_folder, backend) = backend().await;
+    let run = backend.createrun("/work", "test", json!({})).await.unwrap();
+    backend.claim("worker-1", 30).await.unwrap().unwrap();
+    backend
+        .updaterun(&run.id, RunStatus::Succeeded, "done", "")
+        .await
+        .unwrap();
+    let decision = &backend.policydecisions(1).await.unwrap()[0];
+    assert_eq!(decision.mode, "observed");
+    assert_eq!(decision.selected, "worker-1");
+    assert_eq!(decision.reward, Some(0.75));
+
+    backend
+        .evaluate(&run.id, "done", "done", 1.0, "matched")
+        .await
+        .unwrap();
+    let decision = &backend.policydecisions(1).await.unwrap()[0];
+    assert_eq!(decision.reward, Some(1.0));
+    let arm = &backend.policyarms().await.unwrap()[0];
+    assert_eq!(arm.trials, 1);
+    assert_eq!(arm.reward, 1.0);
+}
+
+#[tokio::test]
+async fn a_late_terminal_update_keeps_the_evaluated_reward() {
+    let (_folder, backend) = backend().await;
+    let run = backend.createrun("/work", "test", json!({})).await.unwrap();
+    backend.claim("worker-1", 30).await.unwrap().unwrap();
+    backend
+        .evaluate(&run.id, "done", "done", 1.0, "matched")
+        .await
+        .unwrap();
+    backend
+        .updaterun(&run.id, RunStatus::Succeeded, "done", "")
+        .await
+        .unwrap();
+    assert_eq!(
+        backend.policydecisions(1).await.unwrap()[0].reward,
+        Some(1.0)
+    );
 }
 
 fn jsonserver() -> (String, std::sync::mpsc::Receiver<String>) {

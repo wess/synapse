@@ -4,12 +4,15 @@ use guise::prelude::*;
 use std::collections::HashMap;
 use std::rc::Rc;
 use synapsecore::backend::{
-    Capability, Change, Checkpoint, Comment, Event, Preview, Review, Route, Run, RunStats, Runner,
-    Summary, Trigger, Workspace,
+    Capability, Change, Checkpoint, Comment, Event, PolicyDecision, PolicyState, Preview, Review,
+    Route, Run, RunStats, Runner, Summary, Trigger, Workspace,
 };
 
 pub type Click = Box<dyn Fn(&ClickEvent, &mut Window, &mut App) + 'static>;
 pub type Inspect = Rc<dyn Fn(String, &ClickEvent, &mut Window, &mut App) + 'static>;
+pub type PolicyToggle =
+    Rc<dyn Fn(String, String, bool, &ClickEvent, &mut Window, &mut App) + 'static>;
+pub type PolicyReset = Rc<dyn Fn(String, String, &ClickEvent, &mut Window, &mut App) + 'static>;
 
 #[derive(Clone, Default)]
 pub struct RunDetail {
@@ -32,6 +35,8 @@ pub struct View {
     pub triggers: Vec<Trigger>,
     pub routes: Vec<Route>,
     pub capabilities: Vec<Capability>,
+    pub policies: Vec<PolicyState>,
+    pub decisions: Vec<PolicyDecision>,
     pub paused: bool,
     pub loading: bool,
     pub error: Option<String>,
@@ -41,6 +46,8 @@ pub struct Actions {
     pub refresh: Click,
     pub toggle: Click,
     pub inspect: Inspect,
+    pub togglepolicy: PolicyToggle,
+    pub resetpolicy: PolicyReset,
 }
 
 pub fn render(view: View, actions: Actions, cx: &App) -> AnyElement {
@@ -51,6 +58,8 @@ pub fn render(view: View, actions: Actions, cx: &App) -> AnyElement {
         refresh,
         toggle,
         inspect,
+        togglepolicy,
+        resetpolicy,
     } = actions;
     let View {
         summary,
@@ -63,6 +72,8 @@ pub fn render(view: View, actions: Actions, cx: &App) -> AnyElement {
         triggers,
         routes,
         capabilities,
+        policies,
+        decisions,
         paused,
         loading,
         error,
@@ -211,6 +222,14 @@ pub fn render(view: View, actions: Actions, cx: &App) -> AnyElement {
                                     triggers,
                                     routes,
                                     capabilities,
+                                    border,
+                                    surface,
+                                ))
+                                .child(policy_panel(
+                                    policies,
+                                    decisions,
+                                    togglepolicy,
+                                    resetpolicy,
                                     border,
                                     surface,
                                 )),
@@ -633,6 +652,132 @@ fn automation_panel(
                         .dimmed(),
                 )
         }))
+        .into_any_element()
+}
+
+fn policy_panel(
+    policies: Vec<PolicyState>,
+    decisions: Vec<PolicyDecision>,
+    toggle: PolicyToggle,
+    reset: PolicyReset,
+    border: Hsla,
+    surface: Hsla,
+) -> AnyElement {
+    let count = decisions
+        .iter()
+        .filter(|decision| decision.reward.is_some())
+        .count();
+    div()
+        .w(px(330.0))
+        .rounded(px(8.0))
+        .border_1()
+        .border_color(border)
+        .bg(surface)
+        .overflow_hidden()
+        .child(panel_header(
+            "Learning",
+            &format!("{count} recent outcomes"),
+            IconName::BrainCircuit,
+        ))
+        .when(policies.is_empty(), |element| {
+            element.child(empty(
+                "Learning stays quiet until ordinary runs and routes produce outcomes.",
+            ))
+        })
+        .children(
+            policies
+                .into_iter()
+                .take(6)
+                .enumerate()
+                .map(|(index, policy)| {
+                    let kind = policy.kind.clone();
+                    let context = policy.context.clone();
+                    let togglekind = kind.clone();
+                    let togglecontext = context.clone();
+                    let resetkind = kind.clone();
+                    let resetcontext = context.clone();
+                    let enabled = policy.enabled;
+                    let paused = !enabled || policy.disableduntil > chrono::Utc::now().timestamp();
+                    let detail = if policy.learnedtrials > 0 {
+                        format!(
+                            "{} learned · {} baseline · v{}",
+                            policy.learnedtrials, policy.baselinetrials, policy.version
+                        )
+                    } else {
+                        format!(
+                            "{} baseline outcomes · v{}",
+                            policy.baselinetrials, policy.version
+                        )
+                    };
+                    let toggle = toggle.clone();
+                    let reset = reset.clone();
+                    div()
+                        .px(px(12.0))
+                        .py(px(9.0))
+                        .border_t_1()
+                        .border_color(border)
+                        .flex()
+                        .items_center()
+                        .justify_between()
+                        .gap(px(10.0))
+                        .child(
+                            div()
+                                .min_w(px(0.0))
+                                .flex_1()
+                                .flex()
+                                .flex_col()
+                                .gap(px(2.0))
+                                .child(
+                                    Text::new(format!("{kind} · {context}"))
+                                        .size(Size::Xs)
+                                        .bold(),
+                                )
+                                .child(Text::new(detail).size(Size::Xs).dimmed()),
+                        )
+                        .child(
+                            div()
+                                .flex()
+                                .items_center()
+                                .gap(px(4.0))
+                                .child(
+                                    Button::new(
+                                        ("policytoggle", index),
+                                        if paused { "Resume" } else { "Pause" },
+                                    )
+                                    .variant(Variant::Subtle)
+                                    .color(ColorName::Gray)
+                                    .size(Size::Xs)
+                                    .on_click(
+                                        move |event, window, cx| {
+                                            toggle(
+                                                togglekind.clone(),
+                                                togglecontext.clone(),
+                                                !enabled,
+                                                event,
+                                                window,
+                                                cx,
+                                            )
+                                        },
+                                    ),
+                                )
+                                .child(
+                                    Button::new(("policyreset", index), "Reset")
+                                        .variant(Variant::Subtle)
+                                        .color(ColorName::Gray)
+                                        .size(Size::Xs)
+                                        .on_click(move |event, window, cx| {
+                                            reset(
+                                                resetkind.clone(),
+                                                resetcontext.clone(),
+                                                event,
+                                                window,
+                                                cx,
+                                            )
+                                        }),
+                                ),
+                        )
+                }),
+        )
         .into_any_element()
 }
 

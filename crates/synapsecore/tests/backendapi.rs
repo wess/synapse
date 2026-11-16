@@ -173,6 +173,68 @@ async fn jsonl_exposes_collaboration_and_runner_records() {
     assert_eq!(responses[2]["result"]["status"], "online");
 }
 
+#[tokio::test]
+async fn jsonl_exposes_background_policy_observability_and_controls() {
+    let root = tempfile::tempdir().unwrap();
+    let backend = Backend::open(root.path().join("brain.db")).await.unwrap();
+    let run = backend
+        .createrun("demo", "build", json!({"capabilities":["shell"]}))
+        .await
+        .unwrap();
+    backend
+        .putrunner("local-one", "Local one", "", json!(["shell"]), true)
+        .await
+        .unwrap();
+    let requests = [
+        json!({
+          "version": 1,
+          "id": "select",
+          "method": "runners.select",
+          "params": {"runid":run.id,"local":true}
+        }),
+        json!({
+          "version": 1,
+          "id": "decisions",
+          "method": "policy.decisions",
+          "params": {"limit":10}
+        }),
+        json!({
+          "version": 1,
+          "id": "disable",
+          "method": "policy.enable",
+          "params": {"kind":"runner","context":"code","enabled":false}
+        }),
+        json!({
+          "version": 1,
+          "id": "states",
+          "method": "policy.states",
+          "params": {}
+        }),
+        json!({
+          "version": 1,
+          "id": "reset",
+          "method": "policy.reset",
+          "params": {"kind":"runner","context":"code"}
+        }),
+    ]
+    .map(|request| request.to_string())
+    .join("\n");
+    let mut output = Vec::new();
+    synapsecore::backend::api::serve(&backend, std::io::Cursor::new(requests), &mut output)
+        .await
+        .unwrap();
+    let responses = String::from_utf8(output)
+        .unwrap()
+        .lines()
+        .map(|line| serde_json::from_str::<Value>(line).unwrap())
+        .collect::<Vec<_>>();
+    assert_eq!(responses[0]["result"]["id"], "local-one");
+    assert_eq!(responses[1]["result"][0]["mode"], "baseline");
+    assert_eq!(responses[2]["result"]["enabled"], false);
+    assert_eq!(responses[3]["result"][0]["enabled"], false);
+    assert_eq!(responses[4]["result"]["reset"], true);
+}
+
 #[test]
 fn backend_cli_emits_and_queries_events() {
     let root = tempfile::tempdir().unwrap();

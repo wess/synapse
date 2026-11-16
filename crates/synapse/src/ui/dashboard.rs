@@ -96,6 +96,8 @@ pub struct Dashboard {
     logtriggers: Vec<synapsecore::backend::Trigger>,
     logroutes: Vec<synapsecore::backend::Route>,
     logcapabilities: Vec<synapsecore::backend::Capability>,
+    logpolicies: Vec<synapsecore::backend::PolicyState>,
+    logdecisions: Vec<synapsecore::backend::PolicyDecision>,
     logserror: Option<String>,
     logspaused: bool,
     logsloading: bool,
@@ -411,6 +413,8 @@ impl Dashboard {
             logtriggers: Vec::new(),
             logroutes: Vec::new(),
             logcapabilities: Vec::new(),
+            logpolicies: Vec::new(),
+            logdecisions: Vec::new(),
             logserror: None,
             logspaused: false,
             logsloading: false,
@@ -1725,6 +1729,8 @@ impl Dashboard {
                         this.logtriggers = data.triggers;
                         this.logroutes = data.routes;
                         this.logcapabilities = data.capabilities;
+                        this.logpolicies = data.policies;
+                        this.logdecisions = data.decisions;
                         this.logserror = None;
                     }
                     Err(error) => this.logserror = Some(format!("Could not read logs: {error}")),
@@ -1857,6 +1863,82 @@ impl Dashboard {
         self.navigate(Page::Settings);
         self.refreshguidance();
         cx.notify();
+    }
+
+    fn togglepolicy(
+        &mut self,
+        kind: String,
+        context: String,
+        enabled: bool,
+        cx: &mut Context<Self>,
+    ) {
+        let Some(backend) = self.logbackend.clone() else {
+            self.logserror =
+                Some("Could not update learning: the backend store is unavailable".into());
+            cx.notify();
+            return;
+        };
+        cx.spawn(async move |this, cx| {
+            let result = cx
+                .background_executor()
+                .spawn(async move { backend.setpolicyenabled(&kind, &context, enabled).await })
+                .await;
+            this.update(cx, |this, cx| {
+                match result {
+                    Ok(state) => {
+                        if let Some(existing) = this
+                            .logpolicies
+                            .iter_mut()
+                            .find(|item| item.kind == state.kind && item.context == state.context)
+                        {
+                            *existing = state;
+                        } else {
+                            this.logpolicies.push(state);
+                        }
+                        this.logserror = None;
+                    }
+                    Err(error) => {
+                        this.logserror = Some(format!("Could not update learning: {error}"));
+                    }
+                }
+                cx.notify();
+            })
+            .ok();
+        })
+        .detach();
+    }
+
+    fn resetpolicy(&mut self, kind: String, context: String, cx: &mut Context<Self>) {
+        let Some(backend) = self.logbackend.clone() else {
+            self.logserror =
+                Some("Could not reset learning: the backend store is unavailable".into());
+            cx.notify();
+            return;
+        };
+        let removedkind = kind.clone();
+        let removedcontext = context.clone();
+        cx.spawn(async move |this, cx| {
+            let result = cx
+                .background_executor()
+                .spawn(async move { backend.resetpolicy(&kind, &context).await })
+                .await;
+            this.update(cx, |this, cx| {
+                match result {
+                    Ok(()) => {
+                        this.logpolicies.retain(|item| {
+                            item.kind != removedkind || item.context != removedcontext
+                        });
+                        this.logserror = None;
+                    }
+                    Err(error) => {
+                        this.logserror = Some(format!("Could not reset learning: {error}"));
+                    }
+                }
+                cx.notify();
+            })
+            .ok();
+        })
+        .detach();
     }
 
     /// Leaving a page cancels confirmations that were armed there. A second
@@ -3194,6 +3276,8 @@ impl Dashboard {
                         triggers: self.logtriggers.clone(),
                         routes: self.logroutes.clone(),
                         capabilities: self.logcapabilities.clone(),
+                        policies: self.logpolicies.clone(),
+                        decisions: self.logdecisions.clone(),
                         paused: self.logspaused,
                         loading: self.logsloading,
                         error: self.logserror.clone(),
@@ -3204,6 +3288,22 @@ impl Dashboard {
                         inspect: std::rc::Rc::new(move |runid, _, _, cx| {
                             host.update(cx, |this, cx| this.inspectrun(runid, cx)).ok();
                         }),
+                        togglepolicy: {
+                            let host = cx.entity().downgrade();
+                            std::rc::Rc::new(move |kind, context, enabled, _, _, cx| {
+                                host.update(cx, |this, cx| {
+                                    this.togglepolicy(kind, context, enabled, cx)
+                                })
+                                .ok();
+                            })
+                        },
+                        resetpolicy: {
+                            let host = cx.entity().downgrade();
+                            std::rc::Rc::new(move |kind, context, _, _, cx| {
+                                host.update(cx, |this, cx| this.resetpolicy(kind, context, cx))
+                                    .ok();
+                            })
+                        },
                     },
                     cx,
                 ))
@@ -3809,6 +3909,8 @@ struct LogData {
     triggers: Vec<synapsecore::backend::Trigger>,
     routes: Vec<synapsecore::backend::Route>,
     capabilities: Vec<synapsecore::backend::Capability>,
+    policies: Vec<synapsecore::backend::PolicyState>,
+    decisions: Vec<synapsecore::backend::PolicyDecision>,
 }
 
 fn loadlogs(
@@ -3846,6 +3948,8 @@ fn loadlogs(
         let triggers = backend.triggers().await?;
         let routes = backend.routes().await?;
         let capabilities = backend.capabilities().await?;
+        let policies = backend.policystates().await?;
+        let decisions = backend.policydecisions(50).await?;
         Ok(LogData {
             summary,
             events,
@@ -3856,6 +3960,8 @@ fn loadlogs(
             triggers,
             routes,
             capabilities,
+            policies,
+            decisions,
         })
     })
 }

@@ -7,7 +7,7 @@ use std::ffi::OsString;
 use std::io::{Read, Write};
 use std::path::PathBuf;
 
-const USAGE: &str = "usage: synapse backend <summary|events|emit|runs|run|steps|changes|review|comment|artifact|runner|preview|checkpoints|workspace|capability|trigger|route|evaluation|api>";
+const USAGE: &str = "usage: synapse backend <summary|events|emit|runs|run|steps|changes|review|comment|artifact|runner|preview|checkpoints|workspace|capability|trigger|route|evaluation|policy|api>";
 const INPUTLIMIT: u64 = 1024 * 1024;
 const ARTIFACTLIMIT: u64 = 128 * 1024 * 1024;
 
@@ -73,6 +73,7 @@ async fn command(backend: &Backend, action: &str, arguments: &[OsString]) -> Res
         "trigger" => trigger(backend, arguments).await,
         "route" => route(backend, arguments).await,
         "evaluation" => evaluation(backend, arguments).await,
+        "policy" => policy(backend, arguments).await,
         unknown => anyhow::bail!("unknown backend command `{unknown}`\n\n{USAGE}"),
     }
 }
@@ -361,7 +362,7 @@ async fn runner(backend: &Backend, arguments: &[OsString]) -> Result<()> {
     let action = text(
         arguments,
         0,
-        "usage: synapse backend runner <list|put|heartbeat>",
+        "usage: synapse backend runner <list|put|heartbeat|select>",
     )?;
     match action.as_str() {
         "list" => printjson(&backend.runners().await?),
@@ -392,6 +393,14 @@ async fn runner(backend: &Backend, arguments: &[OsString]) -> Result<()> {
                 "usage: synapse backend runner heartbeat <id> <status>",
             )?;
             printjson(&backend.heartbeat(&id, &status).await?)
+        }
+        "select" => {
+            let run = text(
+                arguments,
+                1,
+                "usage: synapse backend runner select <run> [--local|--remote]",
+            )?;
+            printjson(&backend.selectrunner(&run, localfilter(arguments)?).await?)
         }
         unknown => anyhow::bail!("unknown runner command `{unknown}`"),
     }
@@ -829,6 +838,55 @@ async fn evaluation(backend: &Backend, arguments: &[OsString]) -> Result<()> {
             )
         }
         unknown => anyhow::bail!("unknown evaluation command `{unknown}`"),
+    }
+}
+
+async fn policy(backend: &Backend, arguments: &[OsString]) -> Result<()> {
+    let action = text(
+        arguments,
+        0,
+        "usage: synapse backend policy <decisions|arms|states|enable|disable|reset>",
+    )?;
+    match action.as_str() {
+        "decisions" => printjson(
+            &backend
+                .policydecisions(number(arguments, "--limit")?.unwrap_or(100))
+                .await?,
+        ),
+        "arms" => printjson(&backend.policyarms().await?),
+        "states" => printjson(&backend.policystates().await?),
+        "enable" | "disable" => {
+            let kind = text(
+                arguments,
+                1,
+                "usage: synapse backend policy <enable|disable> <kind> <context>",
+            )?;
+            let context = text(
+                arguments,
+                2,
+                "usage: synapse backend policy <enable|disable> <kind> <context>",
+            )?;
+            printjson(
+                &backend
+                    .setpolicyenabled(&kind, &context, action == "enable")
+                    .await?,
+            )
+        }
+        "reset" => {
+            let kind = text(
+                arguments,
+                1,
+                "usage: synapse backend policy reset <kind> <context>",
+            )?;
+            let context = text(
+                arguments,
+                2,
+                "usage: synapse backend policy reset <kind> <context>",
+            )?;
+            backend.resetpolicy(&kind, &context).await?;
+            printjson(&json!({"reset": true}))
+        }
+        unknown => anyhow::bail!("unknown policy command `{unknown}`"),
     }
 }
 

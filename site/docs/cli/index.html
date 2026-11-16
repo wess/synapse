@@ -19,7 +19,7 @@
 <body class="docs" data-root="../../">
   <div class="shell">
   <a class="skip" href="#content">Skip to content</a>
-  <div class="windowbar"><a href="../../">synapse / manual</a><span>v1.18.3 · on your machine</span></div>
+  <div class="windowbar"><a href="../../">synapse / manual</a><span>v1.19.0 · on your machine</span></div>
   <header class="topbar">
     <a class="wordmark" href="../../" aria-label="Synapse home"><img src="../../icon.svg" width="28" height="28" alt=""><span>synapse</span></a>
     <button class="navtoggle" type="button" aria-expanded="false" aria-controls="topnav">Menu</button>
@@ -682,9 +682,9 @@
   <section class="command" id="backendrunner">
     <div>
       <h3>backend runner</h3>
-      <code>synapse backend runner &amp;lt;list|put|heartbeat&amp;gt;</code>
+      <code>synapse backend runner &amp;lt;list|put|heartbeat|select&amp;gt;</code>
     </div>
-    <p>Register a runner and report whether it is online, busy, draining, or offline.</p>
+    <p>Register a runner, report whether it is online, busy, draining, or offline, or select an eligible runner for a run using local outcome history.</p>
   </section>
 
   <section class="command" id="backendpreview">
@@ -733,6 +733,14 @@
       <code>synapse backend evaluation &amp;lt;list|add&amp;gt;</code>
     </div>
     <p>Attach expected output, actual output, a normalized score, and a note to a run.</p>
+  </section>
+
+  <section class="command" id="backendpolicy">
+    <div>
+      <h3>backend policy</h3>
+      <code>synapse backend policy &amp;lt;decisions|arms|states|enable|disable|reset&amp;gt;</code>
+    </div>
+    <p>Inspect quiet route and runner learning, pause or resume one task class, or reset its aggregates. Normal learning and fallback need no interaction.</p>
   </section>
 
   <section class="command" id="backendapi">
@@ -1269,14 +1277,14 @@
     </div>
     <p>Print the command summary, or one command’s entries. <code>--help</code> and <code>-h</code> do the same thing wherever they appear before a <code>--</code>.</p>
   </section>
-  <footer class="articlefoot"><div class="articlemeta"><a href="https://github.com/wess/synapse/blob/main/website/docs/cli.ts">View page source</a><span>Synapse 1.18.3</span></div><nav class="pagenav" aria-label="Guide pages"><a href="../../docs/troubleshoot/"><small>Previous</small><strong>Troubleshooting</strong></a><a href="../../docs/backend/"><small>Next</small><strong>Agent backend</strong></a></nav></footer>
+  <footer class="articlefoot"><div class="articlemeta"><a href="https://github.com/wess/synapse/blob/main/website/docs/cli.ts">View page source</a><span>Synapse 1.19.0</span></div><nav class="pagenav" aria-label="Guide pages"><a href="../../docs/troubleshoot/"><small>Previous</small><strong>Troubleshooting</strong></a><a href="../../docs/backend/"><small>Next</small><strong>Agent backend</strong></a></nav></footer>
     </main>
   <aside class="ontoc" aria-label="On this page"><span>Contents</span><ol><li><a href="#invocation">Invocation</a></li><li><a href="#application">Application and server</a></li><li><a href="#shell">Shell environments</a></li><li><a href="#vault">Vault and scope</a></li><li><a href="#memory">Memory</a></li><li><a href="#learning">Learning</a></li><li><a href="#mesh">Agent mesh</a></li><li><a href="#backend">Local backend</a></li><li><a href="#skills">Skills</a></li><li><a href="#data">Data and settings</a></li><li><a href="#installation">Installation and paths</a></li></ol></aside>
   </div>
   <footer class="footer">
     <div class="footerupper"><div><a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">synapse</a><p>A shared memory. A little less starting over.</p></div>
       <nav aria-label="Footer"><a href="../../docs/">Manual</a><a href="../../tutorials/">Tutorials</a><a href="https://github.com/wess/synapse">Source</a><a href="https://github.com/wess/synapse/releases">Releases</a><a href="https://wess.io">By Wess</a></nav></div>
-    <p class="footerfine"><span>macOS &amp; Windows desktop · Linux CLI &amp; MCP</span><span>v1.18.3 · MIT · No account required</span></p>
+    <p class="footerfine"><span>macOS &amp; Windows desktop · Linux CLI &amp; MCP</span><span>v1.19.0 · MIT · No account required</span></p>
   </footer></div>
 </body>
 </html>

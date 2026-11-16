@@ -347,3 +347,71 @@ pub struct Evaluation {
     pub note: String,
     pub created: i64,
 }
+
+#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema, FromRow, PartialEq)]
+pub struct PolicyDecision {
+    pub id: i64,
+    pub kind: String,
+    pub context: String,
+    pub baseline: String,
+    pub selected: String,
+    pub recommendation: String,
+    pub mode: String,
+    pub confidence: f64,
+    pub reason: String,
+    pub runid: String,
+    pub reward: Option<f64>,
+    pub duration: i64,
+    pub created: i64,
+    pub updated: i64,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema, FromRow, PartialEq)]
+pub struct PolicyArm {
+    pub kind: String,
+    pub context: String,
+    pub action: String,
+    pub trials: i64,
+    pub reward: f64,
+    pub duration: i64,
+    pub updated: i64,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema, FromRow, PartialEq)]
+pub struct PolicyState {
+    pub kind: String,
+    pub context: String,
+    pub version: i64,
+    pub enabled: bool,
+    pub disableduntil: i64,
+    pub regressions: i64,
+    pub baselinetrials: i64,
+    pub baselinereward: f64,
+    pub learnedtrials: i64,
+    pub learnedreward: f64,
+    pub updated: i64,
+}
+
+impl PolicyState {
+    pub(crate) fn new(kind: &str, context: &str) -> Self {
+        Self {
+            kind: kind.to_owned(),
+            context: context.to_owned(),
+            version: 1,
+            enabled: true,
+            disableduntil: 0,
+            regressions: 0,
+            baselinetrials: 0,
+            baselinereward: 0.0,
+            learnedtrials: 0,
+            learnedreward: 0.0,
+            updated: 0,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Serialize, JsonSchema, PartialEq)]
+pub struct PolicyChoice {
+    pub action: String,
+    pub decision: PolicyDecision,
+}

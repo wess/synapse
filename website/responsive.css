@@ -33,7 +33,7 @@
 }
 @media (max-width: 640px) {
   .shell { margin: 0; border: 0; }
-  .windowbar { padding-inline: 1rem; font-size: .65rem; }
+  .windowbar { padding-inline: 1rem; font-size: .7rem; }
   .windowbar > span { display: none; }
   .topbar { padding-block: .9rem; }
   .navtoggle { display: block; font: .75rem/1.5 var(--mono); }

@@ -1,4 +1,4 @@
-use super::{Backend, Preview, Runner};
+use super::{Backend, PolicyChoice, Preview, Runner};
 use anyhow::{Context, Result};
 
 const RUNNERLIMIT: i64 = 256;
@@ -93,6 +93,40 @@ impl Backend {
         .fetch_all(&self.pool)
         .await
         .map_err(Into::into)
+    }
+
+    /// Select an eligible runner for a run. Capabilities are a deterministic gate; the policy only
+    /// ranks the rows left after it. An input shaped as `{ "capabilities": ["shell"] }` requests
+    /// capabilities, while an absent list accepts every online runner.
+    pub async fn selectrunner(&self, runid: &str, local: Option<bool>) -> Result<Option<Runner>> {
+        let run = self
+            .run(runid)
+            .await?
+            .with_context(|| format!("run `{runid}` does not exist"))?;
+        let required = requiredcapabilities(&run.input)?;
+        let mut runners = self.runners().await?;
+        runners.retain(|runner| {
+            runner.status == "online"
+                && local.is_none_or(|local| runner.local == local)
+                && hascapabilities(&runner.capabilities, &required)
+        });
+        runners.sort_by(|left, right| {
+            right
+                .local
+                .cmp(&left.local)
+                .then_with(|| left.name.cmp(&right.name))
+                .then_with(|| left.id.cmp(&right.id))
+        });
+        if runners.is_empty() {
+            return Ok(None);
+        }
+        let choices = runners
+            .iter()
+            .map(|runner| runner.id.clone())
+            .collect::<Vec<_>>();
+        let PolicyChoice { action, .. } =
+            self.choose("runner", &run.harness, &choices, runid).await?;
+        Ok(runners.into_iter().find(|runner| runner.id == action))
     }
 
     pub async fn putpreview(
@@ -210,6 +244,46 @@ fn cleanjson(value: serde_json::Value) -> Result<String> {
     let body = redact(&text);
     serde_json::from_str::<serde_json::Value>(&body).context("redaction made invalid JSON")?;
     Ok(body)
+}
+
+fn requiredcapabilities(input: &str) -> Result<Vec<String>> {
+    let value: serde_json::Value = serde_json::from_str(input).context("run input is not JSON")?;
+    let Some(value) = value.get("capabilities") else {
+        return Ok(Vec::new());
+    };
+    let items = value
+        .as_array()
+        .context("run capabilities must be an array of names")?;
+    anyhow::ensure!(items.len() <= 64, "run requests too many capabilities");
+    items
+        .iter()
+        .map(|item| {
+            let item = item
+                .as_str()
+                .context("run capabilities must be an array of names")?;
+            anyhow::ensure!(
+                !item.is_empty() && item.len() <= 128,
+                "run capability name is invalid"
+            );
+            Ok(item.to_owned())
+        })
+        .collect()
+}
+
+fn hascapabilities(raw: &str, required: &[String]) -> bool {
+    if required.is_empty() {
+        return true;
+    }
+    let Ok(value) = serde_json::from_str::<serde_json::Value>(raw) else {
+        return false;
+    };
+    let held: std::collections::HashSet<&str> = value
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(serde_json::Value::as_str)
+        .collect();
+    required.iter().all(|item| held.contains(item.as_str()))
 }
 
 fn redact(value: &str) -> String {
