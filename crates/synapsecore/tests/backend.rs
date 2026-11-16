@@ -814,21 +814,20 @@ async fn policy_learns_quietly_and_rolls_back_a_regression() {
 
     let first = backend.choose("route", "code", &choices, "").await.unwrap();
     assert_eq!(first.action, "baseline");
-    assert_eq!(first.decision.mode, "baseline");
-    backend
-        .rewarddecision(first.decision.id, 0.5, 10)
-        .await
-        .unwrap();
+    let decision = first.decision.as_ref().unwrap();
+    assert_eq!(decision.mode, "baseline");
+    backend.rewarddecision(decision.id, 0.5, 10).await.unwrap();
 
     let mut learned = None;
     for _ in 0..120 {
         let choice = backend.choose("route", "code", &choices, "").await.unwrap();
         let reward = if choice.action == "better" { 1.0 } else { 0.5 };
+        let decision = choice.decision.as_ref().unwrap();
         backend
-            .rewarddecision(choice.decision.id, reward, 10)
+            .rewarddecision(decision.id, reward, 10)
             .await
             .unwrap();
-        if choice.decision.mode == "learned" {
+        if decision.mode == "learned" {
             learned = Some(choice);
             break;
         }
@@ -838,18 +837,16 @@ async fn policy_learns_quietly_and_rolls_back_a_regression() {
 
     for _ in 0..3 {
         let choice = backend.choose("route", "code", &choices, "").await.unwrap();
-        assert_eq!(choice.decision.mode, "learned");
-        backend
-            .rewarddecision(choice.decision.id, 0.0, 10)
-            .await
-            .unwrap();
+        let decision = choice.decision.as_ref().unwrap();
+        assert_eq!(decision.mode, "learned");
+        backend.rewarddecision(decision.id, 0.0, 10).await.unwrap();
     }
     let state = backend.policystates().await.unwrap().remove(0);
     assert_eq!(state.regressions, 1);
     assert!(state.disableduntil > state.updated);
     let fallback = backend.choose("route", "code", &choices, "").await.unwrap();
     assert_eq!(fallback.action, "baseline");
-    assert_eq!(fallback.decision.mode, "shadow");
+    assert_eq!(fallback.decision.unwrap().mode, "shadow");
 }
 
 #[tokio::test]
@@ -860,12 +857,33 @@ async fn policy_context_is_bounded_classification_not_task_text() {
         .choose("route", secret, &["local".to_owned()], "")
         .await
         .unwrap();
-    assert_eq!(choice.decision.context, "default");
-    assert!(
-        !serde_json::to_string(&choice.decision)
-            .unwrap()
-            .contains(secret)
-    );
+    let decision = choice.decision.unwrap();
+    assert_eq!(decision.context, "default");
+    assert!(!serde_json::to_string(&decision).unwrap().contains(secret));
+}
+
+#[tokio::test]
+async fn the_master_switch_restores_fallback_and_stops_outcome_collection() {
+    let (_folder, backend) = backend().await;
+    let choices = vec!["baseline".to_owned(), "other".to_owned()];
+    backend.setadaptive(false).await.unwrap();
+
+    let fallback = backend.choose("route", "code", &choices, "").await.unwrap();
+    assert_eq!(fallback.action, "baseline");
+    assert!(fallback.decision.is_none());
+    assert!(backend.policydecisions(10).await.unwrap().is_empty());
+
+    backend.setadaptive(true).await.unwrap();
+    let observed = backend.choose("route", "code", &choices, "").await.unwrap();
+    let id = observed.decision.unwrap().id;
+    backend.rewarddecision(id, 0.5, 10).await.unwrap();
+
+    backend.setadaptive(false).await.unwrap();
+    let unchanged = backend.rewarddecision(id, 1.0, 20).await.unwrap();
+    assert_eq!(unchanged.reward, Some(0.5));
+    let arm = backend.policyarms().await.unwrap().remove(0);
+    assert_eq!(arm.trials, 1);
+    assert_eq!(arm.reward, 0.5);
 }
 
 #[tokio::test]
@@ -875,16 +893,11 @@ async fn a_late_revision_after_reset_updates_only_the_audit_trail() {
         .choose("route", "code", &["local".to_owned()], "")
         .await
         .unwrap();
-    backend
-        .rewarddecision(choice.decision.id, 0.5, 10)
-        .await
-        .unwrap();
+    let decision = choice.decision.unwrap();
+    backend.rewarddecision(decision.id, 0.5, 10).await.unwrap();
     backend.resetpolicy("route", "code").await.unwrap();
 
-    let revised = backend
-        .rewarddecision(choice.decision.id, 1.0, 20)
-        .await
-        .unwrap();
+    let revised = backend.rewarddecision(decision.id, 1.0, 20).await.unwrap();
     assert_eq!(revised.reward, Some(1.0));
     assert!(backend.policyarms().await.unwrap().is_empty());
     assert!(backend.policystates().await.unwrap().is_empty());

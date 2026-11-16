@@ -78,6 +78,7 @@ pub struct Dashboard {
     pendingbackend: bool,
     appmenu: Option<Entity<MenuBar>>,
     optimization: Optimization,
+    adaptiveenabled: bool,
     meshenabled: bool,
     meshshowoffline: bool,
     learnenabled: bool,
@@ -347,6 +348,7 @@ impl Dashboard {
             notice = Notice::Error(format!("Could not create SOUL.md: {error}"));
         }
         let learnenabled = settings.learn;
+        let adaptiveenabled = settings.adaptive;
         let knowledgeenabled = settings.knowledge;
         let workerlimit = settings.workers;
         Self {
@@ -395,6 +397,7 @@ impl Dashboard {
             pendingbackend: false,
             appmenu,
             optimization,
+            adaptiveenabled,
             meshenabled: meshdata.enabled,
             meshshowoffline: false,
             learnenabled,
@@ -1729,6 +1732,7 @@ impl Dashboard {
                         this.logtriggers = data.triggers;
                         this.logroutes = data.routes;
                         this.logcapabilities = data.capabilities;
+                        this.adaptiveenabled = data.adaptive;
                         this.logpolicies = data.policies;
                         this.logdecisions = data.decisions;
                         this.logserror = None;
@@ -1791,6 +1795,26 @@ impl Dashboard {
                 ))
             }
             Err(error) => Notice::Error(format!("Could not change the worker limit: {error}")),
+        };
+        cx.notify();
+    }
+
+    fn setadaptive(&mut self, enabled: bool, cx: &mut Context<Self>) {
+        let database = self.database.clone();
+        let result = block(async {
+            let brain = synapsecore::brain::Brain::open(database).await?;
+            brain.setadaptive(enabled).await
+        });
+        self.notice = match result {
+            Ok(()) => {
+                self.adaptiveenabled = enabled;
+                Notice::Success(if enabled {
+                    "Adaptive routing on. Synapse will quietly resume learning from eligible choices."
+                } else {
+                    "Adaptive routing off. Deterministic selection is active; existing history is retained."
+                }.to_owned())
+            }
+            Err(error) => Notice::Error(format!("Could not change adaptive routing: {error}")),
         };
         cx.notify();
     }
@@ -3276,6 +3300,7 @@ impl Dashboard {
                         triggers: self.logtriggers.clone(),
                         routes: self.logroutes.clone(),
                         capabilities: self.logcapabilities.clone(),
+                        adaptive: self.adaptiveenabled,
                         policies: self.logpolicies.clone(),
                         decisions: self.logdecisions.clone(),
                         paused: self.logspaused,
@@ -3578,6 +3603,7 @@ impl Dashboard {
                 .child(settings::render(
                     settings::View {
                         optimization: self.optimization,
+                        adaptive: self.adaptiveenabled,
                         mesh: self.meshenabled,
                         learn: self.learnenabled,
                         knowledge: self.knowledgeenabled,
@@ -3600,6 +3626,12 @@ impl Dashboard {
                         pendingguidance: self.pendingguidance,
                     },
                     settings::Actions {
+                        adaptiveon: Box::new(
+                            cx.listener(|this, _, _, cx| this.setadaptive(true, cx)),
+                        ),
+                        adaptiveoff: Box::new(
+                            cx.listener(|this, _, _, cx| this.setadaptive(false, cx)),
+                        ),
                         meshon: Box::new(cx.listener(|this, _, _, cx| this.setmesh(true, cx))),
                         meshoff: Box::new(cx.listener(|this, _, _, cx| this.setmesh(false, cx))),
                         setworkers: {
@@ -3909,6 +3941,7 @@ struct LogData {
     triggers: Vec<synapsecore::backend::Trigger>,
     routes: Vec<synapsecore::backend::Route>,
     capabilities: Vec<synapsecore::backend::Capability>,
+    adaptive: bool,
     policies: Vec<synapsecore::backend::PolicyState>,
     decisions: Vec<synapsecore::backend::PolicyDecision>,
 }
@@ -3948,6 +3981,7 @@ fn loadlogs(
         let triggers = backend.triggers().await?;
         let routes = backend.routes().await?;
         let capabilities = backend.capabilities().await?;
+        let adaptive = backend.adaptive().await?;
         let policies = backend.policystates().await?;
         let decisions = backend.policydecisions(50).await?;
         Ok(LogData {
@@ -3960,6 +3994,7 @@ fn loadlogs(
             triggers,
             routes,
             capabilities,
+            adaptive,
             policies,
             decisions,
         })
@@ -4198,6 +4233,7 @@ fn loadvaults(database: &std::path::Path) -> anyhow::Result<VaultData> {
 struct Startup {
     stats: Stats,
     optimization: Optimization,
+    adaptive: bool,
     mesh: bool,
     learn: bool,
     knowledge: bool,
@@ -4212,6 +4248,7 @@ impl Default for Startup {
         Self {
             stats: Stats::default(),
             optimization: Optimization::default(),
+            adaptive: true,
             mesh: false,
             learn: false,
             knowledge: false,
@@ -4236,6 +4273,7 @@ fn readsettings(brain: Option<&Brain>) -> Startup {
         Ok(Startup {
             stats: brain.stats().await.unwrap_or_default(),
             optimization: settings.optimization,
+            adaptive: brain.adaptive().await.unwrap_or(true),
             mesh: brain.mesh().await.unwrap_or(false),
             learn: brain.learn().await.unwrap_or(false),
             knowledge: brain.knowledge().await.unwrap_or(false),

@@ -40,6 +40,16 @@ pub async fn writelearn(pool: &SqlitePool, enabled: bool) -> Result<()> {
     writevalue(pool, "learn", if enabled { "on" } else { "off" }).await
 }
 
+/// Whether local outcomes may influence route and runner selection. On by default because the
+/// policy remains behind deterministic eligibility gates and falls back until evidence is strong.
+pub async fn adaptive(pool: &SqlitePool) -> Result<bool> {
+    Ok(value(pool, "adaptive").await?.as_deref() != Some("off"))
+}
+
+pub async fn writeadaptive(pool: &SqlitePool, enabled: bool) -> Result<()> {
+    writevalue(pool, "adaptive", if enabled { "on" } else { "off" }).await
+}
+
 /// The most background workers one session may run at once.
 ///
 /// Read at spawn time rather than baked in, because how many agents a machine
@@ -102,6 +112,16 @@ mod tests {
 
         writemaxworkers(&pool, 3).await.unwrap();
         assert_eq!(maxworkers(&pool).await.unwrap(), 3);
+    }
+
+    #[tokio::test]
+    async fn adaptive_routing_defaults_on_and_can_be_disabled() {
+        let (pool, _directory) = pool().await;
+        assert!(adaptive(&pool).await.unwrap());
+        writeadaptive(&pool, false).await.unwrap();
+        assert!(!adaptive(&pool).await.unwrap());
+        writeadaptive(&pool, true).await.unwrap();
+        assert!(adaptive(&pool).await.unwrap());
     }
 
     #[tokio::test]

@@ -174,6 +174,13 @@ only after every eligible option has enough outcomes and the measured advantage 
 large enough. A regression pauses that policy for a day, starts a fresh comparison
 window, and immediately returns selection to the deterministic fallback. No prompt
 or approval is part of this loop.</p>
+<p>Adaptive routing is on by default. The master switch immediately restores deterministic
+selection and stops recording new decisions or outcomes without deleting existing history:</p>
+<div class="codeblock"><div class="codebar"><span>sh</span><button type="button" data-copy aria-live="polite">Copy</button></div><pre><code>synapse settings adaptive off
+synapse settings adaptive on
+</code></pre></div>
+<p>The same switch is under <strong>Settings → Adaptive routing</strong>. Per-context pause and reset
+controls remain on Activity for narrower intervention.</p>
 <p>Capability decisions, runner state, route locality, permissions, and other safety
 boundaries are applied before the policy sees a choice. Learning cannot grant access
 or make an ineligible choice eligible. Run completion supplies a coarse outcome;
@@ -197,7 +204,8 @@ per line. It opens no listener and exits at end of input.</p>
 <code>artifacts</code>, <code>checkpoints</code>, <code>workspaces</code>, <code>runners</code>, <code>previews</code>, <code>events</code>,
 <code>capabilities</code>, <code>triggers</code>, <code>routes</code>, <code>evaluations</code>, and <code>policy</code>. Runner selection is
 <code>runners.select</code>; policy inspection and controls are <code>policy.decisions</code>, <code>policy.arms</code>,
-<code>policy.states</code>, <code>policy.enable</code>, and <code>policy.reset</code>.</p>
+<code>policy.states</code>, <code>policy.settings</code>, <code>policy.configure</code>, <code>policy.enable</code>, and <code>policy.reset</code>.
+<code>policy.configure</code> accepts <code>{ &quot;enabled&quot;: false }</code> for the global switch.</p>
 <h2 id="retention-and-trust">Retention and trust</h2>
 <ul>
 <li>Events retain 30 days and are capped at 50,000 rows.</li>

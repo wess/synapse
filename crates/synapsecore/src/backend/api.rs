@@ -221,6 +221,11 @@ struct PolicyToggle {
 }
 
 #[derive(Deserialize)]
+struct PolicySetting {
+    enabled: bool,
+}
+
+#[derive(Deserialize)]
 struct PreviewPut {
     id: String,
     runid: String,
@@ -722,6 +727,14 @@ pub async fn handle(backend: &Backend, request: Request) -> Response {
             }
             "policy.arms" => Response::ok(id.clone(), backend.policyarms().await?),
             "policy.states" => Response::ok(id.clone(), backend.policystates().await?),
+            "policy.settings" => {
+                Response::ok(id.clone(), json!({ "enabled": backend.adaptive().await? }))
+            }
+            "policy.configure" => {
+                let input = params::<PolicySetting>(request.params)?;
+                backend.setadaptive(input.enabled).await?;
+                Response::ok(id.clone(), json!({ "enabled": input.enabled }))
+            }
             "policy.enable" => {
                 let input = params::<PolicyToggle>(request.params)?;
                 Response::ok(

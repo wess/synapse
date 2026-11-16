@@ -657,6 +657,14 @@ impl Brain {
         crate::brain::settings::writelearn(&self.pool, enabled).await
     }
 
+    pub async fn adaptive(&self) -> Result<bool> {
+        crate::brain::settings::adaptive(&self.pool).await
+    }
+
+    pub async fn setadaptive(&self, enabled: bool) -> Result<()> {
+        crate::brain::settings::writeadaptive(&self.pool, enabled).await
+    }
+
     pub async fn preference(&self, key: &str) -> Result<Option<String>> {
         crate::brain::settings::value(&self.pool, key).await
     }

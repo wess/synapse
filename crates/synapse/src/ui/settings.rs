@@ -11,6 +11,7 @@ pub type Click = Box<dyn Fn(&ClickEvent, &mut Window, &mut App) + 'static>;
 
 pub struct View {
     pub optimization: Optimization,
+    pub adaptive: bool,
     pub mesh: bool,
     pub learn: bool,
     pub knowledge: bool,
@@ -27,6 +28,8 @@ pub struct View {
 }
 
 pub struct Actions {
+    pub adaptiveon: Click,
+    pub adaptiveoff: Click,
     pub meshon: Click,
     pub meshoff: Click,
     pub knowledgeon: Click,
@@ -54,6 +57,8 @@ pub fn render(view: View, actions: Actions, cx: &App) -> AnyElement {
     let border = theme.border().hsla();
     let surface = theme.surface().hsla();
     let Actions {
+        adaptiveon,
+        adaptiveoff,
         meshon,
         meshoff,
         knowledgeon,
@@ -208,6 +213,13 @@ pub fn render(view: View, actions: Actions, cx: &App) -> AnyElement {
                             .dimmed(),
                         ),
                 )
+                .child(adaptivepanel(
+                    view.adaptive,
+                    adaptiveon,
+                    adaptiveoff,
+                    border,
+                    surface,
+                ))
                 .child(meshpanel(view.mesh, meshon, meshoff, border, surface))
                 .child(knowledgepanel(view.knowledge, knowledgeon, knowledgeoff, border, surface))
                 .child(learnpanel(view.learn, learnon, learnoff, border, surface))
@@ -339,6 +351,90 @@ pub fn render(view: View, actions: Actions, cx: &App) -> AnyElement {
                                 ),
                         ),
                 ),
+        )
+        .into_any_element()
+}
+
+/// Master control for outcome-driven choice ranking. It is on by default, but unlike the
+/// per-context controls on Activity this switch also stops collecting new outcomes.
+fn adaptivepanel(
+    enabled: bool,
+    on: Click,
+    off: Click,
+    border: gpui::Hsla,
+    surface: gpui::Hsla,
+) -> AnyElement {
+    div()
+        .rounded(px(6.0))
+        .border_1()
+        .border_color(border)
+        .bg(surface)
+        .p(px(16.0))
+        .flex()
+        .flex_col()
+        .gap(px(13.0))
+        .child(
+            div()
+                .flex()
+                .items_start()
+                .justify_between()
+                .gap(px(24.0))
+                .child(
+                    div()
+                        .flex_1()
+                        .min_w(px(0.0))
+                        .flex()
+                        .flex_col()
+                        .gap(px(4.0))
+                        .child(
+                            div()
+                                .flex()
+                                .items_center()
+                                .gap(px(8.0))
+                                .child(Icon::new(IconName::BrainCircuit).size(Size::Sm))
+                                .child(Text::new("Adaptive routing").size(Size::Sm).bold()),
+                        )
+                        .child(
+                            Text::new(
+                                "Quietly learns which eligible routes and runners work best from ordinary outcomes.",
+                            )
+                            .size(Size::Xs)
+                            .dimmed(),
+                        ),
+                )
+                .child(
+                    Badge::new(if enabled { "On" } else { "Off" }).color(if enabled {
+                        ColorName::Teal
+                    } else {
+                        ColorName::Gray
+                    }),
+                ),
+        )
+        .child(
+            div()
+                .flex()
+                .gap(px(10.0))
+                .child(option(
+                    "adaptive",
+                    "Off",
+                    "Deterministic order · records no new outcomes",
+                    !enabled,
+                    off,
+                ))
+                .child(option(
+                    "adaptive",
+                    "On",
+                    "Learns in the background · eligible choices only",
+                    enabled,
+                    on,
+                )),
+        )
+        .child(
+            Text::new(
+                "Turning this off keeps existing history and immediately restores deterministic selection. Per-context pause and reset controls remain on Activity.",
+            )
+            .size(Size::Xs)
+            .dimmed(),
         )
         .into_any_element()
 }

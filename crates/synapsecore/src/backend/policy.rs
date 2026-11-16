@@ -18,6 +18,16 @@ use anyhow::{Context, Result};
 pub(crate) use self::rank::cleancontext;
 
 impl Backend {
+    /// The master switch for outcome-driven selection. It defaults on and retains history when
+    /// disabled so re-enabling can resume without a new warm-up.
+    pub async fn adaptive(&self) -> Result<bool> {
+        crate::brain::settings::adaptive(&self.pool).await
+    }
+
+    pub async fn setadaptive(&self, enabled: bool) -> Result<()> {
+        crate::brain::settings::writeadaptive(&self.pool, enabled).await
+    }
+
     /// Rank choices that have already passed the caller's deterministic filters.
     ///
     /// The first choice is the baseline. Calling this with a different order changes the fallback,
@@ -35,6 +45,12 @@ impl Backend {
         let baseline = choices
             .first()
             .context("policy needs at least one eligible choice")?;
+        if !self.adaptive().await? {
+            return Ok(PolicyChoice {
+                action: baseline.clone(),
+                decision: None,
+            });
+        }
         let now = now();
         let state = store::state(&self.pool, kind, &context).await?;
         let arms = store::arms(&self.pool, kind, &context, &choices).await?;
@@ -107,7 +123,7 @@ impl Backend {
         store::prune(&self.pool, now).await?;
         Ok(PolicyChoice {
             action: selected,
-            decision,
+            decision: Some(decision),
         })
     }
 
@@ -118,9 +134,12 @@ impl Backend {
         context: &str,
         action: &str,
         runid: &str,
-    ) -> Result<PolicyDecision> {
+    ) -> Result<Option<PolicyDecision>> {
         validlabel(kind, "policy kind")?;
         validaction(action)?;
+        if !self.adaptive().await? {
+            return Ok(None);
+        }
         let context = cleancontext(context);
         let now = now();
         let decision = sqlx::query_as(
@@ -139,7 +158,7 @@ impl Backend {
     .fetch_one(&self.pool)
         .await?;
         store::prune(&self.pool, now).await?;
-        Ok(decision)
+        Ok(Some(decision))
     }
 
     /// Attach or revise an outcome. Revisions adjust aggregates by their delta instead of counting
@@ -154,6 +173,13 @@ impl Backend {
             (0.0..=1.0).contains(&reward),
             "policy reward must be between 0 and 1"
         );
+        if !self.adaptive().await? {
+            return sqlx::query_as("SELECT * FROM policydecision WHERE id=?")
+                .bind(id)
+                .fetch_optional(&self.pool)
+                .await?
+                .context("policy decision does not exist");
+        }
         let mut transaction = self.pool.begin_with("BEGIN IMMEDIATE").await?;
         let current: PolicyDecision = sqlx::query_as("SELECT * FROM policydecision WHERE id=?")
             .bind(id)
@@ -303,6 +329,9 @@ impl Backend {
     }
 
     pub(crate) async fn rewardrun(&self, runid: &str, reward: f64, duration: i64) -> Result<()> {
+        if !self.adaptive().await? {
+            return Ok(());
+        }
         let ids: Vec<i64> = sqlx::query_scalar(
             "SELECT MAX(id) FROM policydecision WHERE runid=? AND kind IN ('runner','route') \
              GROUP BY kind",

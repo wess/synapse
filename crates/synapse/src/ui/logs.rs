@@ -35,6 +35,7 @@ pub struct View {
     pub triggers: Vec<Trigger>,
     pub routes: Vec<Route>,
     pub capabilities: Vec<Capability>,
+    pub adaptive: bool,
     pub policies: Vec<PolicyState>,
     pub decisions: Vec<PolicyDecision>,
     pub paused: bool,
@@ -72,6 +73,7 @@ pub fn render(view: View, actions: Actions, cx: &App) -> AnyElement {
         triggers,
         routes,
         capabilities,
+        adaptive,
         policies,
         decisions,
         paused,
@@ -226,6 +228,7 @@ pub fn render(view: View, actions: Actions, cx: &App) -> AnyElement {
                                     surface,
                                 ))
                                 .child(policy_panel(
+                                    adaptive,
                                     policies,
                                     decisions,
                                     togglepolicy,
@@ -656,6 +659,7 @@ fn automation_panel(
 }
 
 fn policy_panel(
+    adaptive: bool,
     policies: Vec<PolicyState>,
     decisions: Vec<PolicyDecision>,
     toggle: PolicyToggle,
@@ -667,6 +671,11 @@ fn policy_panel(
         .iter()
         .filter(|decision| decision.reward.is_some())
         .count();
+    let detail = if adaptive {
+        format!("{count} recent outcomes")
+    } else {
+        "off · history retained".to_owned()
+    };
     div()
         .w(px(330.0))
         .rounded(px(8.0))
@@ -676,10 +685,15 @@ fn policy_panel(
         .overflow_hidden()
         .child(panel_header(
             "Learning",
-            &format!("{count} recent outcomes"),
+            &detail,
             IconName::BrainCircuit,
         ))
-        .when(policies.is_empty(), |element| {
+        .when(!adaptive, |element| {
+            element.child(empty(
+                "Adaptive routing is off in Settings. Deterministic selection is active and no new outcomes are recorded.",
+            ))
+        })
+        .when(adaptive && policies.is_empty(), |element| {
             element.child(empty(
                 "Learning stays quiet until ordinary runs and routes produce outcomes.",
             ))
@@ -747,6 +761,7 @@ fn policy_panel(
                                     .variant(Variant::Subtle)
                                     .color(ColorName::Gray)
                                     .size(Size::Xs)
+                                    .disabled(!adaptive)
                                     .on_click(
                                         move |event, window, cx| {
                                             toggle(

@@ -413,5 +413,5 @@ impl PolicyState {
 #[derive(Clone, Debug, Serialize, JsonSchema, PartialEq)]
 pub struct PolicyChoice {
     pub action: String,
-    pub decision: PolicyDecision,
+    pub decision: Option<PolicyDecision>,
 }

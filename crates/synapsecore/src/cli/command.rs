@@ -157,10 +157,11 @@ Commands:
   statusline                       Print one status line for a connected tool
   compact                          Answer a tool's pre-compaction hook
   doctor [--json]                  Report everything a bug report needs
-  settings show                    Show recall, mesh, and shell settings
+  settings show                    Show recall, routing, mesh, and shell settings
   settings optimize <full|balanced|lean>
                                    Set the MCP recall response budget
   settings mesh <on|off>           Turn the agent mesh tools on or off
+  settings adaptive <on|off>       Let local outcomes improve route and runner choices
   settings knowledge <on|off>      Share repository guides with connected agents
   settings learn <on|off>          Let agents write and correct skills
   settings workers <count>         Most background workers one session may run
@@ -737,7 +738,7 @@ fn settings(arguments: &[OsString]) -> Result<Outcome> {
     let action = textarg(
         arguments,
         0,
-        "usage: synapse settings <show|optimize|mesh|learn|knowledge|workers|price>",
+        "usage: synapse settings <show|optimize|adaptive|mesh|learn|knowledge|workers|price>",
     )?;
     let runtime = runtime()?;
     let brain = runtime.block_on(crate::brain::Brain::open(crate::files::database()?))?;
@@ -752,6 +753,14 @@ fn settings(arguments: &[OsString]) -> Result<Outcome> {
                     .characterbudget
                     .map(|value| value.to_string())
                     .unwrap_or_else(|| "unlimited".to_owned())
+            );
+            println!(
+                "adaptive routing\t{}",
+                if runtime.block_on(brain.adaptive())? {
+                    "on"
+                } else {
+                    "off"
+                }
             );
             println!(
                 "mesh\t{}",
@@ -784,6 +793,25 @@ fn settings(arguments: &[OsString]) -> Result<Outcome> {
             );
             println!("shell modes\tcommand-scoped, ambient directory");
             println!("zsh hook\teval \"$(synapse hook zsh)\"");
+        }
+        "adaptive" => {
+            let enabled = match textarg(arguments, 1, "usage: synapse settings adaptive <on|off>")?
+                .as_str()
+            {
+                "on" => true,
+                "off" => false,
+                value => anyhow::bail!("expected `on` or `off`, got `{value}`"),
+            };
+            runtime.block_on(brain.setadaptive(enabled))?;
+            println!(
+                "Adaptive routing {}. {}",
+                if enabled { "on" } else { "off" },
+                if enabled {
+                    "Synapse will quietly resume learning from eligible choices."
+                } else {
+                    "Routes and runners now use deterministic order; existing history is retained."
+                }
+            );
         }
         "mesh" => {
             let enabled =

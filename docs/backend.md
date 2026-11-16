@@ -181,6 +181,17 @@ large enough. A regression pauses that policy for a day, starts a fresh comparis
 window, and immediately returns selection to the deterministic fallback. No prompt
 or approval is part of this loop.
 
+Adaptive routing is on by default. The master switch immediately restores deterministic
+selection and stops recording new decisions or outcomes without deleting existing history:
+
+```sh
+synapse settings adaptive off
+synapse settings adaptive on
+```
+
+The same switch is under **Settings → Adaptive routing**. Per-context pause and reset
+controls remain on Activity for narrower intervention.
+
 Capability decisions, runner state, route locality, permissions, and other safety
 boundaries are applied before the policy sees a choice. Learning cannot grant access
 or make an ineligible choice eligible. Run completion supplies a coarse outcome;
@@ -213,7 +224,8 @@ Method families mirror the CLI: `runs`, `steps`, `changes`, `reviews`, `comments
 `artifacts`, `checkpoints`, `workspaces`, `runners`, `previews`, `events`,
 `capabilities`, `triggers`, `routes`, `evaluations`, and `policy`. Runner selection is
 `runners.select`; policy inspection and controls are `policy.decisions`, `policy.arms`,
-`policy.states`, `policy.enable`, and `policy.reset`.
+`policy.states`, `policy.settings`, `policy.configure`, `policy.enable`, and `policy.reset`.
+`policy.configure` accepts `{ "enabled": false }` for the global switch.
 
 ## Retention and trust
 

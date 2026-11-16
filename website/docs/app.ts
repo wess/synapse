@@ -34,7 +34,7 @@ export const app: Page = {
         <tr><td>Mesh</td><td>Turn the agent mesh on and watch who has joined, what they report, and what they send each other.</td><td>One local preference. The roster and messages are written by the agents themselves.</td></tr>
         <tr><td>Activity</td><td>Follow runs, changed-file provenance, reviews, workspaces, runners, previews, and live harness events.</td><td>Nothing. The screen reads bounded local runtime state.</td></tr>
         <tr><td>Vaults</td><td>Manage labels, stored values, mappings, the value store itself, and approved project scopes.</td><td>Vault metadata, stored values, and <code>.synapse.yaml</code>.</td></tr>
-        <tr><td>Settings</td><td>Manage shared guidance, recall, the mesh, self-improvement, the worker limit, appearance, CLI, and shell integration.</td><td><code>SOUL.md</code>, global pointers, local preferences, the CLI launcher, and one managed shell block.</td></tr>
+        <tr><td>Settings</td><td>Manage shared guidance, recall, adaptive routing, the mesh, self-improvement, the worker limit, appearance, CLI, and shell integration.</td><td><code>SOUL.md</code>, global pointers, local preferences, the CLI launcher, and one managed shell block.</td></tr>
       </tbody>
     </table>
     <p>Success and error notices appear inside the active screen. The app does not require an account and does not send this state to a hosted service.</p>
@@ -139,6 +139,8 @@ export const app: Page = {
     <p><strong>Open shared guidance</strong> edits <code>SOUL.md</code>. <strong>Sync pointers</strong> refreshes both global files without removing unmanaged content. <strong>Consolidate guidance</strong> requires confirmation, moves existing global text into the shared file, and leaves backups before making both global files pointer-only.</p>
     <h3>Recall optimization</h3>
     <p>Full, Balanced, and Lean change the shared MCP response limit and character budget. Original memory remains untouched. Balanced is the default; exact limits are documented in <a href="../memory/#budgets">Response budgets</a>.</p>
+    <h3>Adaptive routing</h3>
+    <p>On quietly learns which already-eligible routes and runners work best from ordinary outcomes. It is the default and requires no interaction. Off immediately restores deterministic order and stops recording new decisions or outcomes; existing history is retained if you turn it on again. Narrower pause and reset controls remain on <a href="#logs">Activity</a>.</p>
     <h3>Agent mesh</h3>
     <p>Off and On switch the coordination tools for every connected tool. Off keeps the tool list at its smallest, which is why it is the default. Tools already running keep the tool list they started with, so the change applies the next time each one starts. The same switch is on the <a href="#mesh">Mesh</a> screen.</p>
     <h3>Self-improvement</h3>

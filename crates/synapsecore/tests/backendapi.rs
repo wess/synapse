@@ -216,6 +216,30 @@ async fn jsonl_exposes_background_policy_observability_and_controls() {
           "method": "policy.reset",
           "params": {"kind":"runner","context":"code"}
         }),
+        json!({
+          "version": 1,
+          "id": "settings",
+          "method": "policy.settings",
+          "params": {}
+        }),
+        json!({
+          "version": 1,
+          "id": "off",
+          "method": "policy.configure",
+          "params": {"enabled":false}
+        }),
+        json!({
+          "version": 1,
+          "id": "fallback",
+          "method": "runners.select",
+          "params": {"runid":run.id,"local":true}
+        }),
+        json!({
+          "version": 1,
+          "id": "unchanged",
+          "method": "policy.decisions",
+          "params": {"limit":10}
+        }),
     ]
     .map(|request| request.to_string())
     .join("\n");
@@ -233,6 +257,10 @@ async fn jsonl_exposes_background_policy_observability_and_controls() {
     assert_eq!(responses[2]["result"]["enabled"], false);
     assert_eq!(responses[3]["result"][0]["enabled"], false);
     assert_eq!(responses[4]["result"]["reset"], true);
+    assert_eq!(responses[5]["result"]["enabled"], true);
+    assert_eq!(responses[6]["result"]["enabled"], false);
+    assert_eq!(responses[7]["result"]["id"], "local-one");
+    assert_eq!(responses[8]["result"].as_array().unwrap().len(), 1);
 }
 
 #[test]

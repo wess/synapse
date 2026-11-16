@@ -121,8 +121,9 @@ rebuild: a live redacted event ledger, leased jobs, change provenance, reversibl
 checkpoints, isolated Git worktrees, review handoffs, comments, portable run
 bundles, content-addressed artifacts, runners, previews, default-deny capability
 decisions, triggers, model routes, evaluations, and quiet local learning that ranks
-eligible routes and runners from bounded outcome records. The native **Activity** screen
-follows work and runs;
+eligible routes and runners from bounded outcome records. Adaptive routing defaults on;
+`synapse settings adaptive off` restores deterministic selection and stops new outcome
+collection without deleting history. The native **Activity** screen follows work and runs;
 the status-bar menu keeps the current counts and latest events visible without
 opening a window.
 

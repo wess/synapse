@@ -1058,7 +1058,7 @@
       <h3>settings show</h3>
       <code>synapse settings show</code>
     </div>
-    <p>Print the active recall optimization, result limit, character budget, supported shell modes, and zsh hook example.</p>
+    <p>Print the active recall optimization, adaptive-routing state, result limit, character budget, supported shell modes, and zsh hook example.</p>
   </section>
 
   <section class="command" id="settingsoptimize">
@@ -1067,6 +1067,14 @@
       <code>synapse settings optimize &lt;full|balanced|lean&gt;</code>
     </div>
     <p>Change the shared MCP recall response budget. Stored memory is not modified.</p>
+  </section>
+
+  <section class="command" id="settingsadaptive">
+    <div>
+      <h3>settings adaptive</h3>
+      <code>synapse settings adaptive &amp;lt;on|off&amp;gt;</code>
+    </div>
+    <p>Control quiet route and runner learning. Off restores deterministic order and stops new outcome collection while retaining existing history. On is the default.</p>
   </section>
 
   <section class="command" id="settingsmesh">

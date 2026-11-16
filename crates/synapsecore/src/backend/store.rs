@@ -986,13 +986,15 @@ impl Backend {
         }
         .await;
         let duration = started.elapsed().as_millis().min(i64::MAX as u128) as i64;
-        let _ = self
-            .rewarddecision(
-                choice.decision.id,
-                if result.is_ok() { 1.0 } else { 0.0 },
-                duration,
-            )
-            .await;
+        if let Some(decision) = choice.decision {
+            let _ = self
+                .rewarddecision(
+                    decision.id,
+                    if result.is_ok() { 1.0 } else { 0.0 },
+                    duration,
+                )
+                .await;
+        }
         result
     }
 
