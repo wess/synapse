@@ -98,7 +98,7 @@ jobs:
       # notarization run with none of its assets attached yet. Drafts are
       # invisible to `releases/latest` and still accept uploads.
       - name: Create GitHub Release (draft)
-        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65
+        uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3
         with:
           tag_name: "v${{ needs.check-version.outputs.version }}"
           generate_release_notes: true
@@ -219,7 +219,7 @@ jobs:
           $uninstall = Start-Process "$env:LOCALAPPDATA/Programs/Synapse/unins000.exe" -ArgumentList '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART' -Wait -PassThru
           if ($uninstall.ExitCode -ne 0) { throw 'Uninstall failed' }
       - name: Upload Windows installer
-        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65
+        uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3
         with:
           tag_name: "v${{ needs.check-version.outputs.version }}"
           draft: true
