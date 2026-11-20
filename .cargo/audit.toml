@@ -24,8 +24,6 @@ ignore = [
   "RUSTSEC-2025-0134", # rustls-pemfile, through the HTTP client
   "RUSTSEC-2026-0173", # proc-macro-error2, through stacksafe
   "RUSTSEC-2026-0192", # ttf-parser, through text and SVG rendering
-  "RUSTSEC-2026-0194", # quick-xml, optional xcb graph
-  "RUSTSEC-2026-0195", # quick-xml, optional xcb graph
   "RUSTSEC-2026-0206", # rustybuzz, through text and SVG rendering
   "RUSTSEC-2026-0370", # zvariant, Linux platform graph
   "RUSTSEC-2026-0371", # zbus_names, Linux platform graph
