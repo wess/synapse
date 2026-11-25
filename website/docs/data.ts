@@ -59,7 +59,7 @@ synapse data check --json`)}
     <h2 id="restore">Restore a snapshot</h2>
     <ol>
       <li>Quit the Synapse desktop app.</li>
-      <li>Stop every connected MCP process by closing the relevant tool sessions.</li>
+      <li>Close all tool sessions connected to this store, including those using <a href="../devcontainer/">devcontainer SSH</a>.</li>
       <li>Run the restore command from a separate terminal.</li>
     </ol>
     ${code("shell", `synapse data restore "$HOME/Desktop/synapsebackup.db"
@@ -69,6 +69,6 @@ synapse data check`)}
 
     <h2 id="wipe">Memory wipe is not a reset</h2>
     <p><code>synapse memory wipe --confirm</code> removes every memory entry and import batch but leaves <code>SOUL.md</code>, settings, vault labels, stored values, global mappings, and scope approvals. Use it when you want a clean memory history without rebuilding guidance or credential setup.</p>
-    <p>There is no one-command factory reset. To remove Synapse completely, first forget each secret through the app or CLI, then quit all processes and remove the application, installed launcher, and data directory deliberately. On the encrypted store the data directory <em>is</em> the credential store, so removing it takes every value with it — <code>synapse uninstall --data</code> says so before it acts.</p>
+    <p>To remove Synapse completely, first <a href="../devcontainer/#revoke-access">revoke devcontainer grants</a> and forget each secret through the app or CLI. Then quit all processes and remove the application, installed launcher, and data directory deliberately. Removing the data directory also removes the encrypted vault and its key. <code>synapse uninstall --data</code> reports this before it acts.</p>
   `,
 };

@@ -60,3 +60,60 @@ RSS includes fixture generation and the benchmark process; it is not the desktop
 - A current-thread Tokio test verifies that occupied knowledge workers do not block the async executor and that a third job is refused while two are active.
 - Strict Clippy and formatting checks for the affected workspaces.
 - Windows core cross-compilation with a local Zig C compiler. Windows native runtime and filesystem behavior were not exercised on a Windows machine in this review.
+
+## Devcontainer release audit
+
+Reviewed on 2026-11-25. This review covers SSH enrollment, the host-side MCP
+session, release regressions, and all three workspace lockfiles.
+
+### Resource use
+
+- Enrollment verifies the full host store. A connection checks database
+  relationships and migrations at startup without scanning every SQLite page.
+  No Synapse background process is needed between connections.
+- Eight file-lock slots bound simultaneous SSH MCP sessions per host account.
+  A session may run two memory calls at once and refuses additional calls for
+  the client to retry. A handshake must finish within ten seconds.
+- MCP discards incoming frames over 2 MiB. Recall limits queries to 4 KiB and
+  uses Balanced or a smaller budget. Exact reads remain paginated. Writes
+  allow up to 256 KiB of content, a 2 KiB source label, and 64 correction IDs.
+
+In a synthetic loopback OpenSSH run on arm64 macOS, the debug CLI opened a
+session in 71 ms. With 128 project memories of roughly 1 KiB each, 100 sequential
+Lean recalls took 5.49 ms median and 5.83 ms p95. The host MCP process used
+23.4 MiB resident memory at one post-run sample. These figures exclude the SSH
+daemon and client. They describe this fixture rather than a whole-app
+benchmark or a bound on performance for larger stores.
+
+### Security
+
+- Each grant enrolls an owner-only Ed25519 identity and pins the host public
+  key. The authorized entry forces the restricted MCP command and disables
+  shell facilities such as forwarding and TTY allocation. Only the generated
+  client bundle is mounted in the container.
+- The server uses the host-approved project identity for search, exact reads,
+  writes, and corrections. Global memory, other projects, and vault, mesh,
+  and learning tools are outside that grant. Responses omit the absolute
+  host path used as the identity of a project with no network Git origin.
+- All three lockfiles use `url` 2.5.9 for
+  [RUSTSEC-2026-0592](https://rustsec.org/advisories/RUSTSEC-2026-0592.html).
+  The desktop audit records the maintenance-only
+  [Chrono notice](https://rustsec.org/advisories/RUSTSEC-2026-0543.html)
+  while the current MCP and schema dependencies still require it.
+  Fresh RustSec checks found no unacknowledged vulnerabilities.
+
+### Stability and validation
+
+Enrollment preserves unrelated SSH key entries and backs up changes. A rerun
+reuses the project's private key and registration. Revoking the grant blocks
+later calls, and a recreated grant gets a new identity. Close open clients
+to release their session slots and database lifecycle locks before restoring
+the store.
+
+The MCP integration test exercises forged project parameters, isolation for
+both ranked and empty-query recall, exact reads and correction IDs, resource
+limits, and revocation across grant recreation. A disposable OpenSSH daemon
+also verified host-key pinning, forced-command execution, path omission, and
+revocation for active and new sessions. A full VS Code container rebuild was
+outside this audit. See [devcontainer setup](devcontainer.md) for the
+installation and troubleshooting steps.

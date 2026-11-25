@@ -109,6 +109,7 @@ warning: Claude Code skill \`release-checklist\`: \`release-checklist\` in Claud
 
       <li>
         <h3 id="preview">Read the uninstall preview</h3>
+        <p>If you connected any devcontainers, <a href="../../docs/devcontainer/#revoke-access">revoke their SSH grants</a> before uninstalling the host CLI.</p>
         <p>Run it without <code>--confirm</code> first. It always previews:</p>
         ${code("shell", `synapse uninstall`)}
         ${code("text", `\`synapse uninstall --confirm\` would remove:

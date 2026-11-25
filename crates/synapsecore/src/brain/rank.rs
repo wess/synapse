@@ -31,7 +31,7 @@ pub(super) const CLOSE: char = '\u{3}';
 pub(super) enum Reach<'a> {
     /// What a session in this project can see: global memory, this project's,
     /// and nothing superseded.
-    Visible(&'a str),
+    Visible(&'a str, bool),
     /// Every stored memory, for a person browsing their own store.
     Everything,
 }
@@ -193,7 +193,8 @@ async fn list(
     reach: Reach<'_>,
 ) -> Result<Vec<(i64, Option<String>)>> {
     let filter = match reach {
-        Reach::Visible(_) => format!("AND {}", super::store::VISIBLE),
+        Reach::Visible(_, true) => format!("AND {}", super::store::VISIBLE),
+        Reach::Visible(_, false) => format!("AND {}", super::store::PROJECT),
         Reach::Everything => String::new(),
     };
     let sql = format!(
@@ -203,7 +204,7 @@ async fn list(
          ORDER BY bm25({table}, {WEIGHTS}) LIMIT ?"
     );
     let mut query = sqlx::query_as::<_, (i64, Option<String>)>(&sql).bind(expression);
-    if let Reach::Visible(project) = reach {
+    if let Reach::Visible(project, _) = reach {
         query = query.bind(project);
     }
     query

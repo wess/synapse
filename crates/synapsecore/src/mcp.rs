@@ -3,6 +3,8 @@ mod learn;
 mod mesh;
 mod model;
 mod server;
+#[cfg(unix)]
+pub(crate) mod ssh;
 
 /// What the tool definitions cost a session at these settings, per tool, in
 /// bytes of JSON. The mesh's sixteen and self-improvement's two are the whole

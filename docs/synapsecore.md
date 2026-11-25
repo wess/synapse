@@ -49,6 +49,8 @@ the database's advisory lock.
 
 Several local MCP processes can share the same `brain.db`. SQLite WAL coordinates
 reads, and competing memory writes are queued through the database write path.
+An [SSH-connected devcontainer](devcontainer.md) starts its MCP process on the
+host and shares the same database and lifecycle lock.
 A backup or restore still needs the lifecycle guards. Use the library or the CLI
 instead of directly editing tables: indexes, scope metadata, supersession,
 redaction, imports, and sync identities must stay consistent.

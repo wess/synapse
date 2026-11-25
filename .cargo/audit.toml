@@ -17,6 +17,8 @@
 # replacements require upstream API changes across the platform, font, HTTP,
 # and archive layers; keep the exact list here so every new warning still
 # fails CI. Recheck on every UI release and no later than 2027-02-12.
+# Chrono's notice is maintenance-only. The current MCP and schema libraries
+# still depend on it, even if Synapse replaces its own date formatting.
 ignore = [
   "RUSTSEC-2024-0384", # instant, through the UI executor
   "RUSTSEC-2024-0436", # paste, through the macOS graphics bindings
@@ -32,6 +34,7 @@ ignore = [
   "RUSTSEC-2026-0372", # zvariant_derive, Linux platform graph
   "RUSTSEC-2026-0441", # pin-utils, through async-std
   "RUSTSEC-2026-0459", # bundled SQLite; restore rejects adjacent WAL state
+  "RUSTSEC-2026-0543", # chrono, through MCP and schema libraries
 ]
 
 [output]

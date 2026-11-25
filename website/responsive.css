@@ -98,4 +98,5 @@
   .doclayout { display: block; padding: 0; background: white; }
   .article { max-width: none; }
   .codeblock { break-inside: avoid; background: #f0f0f0; color: black; }
+  .codebar { background: transparent; }
 }

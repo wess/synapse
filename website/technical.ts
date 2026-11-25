@@ -5,6 +5,7 @@ import { repositoryurl } from "./deploy";
 
 const descriptions: Record<string, string> = {
   backend: "Runs, provenance, checkpoints, workspaces, reviews, runners, previews, and the local JSONL API.",
+  devcontainer: "Connect a VS Code devcontainer to Synapse on a macOS or Linux host with project-scoped SSH access.",
   developing: "Build, test, document, and publish each Synapse surface from its own workspace.",
   synapsecore: "The shipped core library, its public modules, storage boundary, and independent build.",
   embedding: "Choose MCP, CLI automation, or the Rust library, and preserve scope and response budgets.",

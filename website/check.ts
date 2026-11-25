@@ -78,7 +78,7 @@ for (const file of htmlfiles) {
 }
 
 const home = await Bun.file(join(output, "index.html")).text();
-for (const target of ["docs/install/", "docs/memory/", "docs/skills/", "docs/mesh/", "docs/security/", "tutorials/continuity/"]) {
+for (const target of ["docs/install/", "docs/devcontainer/", "docs/memory/", "docs/skills/", "docs/mesh/", "docs/security/", "tutorials/continuity/"]) {
   if (!home.includes(`href="${target}"`)) fail(`landing page is missing entry point: ${target}`);
 }
 if (!home.includes(downloadurl)) fail("landing page is missing its release download");
