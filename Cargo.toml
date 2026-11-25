@@ -23,7 +23,7 @@ guise-ui = { version = "=1.10.0", default-features = false }
 # tray-icon, rmcp, and the rest) stay in the package that needs them, so a
 # server build never resolves them.
 anyhow = "1.0"
-base64 = "0.22"
+base64 = "0.23"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 sha2 = "0.10"
