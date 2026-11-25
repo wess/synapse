@@ -10,14 +10,15 @@ daemon are not shipped interfaces.
 | Interface | Use it for | Boundary |
 | --- | --- | --- |
 | `synapse mcp` | A tool with an MCP stdio client | The same scoped tools as the desktop's connections |
+| [SSH over MCP stdio](devcontainer.md) | A tool inside a devcontainer | Recall, read, and correct memory for one approved project |
 | `synapse memory …` | Shell workflows and local automation | Owner-facing management commands; not a scoped client sandbox |
 | `synapsecore` | A Rust application embedding the implementation | In-process access with the caller's local account permissions |
 | `synapse-pi` | The supported terminal bridge | Starts the MCP server and discovers its tools |
 | `synapseserve` | An optional encrypted replication log | Opaque envelopes; no search or recall endpoint |
 
-No shared background service is required. Each MCP connection starts a local
-process; the processes coordinate through the same SQLite database. A network
-outage does not affect ordinary local memory.
+Each MCP connection starts a process on the machine holding the SQLite
+database. Same-machine clients use stdio directly. Devcontainer clients use
+OpenSSH to reach that host and depend on that connection for access.
 
 ## Rust example
 
@@ -77,10 +78,10 @@ let memory = brain.memory(id).await?.expect("stored memory");
 let evidence = brain.evidence(&[memory], Some(&project)).await?;
 ```
 
-The project argument is an absolute working-project path, not a repository key
-supplied by the caller. Synapse resolves it to the repository identity. A scoped
-recall includes that project's current records and global records, excluding
-unrelated projects and superseded history.
+Local MCP and library callers supply an absolute working-project path. Synapse
+resolves it to the repository identity and recalls current project and global
+records. A devcontainer grant fixes the identity on the host and returns only
+current records for that project.
 
 ## Discovery and exact evidence
 

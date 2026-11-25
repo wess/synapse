@@ -1,6 +1,8 @@
 mod backend;
 mod command;
 mod connect;
+#[cfg(unix)]
+mod devcontainer;
 mod doctor;
 mod drift;
 mod editor;

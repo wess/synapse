@@ -31,6 +31,10 @@ Commands:
   mcp get <source:id> [--name <name>]
                                    Add a found server to the library
   mcp run <name>                   Start a library server (what tools run)
+  devcontainer setup [--project <folder>] [--host <name>] [--port <n>] [--host-key <file>]
+                                   Grant one devcontainer SSH access to project memory
+  devcontainer revoke [--project <folder> | --id <id>]
+                                   Revoke a devcontainer grant
   launch <tool> [-- <flags>]       Start a tool wired into memory and the vault
   run -- <command> [arguments]     Run with resolved vault variables
   mux [--as <name>] [--team <team>]
@@ -213,6 +217,12 @@ pub fn run(arguments: Vec<OsString>) -> Result<Outcome> {
             Ok(Outcome::Exit(0))
         }
         "mcp" => super::servers::run(rest),
+        "devcontainer" => {
+            #[cfg(unix)]
+            return super::devcontainer::run(rest);
+            #[cfg(not(unix))]
+            anyhow::bail!("devcontainer SSH setup requires a macOS or Linux host")
+        }
         "run" => {
             let status = runtime()?.block_on(crate::vault::run(rest.to_vec()))?;
             Ok(Outcome::Exit(status.code().unwrap_or(1)))

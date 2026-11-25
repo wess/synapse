@@ -43,6 +43,8 @@ bun run check
 ```
 
 See [Windows](windows.md) for the installer toolchain and platform smoke check.
+The Unix [devcontainer](devcontainer.md) integration test uses `ssh-keygen` from
+OpenSSH. Run it with `cargo test --locked --manifest-path crates/synapsecore/Cargo.toml --test mcp devcontainer`.
 
 ## Work on the website
 

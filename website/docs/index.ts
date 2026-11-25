@@ -14,7 +14,7 @@ export const overview: Page = {
   body: `
     <h2 id="model">The model</h2>
     <p>Synapse is a local service with two deliberately separate jobs. Its <strong>memory layer</strong> gives connected developer tools one durable, searchable context store. Its <strong>vault layer</strong> gives commands or opted-in shells carefully scoped environment variables while keeping secret values sealed in a store of their own.</p>
-    <p>The desktop app is the control surface. The CLI exposes the same memory, vault, scope, settings, and data-lifecycle operations. The MCP stdio server exposes four core tools: <code>remember</code>, <code>recall</code>, <code>readmemory</code>, and value-free <code>vaultstatus</code>. Optional learning tools support reviewed skills and feedback; the <strong>agent mesh</strong> adds coordination, roles, teams, and bounded workers.</p>
+    <p>The desktop app is the control surface. The CLI exposes the same memory, vault, scope, settings, and data-lifecycle operations. The local MCP stdio server exposes four core tools: <code>remember</code>, <code>recall</code>, <code>readmemory</code>, and value-free <code>vaultstatus</code>. Optional learning tools support reviewed skills and feedback; the <strong>agent mesh</strong> adds coordination, roles, teams, and bounded workers.</p>
 
     <h2 id="stores">What Synapse stores</h2>
     <table>
@@ -47,6 +47,8 @@ export const overview: Page = {
     <dl>
       <dt>I want to use Synapse now.</dt>
       <dd>Follow <a href="../tutorials/connect/">Install and connect your first tools</a>. It covers download, first launch, the CLI, supported harnesses, and a working recall check.</dd>
+      <dt>I run my tools in a VS Code devcontainer.</dt>
+      <dd>Follow <a href="devcontainer/">the devcontainer guide</a> to connect to your host's project memory over SSH.</dd>
       <dt>I use a different coding harness.</dt>
       <dd>See <a href="harnesses/">supported and custom harnesses</a>. Create a <code>.synapse/tools/mytool.toml</code> descriptor, connect it, and contribute it through a PR.</dd>
       <dt>I want to manage Synapse from the app.</dt>

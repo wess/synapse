@@ -4,10 +4,11 @@ import type { Page } from "../types";
 export const mcp: Page = {
   path: "docs/mcp/index.html",
   title: "MCP tool reference",
-  description: "Run the local stdio server and understand the exact request, response, and value boundary of every exposed tool.",
+  description: "Connect over stdio locally or through SSH in a devcontainer, and understand the tools and their scope.",
   kind: "docs",
   toc: [
     { label: "Server", id: "server" },
+    { label: "Devcontainer sessions", id: "devcontainers" },
     { label: "Session start", id: "sessionstart" },
     { label: "Before compaction", id: "compaction" },
     { label: "remember", id: "remember" },
@@ -23,6 +24,15 @@ export const mcp: Page = {
     <p>Synapse implements an MCP stdio server. A tool launches the same signed or installed executable with the <code>mcp</code> argument:</p>
     ${code("shell", `~/.local/bin/synapse mcp`)}
     <p>The process uses stdin and stdout for protocol messages. Do not wrap it in a command that writes banners or shell setup output to stdout. The server opens the same local database as the desktop app and holds a shared lifecycle lock while connected.</p>
+
+    <h2 id="devcontainers">Devcontainer sessions</h2>
+    <p>A <a href="../devcontainer/">devcontainer SSH grant</a> starts a separate stdio MCP session on the host. It shares the host database and its lifecycle lock. The grant fixes the project identity, so tool parameters and container paths cannot select a different project.</p>
+    <ul>
+      <li><code>recall</code> accepts <code>query</code> and optional <code>limit</code> and <code>budget</code> fields.</li>
+      <li><code>readmemory</code> accepts <code>id</code> and optional <code>offset</code> and <code>budget</code> fields.</li>
+      <li><code>remember</code> accepts <code>content</code> and optional <code>source</code> and <code>supersedes</code> fields.</li>
+    </ul>
+    <p>Reads and corrections stay inside the approved project. The startup command registers these tools and the MCP server supplies instructions to recall relevant memory. The sections below describe the local server.</p>
 
     <h2 id="sessionstart">Session start</h2>
     <p>Connecting Claude Code also installs a <code>SessionStart</code> hook that runs <code>synapse session</code>. It does two things a tool cannot do for itself: it prints a line in the terminal before the model has written anything, and it puts this project's memory into the session's context before the first turn. A connected pi runs the same command from its extension and shows the same two halves.</p>
