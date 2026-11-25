@@ -27,3 +27,5 @@ pub use redact::{Redacted, redact};
 pub use scope::{projectkey, projectroot};
 pub use store::Brain;
 pub(crate) use store::COLUMNS;
+#[cfg(unix)]
+pub(crate) use store::MAXBODY;

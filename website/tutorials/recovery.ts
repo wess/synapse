@@ -62,7 +62,7 @@ synapse memory list synapserecovery`)}
 
       <li>
         <h3 id="stop">Stop every database user</h3>
-        <p>Quit the Synapse desktop app. Close every connected session so its <code>synapse mcp</code> child process exits. A plain CLI command releases its lock when it finishes, so nothing needs doing about those.</p>
+        <p>Quit the Synapse desktop app and close every connected tool session, including ones in <a href="../../docs/devcontainer/">devcontainers</a>, so their MCP processes exit. CLI commands release the lock when they finish.</p>
         <p>Reading the database takes a shared lock; restoring requires an exclusive one. If you deliberately leave a session open, the next step will refuse and tell you to close the app and connected tools.</p>
         ${note("Do not work around the lock", "The refusal is not a formality. Replacing a database file underneath a process that has it open is how a store gets corrupted in a way no integrity check can undo. If restore refuses, find the process that is still holding it.")}
       </li>

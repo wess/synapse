@@ -62,6 +62,22 @@ impl Brain {
         budget: Option<Optimization>,
         project: Option<&Path>,
     ) -> Result<ReadResponse> {
+        let project = project
+            .map(crate::brain::projectkey)
+            .transpose()?
+            .flatten()
+            .unwrap_or_default();
+        self.readkeyed(id, offset, budget, &project, true).await
+    }
+
+    pub(crate) async fn readkeyed(
+        &self,
+        id: i64,
+        offset: u32,
+        budget: Option<Optimization>,
+        project: &str,
+        globals: bool,
+    ) -> Result<ReadResponse> {
         anyhow::ensure!(id > 0, "memory id must be positive");
         let configured = self.settings().await?;
         let optimization = configured.optimization.constrained(budget);
@@ -69,11 +85,6 @@ impl Brain {
             .characterbudget
             .unwrap_or(PAGEBYTES)
             .min(PAGEBYTES);
-        let project = project
-            .map(crate::brain::projectkey)
-            .transpose()?
-            .flatten()
-            .unwrap_or_default();
         // slice in SQLite so a small read never loads the entire body into Rust.
         // blobs preserve embedded NULs; SQLite's text length stops at the first one.
         let row = sqlx::query_as::<_, PageRow>(
@@ -84,13 +95,14 @@ impl Brain {
              length(CAST(memory.body AS BLOB)) AS total \
              FROM memory JOIN memorymeta meta ON meta.memoryid = memory.rowid \
              WHERE memory.rowid = ?1 AND meta.superseded = 0 AND \
-             (meta.scope = 'global' OR (meta.scope = 'project' AND meta.project = ?2))",
+             ((?6 AND meta.scope = 'global') OR (meta.scope = 'project' AND meta.project = ?2))",
         )
         .bind(id)
         .bind(project)
         .bind(i64::from(offset))
         .bind(bytes as i64)
         .bind(SOURCEBYTES as i64)
+        .bind(globals)
         .fetch_optional(&self.pool)
         .await
         .context("could not read memory page")?;

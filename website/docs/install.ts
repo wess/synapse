@@ -16,6 +16,7 @@ export const install: Page = {
     { label: "Install the CLI", id: "cli" },
     { label: "Shell integration", id: "shell" },
     { label: "Connect tools", id: "tools" },
+    { label: "Devcontainers", id: "devcontainers" },
     { label: "Shared guidance", id: "guidance" },
     { label: "Manual connection", id: "manual" },
     { label: "Verify", id: "verify" },
@@ -97,6 +98,9 @@ synapse version`)}
       </tbody>
     </table>
     <p>Before changing a tool store or instruction file, Synapse creates a sibling <code>.synapsebackup</code>. If either half of setup fails, both files are restored.</p>
+
+    <h2 id="devcontainers">Connect a VS Code devcontainer</h2>
+    <p>Install Synapse on the macOS or Linux host. From the host checkout, run <code>synapse devcontainer setup</code>, merge the generated settings into the devcontainer configuration, and rebuild. Inside the container, your existing agent CLI uses OpenSSH to reach the approved project's memory. Follow the <a href="../devcontainer/">devcontainer setup guide</a>.</p>
 
     <h2 id="guidance">Use one shared guidance file</h2>
     <p>Open <strong>Settings → Shared guidance</strong>. <strong>Open shared guidance</strong> edits the central <code>SOUL.md</code>. <strong>Sync pointers</strong> creates it if needed and refreshes every global pointer while preserving every line outside Synapse's managed blocks.</p>
