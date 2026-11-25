@@ -16,6 +16,8 @@ pub(crate) const COLUMNS: &str = "memory.rowid AS id, memory.body, memory.source
 /// Restricts a read to memory a session in `project` can see: everything
 /// global, plus that project's own, and nothing that has been replaced.
 pub(super) const VISIBLE: &str = "(meta.scope = 'global' OR (meta.scope = 'project' AND meta.project = ?)) AND meta.superseded = 0";
+pub(super) const PROJECT: &str =
+    "meta.scope = 'project' AND meta.project = ? AND meta.superseded = 0";
 
 #[derive(Clone)]
 pub struct Brain {
@@ -27,10 +29,15 @@ pub struct Brain {
 
 impl Brain {
     pub async fn open(path: impl AsRef<Path>) -> Result<Self> {
-        let path = path.as_ref().to_path_buf();
-        let brain = Self::from(crate::database::open(&path).await?, path)?;
+        let brain = Self::openkeyed(path.as_ref()).await?;
         brain.rekey().await?;
         Ok(brain)
+    }
+
+    /// Opens the store with project identities as recorded, without reading
+    /// checkouts and refiling memories.
+    pub(crate) async fn openkeyed(path: &Path) -> Result<Self> {
+        Self::from(crate::database::open(path).await?, path.to_path_buf())
     }
 
     /// Open only to report on what is stored. See [`crate::database::glance`].
@@ -104,10 +111,45 @@ impl Brain {
             (false, Some(project)) => crate::brain::evidence::capture(project, sources)?,
             (false, None) => anyhow::bail!("repository evidence needs a project path"),
         };
+        let project = scope.project(project)?;
+        self.rememberkeyed(body, source, scope, &project, supersedes, &evidence, false)
+            .await
+    }
+
+    #[cfg(unix)]
+    pub(crate) async fn rememberproject(
+        &self,
+        body: &str,
+        source: Option<&str>,
+        project: &str,
+        supersedes: &[i64],
+    ) -> Result<(i64, Vec<i64>)> {
+        self.rememberkeyed(
+            body,
+            source,
+            MemoryScope::Project,
+            project,
+            supersedes,
+            &[],
+            true,
+        )
+        .await
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    async fn rememberkeyed(
+        &self,
+        body: &str,
+        source: Option<&str>,
+        scope: MemoryScope,
+        project: &str,
+        supersedes: &[i64],
+        evidence: &[crate::brain::evidence::Captured],
+        projectonly: bool,
+    ) -> Result<(i64, Vec<i64>)> {
         let body = stored(body)?;
         let body = body.as_str();
         let source = sourced(source);
-        let project = scope.project(project)?;
 
         let created = SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -136,16 +178,25 @@ impl Brain {
         for source in evidence {
             sqlx::query("INSERT INTO memoryevidence(memoryid, path, digest) VALUES (?, ?, ?)")
                 .bind(id)
-                .bind(source.path)
-                .bind(source.digest)
+                .bind(&source.path)
+                .bind(&source.digest)
                 .execute(&mut *transaction)
                 .await?;
         }
         let mut replaced = Vec::new();
         for old in supersedes {
-            let done = sqlx::query("UPDATE memorymeta SET superseded = ? WHERE memoryid = ?")
-                .bind(id)
-                .bind(old)
+            let mut update = sqlx::query(if projectonly {
+                "UPDATE memorymeta SET superseded = ? WHERE memoryid = ? AND memoryid != ? \
+                     AND scope = 'project' AND project = ? AND superseded = 0"
+            } else {
+                "UPDATE memorymeta SET superseded = ? WHERE memoryid = ?"
+            })
+            .bind(id)
+            .bind(old);
+            if projectonly {
+                update = update.bind(id).bind(project);
+            }
+            let done = update
                 .execute(&mut *transaction)
                 .await
                 .with_context(|| format!("could not supersede memory #{old}"))?;
@@ -272,15 +323,31 @@ impl Brain {
         budget: Option<Optimization>,
         project: Option<&Path>,
     ) -> Result<(Settings, Vec<Memory>, usize)> {
-        let configured = self.settings().await?;
-        let settings = Settings::from(configured.optimization.constrained(budget));
         let project = project
             .map(crate::brain::projectkey)
             .transpose()?
             .flatten()
             .unwrap_or_default();
+        self.recallkeyed(query, limit, budget, &project, true).await
+    }
+
+    pub(crate) async fn recallkeyed(
+        &self,
+        query: &str,
+        limit: u32,
+        budget: Option<Optimization>,
+        project: &str,
+        globals: bool,
+    ) -> Result<(Settings, Vec<Memory>, usize)> {
+        let configured = self.settings().await?;
+        let settings = Settings::from(configured.optimization.constrained(budget));
         let found = self
-            .searchscoped(query, limit.clamp(1, settings.resultlimit), &project)
+            .searchscoped(
+                query,
+                limit.clamp(1, settings.resultlimit),
+                project,
+                globals,
+            )
             .await?;
         let excerpts = found
             .iter()
@@ -436,6 +503,7 @@ impl Brain {
         query: &str,
         limit: u32,
         project: &str,
+        globals: bool,
     ) -> Result<Vec<(Memory, Option<rank::Hit>)>> {
         let limit = limit.clamp(1, 200);
         // A query of nothing but function words asks for nothing in particular,
@@ -447,7 +515,7 @@ impl Brain {
                 &self.pool,
                 &kept,
                 limit as usize,
-                Reach::Visible(project),
+                Reach::Visible(project, globals),
                 Purpose::Recall,
             )
             .await?;
@@ -462,12 +530,12 @@ impl Brain {
             // those. Filtering and ordering in the outer join instead lets the
             // planner drive from the full-text table, which means reading every
             // memory and sorting all of them to answer for the newest handful.
+            let filter = if globals { VISIBLE } else { PROJECT };
             sqlx::query_as::<_, Memory>(&format!(
                 "SELECT {COLUMNS} \
                  FROM memorymeta meta JOIN memory ON memory.rowid = meta.memoryid \
                  WHERE meta.memoryid IN (\
-                 SELECT memoryid FROM memorymeta \
-                 WHERE (scope = 'global' OR (scope = 'project' AND project = ?)) AND superseded = 0 \
+                 SELECT memoryid FROM memorymeta meta WHERE {filter} \
                  ORDER BY created DESC, memoryid DESC LIMIT ?) \
                  ORDER BY meta.created DESC, meta.memoryid DESC"
             ))

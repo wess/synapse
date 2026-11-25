@@ -18,6 +18,7 @@ export const tutorials: Page = {
 
     <h2 id="newcomer">Level 1 · Newcomer</h2>
     <p>You have downloaded Synapse and want one tool remembering things. Roughly an hour for both.</p>
+    <p>Working in VS Code Dev Containers? Start with <a href="../docs/devcontainer/">Synapse in a VS Code devcontainer</a>.</p>
     <ol class="steps">
       <li><h3><a href="connect/">Install and connect your first tools</a></h3><p>Start from the release archive, install the CLI, connect Codex, Claude Code, or pi, and verify all three MCP tools from the app, the terminal, and the tool itself.</p></li>
       <li><h3><a href="continuity/">Carry one decision between tools</a></h3><p>Store a confirmed convention in one tool, end the session, recover it in another, and inspect the exact record that made it across.</p></li>

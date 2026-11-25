@@ -1,7 +1,7 @@
 import type { Page } from "./types";
 
 export const sections = [
-  { title: "Start here", paths: ["docs/", "docs/install/", "docs/harnesses/", "docs/app/"] },
+  { title: "Start here", paths: ["docs/", "docs/install/", "docs/devcontainer/", "docs/harnesses/", "docs/app/"] },
   {
     title: "Reference",
     paths: [

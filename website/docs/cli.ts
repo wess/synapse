@@ -9,6 +9,7 @@ export const cli: Page = {
   toc: [
     { label: "Invocation", id: "invocation" },
     { label: "Application and server", id: "application" },
+    { label: "Devcontainers", id: "devcontainers" },
     { label: "Shell environments", id: "shell" },
     { label: "Vault and scope", id: "vault" },
     { label: "Memory", id: "memory" },
@@ -21,7 +22,7 @@ export const cli: Page = {
   ],
   body: `
     <h2 id="invocation">Invocation</h2>
-    <p>Run <code>synapse help</code> for the built-in summary. Every command answers <code>--help</code> and <code>-h</code> with its own entries — <code>synapse vault --help</code>, or <code>synapse secret set --help</code> for one line of it — and <code>synapse help &lt;command&gt;</code> is the same answer typed the other way round. After a <code>--</code> the flag belongs to the child, so <code>synapse run -- mytool --help</code> asks <code>mytool</code>. Commands print human-readable output unless a documented <code>--json</code> option is present. Errors go to stderr and return a non-zero exit status.</p>
+    <p>Run <code>synapse help</code> for the built-in summary. Every command answers <code>--help</code> and <code>-h</code> with its own entries — <code>synapse vault --help</code>, or <code>synapse secret set --help</code> for one line of it — and <code>synapse help &lt;command&gt;</code> is the same answer typed the other way round. After a <code>--</code> the flag belongs to the child, so <code>synapse run -- mytool --help</code> asks <code>mytool</code>. Command entries indicate which outputs are structured. Errors go to stderr and return a non-zero exit status.</p>
     ${note("Secret and memory input", "Secret values are never accepted as arguments. Secret set uses a hidden prompt or stdin. Memory add and edit always read their body from stdin.")}
 
     <h2 id="application">Application and server</h2>
@@ -30,6 +31,11 @@ export const cli: Page = {
     ${command("run", "synapse run -- <command> [arguments]", "Resolve global, project, and folder vault mappings for the current directory, refuse on any scope warning, read the selected values out of the vault, and launch the child. Synapse returns the child exit code, or 1 when the operating system reports no code.")}
     ${command("launch", "synapse launch &lt;claude|codex|pi&gt; [options] [-- &lt;flags&gt;]", "Start a coding tool with Synapse already in place: memory and the vault reachable over MCP, this folder's vault variables in its environment, and the project root it should treat as home. Everything after a bare <code>--</code> is passed to the tool untouched. A tool Synapse is not connected to is wired for the life of the process, so this works before setup has ever run and writes nothing into the tool's own configuration. Options: <code>--directory</code>, <code>--model</code>, <code>--allow-tool</code> (repeatable), <code>--strict</code>, <code>--no-vault</code>, <code>--skip-permissions</code>, <code>--as &lt;name&gt;</code> with <code>--role</code>, <code>--task</code>, and <code>--channel</code> to join the mesh as well, and <code>--print</code> to show the resolved command and environment names without running anything. Refuses on any scope warning, and never prints a secret value.")}
     ${command("status", "synapse status [folder] [--json]", "Show the resolved folder, available environment names, discovered scope states, warnings, ambient readiness, and detected shell hook. Reports which value store this machine uses and never a value. The folder defaults to the current directory.")}
+
+    <h2 id="devcontainers">Devcontainers</h2>
+    <p>Run both commands on the macOS or Linux SSH host. See the <a href="../devcontainer/">devcontainer setup guide</a> for prerequisites, mounts, and networking.</p>
+    ${command("devcontainer setup", "synapse devcontainer setup [--project &lt;folder&gt;] [--host &lt;name&gt;] [--port &lt;n&gt;] [--host-key &lt;file&gt;]", "Create or refresh one project's SSH grant. The project defaults to the current checkout, the address to <code>host.docker.internal</code>, and the SSH port to <code>22</code>. <code>--host-key</code> selects a trusted Ed25519 public host key file. The command prints the grant ID to stderr and a devcontainer JSON snippet to stdout.")}
+    ${command("devcontainer revoke", "synapse devcontainer revoke [--project &lt;folder&gt; | --id &lt;id&gt;]", "Remove the project's restricted SSH key and client bundle. Use the grant ID if the checkout moved or was deleted. Later memory calls from open sessions fail after revocation.")}
 
     <h2 id="shell">Shell environments</h2>
     ${command("hook", "synapse hook <zsh|bash|fish>", "Print the integration script for a shell. Evaluate or source it from that shell’s startup file. The hook reevaluates approved directory scopes after directory changes and before prompts.")}
@@ -209,7 +215,7 @@ ${command("guidance adopt", "synapse guidance adopt --confirm", "Move unmanaged 
     ${command("connect --refresh", "synapse connect &lt;tool&gt; --refresh", "Apply this release's descriptor to a tool that is already connected, writing its registration again. Detection cannot tell a descriptor that moved from one that did not, so a tool set up under an older release keeps that release's answer until this is run. Nothing is removed and the tool stays connected throughout. <code>synapse doctor</code> reports <em>update available</em> when it is worth running.")}
     ${command("connect --reset", "synapse connect &lt;tool&gt; --reset", "Disconnect the tool and connect it again. Costs more than <code>--refresh</code>: disconnecting takes back the skills Synapse installed for that tool, and this restores the connection rather than the library. For when what is on disk has to go before the new answer can land.")}
     ${command("disconnect", "synapse disconnect [tool]", "Undo one tool's connection, or every tool's when no name is given: the MCP registration or installed package, the managed block in its instruction file, the Claude Code hooks and status line, and any skill Synapse installed for it. A skill you wrote, or a status line somebody else configured, is left alone.")}
-    ${command("uninstall", "synapse uninstall [--data] [--confirm]", "Remove everything Synapse installed: every tool connection, the shell hook, and the command line tool. Without <code>--confirm</code> it prints what it would remove and stops. Your memory is left alone unless you also pass <code>--data</code>, which cannot be undone.")}
+    ${command("uninstall", "synapse uninstall [--data] [--confirm]", "Remove local tool connections, the shell hook, and the command line tool. Revoke any <a href=\"../devcontainer/#revoke-access\">devcontainer grants</a> first. Without <code>--confirm</code> the command previews what it would remove. <code>--data</code> also removes stored memory.")}
     ${command("version", "synapse version", "Print the application version. <code>--version</code> and <code>-V</code> are aliases.")}
     ${command("help", "synapse help [command]", "Print the command summary, or one command\u2019s entries. <code>--help</code> and <code>-h</code> do the same thing wherever they appear before a <code>--</code>.")}
   `,

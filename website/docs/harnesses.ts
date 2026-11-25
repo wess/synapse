@@ -21,6 +21,7 @@ export const harnesses: Page = {
     ${code("shell", `synapse tool list
 synapse tool show codex
 synapse connect codex`)}
+    <p>For MCP clients running in a VS Code devcontainer, set up the <a href="../devcontainer/">project-scoped SSH connection</a> from the host. The generated startup command registers compatible clients on the container's <code>PATH</code>.</p>
 
     <h2 id="create">Create a connector</h2>
     <p>Install your harness and make its executable available on <code>PATH</code>. From your repository root, run:</p>

@@ -4,6 +4,10 @@ mod presence;
 #[path = "mcp/learning.rs"]
 mod learning;
 
+#[cfg(unix)]
+#[path = "mcp/devcontainer.rs"]
+mod devcontainer;
+
 use serde_json::{Value, json};
 use std::io::{BufRead, BufReader, Read, Write};
 use std::process::{Command, Stdio};

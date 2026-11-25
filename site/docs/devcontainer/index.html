@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Synapse in a VS Code devcontainer — Synapse</title>
+  <meta name="description" content="Connect a VS Code devcontainer to Synapse on a macOS or Linux host with project-scoped SSH access.">
+  <meta name="theme-color" content="#25208f">
+  <meta property="og:title" content="Synapse in a VS Code devcontainer — Synapse">
+  <meta property="og:description" content="Connect a VS Code devcontainer to Synapse on a macOS or Linux host with project-scoped SSH access.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://wess.io/synapse/docs/devcontainer/">
+  <link rel="canonical" href="https://wess.io/synapse/docs/devcontainer/">
+  <link rel="icon" href="../../icon.svg" type="image/svg+xml">
+  <link rel="preload" href="../../saira.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="../../silkscreen.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="../../style.css">
+  <script type="module" src="../../site.js"></script>
+</head>
+<body class="docs" data-root="../../">
+  <div class="shell">
+  <a class="skip" href="#content">Skip to content</a>
+  <div class="machinebar"><a href="../../">Synapse field manual</a><span><i aria-hidden="true"></i>local · v1.19.4</span></div>
+  <header class="topbar">
+    <a class="wordmark" href="../../" aria-label="Synapse home"><img src="../../icon.svg" width="28" height="28" alt=""><span>synapse</span></a>
+    <button class="navtoggle" type="button" aria-expanded="false" aria-controls="topnav">Menu</button>
+    <nav id="topnav" aria-label="Primary">
+      <a href="../../docs/" aria-current="page">Docs</a>
+      <a href="../../tutorials/">Tutorials</a>
+      <a href="https://github.com/wess/synapse">Source</a>
+      <a class="navdownload" href="../../docs/install/">Install</a>
+    </nav>
+  </header>
+  <div class="doclayout">
+  <aside class="docsrail" aria-label="Documentation navigation">
+    <p class="manualmark">Field manual <span>v1.19.4</span></p>
+    <div class="searchbox">
+      <label for="docssearch">Search docs &amp; tutorials</label>
+      <input id="docssearch" type="search" placeholder="Memory, vaults, restore…" autocomplete="off" aria-controls="searchresults">
+      <div id="searchresults" class="searchresults" data-results hidden></div>
+      <span class="searchstatus" data-searchstatus role="status" aria-live="polite"></span>
+    </div>
+    <details class="railnav" open>
+      <summary>Browse all guides</summary>
+      <nav aria-label="All guides">
+        <h2>Start here</h2><ul><li><a href="../../docs/">Start here</a></li><li><a href="../../docs/install/">Install and connect</a></li><li><a href="../../docs/devcontainer/" aria-current="page">Synapse in a VS Code devcontainer</a></li><li><a href="../../docs/harnesses/">Supported and custom harnesses</a></li><li><a href="../../docs/app/">Desktop app reference</a></li></ul><h2>Reference</h2><ul><li><a href="../../docs/memory/">Memory and recall</a></li><li><a href="../../docs/knowledge/">Project Knowledge</a></li><li><a href="../../docs/mcp/">MCP tool reference</a></li><li><a href="../../docs/mesh/">Agent mesh</a></li><li><a href="../../docs/skills/">Skills</a></li><li><a href="../../docs/servers/">MCP servers</a></li><li><a href="../../docs/sources/">Sources</a></li></ul><h2>Your machine</h2><ul><li><a href="../../docs/vault/">Vaults and scopes</a></li><li><a href="../../docs/data/">Data lifecycle</a></li><li><a href="../../docs/config/">Configuration and paths</a></li><li><a href="../../docs/security/">Security model</a></li><li><a href="../../docs/sync/">Encrypted sync</a></li><li><a href="../../docs/troubleshoot/">Troubleshooting</a></li></ul><h2>Build with it</h2><ul><li><a href="../../docs/cli/">CLI reference</a></li><li><a href="../../docs/backend/">Agent backend</a></li><li><a href="../../docs/developing/">Developing Synapse</a></li><li><a href="../../docs/synapsecore/">The core library</a></li><li><a href="../../docs/embedding/">Embedding Synapse</a></li><li><a href="../../docs/retrieval/">Retrieval checks</a></li><li><a href="../../docs/map/">The memory map</a></li><li><a href="../../docs/startup/">What launching costs</a></li><li><a href="../../docs/review/">Security, stability, and resource review</a></li><li><a href="../../docs/windows/">Windows</a></li><li><a href="../../docs/federation/">Federation proposal</a></li></ul>
+        <h2>Tutorials</h2><ul><li><a href="../../tutorials/">Tutorials</a></li><li><a href="../../tutorials/connect/">Install and connect your first tools</a></li><li><a href="../../tutorials/continuity/">Carry one decision between tools</a></li><li><a href="../../tutorials/curate/">Curate and optimize memory</a></li><li><a href="../../tutorials/secrets/">Use a scoped secret in either shell mode</a></li><li><a href="../../tutorials/skills/">Keep one skill library across every tool</a></li><li><a href="../../tutorials/learn/">Let your agents write skills</a></li><li><a href="../../tutorials/launch/">Start a tool with everything in place</a></li><li><a href="../../tutorials/mesh/">Run a team of agents and drive it yourself</a></li><li><a href="../../tutorials/overseer/">Hand a job to one agent and watch it grow a team</a></li><li><a href="../../tutorials/recovery/">Export and restore safely</a></li><li><a href="../../tutorials/lifecycle/">Check, migrate, and remove Synapse</a></li></ul>
+      </nav>
+    </details>
+  </aside>
+    <main class="article" id="content">
+      <header class="articlehead"><nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../">Synapse</a><span aria-hidden="true">/</span><a href="../../docs/">Manual</a></nav><h1>Synapse in a VS Code devcontainer</h1><p>Connect a VS Code devcontainer to Synapse on a macOS or Linux host with project-scoped SSH access.</p><div class="articleledger"><span>reference</span><span>release 1.19.4</span></div></header>
+      <p>Install Synapse on the macOS or Linux host. Inside the container, your existing
+agent CLI uses the OpenSSH client to recall, read, and save memory for the host
+project you approve. Those writes appear in the host's Synapse store.</p>
+<h2 id="set-it-up">Set it up</h2>
+<ol>
+<li>
+<p>Enable the host's OpenSSH service for your account. On macOS, open <strong>System
+Settings → General → Sharing → Remote Login</strong> and allow your user. The host
+command uses the standard <code>~/.ssh/authorized_keys</code> file and pins the host's
+Ed25519 public key.</p>
+</li>
+<li>
+<p>From the host checkout for the devcontainer, run:</p>
+<div class="codeblock"><div class="codebar"><span>sh</span><button type="button" data-copy aria-live="polite">Copy</button></div><pre><code>synapse devcontainer setup
+</code></pre></div>
+<p>Merge the printed <code>mounts</code> and <code>postStartCommand</code> entries into
+<code>.devcontainer/devcontainer.json</code>. Append to any existing mounts. If you
+already have a startup command, keep it and add the generated <code>synapse</code>
+entry alongside it in an object, under a different key.</p>
+</li>
+<li>
+<p>In VS Code, select <strong>Dev Containers: Rebuild Container</strong>. The startup
+command registers Synapse with compatible agent CLIs found on the container's
+PATH. Start a fresh agent session and ask it to recall a known project
+decision. Save a new project decision and find it on the host with
+<code>synapse memory list &quot;&lt;words from the decision&gt;&quot;</code>.</p>
+</li>
+</ol>
+<p>The container needs <code>sh</code> and <code>ssh</code>. For a Debian or Ubuntu image without SSH,
+add <code>openssh-client</code> to the packages installed in its Dockerfile. The grant's
+private identity lives in the host's <code>~/.ssh/synapse</code> directory. The generated
+bind mount makes only that grant's client files available in the container, so
+the container user must be able to read them. Keep the key directory on the
+host and share the configuration only with containers you trust to access the
+project's memory.</p>
+<h2 id="connection-settings">Connection settings</h2>
+<ul>
+<li>
+<p>Docker Desktop uses <code>host.docker.internal</code> by default.</p>
+</li>
+<li>
+<p>For a native Linux Docker Engine, add
+<code>&quot;runArgs&quot;: [&quot;--add-host=host.docker.internal:host-gateway&quot;]</code> to an
+image- or Dockerfile-based configuration. With Compose, give the devcontainer
+service an <code>extra_hosts</code> entry of <code>host.docker.internal=host-gateway</code>.
+SSH must listen on an address reachable from the container.</p>
+</li>
+<li>
+<p>For a different SSH address, pass <code>--host &lt;hostname&gt;</code>. Use <code>--port &lt;number&gt;</code>
+for a custom SSH port and <code>--host-key &lt;file&gt;</code> for a custom Ed25519 <strong>public</strong>
+host key. Re-run setup with the same settings after an intentional host-key
+rotation.</p>
+</li>
+<li>
+<p>The mount source must exist on the machine running the Docker engine. Run
+setup on that machine for a remote Docker host.</p>
+</li>
+<li>
+<p>Use <code>--project &lt;folder&gt;</code> to approve a checkout from another working directory.</p>
+</li>
+<li>
+<p>If you install the agent CLI after the container starts, run the generated
+startup command in a container terminal. Substitute the grant ID printed by
+setup and then start a fresh agent session.</p>
+<div class="codeblock"><div class="codebar"><span>sh</span><button type="button" data-copy aria-live="polite">Copy</button></div><pre><code>sh /run/synapse/GRANT_ID/connect
+</code></pre></div>
+</li>
+</ul>
+<p>The host fixes the project identity at setup, so container paths can differ
+from the host checkout. An SSH session gets only <code>recall</code>, <code>readmemory</code>, and
+<code>remember</code> for that project. Any process that can read the mounted key can
+use that grant.</p>
+<h2 id="troubleshoot-the-connection">Troubleshoot the connection</h2>
+<ul>
+<li>If setup cannot read the SSH host key, check that SSH is enabled for your
+account and that an Ed25519 host key exists. Use <code>--host-key</code> for a custom
+public key location.</li>
+<li>If the container cannot reach the host, check the address and port from inside
+it. On native Linux, check the host-gateway mapping and the SSH listener.</li>
+<li>If startup reports that it cannot read the identity, check that the mount is
+present and readable by the container user. Keep the private key owner-only.</li>
+<li>If the host executable moved, run setup again from the checkout to refresh the
+forced command. If setup reports that the project identity or data directory
+changed, revoke the old grant before creating the new one.</li>
+</ul>
+<h2 id="revoke-access">Revoke access</h2>
+<p>Run <code>synapse devcontainer revoke</code> from the host checkout. For a moved or deleted
+checkout, use <code>synapse devcontainer revoke --id &lt;id&gt;</code> with the grant ID printed
+by setup. Revocation removes the grant's authorized key and client files.
+Subsequent memory calls in an open session also lose access. Remove the
+generated mount and startup entry before rebuilding the container again.
+Revoke each grant before uninstalling the host CLI.</p>
+<footer class="articlefoot"><div class="articlemeta"><a href="https://github.com/wess/synapse/blob/main/docs/devcontainer.md">View page source</a><span>Synapse 1.19.4</span></div><nav class="pagenav" aria-label="Guide pages"><a href="../../docs/install/"><small>Previous</small><strong>Install and connect</strong></a><a href="../../docs/harnesses/"><small>Next</small><strong>Supported and custom harnesses</strong></a></nav></footer>
+    </main>
+  <aside class="ontoc" aria-label="On this page"><span>On this page</span><ol><li><a href="#set-it-up">Set it up</a></li><li><a href="#connection-settings">Connection settings</a></li><li><a href="#troubleshoot-the-connection">Troubleshoot the connection</a></li><li><a href="#revoke-access">Revoke access</a></li></ol></aside>
+  </div>
+  <footer class="footer">
+    <div class="footerupper"><div><a class="wordmark" href="../../"><img src="../../icon.svg" width="26" height="26" alt="">synapse</a><p>A shared memory. A little less starting over.</p></div>
+      <nav aria-label="Footer"><a href="../../docs/">Manual</a><a href="../../tutorials/">Tutorials</a><a href="https://github.com/wess/synapse">Source</a><a href="https://github.com/wess/synapse/releases">Releases</a><a href="https://wess.io">By Wess</a></nav></div>
+    <p class="footerfine"><span>macOS &amp; Windows desktop · Linux CLI &amp; MCP</span><span>v1.19.4 · MIT · No account required</span></p>
+  </footer></div>
+</body>
+</html>

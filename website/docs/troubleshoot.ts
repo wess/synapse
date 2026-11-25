@@ -11,6 +11,7 @@ export const troubleshoot: Page = {
     { label: "One command for a bug report", id: "doctor" },
     { label: "App and CLI", id: "app" },
     { label: "Tool connection", id: "connection" },
+    { label: "Devcontainer SSH", id: "devcontainer" },
     { label: "Scopes and secrets", id: "scopes" },
     { label: "Memory and database", id: "database" },
     { label: "Restore", id: "restore" },
@@ -51,6 +52,9 @@ synapse doctor --json`)}
     <p>Run <code>synapse guidance show</code>. If a pointer is missing, use <code>synapse guidance sync</code> or <strong>Settings → Shared guidance → Sync pointers</strong>, then restart the tools. Consolidation is optional and requires separate confirmation.</p>
     <h3>Setup failed</h3>
     <p>Read the app error for the external tool command that failed. Setup restores both the integration store and instruction file on failure, leaving <code>.synapsebackup</code> recovery copies beside changed existing files.</p>
+
+    <h2 id="devcontainer">Devcontainer SSH</h2>
+    <p>If the memory tools are missing, check the container startup output, confirm the agent CLI and <code>ssh</code> are on its <code>PATH</code>, and rerun the generated startup command. If the tools are registered but cannot connect, check the host address, SSH port, key mount permissions, and pinned host key. The <a href="../devcontainer/#troubleshoot-the-connection">devcontainer troubleshooting guide</a> covers these checks.</p>
 
     <h2 id="scopes">Scopes and secrets</h2>
     <h3><code>vault scope is not ready</code></h3>
@@ -93,7 +97,7 @@ synapse doctor --json`)}
 
     <h2 id="restore">Restore</h2>
     <h3>Restore says Synapse is using the database</h3>
-    <p>Quit the desktop app and close every developer-tool session connected to the MCP server. Confirm no <code>synapse mcp</code> process remains, then retry. The refusal proves the exclusive lifecycle guard is working.</p>
+    <p>Quit the desktop app and close every developer-tool session connected to the host store, including sessions in devcontainers. Retry after their MCP processes have exited.</p>
     <h3>The backup version is unsupported</h3>
     <p>The source schema must match the current release. Keep the source unchanged. Open it first with the Synapse version that created it, let that version migrate normally if appropriate, export a fresh snapshot, then restore that compatible export with the current app.</p>
     <h3>Secrets are missing after moving to another machine</h3>
